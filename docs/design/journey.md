@@ -35,11 +35,11 @@ rest points, which also makes it a breadcrumb (§5). **Rescoped 2026-10-18:** it
 something she does opens its way, and it is waiting further on. Its arc in six beats (clock as in §4):
 1. **Wood floor, opening (0:00).** Its cocoon hangs beside hers, already open. It is on the branch when she hatches,
    one wing torn, watching the swarm leave without it.
-2. **Wood floor, the hub (~0:10–0:16): the want.** It waits at the hub's moon patch under the root shelf, looking up
-   at a climb it can't make. When she cuts the hanging root at the top of the cap stair, the root falls as a ladder.
-   From then on it is ahead of her at the next patch. The player helps without being asked and sees the result.
-   The cap stair is the hub's third branch and the dangler's first room, so nearly every first-timer climbs it; one
-   who doesn't finds Tatter ahead anyway later (it took the long way round), and the root still falls as a shortcut.
+2. **Wood floor, the oak (~0:10 and ~0:32): the want.** At the hub it sits under the hollow oak's trunk, looking up
+   at a climb it can't make, while every freed moth spirals up the trunk and out. When she has climbed the trunk
+   with her new claws, she cuts the hanging root at the crown. It falls down the trunk, and Tatter climbs up and
+   sits beside her as the cloud of her freed moths lifts off. Both beats are on the critical path (the director's
+   area 1 redesign, `regions/wood-area1-director.md`). From then on it is ahead of her at the next patch.
 3. **Moon patches, throughout.** Every few patches it is already there, resting. When she rests, it shuffles a little
    closer. The player never has to do anything with it.
 4. **The roost (2:10).** It is caught at a lamp: Tatter's lamp, in a room off the critical path but impossible to
@@ -50,14 +50,14 @@ something she does opens its way, and it is waiting further on. Its arc in six b
 6. **Home (9:45).** It is in the cave when she arrives. It walked. It settles beside her on the ceiling.
 
 Fallback if Tatter doesn't read (moths look the same, players miss it): drop beats 4–5 and keep it as a figure at
-the opening, the want and the ending, or drop it entirely. If it goes, the root ladder stays as a plain shortcut up
-to the hub's shelf; nothing else depends on it.
+the opening, the want and the ending, or drop it entirely. If it goes, the crown root is cut for nothing and can be
+removed; nothing else depends on it.
 
 **The firefly's arc**, the spine of the story, with its reason held back until the marsh:
 
 | Region (area, clock) | What the player sees | What they think |
 |---|---|---|
-| Wood (the hub, ~0:10) | A warm light far across a canopy gap, hanging a glow-cap on a branch, then gone. Later, picked glow-cap stumps, and from the cap stair the same glow-cap seen from the other side | "Someone is putting these up" |
+| Wood (the hollow oak, ~0:10 → ~0:30) | From the hub floor, a warm light hangs a glow-cap **inside the oak's trunk**, two thirds up, and darts out through the crown. Picked glow-cap stumps at the trunk's foot. The glow-cap burns overhead all through the floor, and in the trunk climb it is the last lamp that throws her; she snuffs it | "Someone is putting these up", then "I put it out" |
 | Wood, boss (the grove, 1:02) | She snuffs the great lamp; a small light darts out of the dark, and behind her one lamp *relights*. It flees | An enemy. It undoes my work |
 | Valley (the rim and the roost) | Flicker lamps blink in its rhythm (three short, one long). It is seen hanging new lights, fleeing when she nears. Firefly signs start to add up | It is building this on purpose |
 | Valley (the roost's crown, ~2:35) | On a high branch above the dead roost tree it flashes its rhythm at the empty sky, slow and long. Nothing answers | The first crack: what is it doing? |
@@ -74,8 +74,8 @@ player chases something they have started to wonder about.
 ### The opening: the first ten minutes
 
 Baseline from story.md, plus the **upgrade** (last to hatch, chase the swarm). Times are targets; the wood's beat
-sheet (`regions/wood.md`, rescope) owns the minutes after 5:00 (rescoped 2026-10-18: the glimpse moves to the hub,
-and Tatter's want is shown there).
+sheet (`regions/wood.md` Part A, from the director's area 1 redesign) owns the minutes after 5:00: the area's question
+is the hollow oak, and the way out is up its trunk.
 
 | Time | Beat | Player does | Staging and cost |
 |---|---|---|---|
@@ -83,15 +83,15 @@ and Tatter's want is shown there).
 | 0:04 | A row of empty, split cocoons on a branch over the dark wood. One still closed. Above, the moon. Tatter sits on the branch | nothing | Static props on the existing Grove layers |
 | 0:08 | The closed cocoon twitches with each button press. Third press: she breaks out | **first input** (jump ×3, the same input as beating free later) | Cocoon prop + rig spawn pose. Control at 8 s |
 | 0:15 | The swarm streams overhead past the moon, a river of small moths leaving | runs along the branch after them | Swarm renderer on a spline. Camera leads toward the swarm |
-| 0:20–1:30 | **The chase.** Downhill through the canopy: branch runs, jumps, a pogo off a thorn, the swarm always just ahead and above. She can't fly yet. No enemies | runs, jumps, pogo | A hand-built descending room. The swarm spline is keyed to her x, so it never escapes and never waits visibly |
-| 1:30 | **The vista.** The canopy opens on a cliff edge. The valley below, dotted with warm lamps. The swarm pours down into them and breaks apart into spinning knots around each light. The moon over the far mountain. **Title over the moon: LAMPFALL** | stands at the edge (camera holds ~2 s, then she can move) | Camera widen, the swarm splits to N lamp orbits. Far valley is a background layer. The one big vista of the opening |
-| 2:00 | Back down into the wood. A wick over a short gap pulls her in. She is **caught**, orbiting, and beats free (three presses, which she already knows from the cocoon). A dead moth lies under it | teaches pull and Caught by consequence | Core lamp module |
-| 2:30 | The next wick, reachable from a ledge. A slash snuffs it: hitstop, the dark blooms, six moths spiral out, fly with her, then peel off downhill | **first snuff** | Core |
-| 3:00–5:00 | First predator (a burrback under a lit wick), first moon patch (Tatter already resting there), two more wicks | fights, rests | Creatures doc |
+| 0:20–1:30 | **The chase.** Downhill through the canopy: branch runs, jumps, a fallen trunk, the swarm always just ahead and above. She can't fly yet. No enemies, no hazards | runs, jumps | A hand-built descending room. The swarm spline is keyed to her x, so it never escapes and never waits visibly |
+| 1:30 | **The vista.** The canopy opens on a cliff edge. The valley below, dotted with warm lamps. The swarm pours down into them and breaks apart into spinning knots around each light. Below, **the great hollow oak** with a ring of moonlight at its crown, and stragglers peeling down into the wood. The moon over the far mountain. **Title over the moon: LAMPFALL** | stands at the edge (camera holds ~2 s, then she can move) | Camera widen, the swarm splits to N lamp orbits. Far valley is a background layer. The one big vista of the opening |
+| 2:00 | Down into the wood after the stragglers. They circle a wick over a dip; it pulls her in, she is **caught**, beats free (three presses, which she knows from the cocoon) and **the throw lands her on the next shelf**. A dead moth lies in the dip | teaches pull, Caught and the throw by consequence | Core lamp module |
+| 2:30 | A jump-cut puts the stragglers' wick out: hitstop, the dark blooms, the moths spiral out, fly with her, then peel off toward the oak | **first snuff** | Core |
+| 3:00–5:00 | A juvenile beetle (two cuts), then a beetle under a lit wick that notices her only in its light; a throw across a gap; first moon patch (Tatter already resting there); a bark floor she cuts through, bouncing, down to the glade | fights, rests, pogos | Creatures doc |
 | 5:00 | **First glade.** A shaft of real moonlight at the bottom of a hollow. She basks; her wings open and dry. *Item line* + glide glyph | gets glide | The one glade presentation |
 | 5:30–10:00 | The glide room: the drop out of the hollow is too long without it. A pull field to glide across on a line, then a ladder of gaps. Joy before difficulty | glides | Level layout |
-| 10:30 | **The hub** (the hollow oak). **First glimpse of the firefly** across a canopy gap: a warm light hanging a glow-cap, then gone. Tatter at the moon patch under the root shelf, looking up at a climb it can't make | sees | One actor on a path, 4 s; Tatter's look-up state |
-| 10:30–12:00 | The wood opens up: three ways out of the hub, a lit marker on the map for a lamp she can't reach yet. Free exploration starts | explores, chooses | |
+| 10:30 | **The hub, the hollow oak: the question.** Looking up the trunk: the crown ring of moonlight, every freed moth spiralling out, and the **first glimpse of the firefly** hanging a glow-cap inside the trunk, then gone. Tatter under the trunk, looking up at a climb it can't make. Her kicks slide on its walls | sees, tries the walls | One actor on a path, a held beat; Tatter's look-up state |
+| 10:30–12:00 | One way on, east across the floor, to find a way up. The glow-cap burns overhead as a lit lock | goes on | |
 
 What it does: control at 8 s, one want (the swarm), one force (the lights), each beat caused by the last (left
 behind, so chase; chase, so the vista; the swarm falls into the lights, so the lights are the problem). Emotional
@@ -143,7 +143,7 @@ the Beacon (6) as a major boss. Everything else in the game is rooms.
 | 3 | **The river of moths** | bright floor, 3:20, after the Mantis | The valley's great lamp goes out and every moth still circling in the region rises together into one river toward the mountain. Camera lifts to the biggest vista so far. Music's first full swell | Low: swarm renderer + camera + one vista layer. The best cost-to-feeling ratio in the game |
 | 4 | **The chase** (escape 1) | bright floor into the reedbeds, 3:25–3:30 | Ori's escapes, reversed: she chases the firefly down a corridor of lamps as it relights them ahead of her, and the only way to keep up is to fling through them and dash out of Caught (dash is ten minutes old). It reaches the marsh fog and is gone | Medium-high: a scripted firefly path keyed to her position, relights triggered by x. *Fallback:* shorten to one screen |
 | 5 | **The empty meadow** | the fen, 4:50 | Silence after the marsh's noise, at the game's midpoint. She is shrouded (just got it), so predators and the firefly don't see her. The firefly flashes its call over a meadow of dark husks; a lamp built in the shape of a firefly hangs above them; nothing answers. She can watch or leave. No fight | Low: a quiet room, the firefly on a loop, a static prop. Lands only if it follows something loud |
-| 9 | **The drowned roots** (new; escape 2) | the bridge into the wood, 5:35 | The bridge falls with the Colony and black water rises through the roots behind her. Soar, found at the bottom, carries her up the updraft shafts ahead of the water, and she breaks out through the seeping root wall in the wood's hub alcove: the stub drawn since minute 10, and home, changed | Medium-high: a rising-hazard cue timeline (the boss framework's), three or four shafts. *Fallback:* the water rises only in the last shaft |
+| 9 | **The drowned roots** (new; escape 2) | the bridge into the wood, 5:35 | The bridge falls with the Colony and black water rises through the roots behind her. Soar, found at the bottom, carries her up the updraft shafts ahead of the water, and she breaks out through the seeping root wall in the roots under the wood's hollow oak, then up through the root mesh into the hub: the stub seen from the root stair since minute 20, and home, changed | Medium-high: a rising-hazard cue timeline (the boss framework's), three or four shafts. *Fallback:* the water rises only in the last shaft |
 | 10 | **The storm crossing** (new) | the scree, 6:22 | An open saddle in a storm: gusts on a beat (a flameless pull row with a period) throw her off the slope unless she shelters behind cairns, and with Soar she rides a gust up to the next one. The cave draft starts here | Low-medium: wind rows, the camera, sound |
 | 6 | **The beacon** | the beacon, 7:45 (the Beacon boss) | A lamp the size of a tree on an open cliff. She climbs it with Moonflight, which drains in its light, so the climb is a dash from shadow to shadow. Snuffed from the top: the whole pass goes dark, and the cave mouth appears above under the moon | High: a tall arena, Moonflight tuning. The one place the mountain is fully in frame |
 | 11 | **The wall-less climb** (new) | the cave mouth, 8:00 | Straight up a sheer face with nothing to hold, above the dark beacon, toward the cave mouth under the moon: Moonflight alone, refilled in the dark between the last few lamps. The last time the open sky is seen until the ending | Medium: one tall room, dark refill pockets (`world.md` §3 rule 5) |
@@ -164,7 +164,7 @@ Region and area entrances get a vista, not a scene.
 
 | Region | Areas | Intensity | Rests and quiet | Vistas | Music | First-run time |
 |---|---|---|---|---|---|---|
-| **Wood** | the floor, the high wood | low → medium. The floor ends on the old burrback; the high wood on the grove of lamps | Moon patches, dark tunnels between lit rooms, the hub, the glades | The opening cliff (valley + mountain); the canopy gap from the cap stair; the canopy edge (Gust's glade, the first open moonlight) | Sparse; first swell at the title, second at the first sky clear | **70 min** (0:00–1:10) |
+| **Wood** | the floor, the high wood | low → medium. The floor peaks at the old burrback and ends on the climb up the oak; the high wood on the grove of lamps | Moon patches, dark tunnels between lit rooms, the hub, the glades | The opening cliff (valley + mountain, and the hollow oak below); the oak's crown, looking back to the hatching tree; the canopy edge (Gust's glade, the first open moonlight) | Sparse; first swell at the title, second at the first sky clear | **70 min** (0:00–1:10) |
 | **Valley of lamps** | the rim, the roost, the bright floor | medium → high. Dense lit rooms, predators everywhere | Dark river caves under the lamps; Tatter's lamp; the roost's crown | The rim on arrival (lamps to the horizon); the roost's crown; **the river of moths** | Rhythmic (the flicker beat); full swell at the river | **135 min** (1:10–3:25) |
 | **Marsh** | the reedbeds, the fen, the bridge | medium, then a hard stop, then the escape. Drifters, fog, glass | **The empty meadow**, the quietest moment in the game | Few: fog. The mountain is not seen here at all, on purpose | Low drones; silence at the meadow; the escape's rising pulse | **135 min** (3:25–5:40) |
 | **Return** | the wood's hub, the valley to its east rim | low: a home visit, every new move paying | the wood's dark sky full of stars; Tatter's root ladder | the wood and the valley seen changed | the wood's bed, quieter | **15 min** (5:40–5:55) |

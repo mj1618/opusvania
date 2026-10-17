@@ -43,9 +43,15 @@ idea. Progress is the night coming back.
   always walk away. All her moves still work inside the pull, just bent by it. Before she has any lamp ability,
   crossing a pull field already slingshots her path like a gravity assist, and good players will use that for free.
 - **Caught.** If she reaches the flame's core she is caught. She orbits it tight and her moves are replaced by
-  *beating free*: each jump press pushes her outward, and three presses free her (tuned). Once she has the dash,
-  dashing out frees her at once. On a gentle lamp being caught does no damage by itself. The danger is the time it
-  costs her while predators close in. Hot lamps burn while she is caught.
+  *beating free*: each jump (or attack) press pushes her outward, and three presses free her (tuned). Once she has the
+  dash, dashing out frees her at once. On a gentle lamp being caught does no damage by itself. The danger is the time
+  it costs her while predators close in, and the hawker, which hunts the caught. Hot lamps burn while she is caught.
+- **The throw.** The third beat throws her out along the held direction (outward when nothing is held). **The throw
+  is a launch:** letting go of jump never cuts it, because its strength is what makes it fun. While she is caught,
+  **the throw's arc shows along the arrow** (or at least its length; Ori's Bash preview), so an aimed throw is a choice
+  and not an accident. In the wood the trap's throw is the first area's toy and its critical path: a throw lamp
+  carries her over a gap, with a slower dark way under it (`world.md` §6, the light/dark line). The valley's Fling
+  then makes the throw hers: "in the wood the trap throws you; in the valley you learn to throw yourself."
 - **Snuff.** The flame takes hits like a creature does. Small lamps go out with one blade hit and bigger ones take
   more. A down-slash on a flame is a pogo, so she can bounce off a lamp while beating it out. The skill is hitting
   the flame from just outside the core (the slash reaches about 110 px, and the core will be smaller than that) or
@@ -81,9 +87,12 @@ New lamp kinds after launch should be new parameter rows first, and new code onl
 ### Freeing moths
 Each lamp holds a number of moths, drawn by render as a swarm in orbit, with a dead one on the ground now and then
 so the stakes stay real. When the lamp goes out the sim emits one event (lamp id, moth count, position). Render
-does the rest: the swarm spirals out, follows her loosely for about 6 s, then peels off along the region's
-**migration line**, a path in scene data that points to the next region or to the mountain. That is the
-wayfinding. Underground, the line runs to the exit.
+does the rest: the swarm spirals out, follows her loosely for about 6 s, then peels off along the room's
+**migration line** toward **the area's gathering point**, never into the HUD counter. In the wood's first area that
+point is the hollow oak: every cloud flies there and spirals up the trunk, and at the crown **one cloud sized by her
+moth count** circles and lifts off together, which is the area's payoff and the picture of her finds. Elsewhere the
+gathering point is the next region or the mountain. That is the wayfinding. Underground, the line runs to the
+exit.
 
 What the moths do for her afterwards: **nothing in combat.** They give her health milestones (section 6), they guide
 her, and they come home with her in the ending, where the cave ceiling fills to match the count. *Easy path:* we

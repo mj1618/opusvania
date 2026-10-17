@@ -42,7 +42,7 @@ other region has a door into it or a shortcut back to it.
 |---|---|
 | Linear or hub? | **A spine with a hub in the middle, and a small hub in every area.** The wood and the pass/cave ends are mostly linear (story pace). The valley is a crossroads with loops (the roost is its hub area). Every area has its own hub room (a moon patch with 3–4 exits), so each 30–45 minute area plays like a small metroidvania. *Reason: the bar's C7 (briefly unsure, never lost) and HK's Crossroads* |
 | Where backtracking happens | (1) Inside each area: loops that close as its ability opens. (2) Back into the wood with fling and double jump (the canopy, the hub's lantern gap). (3) **The drowned-roots escape** at the end of the marsh surfaces in the wood's hub: a required return home that is fast (~15 min through wood and valley to the pass), and full of payoffs for dash, Fold and Shroud. (4) After Moonflight, high secrets everywhere, reached through the pass chute or fast travel. Target: backtracking 10–20% of main time (G5) |
-| Shortcuts | Each one opens from the far side the first time she reaches it (HK style), and each cuts a return trip to under a minute: the wood's grate and the high wood's edge drop, the valley's lantern lift, the drowned roots (marsh to wood), the pass chute (pass to valley) |
+| Shortcuts | Each one opens from the far side the first time she reaches it (HK style), and each cuts a return trip to under a minute: the wood's root mesh (the oak's floor, back down to glade 2) and the high wood's edge drop, the valley's lantern lift, the drowned roots (marsh to wood), the pass chute (pass to valley) |
 | Fast travel | **From Tier 2 on: travel between the hub moon patches from the map.** Once play passes ~4 h a return to the valley must take ≤ 2 min (G5), and the shortcuts alone can't do that across five regions. *Reason: G5; tech.md §4 already planned it as a later M* |
 | How she finds the way | The freed moths follow the region's migration line. The line is staged: it points at the area's goal (a glade, a great lamp), then at the exit. Vistas show the next region. The map shows every lamp she has seen and still burning, and a moth-stone shows a whole area (core §6). Underground (the roots, the cave) the moths alone lead |
 
@@ -80,8 +80,8 @@ area's new terrain toy, lamp kind and creature (G7 asks for a new creature or la
 
 | # | Area | Region | Min (clock) | Purpose | Signature mechanic | Ability found | Boss / set piece (clock) |
 |---|---|---|---|---|---|---|---|
-| 1 | **The wood floor** (hatch → hollow hub → well) | wood | 35 (0:00–0:35) | Teach pull, Caught, snuff, pogo, glide, wall jump; the first hub | toys: seed-cases, **bounce caps**, rotten bark, the grate; lamps: wick, lantern; creatures: burrback, **dangler**, hawker | **Glide** 0:05; **Wall jump** 0:28 | set piece 1, the chase and the vista with the title 0:01; the old burrback (mini) 0:25 |
-| 2 | **The high wood** (climb → boughs → knot → web hall → grove → canopy edge) | wood | 35 (0:35–1:10) | Test the wood's verbs together; the first boss; leave the wood | toys: broken faces, **crumbling bark**, orb webs; lamps: swinging lantern; creatures: **bombardier**, orb web + weaver | ***Gust*** 1:06 | the web gauntlet 0:48; **the Weaver** 1:00 and set piece 2, the first sky clear and the relight 1:02 |
+| 1 | **The wood floor** (hatch → the hollow oak → the roots under it → up the oak's trunk to the crown) | wood | 35 (0:00–0:35) | Teach the lamp's three moments (caught, thrown, snuffed), glide, wall jump and the pogo; the first hub, which asks one question (get up the oak) | toy: **the trap's throw** (a lamp catches her and throws her over a gap, with a dark slow way under it); terrain: rotten-bark floors, the root mesh, thorns; lamps: wick only; creatures: **juvenile beetle**, burrback, **dangler**, hawker | **Glide** 0:05; **Wall jump** 0:27 | set piece 1, the chase and the vista with the title 0:01; the old burrback (mini) 0:24; the trunk climb and the crown cloud 0:30–0:33 |
+| 2 | **The high wood** (the crown → the canopy road → boughs → knot → web hall → grove → canopy edge) | wood | 35 (0:35–1:10) | Test the wood's verbs together; the first boss; leave the wood | toys: **bounce caps** (moved from area 1), broken faces, **crumbling bark**, orb webs; lamps: **the lantern** and its swinging ladder (moved from area 1); creatures: **bombardier**, orb web + weaver | ***Gust*** 1:06 | the web gauntlet 0:48; **the Weaver** 1:00 and set piece 2, the first sky clear and the relight 1:02 |
 | 3 | **The rim** | valley | 45 (1:10–1:55) | Arrival: the bowl seen whole; lamps that throw; fling | toys: lantern chains, grass-stem faces; lamps: **flicker**; creatures: **toad**, **jumping spider**, **emperor hawker** | ***Fling*** 1:46 | the arrival vista 1:12; **the Emperor** (mini, fling exam) 1:52 |
 | 4 | **The roost** (the valley's hub area) | valley | 50 (1:55–2:45) | The crossroads: three loops, choice, Tatter's lamp | toys: **seed wheels** (spun by Gust: switches), **thistledown rafts** (drift on wind paths); rule: flicker hunters; creatures: **mantis nymph** | **Double jump** 2:35 | Tatter's lamp 2:10 (story); set piece: **the roost climb** up the dead roost tree to its crown 2:30 |
 | 5 | **The bright floor** | valley | 40 (2:45–3:25) | The valley's climax and the river | the great lamp's rising pull, lantern rings on a beat | **Dash** 3:15 | **the Mantis** 3:08; set piece 3, the river of moths 3:20; set piece 4, **the chase** begins 3:25 (escape 1) |
@@ -116,7 +116,8 @@ Per-region notes (what changed from draft 1 is marked):
 - **The marsh** is the first region underground in places (sunken root rooms), where the mountain can't be seen. It
   is the game's midpoint and its emotional trough (the meadow). It ends in the **drowned-roots escape**: the bridge
   falls with the Colony, black water rises through the roots, and she climbs out through the seeping root wall in the
-  wood's hub alcove (the T2 stub drawn since minute 10). *Changed: Fold before Shroud, Soar as the Colony's reward,
+  roots under the wood's hollow oak, then up through the root mesh into the hub (the stub seen from the root stair
+  since minute 20). *Changed: Fold before Shroud, Soar as the Colony's reward,
   the roots as an escape. Reason: G3, G4 (≥ 2 escapes), G5 (a home visit), G9 (the world changed on return).*
 - **The pass** is mostly vertical rooms (1x3 shafts, cliff faces). Its vistas are the biggest in the game. The chute
   lets her glide straight down to the valley rim once the top is open. *Changed: Grip in the cliffs, and Moonflight
@@ -136,7 +137,7 @@ the abilities and the health milestones.
 
 | # | Area | Peaks (clock) | Creature kinds present | Example combinations | Finds besides lamps |
 |---|---|---|---|---|---|
-| 1 | wood floor | chase 0:01, old burrback 0:25 | burrback, **dangler**, hawker, [old burrback] | burrback under a wick on a step; a dangler over a glide landing; a hawker over a bounce-cap gap; dangler + burrback under the lantern | stone, 2 signs, hollow (quick wings) |
+| 1 | wood floor | chase 0:01, old burrback 0:24, the trunk 0:30 | **juvenile beetle**, burrback, **dangler**, hawker, [old burrback] | a beetle on a glide landing; a hawker diving at the caught over a throw gap; a dangler beside a throw line; beetle + dangler at one wick; danglers over lit landings in the dark; a dangler, the firefly's lamp and a hawker in the trunk | stone, 2 signs, hollow (quick wings) |
 | 2 | high wood | web gauntlet 0:48, Weaver 1:00 | burrback, dangler, hawker, **bombardier**, **orb web + weaver**, [the Weaver] | a bombardier above a wall-jump shaft; crumbling bark under a dangler; the orb web with a bombardier behind it | stone, sign, hollow (keen blade) |
 | 3 | rim | Emperor 1:52 | hawker, bombardier, **toad**, **jumping spider**, **emperor hawker**, [the Emperor] | a toad under a fling lantern; a jumping spider on a flicker's beat | stone, 2 signs, hollow (long gust) |
 | 4 | roost | roost climb 2:30 | toad, jumping spider, emperor hawker, dangler, **mantis nymph**; flicker hunters | a nymph at a seed wheel; toads along a thistledown raft line | stone, 2 signs, hollow (wide throw) |
@@ -302,6 +303,13 @@ arena: about 1.2 screens with the camera locked. Vertical shafts: 1x2 to 1x3. An
 
 **Rhythm.** Alternate lit rooms (lamps, predators, fights) with dark rooms (corridors, rest, a view). Never enter a
 room inside a lamp's pull or a predator's notice range: doors open into the dark.
+
+**Light is the fast line, the dark is the slow line** (from the wood's area 1 redesign, `regions/wood-area1-director.md`
+§3). Every lit route (a throw, a pull bending a glide, a snuff from a guarded spot) is the quick way through, and a
+predator guards it. Every critical-path room with a lamp also has a dark way (a lower floor, a root tunnel, a longer
+climb) that is safe, slower and pays nothing. It makes the lamp the critical path for anyone who moves. It meets the
+permanence rule, because a snuffed lamp never strands her. And it turns hard gates into a choice of risk. A throw lamp
+on a fast line sits out of reach from the near side, so it can be snuffed only after it has been used.
 
 **Moon patches.** One every 3–5 rooms (about 4 minutes of play at most between them), one in every hub, one in
 every glade, and one in the room before every boss door (core.md).

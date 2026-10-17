@@ -41,13 +41,23 @@ the same way.
    from snuffs and moth milestones. A creature is a reason to read the room, not a resource.
 7. **Fair placement**, as already tested for the burrback and lampwing: no landing straight into a creature, no
    route a creature blocks, no hit through ground, and a re-hit gap after every hit. Each new kind gets a pilot test.
+8. **One predator for each moment of the lamp verb** (the director's wood area 1 redesign, `regions/wood-area1-director.md`
+   §6). The verb has three moments, and each lamp-guarder punishes one of them:
+   - the **beetle** punishes landing and walking under the light, and sits in the light's pool on a landing;
+   - the **dangler** punishes stopping to snuff, and hangs over the cut spot;
+   - the **hawker** punishes being caught, and dives at the orbit around a throw lamp.
+
+   A lit room then reads as "where do I land, where do I stand, and do I let it catch me?", and the snuff answers all
+   three at once. Placement rule: **the dangler where she must stop, the hawker where she is held, the beetle where
+   she lands.** Every predator on the critical path must be able to bite a player who takes the fast line. Later
+   regions add kinds, but each new one names the moment it hunts.
 
 ## 2. Roster (rescoped 2026-10-18)
 
 **22 regular kinds over 14 areas** (draft 1: ~20 over five regions), on seven rigs, about two thirds of them variant
 rows. The rescope adds two kinds and moves one, all to meet the bar's C2 (≥ 3 creature kinds in every 20-minute
 chunk) without new rigs: the **dangler** (wood floor), the **skink** (the scree), and the **bombardier** moved from
-the marsh to the high wood so the wood has a ranged threat early (HK's Aspid slot). Each region's table names the
+the marsh to the high wood so the wood has a ranged threat early (HK's Aspid slot). Draft 3 of the wood adds one tuning row, the **juvenile beetle**, as area 1's fodder; it is a row of the burrback, not a new kind. Each region's table names the
 **area** where the kind is first met (numbers as in `world.md` §2.2); the per-area mix and its combinations are
 `world.md` §2.3's table, which this roster has to keep fed. Variant columns name the base and the change that the
 player feels.
@@ -56,9 +66,10 @@ player feels.
 | Creature | First met | Role | Behaviour in one line | Tests | Cost | Base / variant |
 |---|---|---|---|---|---|---|
 | **Burrback** (ground beetle; carabid beetles do hunt insects at night) | 1 wood floor | ground, lamp-guarder | patrols under a lamp, braces, rams, is winded, curls under a pogo | reading a tell, punishing, pogo | S (exists, rework the look toward a carabid, drop the old calm/offer rules) | base: *crawler* |
-| **Dangler** (new; spiders really drop on a dragline to ambush, and the bolas spider hunts moths on a single line at night) | 1 wood floor (R14, then R8–R9) | ambusher, lamp-guarder | the thread shows first, it drops on silk to a lit point, swings once, hangs open for a cut, climbs back. It drops only inside its lamp's light; a snuff sends it up for good | reading a thread, waiting out a swing, the up cut. It rehearses the Weaver's drops ~30 min before the fight (C13) | S (the weaver's drop on a small weaver) | variant: weaver (*crawler* + *strands*), small |
-| **Hawker** (dusk dragonfly; hawkers really do hunt at dusk around lights) | 1 wood floor | flyer, lamp-guarder | hovers at its lamp, tells, dives in an arc, stalls open, climbs, dives again | glide steering, air cuts, cutting in the stall | M (the lampwing's sim kept, its moth look replaced by a four-winged dragonfly on the same flyer rig) | base: *flyer* (rework of the lampwing) |
-| **Old burrback** | 1 wood floor (the well) | mini-boss | bigger, 10 hp, its ram carries further and it braces twice in a row | everything the burrback taught | S | variant: burrback (size, numbers, one move) |
+| **Juvenile beetle** (new row) | 1 wood floor (R4, by the door) | ground fodder | a small burrback with 2 hp, no brace and a short ram: the first creature dies in two cuts and teaches "hit it, it reacts" (HK's crawlid slot) | the cut, the hit reaction | S (a tuning row, no code) | variant: burrback |
+| **Dangler** (new; spiders really drop on a dragline to ambush, and the bolas spider hunts moths on a single line at night) | 1 wood floor (R9 the silk hall: alone over a cut spot, then beside a throw line, then with a beetle; then R10's lit pockets and R7b's rest ledge) | ambusher, lamp-guarder | the thread shows first, it drops on silk to a lit point, swings once, hangs open for a cut, climbs back. It drops only inside its lamp's light; a snuff sends it up for good | reading a thread, waiting out a swing, the up cut. It rehearses the Weaver's drops ~30 min before the fight (C13) | S (the weaver's drop on a small weaver) | variant: weaver (*crawler* + *strands*), small |
+| **Hawker** (dusk dragonfly; hawkers really do hunt at dusk around lights) | 1 wood floor | flyer, lamp-guarder | hovers at its lamp, tells, dives in an arc, stalls open, climbs, dives again. **Prey rule:** when she is caught in its lamp's light it starts its tell at once and aims at the orbit | glide steering, air cuts, cutting in the stall, beating free early and aiming the throw out of its lane | M (the lampwing's sim kept, its moth look replaced by a four-winged dragonfly on the same flyer rig) | base: *flyer* (rework of the lampwing) |
+| **Old burrback** | 1 wood floor (the pit under the oak) | mini-boss | 2× size, 10 hp, its ram carries further, it braces twice in a row, and while braced only the pogo hurts it (5cbd0a7). It needs no lamp: it lives at the bottom of the oak, fat on the moths that fall down the trunk | everything the burrback taught | S | variant: burrback (size, numbers, one move) |
 | **Bombardier** (moved from the marsh; bombardier beetles really fire a boiling spray from the tail) | 2 high wood (R15 boughs) | ground, lamp-guarder, ranged | perches on a ledge, turns its tail, and spits a burst of spray in an arc at where she is lit; up close it sprays a short cone instead of ramming | spacing, crossing an arc's gap, approaching from behind, climbing under fire | S (the burrback with one new move; builds the `spit` block that Gust and the archerfish reuse) | variant: burrback (`spit` block) |
 | **Orb web + weaver** | 2 high wood (R12 web hall) | hazard-creature | a web strung across a lamp's light. Touching it is Caught, and the weaver runs out along the strands to the spot she touched. Gust tears strands from outside once she has it | Caught and beat free, careful glide lines, cutting strands from outside | M (strands tech + an 8-legged crawler; exists) | base: *crawler* + *strands* |
 

@@ -1,99 +1,31 @@
-# The wood: region design (paper)
+# The wood: region design
 
-Draft 2, 2026-10-18. The top-down half of the region loop (`STUDIO.md`): implementers greybox the rooms from this doc,
-and persona bots and reviewers check the build against it. It follows `docs/design/core.md`, `world.md`,
-`journey.md` and `creatures.md`, and is checked against `docs/research/metroidvania-craft.md` §8. Scene 1
-(`wood-hatch`) is kept as built. Where this doc changes a number from those docs, §11 says so and why. Matt said
-"don't ask, decide", so every call is made here and the big ones are listed at the end for his veto.
+Draft 3, 2026-10-18. The top-down half of the region loop (`STUDIO.md`): builders greybox the rooms from this doc, and
+persona bots and reviewers check the build against it. It follows `docs/design/core.md`, `world.md`, `journey.md` and
+`creatures.md`.
+- **Part A** (area 1, the wood floor) is rewritten from the director's redesign
+  (`regions/wood-area1-director.md`), which owns its reasoning.
+- **Part B** (area 2, the high wood) is kept from draft 2 and the rescope, with notes on what moved into it.
+- The changelog is at the end.
 
-## Rescope (2026-10-18): the wood becomes two areas, ~70 minutes
+Matt: no sunk cost. Stale material is deleted, not kept beside the new.
 
-Matt set the game's length to Ori's (`quality-bar.md` §1.6), and the bar's §5.4 finds the wood compressed: glide,
-wall jump, a mini-boss, a boss and two set pieces in ~38 minutes, against HK's 45–70 minutes for one boss and one
-spell. The whole-game plan is now 14 areas (`world.md` §2.2, `core.md` §4). **This section wins over the rest of
-this doc** where they disagree. §1's 35–45 minutes, the §2 beat sheet after 10:00, the §9 targets, §10's exit
-criterion 3 and §11's decision 16 are superseded until the chunk iteration rewrites them.
+## The wood in two areas (~70 minutes)
 
-**The new shape.**
+| Area | Rooms | Median | Abilities | Peaks | Hub | Toy |
+|---|---|---|---|---|---|---|
+| **1. The wood floor** | R1–R10 and **R7b** (the oak's heart) | ~31 min critical path, ~35 with finds | glide ~0:05, claws ~0:27 | the chase and vista 0:01, the old burrback ~0:24, the trunk climb ~0:30 | the hollow oak (R7) | **the trap's throw** (a lamp that catches her and throws her) |
+| **2. The high wood** | from the crown: the canopy road east over R8 and R9, R15 boughs, R16 knot (its hub), R12 web, R13 grove and the canopy edge; optional R17 gallery | ~35 min | ***Gust*** ~1:06 | the web gauntlet ~0:48, the Weaver ~1:00 and the relight | the knot (R16) | bounce caps, crumbling bark, orb webs |
 
-| Area | Rooms | Median (range) | Abilities | Peaks | Hub |
-|---|---|---|---|---|---|
-| **1. The wood floor** (the current chunk) | R1–R10 as built, plus **R14 `wood-caps`** (new) | **35 min (30–40)**, from ~22 on paper | glide ~0:05, wall jump ~0:28 | the chase and vista 0:01, the glide test ~0:09, the old burrback ~0:25 | the hollow (R7) |
-| **2. The high wood** (the next chunk) | R11 climb, **R15 `wood-boughs`**, **R16 `wood-knot`** (the area's hub), R12 web, R13 grove and the canopy edge; optional **R17 `wood-gallery`** | **35 min (30–40)** | ***Gust*** ~1:06 (glade 3 at the canopy edge, the Weaver's reward) | the web gauntlet ~0:48, the Weaver ~1:00 and the relight | the knot (R16) |
+**Area 1 ends at the crown** (the cloud lifts off, and Tatter climbs up), and **area 2 starts at the crown**. Moved from
+area 1 to area 2 in draft 3:
+- bounce caps;
+- the lantern and its 2-hit, swinging ladder;
+- the canopy line (E-high, W-canopy, `dang-canopy`, R9's window).
 
-Area 1 ends with the crown payoff after wall jump; area 2 starts at R9's broken-face shaft. The wood's arc and three
-feelings stay, and the third ("my wings are getting stronger") gets a third beat: glide, claws, then a wingbeat
-strong enough to blow out a flame. *Reason: G2 (areas of 25–60 min), G3 (three abilities within 75 min), and the
-bar's §5.4 (the wood at 50–75 min in two areas).*
+R11 `wood-climb` is merged into R7b.
 
-**What the current chunk must add** to reach ~35 minutes with quality: more to do, never more walking (R5). Ranked;
-each line names the rubric item it fixes.
-
-1. **A third creature kind: the dangler** (C2, C13; shortfall 1). A small spider that drops on silk at a lit point,
-   with the thread shown first (the Weaver's P2 tell, small), swings once, hangs open for a cut, and climbs back. A
-   lamp-guarder: it only drops inside its lamp's light, and a snuff sends it up for good. Sim: the weaver's drop on a
-   small weaver (S). Ladder: alone over a safe floor in R14, then over a glide landing or a cap bounce, then under L1 in
-   R9 with the burrback below (the chunk's first two-creature combination). It rehearses the Weaver's drops 30
-   minutes before the fight.
-2. **A new terrain toy: bounce caps** (C2, R2; "flight is the joy"). Mushroom caps that throw her up when she lands
-   on them (a solid with a bounce number; the wood kit already lists mushrooms as buildings). Safe in R14, then a
-   hawker over a cap-bounce gap in R8, then reused in the high wood.
-3. **R14 `wood-caps`, the cap stair** (~4–5 min, 3–4 screens; purpose teach + secret). The hub's third branch: from
-   the hollow's root shelf, north-west and up toward the canopy. The caps and the dangler alone, then together; **the
-   wood's moth-stone** at the top, with a view across the canopy gap to the firefly's glow-cap from the other side; a
-   **moonlit hollow** behind rotten bark (quick wings: beat free in 2 presses), the chunk's secret a first-timer
-   misses; 2–3 lamps; and a drop back to the hub floor, so it is a loop. The hub becomes a real three-way choice
-   (C7: briefly unsure, never lost).
-4. **Grow R8 and R9** (R2, R3, R10; suspect 2: both are 3200×1600 boxes with one floor and one lamp). Each to ~4
-   screens with height and two lines through it. R8: the hawker's wick over a gap with bounce caps under it, and the
-   dark half keeps S1 and adds a firefly sign. R9: the lantern over a two-level floor, the burrback low and a dangler
-   high, and the broken-face shaft as it is.
-5. **Finds of four kinds** (C3; shortfall 3), from one optional find every ~5 min to one every ~2.5: +4–6 optional
-   lamps (R14, R8, R9), the moth-stone (R14), two firefly signs (under R6's gap 1, in R8's dark half) and the hollow
-   (R14). The first health milestone stays at 110 moths, in the Weaver's burst.
-6. **Return legs that aren't dead walking** (R5, C6; suspect 7). The walk back from R9's lock gets a cap-bounce
-   shortcut from R8's floor back up to the hub's arch, and the walk east after wall jump passes the R8 sign and a new
-   high line over R8's caps. Loops then: the grate, the cap stair's drop, R8's shortcut, and the optional R1–R5 return.
-7. **Tatter wants something** (C11; suspect 8). It walks the road and keeps getting stuck: at the hub it waits under
-   the root shelf it can't climb. When she cuts the hanging root at the top of the cap stair, the root falls as a
-   ladder, and from then on Tatter is ahead of her at the next patch. A flag gate and two Tatter positions (both
-   exist). A small story call, flagged for Matt (README).
-8. **Fix the measured forgiveness problems** (R7, R9, C8; suspect 5): W5's throw landing in gap 2's thorns, R6's
-   gap-3 skip by gliding on after W5, L1's hit and catch rates.
-
-**Target beat sheet for area 1** (first-timer minutes; the chunk iteration measures and corrects it): hatch, chase,
-vista 0:00–1:30 · wicks and burrow, the seed-cases, P1 1:30–5:00 · glide 5:15 · glidewalk 6:30–10:00 · the hub and
-the glimpse 10:30 · the cap stair 11:30–16:00 · the hawkers 16:00–19:30 · the lantern and the lock 19:30–23:00 ·
-the well and the old burrback 23:30–27:00 · wall jump 27:30 · climb-out and crown 28:00–30:00 · the optional R1–R5
-return or straight on up R9's shaft 30:00–35:00. About 18 novelties in 35 minutes (C1), 3 creature kinds and ~10
-challenge types (C2), ≥ 4 combinations (C2), ≥ 6 visible locks (C4), three loops (C6).
-
-**For the next chunk (area 2),** in outline: R15 `wood-boughs` (crumbling bark bridges above the canopy line, the
-**bombardier** on a ledge spitting arcs across them, a swinging lantern); R16 `wood-knot` (the area's hub: P5, a
-moth-stone, Tatter, three exits: the web hall, the optional R17 gallery with a sign and a hollow, and the landing
-of the edge drop); the **web gauntlet** in R12 (the orb web, a bombardier behind it and a dangler composed, Nine
-Sols' gauntlet before the boss); glade 3 (**Gust**) in the open moonlight at the canopy edge after P7; and **the
-edge drop**, one way back into the knot, past Gust's first old payoffs (R11's thorn niche, the web hall's high
-strands). Area 2 holds ~20 lamps.
-
----
-
-**Draft 2** answers paper review 1 (`reviews/wood-paper-1.md`) and uses the lamp lab's real lure numbers
-(`memory/lures.md`). Every reach number below was measured in the sim (headless probes on `step`, the way
-`tests/unit/glide.test.ts` does it), not taken from a straight line. What changed:
-- The hub well moved into an alcove off the walkway. Glade 2's climb-out now comes up through the hub floor and
-  carries on up the hub's up-shaft.
-- The pogo is taught as a ladder.
-- R8 is split into `wood-hawkers` and `wood-lantern`, and the second hawker is cut. That makes 13 rooms.
-- The glide gaps were re-derived from real trajectories. W4 and ledge M are gone, and gaps 2 and 3 are wider.
-- The Weaver is rebuilt: spokes only in P1, a smaller pull, three ring flames on a retry, and half-arena swings with
-  the safe spot opposite.
-- The wall-jump ladder escalates: broken faces, a rest ledge, and flat rooms in between.
-- R1–R5 reopen with wall jump.
-- Tatter walks; the glimpse happens in the hub; the relit flame sits on the critical path.
-- The leaks from §4 of the review are closed.
-
-**Units.** "R6" means room 6 in the §3 table. Px, a 64 px grid, a screen is 1920×1080. Room coordinates are local (x
+**Units.** "R6" means room 6 (Part A's table). Px, a 64 px grid, a screen is 1920×1080. Room coordinates are local (x
 right, y down, y = the top of a floor). The wood's kit has no double jump and no dash.
 
 **Measured reach** (default tuning, run speed 9.6 px/f, x past the lip when her feet are this far below launch):
@@ -130,274 +62,485 @@ right, y down, y = the top of a floor). The wood's kit has no double jump and no
   (8-way; outward from the flame only when nothing is held), then 50 frames of grace for that lure and for every
   core the throw passes through (feel review r1, 3834228). A catch needs her moving inward, or 4 frames in the core.
   Measured since: W1 → M 17 of 17, W5 → T3 8 of 8 holding right.
+- **To build** (core §3, the director's essential 1): the throw becomes a launch that letting go of jump never cuts,
+  and while she is caught its arc shows along the arrow.
 - **Snuff**: 9 frames of hitstop, 1 health back.
-- **Lanterns are static in the sim today.** The swing in this doc waits for the path-follow block, and every lantern
-  room works without it.
+- **Lanterns are static in the sim today.** They are area 2's now (the swing waits for the path-follow block).
 - The Weaver's heart is a new great-lamp row: R 700 in P1–P2 and 1100 in P3, core 72, pull 0.2 → 2.3, 3 hits.
 
 ---
 
-## 1. The wood's job
+# Part A. Area 1: the wood floor (draft 3, from the director's redesign)
 
-The wood teaches the game. In 35–45 minutes it turns a newborn moth who can only run, jump and cut into a flyer
-who glides, climbs, pogos and reads lamps and predators. It does this in the one place she'll ever think of as safe:
-close, dark and old, with the moon above the canopy. Its arc is **left behind → finds the lights are the problem →
-grows wings and claws → puts out the first great lamp**. The region ends when its sky clears for the first time, and
-a small warm light she has seen once before relights a flame in her path and flies off toward the valley. The three
-feelings it must deliver:
+Source: `docs/design/regions/wood-area1-director.md` (5e31bee), which owns the reasoning: the diagnosis, the
+references and the reviewers' questions. This part turns it into the build spec. Two builders are rebuilding the
+rooms from the director doc now, so **the room files own exact coordinates**. Positions below are kept-build numbers
+where a room is kept, and intent where it is rebuilt.
 
-1. **"I want to catch them."** The pull of the swarm leaving without her, kept alive by every cloud of moths she frees.
-2. **"Light is a trap, the dark is mine."** Every lit room is tense, every dark room is a breath, and every snuff
-   turns the first kind of room into the second.
-3. **"My wings are getting stronger."** Glide by minute 6 and claws by minute 19. Claws reopen places already seen:
-   the hub's shaft at once, then the high wicks of R3 and R4 and the hollow back into them.
+**Removed in draft 3** (stale; git history has them, 8e68f22 and earlier):
+- the old §1–§10 for R1–R10;
+- R14 `wood-caps` and the hub's cap climb;
+- the seed-cases;
+- the R9 lantern and the broken-face shaft;
+- the mid-air thorn branch;
+- the hub's alcove well and its lid;
+- W-hummock;
+- R6's critical-path bark wall;
+- the canopy line;
+- R11 `wood-climb`, now merged into R7b.
 
----
+## A1. The area's job
 
-## 2. Beat sheet and intensity
+**Through-line: up, back to the sky.** She is left behind by the swarm and falls into the wood after its stragglers.
+The wood floor is a dark bowl under a roof she can't get through, and the firefly's lights sit scattered across it.
+In the bowl's lowest point stands **the great hollow oak**, open inside all the way up to a ring of moonlight at its
+crown. **The way out is up the inside of the oak.** Every moth she frees flies there and spirals up and out, but
+her claws are too soft for its walls. The area is about getting up that trunk.
 
-Minute marks are a first-timer's (the first-timer agent as the reference player), on the expected route (hawkers
-before the well; see §3 for the other order), with 1–2 deaths at the old burrback and 1–3 at the Weaver. Intensity
-runs 0–10: 1 is resting at a moon patch, 5 is a normal lit room, and 9 is the Weaver's last phase.
+**Arc: wonder → smallness → wings → competence → the dark → claws → release.** It ends where it began, with a swarm
+leaving, but this time she sends it off herself, with Tatter beside her. A first-timer should be able to tell the
+area back in one sentence: "I fell into the wood and had to climb the big tree to get out, freeing moths on the way."
 
-| Min | Room | Beat | Int. | Kind |
-|---|---|---|---|---|
-| 0:00 | 1 hatch | Fade up, the cocoon row, break out (control by 8 s) | 1 | |
-| 0:10 | 1 hatch | The swarm overhead, the run, **the promise gap** (glide's lock) | 3 | |
-| 0:30 | 2 chase | Off the branch's end after the swarm, then the downhill chase | 4 | set piece 1 |
-| 1:00 | 2 chase | **The vista**: the swarm pours down into the valley's lamps. **Title over the moon** | 2 | vista |
-| 1:20 | 2 chase | Stragglers peel off the river and dive over the lip; she follows them down | 2 | |
-| 1:30 | 3 wicks | **First lamp**: the stragglers circle a wick; a jump across the dip is pulled in, caught, beaten free (the cocoon's input). A dead moth lies below. High up, another wick by a hanging trunk she can't climb (**wall jump's first lock**) | 4 | first catch |
-| 2:15 | 3 wicks | **First snuff** from a root knob: hitstop, the dark blooms, 5 moths fly with her | 5 | |
-| 3:00 | 4 burrow | **First predator** under a wick. It notices her only in its light. A down cut on its braced shell bounces her (**pogo intro**) | 5 | |
-| 4:15 | 4 burrow | **The seed-case gap**: a low root roof, two hard seed-cases, and the only way over is to pogo them. A miss lands on a floor | 5 | pogo, safe |
-| 4:45 | 4 burrow | **First moon patch, Tatter already resting there.** A wick glows on a high shelf (wall jump and glide) | 1 | rest |
-| 5:15 | 5 glade | Drop down the hollow and land in moonlight: **glide** ("Hold jump to glide") | 2 | glade 1 |
-| 6:00 | 5 glade | The only way out is a long glide over the chasm, unpulled | 4 | |
-| 6:30 | 6 glidewalk | A safe glide over a floor, the first glide wick on the landing | 4 | |
-| 7:30 | 6 glidewalk | A high line through a wick's pull, or a low line under it | 5 | |
-| 8:45 | 6 glidewalk | Test: a thorn branch over the jump's hump, thorns below; the low line onto a burrback's ledge | 6 | |
-| 9:45 | 6 glidewalk | **Rotten bark** on the critical path, and right after it a second, in the floor, hiding a wick | 3 | secret |
-| 10:15 | 7 hollow | **The hub.** Patch, Tatter. **The firefly's glimpse** in the canopy gap overhead: it hangs a glow-cap on a real branch and leaves | 1 | rest, story |
-| 11:15 | 8 hawkers | **First hawker** at a wick over a flat, safe floor. A dark half with a secret | 5 | |
-| 13:15 | 9 lantern | **First lantern** (2 hits), with only a burrback below | 5 | |
-| 15:00 | 9 lantern | The broken-face shaft: freed moths fly up it, and she can't | 2 | lock |
-| 15:30 | 7 hollow | Back to the hub, under the root shelf to the alcove, down the well (one way) | 1 | |
-| 16:00 | 10 well | **The old burrback** (mini-boss): only a pogo on its braced shell hurts it | 7 | mini-boss |
-| 19:00 | 10 well | **Glade 2: wall jump**. Climb out (a rest ledge halfway) | 2–3 | glade 2 |
-| 19:45 | 7 hollow | Up through the hub floor's grate and **straight on up the shaft she couldn't climb**: the crown wick, and the glow-cap she saw hung | 3 | payoff |
-| 21:30 | 8 → 9 | East through the dark rooms she cleared (a flat walk) | 1 | |
-| 22:30 | 9 lantern | The broken-face shaft: kick, glide across, catch the other face | 5 | |
-| 23:30 | 11 climb | Broken faces and thorn bands, a lantern bending the crossings, a hawker at the top wick | 7 | test |
-| 26:30 | 11 climb | **The look back** above the canopy: the hatching tree far off under the moon. Patch | 1 | vista, rest |
-| 27:00 | 12 web | **The orb web** strung across a wick; the weaver runs to where she touches it. Cut it from outside | 6 | |
-| 30:45 | 12 web | The approach: dark, silk thick on the trunks, warm light through them. Patch at the door | 1 | rest |
-| 31:00 | 13 grove | **The Weaver**, P1: glide to the ring flames between the spokes | 6 | boss |
-| 32:00 | 13 grove | P2: drops that swing half the arena; get to the far side and up a face | 8 | |
-| 33:00 | 13 grove | P3: lunges on the floor, pogo the abdomen, then the heart | 9 | |
-| 33–37 | 13 grove | Retries: patch to door in under 15 s, and a 30 s P1 on a retry | 7–9 | |
-| 37:00 | 13 grove | **The great lamp goes out**: the first sky clear, 60 moths, +1 max health, the silk curtain falls. **A small warm light relights an old husk in the chimney ahead of her** | 3 | set piece 2 |
-| 37:30 | 13 grove | Climb the chimney, snuff the relit flame in the climb. At the top she sees the firefly leave over the edge | 4 | |
-| 38:00 | 13 grove | Patch at the canopy edge. **Tatter walks up out of the chimney behind her** and sits. The exit vista: the valley, a flicker blinking, the mountain | 2 | vista |
-| 39:00 | → valley | A long glide off the edge, down into the valley | 2 | |
+**The three feelings** (the wood's, unchanged):
+1. **"I want to catch them"**: the stragglers, then the cloud at the crown.
+2. **"Light is a trap, the dark is mine"**: now a level rule (A5).
+3. **"My wings are getting stronger"**: glide, then claws. The oak's walls slide at 10:30 and hold at 27:00.
+
+**Five set-ups and payoffs** (the director's §2):
+
+| Set-up | Payoff |
+|---|---|
+| The crown ring, seen from the vista (1:20) and the hub floor (10:30) | She stands in it (32:00) |
+| Every freed cloud flies up the oak; the moth-stone's carving shows it | The crown cloud is every moth she freed, sized by the count |
+| The firefly hangs W-ff inside the trunk (10:30) | W-ff is the climb's last throw, and she snuffs it (29:30) |
+| Tatter can't climb (10:30) | She cuts the hanging root, and Tatter climbs up beside her (32:30) |
+| The lamp throws her (2:00 on) | The valley's Fling: "in the wood the trap throws you; in the valley you throw yourself" |
+
+## A2. Beat sheet and intensity
+
+First-timer minutes, *est.* (the director's calibration): ~31 on the critical path, ~35 with the finds a
+first-timer takes. Intensity runs 0–10.
+
+| Min | Room | Beat | Int. |
+|---|---|---|---|
+| 0:00 | R1 hatch | Cocoon, the swarm leaves past the moon, Tatter's failed hop, the run | 1–3 |
+| 0:40 | R2 chase | The fallen-trunk run. W-cave behind the landing (find) | 4 |
+| 1:20 | R2 chase | **The vista** (held beat, ≤ 150 f). Three layers: the valley's lights with the swarm breaking up, **the oak and its crown ring**, and the stragglers peeling down. **Title.** She drops over the lip | 2 |
+| 1:45 | R3 first lights | The stragglers circle W1. **Caught, thrown up onto M** (the fast line), or the dark dip (the slow line). A jump-cut frees them. The dead moth. W2 from the knob. W-hi3 by the hanging trunk (claws' first lock) | 4 |
+| 3:00 | R4 burrow | The **juvenile beetle**: 2 cuts. The adult under W3 notices her in the light; snuff and it sleeps | 5 |
+| 4:00 | R4 burrow | **The gap wick**: caught and thrown right onto F3 (aim matters), or the dark floor and the root tunnel. P1, Tatter ahead | 5 |
+| 4:30 | R4 burrow | **The bark floor** over the hole: three down-cuts, each one bounces her, and on the third it breaks | 4 |
+| 5:00 | R5 glade | Glide. W-alcove under the lip (find) | 2 |
+| 6:00 | R6 glidewalk | Gap 1, safe: walk off under the root roof | 4 |
+| 7:30 | R6 | Gap 2: **caught at W5, thrown, wings open** (fast), or a walk-off glide under the pull (slow) | 5 |
+| 8:30 | R6 | Gap 3: glide through the edge of W6g's pull, or get caught and thrown toward T4. Thorns on the floor only | 6 |
+| 9:30 | R6 | T4: the adult beetle under W6. Snuff on the pass and land in the dark, or fight. The oak's west door fills the frame | 6 |
+| 10:00 | R7 hollow | **The question.** P3, the moth-stone. Tatter under the trunk, looking up. **The glimpse**: the firefly hangs W-ff on the trunk's inner wall and darts out through the crown. Kicks slide. One way on: the east arch | 1–2 |
+| 11:30 | R8 clearing | Hawker A at W7 over the hummocks: tell, step aside, cut in the stall | 5 |
+| 13:30 | R8 | **Caught is prey**: the throw gap with hawker B diving at the orbit. Beat free early, aim out of its lane. Slow line: the root tunnel | 6 |
+| 15:00 | R8 | The bark mound hides the **moonlit hollow** (quick wings, find) | 3 |
+| 15:30 | R9 silk hall | **The dangler alone** over a cut spot on a safe floor | 5 |
+| 17:00 | R9 | A throw line beside a dangler's silk | 6 |
+| 18:00 | R9 | **The composition**: beetle on the floor, dangler over the only cut spot, one wick. One snuff sends both | 7 |
+| 19:30 | R9 | The dead end, a bark floor like R4's. She cuts down | 3 |
+| 20:00 | R10 root stair | Dark ledges west, glide gaps, two lit pockets with danglers over the landings | 4–5 |
+| 22:00 | R10 | **The pogo-wick**: drop and down-cut, snuff and bounce to the next ledge | 5 |
+| 23:00 | R10 | **The window**: the old beetle asleep on a carpet of wings, the moon column beyond. P-chute | 3 |
+| 24:00 | R10 pit | **The old burrback** (as built in 5cbd0a7) | 8 |
+| 26:30 | R10 glade 2 | The moon column falls onto her: **claws**. P4. The climb-out (rest ledge) | 2–3 |
+| 27:00 | R7 | Up through the root mesh. Tatter turns to watch. The walls hold | 3 |
+| 27:30 | R7b heart | Lower third: faces, the rest-ledge wick, a dangler from a knot-hole | 6 |
+| 29:00 | R7b | Middle third: **caught by W-ff, thrown across** the thorn band (or kick-glide through its bend); snuff it from the far face | 7 |
+| 30:00 | R7b | Upper third: the hawker hunting the crown wick dives across the shaft | 8 |
+| 31:00 | Crown | **P5**, the look-out (held beat): west to the hatching tree, east to the valley. Cut the root | 2 |
+| 32:00 | Crown | **The cloud lifts off** east. **Tatter climbs the fallen root** and sits beside her. East along the canopy: area 2 | 1 |
 
 ```
 Intensity, first run (one column = one minute)
- 9 |                                 #  #
- 8 |                                ## ##
- 7 |                ###     ##      #####
- 6 |        ##      ###    ### ### ######
- 5 |   ##  ### #### ###   #### ### ######
- 4 |  ### #### #### ###   #### ### ######
- 3 |# ### #### #### ### # #### ### #######
- 2 |########## ########## #### ### ########
- 1 |#######################################
-   +---------------------------------------
-    0    5    10   15   20   25   30   35
+ 8 |                        ##    #
+ 7 |                  #     ##   ##
+ 6 |        ##   ##  ##     ##  ###
+ 5 |   ##  ###  ### ###  ## ##  ###
+ 4 |  ### ####  ### ### ### ##  ###
+ 3 |# ### ####  ############## ####
+ 2 |########## #####################
+ 1 |#################################
+   +---------------------------------
+    0    5    10   15   20   25   30
 ```
+Four acts: the fall (0–6), the floor (6–20), the roots (20–27), the climb (27–33). Each rises, and the peaks are the
+pit and the trunk, never a teaching room. No stretch of the critical path goes more than 3 minutes without a threat,
+except the glade, the hub and glade 2's rest.
 
-There are three rising waves, each ending in a rest. The opening (0–10) peaks at the glide test. The middle
-(10–20) peaks at the old burrback, then dips through the crown payoff and the flat walk east. The climb to the boss
-(22–38) runs through the wall-jump test, the web and the Weaver. **Novelty:** the hatch (0), the vista (1), pull
-and Caught (1.5), the snuff (2.2), the burrback and the pogo (3), the seed-cases (4.2), glide (5.2), the high/low
-line (7.5), rotten bark (9.7), the hub and the firefly (10.2), the hawker (11.2), the lantern (13.2), the old
-burrback (16), wall jump (19), the broken face (22.5), the look back (26.5), the web (27), the Weaver (31) and the
-relight (37). That is one every ~2 minutes, with the longest gap 27 → 31.
+## A3. Room graph
 
----
-
-## 3. Room graph
-
-Thirteen rooms, twelve new, about 52 new screens of area (the hatch adds 10, mostly empty depth). That is more than
-world.md's ~32 because tall rooms count their empty air. Every room is ≤ 6 screens except R6 (6.5: three glide
-gaps and a return bough). There are seven moon patches. Ids are forever.
+Eleven rooms: R1–R10 plus R7b. R14 and R11 are gone, and R9 is rebuilt as `wood-silk`. No player saves exist yet,
+so the R9 id can change; `wood-lantern`, `wood-caps` and `wood-climb` are retired, never reused.
 
 ```mermaid
 flowchart LR
-  H["1 wood-hatch"] -->|drop| C["2 wood-chase: vista + title"]
-  C -->|drop| K["3 wood-wicks"]
-  K <--> B["4 wood-burrow: patch P1"]
-  B -->|hole| G1{{"5 wood-glade: GLIDE, P2"}}
-  G1 -->|glide| GW["6 wood-glidewalk"]
-  GW -->|rotten bark| HUB(("7 wood-hollow: HUB, P3"))
-  HUB <--> HK["8 wood-hawkers"]
-  HK <--> LN["9 wood-lantern"]
-  HUB -->|alcove well, one way| WL["10 wood-well: old burrback"]
-  WL --> G2{{"glade 2: WALL JUMP, P4"}}
-  G2 -->|wall, grate opens from below| HUB
-  HUB -.->|wall: up-shaft| CR["hub crown: wick, glow-cap, stub"]
-  LN -->|wall: broken face| CL["11 wood-climb: P5 at top"]
-  CL --> WB["12 wood-web: approach, P6"]
-  WB --> AR[["13 wood-grove: the Weaver"]]
-  AR -->|silk falls, chimney| ED["canopy edge: P7"] -->|long glide| V(["valley rim"])
-  GW -.->|wall: return bough| G1
-  G1 -.->|wall: hollow shaft| B
-  CR -.->|fling or DJ + glide| PG["postgame lamps"]
+  H["R1 wood-hatch"] -->|drop| C["R2 wood-chase: vista, the oak seen"]
+  C -->|drop| K["R3 wood-wicks: first lights"]
+  K <--> B["R4 wood-burrow: P1"]
+  B -->|bark floor| G1{{"R5 wood-glade: GLIDE, P2"}}
+  G1 -->|glide| GW["R6 wood-glidewalk"]
+  GW --> HUB(("R7 wood-hollow: the oak, P3"))
+  HUB <--> HK["R8 wood-hawkers: the clearing"]
+  HK <--> SK["R9 wood-silk: the silk hall"]
+  SK -->|bark floor, one way| WL["R10 wood-well: root stair, pit"]
+  WL --> G2{{"glade 2: CLAWS, P4"}}
+  G2 -->|climb-out, root mesh| HUB
+  HUB -->|claws: the trunk| HEART["R7b wood-heart: the oak's heart"]
+  HEART --> CROWN(["crown: P5, the cloud"]) --> A2(["area 2: the canopy road east"])
+  HUB -.->|mesh drop| G2
+  GW -.->|claws: return bough| G1
+  G1 -.->|claws: hollow| B
 ```
 
-| # | id | Screens (px) | Purpose | Exits | Gates | Lamps | Creatures | Patch | Secrets / later | Visible but locked |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | `wood-hatch` (built) | 10 (7424×2816) | Who she is, what she wants, how she moves | S drop | none | none | none | | | **The promise gap** (glide) |
-| 2 | `wood-chase` | 5.9 (6400×1920) | Flow and the chase; the vista and the title | N in, S out | one way down | none | none (the swarm) | | T3: a Moonflight lamp over the vista (later, data) | The valley's lamps across the gulf |
-| 3 | `wood-wicks` | 4.0 (3840×2176) | Pull, Caught and snuff by consequence | N in, E | N is one way in | W1, W2; W-hi3 (wall jump) | none | | | W-hi3 by the hanging trunk |
-| 4 | `wood-burrow` | 3.9 (4480×1792) | The blade against things: first predator, pogo intro and the required pogo | W, S hole | hole is one way down until wall jump | W3; W-hi4 (wall jump + glide) | burrback (4 hp) | **P1** (Tatter) | | W-hi4 on the high shelf |
-| 5 | `wood-glade` | 3.2 (2880×2304) | Glade 1; glide's lock room | N, E | glide to leave; wall jump back up the hollow and the east trunk | none | none | **P2** | | |
-| 6 | `wood-glidewalk` | 6.5 (5760×2368) | Glide: safe → combine → test; the secret language | W, E | glide gaps; rotten bark; return bough by wall jump | W4, W5, W6; W-pocket (secret) | burrback (5 hp) | | floor pocket | |
-| 7 | `wood-hollow` (hub) | 6.0 (3840×3248) | Rest, choice, the story beat, the lock board | W, E, S (alcove well), grate | well one way; up-shaft and grate by wall jump; far branch by fling or DJ + glide | W-crown; L-gap + W-ff (postgame) | none | **P3** (Tatter) | stubs: canopy log (T3+), drowned-roots wall (T2) | Up-shaft and its glow; the grate's moonlight; W-ff burning on the far branch |
-| 8 | `wood-hawkers` | 2.5 (3200×1600) | Hawker intro over a flat, safe floor | W, E | none | W7; S1 (secret) | hawker | | S1 | |
-| 9 | `wood-lantern` | 2.5 (3200×1600) | First lantern; the broken-face lock and the combine | W, N shaft | wall jump | L1; DJ wick (postgame) | burrback | | | The shaft, with moths flying up it; the DJ ledge |
-| 10 | `wood-well` | 3.0 (3840×1600) | Mini-boss (pogo combine), glade 2, the wall-jump lock room | N well in, N grate out | well walls refuse kicks; root gate | W8 | **old burrback** | **P4** | | |
-| 11 | `wood-climb` | 2.5 (2048×2560) | Wall jump test; the look back | S, E (top) | wall jump | L2, W10; S2 (risk niche) | hawker | **P5** | S2 | |
-| 12 | `wood-web` | 4.7 (4480×2176) | The orb web; the quiet approach | W, E (arena door) | wall jump (capped trunk) | W9; S3 (secret); DJ wick (postgame) | orb web + weaver | **P6** | S3; stub: fallen log south | DJ ledge |
-| 13 | `wood-grove` | 5.3 (4736×2304) | The Weaver; set piece 2; the exit vista | W, E (valley) | arena locks; silk curtain | great lamp (5 ring flames + heart); W-relit | **the Weaver** | **P7** (Tatter walks in) | | |
+**Three layers:**
+- **Canopy:** R1, R2, then the crown.
+- **Floor:** R3–R9 and the hub, sloping down east to the oak.
+- **Roots:** R10, under the hub and the east floor.
 
-**Order at the hub.** The hub floor runs unbroken from the west door to the east arch, and the well sits in a dark
-alcove under the entry's root shelf. Taking it means turning back on purpose. So the expected route is hawkers →
-lantern → (the lock) → well. Well-first still works: the old burrback's pogo exam is already taught in R4, and
-wall jump's lock was seen at 1:30 in R3, so its lead time is ≥ 13 min in either order. After glade 2 she comes up
-through the hub floor at the foot of the up-shaft (the far-side shortcut, opened from below), and the crown is one
-climb away.
+The moon is always east-north-east. Inside the oak the moon column falls straight down from the crown, through the
+hub and the root mesh, onto glade 2. `content/world.json` is the source of truth for placement. R7b sits above the
+hub, with its shaft continuing the hub's up-shaft, and the crown at world y ~4.7k (R3's floor height).
 
-**Loops and shortcuts.**
-- **The glade-2 loop:** hub alcove → well (one way) → pit → glade → climb-out → **grate in the hub floor, opened
-  from below** → the up-shaft. The grate is then a drop straight into P4.
-- **The return to R1–R5** (optional, with wall jump, ~5 min round trip from the hub; offered, never required):
-  1. R6's **return bough**: kick up the trunk at R6's east end, walk the canopy bough west, drop onto R6's entry.
-  2. Into R5 at Z, then kick up R5's east trunk and kick-glide west to the glade floor.
-  3. Climb the **hollow shaft** up through the hole into R4. W-hi4 is there, and W3 if it was missed.
-  4. West into R3: W-hi3, and W1 if it was missed. Back the normal way: R4's hole, R5's glide, R6.
+| # | id | Purpose | Lamps (CP / find) | Creatures | Patch | Locks seen |
+|---|---|---|---|---|---|---|
+| R1 | `wood-hatch` | Wonder and the want | none | none | | the promise gap |
+| R2 | `wood-chase` | The destination: the vista shows the oak | find: W-cave | none | | the crown ring |
+| R3 | `wood-wicks` | The light grabs you and throws you | CP: W1, W2; find: W-hi3 (claws) | none | | W-hi3 |
+| R4 | `wood-burrow` | The blade against things; light means seen | CP: the door wick, W3, the gap wick; finds: W-pocket, W-hi4 (claws + glide) | juvenile beetle, beetle | P1 (Tatter) | W-hi4 |
+| R5 | `wood-glade` | Wings | find: W-alcove | none | P2 | |
+| R6 | `wood-glidewalk` | The lamp joins the glide | CP: W5, W6g, W6; finds: W4, the floor pocket | beetle | P-t3 | the oak's door |
+| R7 | `wood-hollow` | The question | none (W-ff burns overhead in R7b) | none | P3 (Tatter), moth-stone | the walls; the crown |
+| R8 | `wood-hawkers` | Being caught is being prey | CP: W7, the throw wick; find: the moonlit hollow | hawker ×2 | P-dark | |
+| R9 | `wood-silk` | The dangler, then the predators together | CP: the dangler's wick, the throw wick, the pair wick; postgame: a DJ wick | dangler ×2, beetle | | |
+| R10 | `wood-well` | The dark under everything, the threshold | CP: pocket wicks ×2, the pogo-wick; find: W8 | dangler ×2, **old burrback** | P-chute, P4 | the window |
+| R7b | `wood-heart` | Everything at once, going up; release | CP: the ledge wick, W-ff, the crown wick; find: the bark knot; postgame: the crown lantern (Fling) | dangler, hawker | P5 (crown) | |
 
-  Nothing in R1–R4 can be missed for good.
-- **The return from the boss door to the hub**: a fall down R11 (~3 s), the R9 shaft, then walking through R9 and R8,
-  about 50 s.
-- **Stubs** (scenery only: no light, no ledge, no map marker): the canopy log in the crown roof (T3+), the seeping
-  root wall at the back of the hub's well alcove (T2 drowned roots, which opens from the marsh side), and a fallen
-  log heading south off the web hall's floor (an unassigned slot). T2 hooks to add in data later: the dash thorn run
-  (R11's top shelf) and the Shroud glass lamp (inside the drowned-roots cave).
+**Loops:**
+- **The big loop** is the area itself: hub → east floor → down R9's bark floor → west through the roots → under the
+  oak → up the root mesh into the hub → up the trunk. She circles around and under the place she first stood.
+- **The shortcut**: once she has climbed through it, the root mesh drops from the hub to P4.
+- **The optional return west** (claws, ~4 min): R6's return bough → R5's east trunk and hollow → R4 (W-hi4, plus W3
+  if missed) → R3 (W-hi3, plus W1 if missed). Its moths join the crown cloud, so the finds have a picture.
 
-**World placement** (world px, top-left; every seam lines up on these):
+**Stubs** (scenery: no light, no ledge, no marker): the drowned-roots wall moves from the cut alcove to the roots
+under the hub (R10's west hall). The canopy log stays in the crown's roof.
 
-| Room | x, y | Room | x, y | Room | x, y |
-|---|---|---|---|---|---|
-| 1 hatch | 0, 0 | 6 glidewalk | 21824, 8064 | 11 climb | 37184, 6208 |
-| 2 chase | 5760, 2816 | 7 hollow | 27584, 7168 | 12 web | 39232, 5952 |
-| 3 wicks | 11264, 4736 | 8 hawkers | 31424, 8768 | 13 grove | 43712, 4800 |
-| 4 burrow | 15104, 4608 | 9 lantern | 34624, 8768 | | |
-| 5 glade | 18944, 6400 | 10 well | 27584, 10416 | | |
+**Lost-risk and pull-back:**
+- **The hub:** it has one way on (the arch), and the glimpse names the goal.
+- **R8's throw gap:** the root tunnel is always there. A throw that fails lands on thorns, which cost 1 pip and send
+  her back to the near ledge.
+- **R9's dead end:** freed moths fly west while nothing goes east. The bark floor is the R4 move, so the floor
+  itself is the clue.
+- **R10:** the window shows the peak ahead of time.
 
-Forward is always east, so the migration line (which points at the great lamp until it is out, then at the exit)
-never points backward. For tech: the hatch's exit fires at `at` 1790, 1026 px above its south edge, so `enterRoom`
-places her at the top of `wood-chase` with her velocity kept.
+## A4. Teaching ladders
 
-**Where a first-timer gets lost, and what pulls them back within 2 minutes:**
-
-| Where | The risk | Pull-back (cheapest first) |
-|---|---|---|
-| R4 seed-case gap | Not knowing a down cut bounces | She has just bounced off the burrback's braced shell. A miss costs ~6 s (a floor and root steps back up). Moths drift up between the seed-cases |
-| R5 glade exit | A tapper never opens the wings | The item line says "hold". A catch costs nothing. After 2 catches render plays the wings-twitch acting cue on the lip |
-| R7 hub, first visit | Four ways out | The arch glows gold, Tatter faces it, the alcove is behind and under her. The glimpse pulls the eye up to the canopy gap (a lock, not a route) |
-| R9 east end | A dead end at the shaft (before wall jump) | L1's moths fly up the shaft ("up, later"). It's 35 s back to the hub, where the alcove's moonlight is the only new thing |
-| R12 web | Not knowing the web can be cut | One sector near the entry is already slack and cut. W9's trapped moths struggle in the strands |
-| R13 P2 | Standing on the near side as the swing comes | The thread tell draws the whole danger arc on the floor band for 45 frames, and the safe side is always the far one |
-
----
-
-## 4. Teaching the abilities
-
-The ladder from world.md §6, room by room. Failure costs climb with the step.
-
-| Step | Glide | Wall jump | Pogo |
-|---|---|---|---|
-| 0. Lock | 0:10, R1: the promise gap | 1:30, R3: W-hi3 by a hanging trunk. 4:45, R4: W-hi4 on a high shelf. 10:15, R7: the up-shaft. 15:00, R9: the broken-face shaft | (a verb from the start) |
-| 1. Intro / glade | R5: she lands in the moon shaft, so it can't be skipped. "Your wings have dried. Hold jump to glide" plus the glyph | R10 glade 2. "Your claws have hardened. Jump at a wall to climb" plus the glyph | R4: a down cut on the burrback's braced shell bounces her for free. A 192 px root step at its patrol's end makes a hop over its ram fall onto the shell |
-| 2. Lock room | R5: the only way out is 960 px of chasm with a 512 drop. A jump makes 717 ✗, a walk-off glide 1193 ✓, a jump-glide 1467 ✓. The chasm is a catch with no cost. No lamp pulls on this glide | R10: the well's walls refuse kicks, and the climb-out is the only way | R4 seed-case gap (required, safe): a root roof 288 over the floor caps the jump, two hard seed-cases sit 290 apart, and a miss lands on a floor 256 below |
-| 3. Safe | R6 gap 1: 800 px with a 448 drop over a safe floor. Jump 688 ✗, walk-off 1045 ✓, jump-glide 1319 ✓. W4 waits on the landing | R10 climb-out: 1472 px, two kickable faces, a rest ledge at the halfway point. It carries on up the hub's up-shaft to the crown (optional) | |
-| 4. Combine | R6 gap 2: 1024 / 512. The jump-glide's line meets W5's pull (caught, beat free holding right, land); the walk-off line passes under it | R9 broken face: the west face is kickable, then a 320 px thorn band. Kick across the 512 shaft (she meets the east face ~229 higher), carry on up it | R10: the old burrback. While it's braced, only a pogo on its shell hurts it (forward cuts clang) |
-| 5. Test | R6 gap 3: 1024 / 512. A thorn branch hangs over the jump's hump, so the jump-glide hits it and only the walk-off glide passes under. Thorns below, a burrback's ledge beyond | R11: two broken faces with alternating thorn bands, L2's field bending the crossings in the middle third, the hawker's dive lane over the top third | The Weaver's P3: the abdomen takes only pogos |
-| 6. Look back | W-hi4 in R4 needs glide too. The return bough's drop into R6 shows the ladder from above | The crown wick ~1 min after the key. Then (optional) the return to R1–R5: W-hi3, W-hi4, the hollow | |
-
-Glide's lock comes ~5 min before its key, not 10, because glide arrives at minute 5 (§11, decision 7). Wall jump's
-first lock comes 17 minutes ahead (13 on the well-first route), and its first payoff ~1 minute after.
-
----
-
-## 5. The lamp verb: introduction and escalation
-
-| Idea | Where | How the player learns it |
-|---|---|---|
-| Lamps pull moths in (demonstration) | R2 → R3 | The stragglers peel off the river, dive over the lip and circle W1 before she reaches it |
-| The pull | R3, W1 | W1 hangs 240 over the shelves, over a 256 px dip, spin −1. Measured: **5 of 5 run-up jumps across the dip are caught**, so no special row is needed. A walker only feels a drag (max 2.4 px/f, which she outwalks) |
-| Caught and beat free | R3, W1 | Three presses, the same input as the cocoon. The throw is steered by the held direction. The dip has a floor and a dead moth on it |
-| The snuff | R3, W2 | A 64-wide, 24 px root knob stops her and the drag. W2 hangs at chest height 112 px from her body centre (measured reach 120). 9-frame hold, the loudest beat |
-| Light means noticed | R4 | The burrback ignores her in the dark and notices her in W3's light |
-| A snuff scatters guarders | R4, W3 | W3 hangs 200 px up. A jump-cut snuffs it in 3–5 of 9 timings and is never caught. The burrback curls and sleeps |
-| The pull as a choice of line | R6, W5 | The high line meets the pull, the low line passes under it |
-| A snuff on a pass | R6 (W5, W6) | A cut while gliding. The flame box (20 half-size) plus 110 of reach |
-| A heavier flame | R9, L1 | 2 hits from a platform, jump-cuts (3–5 of 9 per cut). It swings once the path block exists |
-| A pogo off a flame | R9, L1 (optional), R13 heart | A down cut on a flame bounces her and counts as a hit |
-| A pull against walls | R11, L2 | Kick-glides across the shaft get bent by its field |
-| Light makes a trap of something else | R12, W9 | The web hangs in the light because moths come to it. The pull drags her toward the hub where the weaver waits |
-| Pulls from every side | R13 | Five ring flames, then the heart |
-
-**Escalation: wick → lantern → overlapping fields → the grove.** Wicks with no threat (R3), then a wick with a
-ground guarder (R4), then wicks on glide lines (R6). Then the lantern with an old creature (R9), the lantern plus
-walls and a wick above it (R11, the fields just touch), a lamp plus a creature's trap (R12), and finally the ring and
-the heart (R13). Every lamp is snuffable, and none is a required fling point, so core's permanence rule holds.
-
----
-
-## 6. Encounters
-
-**Creature ladder** (introduce alone near a safe floor, then pair with a lamp, then with a second kind; never a new
-creature and a new lamp kind in the same room):
-
-| Creature | Intro | Develop | Twist | Conclude |
+| | Lock / intro | Safe / develop | Combine / twist | Test / conclude |
 |---|---|---|---|---|
-| Burrback | R4: alone under W3, 4 hp, a long safe floor | R6: on T4 after a glide landing, 5 hp | R9: under the first lantern | R10: the old burrback |
-| Hawker (the lampwing's sim on the dragonfly look) | R8: alone at W7 over a flat safe floor, 3 hp | R11: at W10 in the climb's top third (dodge by moving on, which on a wall means kicking away) | | (valley) |
-| Orb web + weaver | R12: one web, one wick, a safe floor | | | R13: the Weaver |
-| Old burrback | R10: mini-boss, 10 hp, a 260 px ram, two braces in a row (a feint). **While braced only a pogo lands** (forward cuts clang); after a wall stun (90 f), cuts land. As a mini-boss it ignores the lit rule (the pit is its den) | | | |
-| Firefly | R7: the glimpse (4 s, a path and a slow pulse, no hitbox) | | | R13: the relight |
+| **Lamp: caught, thrown, snuffed** | R3: W1 catches her (measured 17 of 17). The throw lands her on M holding right, or back west holding nothing (free) | R4: the gap wick, where aim matters. R6 gap 2: throw, then open the wings, the longest line in the area | R8: hawker B dives at the orbit. R9: the throw line passes a dangler's silk | R7b: throws are the road up, and the last one is W-ff's |
+| **Glide** | R5: the glade (unchanged) | R6 gap 1: 800 / 448 walk-off under the root roof | R6 gap 2: throw plus glide. Gap 3: a glide bent by W6g's edge (pull ×0.6 on a gliding body) | R10's stair: dark glide gaps whose landings are lit only by danglers' wicks. R7b: kick-glides bent by W-ff |
+| **Claws** | Locks: R3's hanging trunk (1:45), and the oak's walls by hand (10:30) | Glade 2 (26:30). The climb-out has two faces and a rest ledge | Through the hub: the lock she stared at is now the road | R7b: faces, thorn bands, a throw where a face ends, a hawker over the top third |
+| **Pogo** | R4: down-cut the bark floor (each cut bounces her, a miss costs nothing). Optional: a down-cut flame or a braced shell | R10: the pogo-wick (required, safe; a miss lands on a floor) | The old burrback: while braced, only the pogo hurts it | (area 2: the Weaver's P3) |
 
-**Density** (threat points: burrback 1, hawker 1.5, web + weaver 2, old burrback 4; lint at ≤ 1.5 a lit screen):
+Two notes on these ladders:
+- **Lead times:** the claws' first lock comes ~25 minutes before the key, and the trunk lock is met by hand 16
+  minutes before.
+- **The pogo:** it is never a required skill check before minute 20. The seed-case gap is cut.
 
-| Room | Light | Threats | Points / lit screen |
+## A5. The lamp verb and the light/dark rule
+
+**Light is the fast line, the dark is the slow line.** Every critical-path room with a lamp also has a dark way: a
+lower floor, a root tunnel, a longer climb. The dark way is safe, slower and pays nothing. This one rule does three
+jobs:
+- it makes the lamp the critical path for anyone who moves fast;
+- it meets core's permanence rule, because a snuffed lamp never strands her;
+- it turns the old hard gates into a choice of risk.
+
+**The throw lamp can't be snuffed until she has used it** (it sits beyond reach from the near side). So at a throw
+lamp she faces its hunter, and the snuff from the far side is the reward. **Freed moths fly to the oak** along each
+room's migration line, never into the HUD counter (core §3).
+
+## A6. Encounters
+
+**One predator for each moment of the lamp verb** (creatures.md rule 8):
+
+| Predator | Real detail | It punishes | Placed |
 |---|---|---|---|
-| 1, 2 | dark | none | 0 |
-| 3 | lit (teaching) | none | 0 |
-| 4 | lit west, dark east (patch) | burrback | ~0.5 |
-| 5 | dark (glade) | none | 0 |
-| 6 | lit | burrback | ~0.3 |
-| 7 | dark (hub) | none | 0 |
-| 8 | lit west, dark east | hawker | ~1.2 |
-| 9 | lit | burrback | ~0.6 |
-| 10 | pit (mini-boss), glade dark | old burrback | (boss) |
-| 11 | lit shaft, dark top | hawker | ~0.9 |
-| 12 | lit hall, dark approach | web + weaver | ~0.7 |
-| 13 | boss, then the dark edge | the Weaver | (boss) |
+| **Beetle** (burrback; the juvenile and the old one are rows of it) | Ground beetles eat the moths that fall under lights | landing and walking | in the light's pool, on a throw's or glide's landing |
+| **Dangler** | Spiders drop on silk where moths circle | stopping to snuff | over the cut spot |
+| **Hawker** | Dragonflies hunt the circling at dusk | being caught | in the air around a throw lamp; it dives at the orbit |
 
-Lit and dark alternate, and a still, dark, safe moment is at most 3 rooms apart. No creature is in sight of a moon
-patch. No door opens inside a pull field or a notice range.
+**Escalation** (~16 instances on the critical path, plus the mini-boss). Every predator on the critical path must be
+able to bite a player who takes the fast line.
+
+| Step | Where | What |
+|---|---|---|
+| 1. Fodder | R4 | The juvenile beetle (2 hp, no brace, a short ram) |
+| 2. One predator, one lamp | R4, R8 west, R9 west | Beetle under W3; hawker A over the hummocks; the dangler alone |
+| 3. On a moving line | R6 T4, R8 east, R9 | Beetle on a glide landing; hawker B at the throw lamp; a dangler beside a throw line |
+| 4. Two, one lamp | R9 | Beetle on the floor plus a dangler over the cut spot |
+| 5. In the dark | R10 stair | Danglers in the only lit pockets, over glide landings |
+| 6. The exam | R10 pit | **The old burrback** as built (5cbd0a7: 2×, an earned window, pogo on the brace). It ignores the lit rule |
+| 7. Everything, going up | R7b | A dangler on the rest ledge, W-ff as the road, a hawker across the shaft |
+
+**What has to be built** (the director's §5, essential):
+1. The throw is a launch, no longer cut by letting go of jump, and its arc shows while she is caught.
+2. Freed moths fly to the oak, and the crown cloud is sized by the count.
+3. The juvenile beetle as a tuning row.
+4. The hawker's prey rule: it starts its tell at once when she is caught in its lamp's light, and aims at the orbit.
+
+## A7. Room specs
+
+### R1 `wood-hatch` (kept; 0:00–0:40)
+As built. Fixes:
+- The trunk in front of the second gap reads as a wall, so push it behind the play plane or darken it.
+- Give the cocoon one visible prompt.
+
+### R2 `wood-chase` (kept; 0:40–1:40)
+As built: the fallen-trunk run, two real drops, the lookout V2, and W-cave in the trunk hollow. The vista is a held
+beat on V2 (≤ 150 f) framing three layers: the valley's lights with the swarm, **the oak with its crown ring** in the
+hollow below, and the stragglers. Everything east of the lip is the south exit.
+
+### R3 `wood-wicks`, "the first lights" (reworked; 1:40–3:00)
+- **The stragglers circle W1** (1280, 720, spin −1) over the dip. The dip's far wall is too tall to climb from the
+  dip floor.
+- **The fast line:** jump at W1 from L, caught (17 of 17). Beat free holding right and the throw lands her on M.
+  Holding nothing throws her back west, at no cost.
+- **The slow line:** the dip floor runs on east under M to root steps that come up at the knob, ~6 s longer.
+- **The first snuff:** a jump-cut on W1 from M frees the stragglers. The dead moth lies in the dip.
+- W2 from the knob is kept as a standing cut.
+- The hanging trunk and W-hi3 (claws' first lock) are kept, and so is the root knot landmark.
+
+### R4 `wood-burrow` (reworked; 3:00–5:00)
+- **The juvenile beetle** under a small wick by the door: 2 cuts, no brace (the crawlid slot).
+- **The adult** under W3 (brace, the amber shell). It notices her only in W3's light. A jump-cut from the root step
+  snuffs W3 and the adult curls up asleep: the room's centre.
+- **The gap:** the seed-cases are cut. A wick hangs over the gap with no creature near it. Caught and thrown right,
+  she lands on F3: the throw's second use, where the aim matters.
+  - The slow line is the dark lower floor (1472), with a low root tunnel east under F3 to steps up.
+- **P1**, with Tatter ahead of her.
+- **The bark floor over the hole** is the way down. Three down-cuts from a hop, each one a bounce (the pogo, learnt
+  where a miss costs nothing). The third breaks it and she falls into the glade.
+- Finds: W-pocket behind the door bark (kept), and W-hi4 from shelf H (claws + glide, kept for the return).
+
+### R5 `wood-glade` (kept; 5:00–6:00)
+As built: the bask, glide, the lip over the chasm (960 / 512), and W-alcove under the lip. The east trunk and the
+hollow are climbable with claws (the return).
+
+### R6 `wood-glidewalk` (reworked; 6:00–10:00)
+- **Gap 1 (safe):** the walk-off under the root roof (kept: 800 / 448, the rungs, the gap1 camera zone). W4 on T2
+  stays as a find.
+- **Gap 2:** the high line is caught at W5 and thrown, and her wings open: throw plus glide reaches T3 (8 of 8
+  holding right). The low line is a walk-off glide under the pull.
+- **Gap 3:** the thorn branch is cut. **W6g** hangs over the gap so that a glide passes through the edge of its pull
+  (a gliding body takes ×0.6). Steer through the bend, or get caught and throw out toward T4. Thorns on the floor
+  only.
+- **T4:** the adult beetle under W6. Snuff W6 on the pass and land in the dark with the beetle asleep, or land in its
+  light and fight. From T4, the oak's west door fills the frame.
+- The CP bark wall is cut (bark now means "a way down / something behind"). The floor pocket is kept as a find.
+- P-t3, the return bough and T-ret are kept.
+- The firefly sign under gap 1 moves to the trunk's foot (R7).
+- Fix: the one-held-input crossing via W5's slingshot (feel r2 #6).
+
+### R7 `wood-hollow`, the hub, "the hollow oak" (reworked; first visit 10:00–11:30, second 27:00)
+- She enters at floor level from R6. The **alcove well and its lid are cut**, and so are the cap climb (B1–B3, NW)
+  and the canopy-gap far branch.
+- **P3** and **the moth-stone** (moved from R14): it draws the area on the map, with the roots faint below. Its
+  carving shows moths climbing a tree.
+- **Tatter** sits under the trunk, looking up.
+- **The glimpse** (a held beat; flag `wood-firefly-glimpse`): the camera looks up the trunk. A warm light hangs
+  **W-ff** on the trunk's inner wall about two thirds up (in R7b), pulses twice, and darts out through the crown. W-ff
+  then burns overhead all through act 2.
+- **Firefly sign 1**: a ring of picked glow-cap stumps at the trunk's foot.
+- The trunk's walls slide when she kicks: the lock, met by hand. The **root mesh** in the floor (one-way, `noDrop`)
+  glows with moonlight from below.
+- **One way on: the east arch.** This is Dirtmouth, not a crossroads. Every freed cloud in the area flies in and
+  spirals up the trunk.
+- **Second visit:** she comes up through the mesh, and Tatter's look-up turns to watch her. The walls hold, and the
+  up-shaft leads into R7b. After that the mesh is a drop back to P4.
+
+### R8 `wood-hawkers`, "the hawkers' clearing" (reworked; 11:30–15:30)
+- **West half:** hawker A at W7 over the hummocks, a safe floor. W-hummock is cut. Its strike (34–40 f) teaches the
+  tell: step aside, cut it in the stall.
+- **East half, the throw gap:** a wick high over a thorn-floored gap, hunted by hawker B.
+  - The fast line: get caught. While she orbits, B tells and dives at the orbit. Beat free before the strike and aim
+    the throw out of its lane onto the far ledge. Snuff the wick afterwards from the far ledge with a jump-cut, and B
+    leaves.
+  - The slow line: a dark root tunnel under the gap (no lamps, ~15 s longer).
+- **Find:** the dark half's bark mound now hides the **moonlit hollow** (quick wings: beat free in 2 presses) in
+  place of W-bark. It pays straight away, since every later throw lamp and hawker is easier.
+- P-dark is kept. The open ceiling stays: area 2's canopy road crosses above.
+
+### R9 `wood-silk`, "the silk hall" (replaces `wood-lantern`; 15:30–19:30)
+A tall hall with silk hanging from the canopy into the light.
+- **The dangler alone:** a wick over a knob-like cut spot on a safe floor. The thread shows first, then it drops on
+  the spot she must stand on. Step back, let it drop, cut it while it hangs, or snuff from a jump.
+- **The throw line:** a throw wick whose best line passes beside a dangler's silk. Wait out its drop, or take the
+  dark floor under it.
+- **The composition** (on the critical path): an adult beetle in the light's pool, a dangler over the only cut spot,
+  one wick. One snuff sends both away.
+- **Firefly sign 2** in the dark half: a half-hung string of glow-caps.
+- **The dead end:** a bark floor like R4's, which takes plain down-cuts from standing, each one a bounce. Her freed
+  moths go west, and nothing goes east. It drops her into R10's stair (one way).
+- Postgame: one DJ wick on a high ledge in the hall (a slick stalk, ≥ 800 px from any face she can kick off). The
+  open ceiling stays for area 2.
+
+### R10 `wood-well`: the root stair, the pit, glade 2 (reworked; 20:00–27:00)
+- **The root stair** (the chute, kept): dark ledges stepping down west with glide gaps, and **two lit pockets**, each
+  a wick with a dangler over its landing.
+- **The pogo-wick** (new; required, safe): a wick hung just under a ledge's lip, so the natural way on is to drop and
+  down-cut. It snuffs and bounces her to the next ledge. A miss lands on a floor below.
+- **The window:** a gap in the roots where the camera holds a beat. Below, the old burrback sleeps on a carpet of
+  wings. Past it, the moon column lands on glade 2.
+- **P-chute** at the pit door: a death costs a short walk.
+- **The pit:** the old burrback as built, sealed to the roof, with the gate floor to roof.
+- **Glade 2:** the moon column falls the whole height of the trunk. "Your claws have hardened." P4. W8 behind the gate
+  (find).
+- **The climb-out:** both faces and a rest ledge, up through the root mesh into the hub. The west hall holds the
+  drowned-roots stub.
+
+### R7b `wood-heart`, "the oak's heart" (new; ~2048 × 2600 above the hub; 27:30–31:00)
+The hub's up-shaft continues into it.
+- **Lower third:** two kickable faces and a rest ledge with a small wick. A dangler drops from a knot-hole onto the
+  ledge's cut spot.
+- **Middle third:** **W-ff** on the inner wall, with a thorn band on the near face above it. The way on is to be caught
+  by W-ff and **thrown across** to the far face's holdable band, or to kick-glide across through its bend. Then snuff
+  it from the far face: the glimpse's payoff and the area's last throw.
+- **Upper third:** the open crown. A **hawker** hunts the crown wick and dives across the shaft while she kicks.
+- Find: a bark knot with a wick. Postgame: the **crown lantern** burns across the crown gap (Fling).
+- **The crown:**
+  - **P5** and the held look-out: west to the hatching tree, east to the valley.
+  - **The hanging root:** one cut and it falls down the trunk.
+  - **The cloud:** every moth she freed circles the crown, sized by the count, and lifts off east.
+  - **Tatter** climbs the root and sits beside her.
+  - She can't follow the moths up. She goes east along the canopy road (area 2).
+
+## A8. Finds and completion
+
+| Kind | Area 1 |
+|---|---|
+| Critical-path lamps (19 wicks, 95 moths) | W1, W2, the door wick, W3, the gap wick, W5, W6g, W6, W7, R8's throw wick, R9's three, R10's two pockets and the pogo-wick, R7b's ledge wick, W-ff, the crown wick |
+| Optional lamps (9 wicks, 45 moths) | W-cave, W-pocket, W-hi3, W-hi4, W-alcove, W4, R6's floor pocket, W8, R7b's bark knot |
+| Postgame (15 moths) | the crown lantern (Fling, 10) and R9's DJ wick (5) |
+| Other finds | the moth-stone (hub), two firefly signs (the trunk's foot, R9's dark half), the moonlit hollow (R8, quick wings) |
+
+**First-run total: ~140 moths.** The crown cloud is the player's own count, and that is the finds' meaning. The first
+health milestone stays a fixed count (110). A player who takes about three of the finds crosses it in the trunk
+climb, so it lands with the cloud. A critical-path player crosses it in area 2's first lamps. Bots must snuff ≥ 9
+critical-path lamps.
+
+## A9. Metrics targets
+
+| | Target |
+|---|---|
+| First-timer, critical path | 28–34 min (~35 with finds) |
+| Wall jump | 25–28 min |
+| Critical-path snuffs (every bot persona) | ≥ 9 |
+| Longest critical-path stretch with no threat | ≤ 3 min (only the glade, the hub, glade 2) |
+| Tries for anything before 6:00 | ≤ 3 |
+| Each critical-path predator | bites a fast-line bot at its moment (beetle at a landing, dangler at a cut spot, hawker while she is caught) |
+| Lost | ≤ 2 min anywhere, ≤ 60 s at the hub |
+| Deaths | in the pit and the trunk, none in R1–R3 |
+
+Per-room first-timer minutes come from the beat sheet (A2) ± 30%. Reviewers also answer the director's 13
+experience questions (director §7) from a first-timer's video or journal and their own play.
+
+## A10. Exit criteria, and what we cut first
+
+Area 1 is done in grey when all of these hold:
+1. The bots and the first-timer agent finish with no softlock and no skip of the pit's gate, the mesh or the trunk.
+2. A9's targets hold.
+3. The one-sentence test passes for a first-timer.
+4. The light/dark rule holds in every critical-path room with a lamp (a dark way exists, is slower, and pays nothing).
+5. **Matt plays it and says it's fun.**
+
+**Cut first if it runs long:**
+1. The optional return west (then force W1 and W3 onto the path).
+2. R9's throw-line beat.
+3. R10's second lit pocket.
+4. R7b's bark knot.
+
+**Never cut:** the oak's question, the throw as the critical path, the window, the pit, W-ff's throw, Tatter's root,
+the crown cloud.
+
+## A11. Decisions (area 1)
+
+The director's calls are adopted whole. Mine on top of them:
+1. **R9 becomes `wood-silk`**, and the ids `wood-lantern`, `wood-caps` and `wood-climb` are retired, never reused.
+2. **R7b `wood-heart` is a room of its own** above the hub, so the hub stays a ~6-screen room.
+3. **The drowned-roots stub** moves to R10's west hall, since the alcove is gone. journey.md's drowned-roots escape
+   now breaks out up through the root mesh into the hub.
+4. **Postgame hooks in area 1:** the crown lantern (Fling) and one DJ wick in R9. The old canopy-gap far branch, its
+   L-gap and R9's lantern-room DJ ledge are gone.
+5. **The first health milestone stays at 110** and is no longer promised at the Weaver's burst. Where it falls depends
+   on the finds (A8).
+
+---
+
+# Part B. Area 2: the high wood (kept from draft 2; rewritten when its chunk starts)
+
+**Moved here from area 1 in draft 3** (the director's §3):
+- **Bounce caps** become area 2's toy, with a full ladder.
+- **The lantern** gets its 2-hit, swinging ladder here: a lantern on the canopy road (the old climb's L2), then the
+  boughs' swinging lantern.
+- **The canopy line** is area 2's first route east from the crown, over R8 and R9 (which become a look back from
+  above): E-high, W-canopy, `dang-canopy`, R9's window. R8 and R9 keep open ceilings for it.
+- **R11 `wood-climb`** is merged into R7b. Its wall-jump test and look back are area 1's now. Where the outline below
+  says "R11's thorn niche", read R7b's thorn band, or a niche on the canopy road.
+
+The first health milestone (110) is no longer promised at the Weaver's burst (A8). The specs below are draft 2's and
+predate the rescope's R15–R17. They stand until area 2's chunk iteration rewrites them.
+
+**Area 2 in outline** (the rescope's, kept): R15 `wood-boughs` (crumbling bark bridges above the canopy line, the
+**bombardier** on a ledge spitting arcs across them, a swinging lantern); R16 `wood-knot` (the area's hub: P5, a
+moth-stone, Tatter, three exits: the web hall, the optional R17 gallery with a sign and a hollow, and the landing
+of the edge drop); the **web gauntlet** in R12 (the orb web, a bombardier behind it and a dangler composed, Nine
+Sols' gauntlet before the boss); glade 3 (**Gust**) in the open moonlight at the canopy edge after P7; and **the
+edge drop**, one way back into the knot, past Gust's first old payoffs (R11's thorn niche, the web hall's high
+strands). Area 2 holds ~20 lamps.
+
+
+### 12 `wood-web`: the orb web and the approach (4480×2176; purpose: teach + rest)
+```
+ 640                                           ══DJ══(wick)
+ 896 [W]═entry═╗          ╭──web r640──╮
+1024           ║S3▐      │    (W9)    │      ╔cap╗══approach══[P6]══[E door]
+1344           ║bark    │   weaver    │      ║trunk 3200 (kickable to 1024 only)
+1600           ╚═══ hall floor 768-3200 ═══════╝   ↓stub log
+```
+- Entry ledge (0–768, y 896) → drop to the hall floor (768–3200, y 1600), safe all the way.
+- **The orb web**: a disk of radius 640 centred on **W9** (1984, 960), anchored to the canopy, two root columns and
+  floor stakes. It fills the hall from y 320 to the floor. Touching it is Caught (a creature's Caught): the weaver
+  runs out at 5 px/f and bites after a 24-frame count, 1 damage. Cuts from outside sever strands, and the weaver
+  senses touches, not cuts.
+  - CP: **cut the lower-west sector** (~6 cuts) to open a doorway at floor level. One sector near the entry already
+    hangs cut.
+  - Options: snuff W9 (the weaver disperses and the web goes dark and harmless), or glide through an outer cell.
+- **S3**: a rotten-bark panel in the hall's west wall (768–832, y 1088–1344), one kick up, with an alcove under the
+  entry ledge holding a lantern.
+- The trunk at 3200 is kickable from the floor to 1024 and **capped there with an overhang**. It climbs 576 to the
+  approach shelf (3328–4480, y 1024).
+- **The approach**: dark, quiet, silk thick on the trunks. **P6** at 4096, no Tatter. The arena door is the E exit,
+  floor level.
+- **DJ ledge** (3584–3840, y 640, slick faces): 384 over the shelf (a double jump reaches it). The capped trunk stops
+  a kick-glide.
+
+### 13 `wood-grove`: the Weaver and the canopy edge (4736×2304; purpose: boss + exit)
+- **Arena** at x 0–2176: the Weaver spec below. The camera locks until `wood-weaver-down`.
+- **Chimney**: the silk curtain on the east trunk (y 1344–1600) opens onto a chimney (2176–2560, kickable both
+  faces). It climbs ~960 to the edge shelf (2560–4736, y 640). **W-relit** hangs at (2368, 1100), mid-chimney: its
+  field covers the chimney, so she is pulled or caught in the climb and snuffs it there (critical path). As she tops
+  out, the firefly crosses the frame and leaves over the edge.
+- **The edge**: **P7** at 3200. While she rests, **Tatter walks up out of the chimney** (insects climb bark) and sits
+  beside her: her victory opened its road. The **exit vista** (camera lift): the valley below and the mountain
+  larger than at the title. One flicker lamp far off blinks the firefly's rhythm (three short, one long). E exit at
+  the shelf's end: a long glide down into the valley's arrival room.
+
 
 ### The Weaver (greybox spec)
 
@@ -437,546 +580,65 @@ of it is on screen; if the camera has no zoom, trim it to 1920×1080 inside the 
   attack has a punish window, and every tell reads with the sound off. A death re-forms her at P6, under 15 s from
   the arena, and on a retry P1 is the three-flame version. There are no pits.
 - **Ending (set piece 2):** input held ≤ 3 s. The heart dies, the wood's sky clears, all 60 moths burst out (the ring
-  flames' moths had fed the heart), and the count crosses the first health milestone (§8). The silk curtain on the
+  flames' moths had fed the heart), and the count may cross the first health milestone (A8). The silk curtain on the
   east trunk falls. A small warm light darts in through the opening and relights **an old glow-cap husk halfway up
   the chimney** (`wood-grove:wick-relit`); five freed moths are pulled back into it. Flags `wood-weaver-down`,
   `wood-relit`.
 - **Fallback** (only if a real attempt fails): cut P2 (P1 → P3); the web stays a fixed graph.
 
----
 
-## 7. Room specs
+### Area 2 lamps (draft 2's, unchanged)
+`wood-web:wick-web` (CP), `wood-web:lantern-bark` (secret, 10), `wood-web:wick-high` (postgame DJ),
+`wood-grove:great` (5 ring flames + heart, 60), `wood-grove:wick-relit` (CP, in the chimney). The rescope's R15–R17
+add ~15 more (area 2 holds ~20 lamps).
 
-Approximate dimensions, main floors, gaps with measured reach, lamps, creatures, the critical path (CP), optional
-paths, camera. Snap to the 64 grid and keep the margins. Every room gets a `purpose` tag in data, and `edgeKick:
-false` unless a spec says otherwise (room edges are never a climb).
-
-**Terrain the sim doesn't have yet** (needed by these specs):
-- **Thorns**: a hazard rect, 1 pip and back to the last safe ground.
-- **Seed-cases**: non-solid hit targets that never break, so a down cut always bounces. They behave like a pod with
-  `blocks`.
-- **Rotten bark**: a breakable solid, 3 hits; a floor panel takes down cuts.
-- **The grate**: a one-way floor that opens from below.
-- **The silk curtain**: a solid cleared by a flag.
-
-### 1 `wood-hatch` (built, kept)
-As built (`memory/rooms.md`): 7424×2816, exit `drop` on the south edge, x 6144–7424, `at` 1790. It leads into
-`wood-chase` once stage 1 lands.
-
-### 2 `wood-chase`: the chase, the vista and the title (6400×1920; purpose: set piece)
-```
-y 0   [N in: x 384-1664]
- 704  ═══A══════════════╗       (A reaches 2048: a run off the hatch's end lands on it)
- 832                    ║  ═══B════════╗
- 960                                   ╚═C══════  (twig line, one-ways y 768 over C)
-1024                                         gap ═══D═══════╗
- 896                                                        ╚═V═══════|lip 5760  VISTA
-1920 ═══════ catch (x 256-5056, y 1600+) ═══════════════════════[S out: 5760-6400]
-```
-- **As built (round 1):** A (256–1600, y 704) → **the fallen trunk** (1600–3328), rolling down from 704 to ~960: she
-  runs its back → a **real drop** of ~330 over a 128 gap → E (3456–4480, y 1280) → a second real drop of 320 →
-  the lookout V2 (4608–5760, y 1600). A twig line (one-way 3584–4224, y 1056) is the high line over E. A **trunk
-  hollow** behind the landing (64–256 × 448–704) holds **W-cave**, a jump-cut from its floor (the chunk's first
-  find, ten seconds in, and the up-cut taught where nothing can catch her: 114 over its floor, a standing up-cut
-  from under it). A trigger on V2 (`vista`, 4800–5184 × 1344–1600) sets `wood-vista` so the vista plays once per
-  save (staging). Catches 200 above the room's foot (the camera keeps her in frame). Landmark: the fallen
-  trunk. The vista zone frames V2 (bounds 4416–6400 × 576–1920).
-- (Paper) A (256–2048, y 704) → gap 256, drop 128 → B (2304–3200, y 832, rolling) → step down 128 → C (3200–3840, y 960) →
-  gap 320, drop 64 → D (4160–5056, y 1024) → step up 128 → V (5056–5760, y 896). Every gap ≤ 320, every step ≤ 128.
-  No thorns, no pips. A fall between boughs is a catch.
-- **The vista**: a camera lift from x 5000. On V the camera holds ~2 s (input free after 1 s), the swarm pours into
-  the valley's lamps (far layer), and **LAMPFALL** appears over the moon. About 8 stragglers break off and dive over
-  the lip.
-- **Everything east of the lip is the south exit** (5760–6400). A jump off V carries ≤ 720 px (drop 512) and lands
-  in the exit, so there is no loop and no catch at the lip.
-- Time: 30–60 s.
-
-### 3 `wood-wicks`: pull, Caught, snuff (3840×2176; purpose: teach)
-```
-y 0   [N in 256-896]                  ┃hanging trunk 1600-1664 (to y 704)
- 352   shaft (she falls ~900)  (W-hi3)·┃
- 720                   (W1)· spin -1
- 918                                       (W2)·
- 960  ══L═══════════╗dip╔══M══════════▌knob (1984-2048)
-1120                ╚═══╝ (dead moth)    ╲ step 192
-1152                                      ══N═══════════════[E out]
-```
-- She falls in and lands on L (128–1152, y 960), dark. W1's field is 300+ px away.
-- **W1** at (1280, 720), spin −1, 240 over the shelves, over a dip (1152–1408, floor 1120). Measured: 5 of 5 run-up
-  jumps caught. A walker falls into the dip and walks out.
-- M (1408–2048, y 960) ends in a **root knob 64 wide, 24 tall** (1984–2048): she stops against it, and so does the
-  drag. **W2** at (2072, 918), 112 px from her body centre at the knob (measured reach 120). Hop the knob, then drop
-  192 to N (2048–3840, y 1152). E exit at N, floor level.
-- **W-hi3** (wall jump) at (1408, 352). A trunk hangs from the canopy at 1600–1664 down to y 704, 256 over M: she can
-  touch it but can't climb it. With wall jump: kick up its west face to ~400, kick west into the field, cut. Her jump
-  apex over the dip (y ~690) stays ~340 px from it, so it never interferes with W1.
-- CP: L → W1 → M → W2 → N → E. Camera: ease toward a flame inside its field.
-- **Round 1: the root knot** (landmark): a root bridges the shaft wall to the hanging trunk at y 192–248, and three
-  tendrils hang round W1 (to 548, 388 and 488; the east one clear of W-hi3's core). It sits above every reach
-  without wall jump (W1's throw apex is ~478), so it can't be stood on to cheat W-hi3. The dead moth lies in the
-  dip under it (a stand-in note until render draws it).
-
-### 4 `wood-burrow`: the blade against things (4480×1792; purpose: teach + rest)
-```
- 512                                                  ══H══(4416 trunk ┃)
- 704                              (W-hi4)·
- 768-864                 ▓▓▓▓ root roof ▓▓▓▓                          ┃ kickable
-1144             (W3)·                                                ┃ west face
-1152                     ▄root▄ ·seed· ·seed· ═══F3══[P1]═Tatter═hole═┃
-1280 [W]══F1════╗        step  (3008)  (3296)                    ↓ S (4096-4352)
-1344            ╚══F2══ burrback 1408-2560═╝ safe floor 1408 below the gap
-```
-- F1 (0–1216, y 1280), dark → F2 (1216–2816, y 1344). **W3** at (1984, 1144), 200 up (a jump-cut works in 3–5 of 9
-  timings and is never caught). Burrback `burr-first` (4 hp, guards W3) patrols 1408–2560. A **root step** (2624–2816,
-  top 1152) at the patrol's east end: drop on the burrback from it, or hop its ram, and land on the braced shell (a
-  free bounce).
-- **The seed-case gap** (2816–3456, level with the step's top, 1152): a root roof at 768–864 (288 over the gap) caps
-  any jump to ~200 px of rise, which is too short to cross 640. Seed-cases hang at (3008, 1152) and (3296, 1152),
-  290 apart. Hop, down-cut, bounce 125, drift, down-cut, land on F3. Below is a safe floor (1472) with root steps
-  (160) back up to the root step. A miss costs ~6 s.
-- F3 (3456–4480, y 1152). **P1** at 3776 with Tatter. The **hole** (4096–4352) is the south exit to R5. W3's freed
-  moths fly into it.
-- **W-hi4** (wall jump + glide) at (3136, 704), over the root roof. The trunk at 4416–4480 hangs from y 192 to 1024
-  (128 over F3) with a kickable west face. With wall jump, climb it to shelf **H** (3904–4416, y 512), then
-  jump-glide west: 768 across, 192 down, and a jump-glide carries 760 before the pull takes her. She lands on the
-  root roof and walks off. Seen from P1 at 4:45.
-- With wall jump the hole opens from below (R5's hollow is climbable). Until P1 is touched, a fade re-forms her at
-  the burrow's west door (room `reform` point (300, 1280)), not beside the burrback.
-- **Round 1:** **seed-0** at (1000, 1176) over F1, a safe floor: a hop and a down cut bounce her in place (the pogo
-  taught where a miss costs nothing, before the gap; chunk1-plan item 11, the impatient first-timer's pit). **W-hi4**
-  moved to (3300, 640), 420+ px from the seed-case hops, so its pull no longer lifts them. A **bark floor panel** by
-  the door (384–480, y 1280) opens a pocket (384–640 × 1344–1472) with **W-pocket**; a hop climbs back out. Landmark:
-  the seed-case pair over the gap, under the root roof.
-
-### 5 `wood-glade`: glade 1, glide's lock room (2880×2304; purpose: glade)
-```
-y 0  [N in 256-512]
-      ║hollow║ 192-576, walls kickable (wall jump: the way back up)    ┃east trunk 2816-2880
-      ↓ (she falls ~1600 into moonlight)                              ┃(to y 1920, kickable)
-1664 ══glade floor══[P2]══(moon shaft)══╗lip 1408                     ┃
-2176                                              ══Z══ 2368-2880 ════[E out 1920-2176]
-2240 ......... catch (x 1408-2368) ..........
-```
-- She lands at 256–512 **inside the moon shaft**. The bask (3 s), glide and the item line follow, so it can't be
-  skipped. **P2** is here.
-- Lip (1408, 1664) → Z (2368–2880, y 2176): gap 960, drop 512. Jump 717 ✗ (243 short), walk-off glide 1193 ✓, jump-glide
-  1467 ✓. **No lamp in the room.** The chasm is a catch back to the lip.
-- With wall jump: kick up the **east trunk** from Z (its foot is 256 over Z) to ~1200, then kick-glide west. That
-  carries ~1000 px at the kick's height and ~380 more down to the glade floor. The **hollow** (walls at 192 and 576)
-  climbs 1664 px to the hole into R4.
-- Camera: frame the moon shaft while she basks; on the lip, look ahead east so that Z is on screen.
-- **Round 1:** an **alcove under the lip** (1216–1408 × 1856–2048) with **W-alcove**: walk off, turn back and glide
-  in (the only lamp in the room, below every line out). The room is 200 taller (2504) so the chasm's catch sits 200
-  above its foot and the camera keeps her in frame until it fires. Landmark: the lip over the moonlit chasm.
-
-### 6 `wood-glidewalk`: the glide ladder (5760×2368; purpose: teach → test; 6.5 screens for three gaps and the bough)
-```
-  32  ═══════ return bough (high over E0) ═══════╗
- 192                                             ╚═══ return bough (rolling) ══════════════╗
- 512 [W]═E0═╗                                        ┃T-ret 5632-5696 (kick, to y 1728)
- 860        ╲ gap1 800       ·(W4)  (W5)·spin 1
- 960         safe floor 1408 ══T2══╗              ▓▓ thorn branch (3798-4198, 1176-1272)
-1472   (root steps up to E0)       ╲ gap2 1024 ═══T3═══╗     (W6)·
-1984                    thorns 1920                    ╲ gap3 1024 ════T4═══▌bark▐═▒▒═┃═[E]
-2240                                    thorns 2240                    burrback  pocket
-```
-- **Safe:** E0 (0–576, y 512) → gap 800, drop 448 → T2 (1376–1984, y 960). Jump 688 ✗, walk-off 1045 ✓, jump-glide
-  1319 ✓. Below is a safe floor (576–1376, y 1408) with one-way root rungs (576–672, y 1216 / 1024 / 832 / 704) back to
-  E0. **W4** at (1800, 640) on T2, 320 up, is glide's first lamp: a jump-cut (6 of 9); every jump-glide from E0
-  passes under it and lands on T2.
-- **Combine:** T2 lip 1984 → T3 (3008–3648, y 1472): gap 1024, drop 512. Walk-off 1193 ✓, jump-glide 1467 ✓, jump 717
-  ✗. **W5** at (2434, 860), spin 1: measured, the jump-glide is caught; beating free while holding right lands her at
-  +1515 (T3). The walk-off passes under untouched and lands at +1192. Thorns at y 1920 under the gap.
-- **Test:** T3 lip 3648 → T4 (4672–5760, y 1984): gap 1024, drop 512. A **thorn branch** (3798–4198, y 1112–1272,
-  thorny all over, underside 200 over T3) hangs over the jump's hump. Measured, the jump-glide hits it (1 pip, back to T3); the
-  walk-off glide passes ~240 under it and lands at +1193 (4841). Thorns at 2240 below. **W6** at (5120, 1784) with
-  burrback `burr-ledge` (5 hp, guards W6) patrolling 4992–5248, so the landing at ~4841 is clear.
-- **Rotten-bark wall** (5376–5440, y 1600–1984) on the CP: spores drift from its seams, W6's freed moths slip through,
-  3 cuts. **Right after it, a rotten-bark floor panel** (5456–5552) breaks with down cuts into a pocket holding
-  **W-pocket**: the language used once more, a few metres on.
-- **Round 1:** a **root roof** over E0's lip (320–800, y 256–320, 192 clear) caps a jump at ~112 of rise: the jump
-  bumps, the walk-off glide is the way (taught at the safe gap, with the rungs under it). Camera zone **gap1** (fit,
-  bounds 0–2100 × 160–1600) frames E0, the gap and T2 at once. **P-t3** on T3 (3200, 1472): the halfway rest, so a
-  death at gap 3 costs ~10 s, not ~40. The **thorn branch** moved up over the jump's apex (3798–4198, y 920–1040,
-  76 px clear): "hold jump to glide" teaches the jump-glide, and the branch sat on its arc (the impatient
-  first-timer: 8 hits, 2 deaths). Both glides now cross gap 3; a glide on after W5's throw lands on T3 or T4.
-  A **firefly sign** on the safe floor under gap 1 (1100, 1408; `wood-sign-gap1`). **n-bough** (1920–2112 on the top
-  edge): R14's drop lands on the return bough (east to T-ret and the hub, or west home).
-- **Return bough** (wall jump): trunk T-ret (5632–5696) hangs from 256 to 1728 (256 over T4: touchable, and walked
-  under to the exit), with kickable faces. At its top the rolling bough runs west at y 192 and rises to y 32 over
-  E0 (448 up, so it can't be jumped onto from E0, and the jump hump from E0 clears it by ~24). It ends over E0:
-  drop down. E exit at T4, floor level (1728–1984).
-- Time: 3:00–4:30.
-
-### 7 `wood-hollow`: the hub (3840×3248; purpose: hub + rest + story)
-**As built, everything below the canopy sits 256 lower than written here** (shelf 2880, floor 3136, alcove roof
-2944, steps up to the E arch at 2880): the W door (R6's T4) and the E door (the hawkers' floor) are both at world
-y 10048 = local 2880. W-ff burns only once `wood-firefly-glimpse` is set (lure `after`).
-```
- 400 (W-ff)·                                      ▓ canopy log (T3 stub)
- 512 ═far branch═╗   (L-gap)· spin 1      ══crown shelf═════(W-crown)·═══
- 640  (kick:false)   canopy gap (open)    ║up║ 1856-3840
-                                          ║sh║ 2560-2944, kickable
-2624 [W]══root shelf══╗                   ║af║
-2688  alcove: ▓roots(T2) [well]  ╲        ║t ║
-2880          (dark, moonlit) ╚═══[P3]═Tatter═══▒grate▒══════════[E arch]
-```
-- She enters from R6 onto a **root shelf** (0–960, y 2624) and drops 256 to the floor (960–3840, y 2880). The floor
-  is unbroken to the east arch. **P3** at 1280 with Tatter, facing the arch.
-- **The well alcove**: under the shelf (256–960, floor 2880, roof 2688), dark, with moonlight welling up from **the
-  well** (384–640, the south exit, one way). The drowned-roots stub seeps at the alcove's back wall.
-- **The glimpse** (first visit, on reaching P3): the camera looks up through the canopy gap (input free, 4 s). A small
-  warm light hangs **W-ff** on the far branch, pulses slowly twice and darts away (`wood-firefly-glimpse`). W-ff then
-  burns overhead all region as a lit lock.
-- **The up-shaft** (2560–2944, kickable both sides) rises 2240 to the crown shelf (1856–3840, y 640) and **W-crown**
-  at (3392, 448). At its foot, **the grate** (2560–2944) shows glade 2's moonlight. It opens from below when she
-  climbs out of R10, and she carries straight on up.
-- **The canopy gap** (768–1856, open to the floor). **L-gap** (lantern, spin 1) at (1280, 512). The far branch
-  (256–768, y 512, `kick: false`) holds W-ff. From the crown lip: 1088 to the branch's end and 128 up, so no glide
-  (it needs a drop) and no jump. Double jump + glide (apex 176, then ~1190 px) or a fling reaches it, both in Tier 1's
-  postgame. **Measured leak check**: a jump from the crown lip into L-gap, then beating free toward the branch,
-  reached it in 0 of 5 timings with spin 1 and 2 of 5 with spin −1. So spin 1 is required, and the breaker bot must
-  confirm 0 over a full sweep. If it doesn't, raise the branch to 448 and move it 128 west. `edgeKick: false`, and
-  every face around the gap is `kick: false`.
-- Camera: rest framing at P3, the glimpse look-up, a vertical look-up under the shaft, a vista lift on the crown.
-- **Round 1, batch 2: the cap climb to R14.** Bracket caps on the west wall: **B1** (0–192, top 2656, big) over the W
-  door, a jump from the root shelf (the door's walk-in passes under it, so the main path is never bounced), **B2**
-  (448–704, 2048), **B3** (0–256, 1440), then up through a one-way root (0–384, y 832) to **NW** (576–832), R14's
-  door. Tatter looks up at B1 (its want, `marks.tatter.want` (96, 2656)). **The root mesh**: the grate became a one-way root mesh over the climb (no hole
-  under the up-shaft: the curious first-timer fell into the well jumping across it, and climbing out landed below the
-  floor); the climb-out kicks up through it and lands on it; it is `noDrop` (down + jump would drop through it to glade 2
-  past the old burrback: the bots found it). **Tatter** waits under the root shelf (800, 3136) facing west, looking up
-  at B1: stuck, wanting up. A **root lip** (640–672, 48 tall) before the well: going
-  down is a choice, not a short jump's accident.
-- **Round 1:** camera zones **rest** (fit over the floor: the whole hub, bounds 0–3840 × 380–3248) and **look-up**
-  (the shaft framed tall, bounds 2176–3328 × 300–3248). **The well lid**: a flag gate over the well (384–640, y
-  3136) shut until `wood-climbout` (set by climbing out of R10): the way into the well is now R9's floor, and the
-  well is the shortcut back down once she has the claws. **E-high** (384–640 on the east edge, off the crown shelf):
-  the canopy line east over R8 and R9 to R9's shaft window. Landmark: the canopy gap of moonlight over P3.
-
-### 8 `wood-hawkers`: the hawker over the hummocks (3840×2752; purpose: teach; round 1)
-```
- 384 [W-high]═canopy═╗  ═══╗      ═══(W-canopy)·══╗     ════[E-high]     (dangler over the canopy landing)
-2120            (W-hummock)·  hawker home (1640, 2200)   (W7)·
-2432         ▄▄hummock A▄▄  dip  ▄▄hummock B▄▄        ▄▒mound▒▄ (W-bark in the cavity)
-2624 [W]════════╝          ╚═══╝              ╚═══════▌bark▐════════════[P-dark]══[E]
-```
-- Floor y 2624, **hummocks** A (1088–1472) and B (1728–2112), tops 2432, over a dip (floor 2688). **W7** at (1920, 2120),
-  312 over hummock B: a jump-cut from inside the dive lane (6.0 of 9). **W-hummock** (1280, 2250) over hummock A is
-  not the hawker's lamp: it lights her early, and snuffing it does not send the hawker off. **Hawker** `hawk-first`
-  (3 hp, guards W7), home (1640, 2200), 232 over the hummocks. Measured, a runner: lit at frame 84, noticed 93, hit
-  165, on hummock B (the only reach) at 194: 1.8 s in the light before she can cut W7.
-- The dark half (2112–3840): **S1** (bark 2688–2752 in a root mound, top 2464) opens a cavity with **W-bark** at
-  (2920, 2560) (out of the bark cuts' reach, and of the jump over the mound). **P-dark** at 3520. A firefly sign
-  goes here when the kit lands.
-- **The canopy line** (from the hub's crown, wall jump): branches at 384–512 with 320 gaps, **W-canopy** (2368, 300),
-  and a **dangler** (`dang-canopy`, guards W-canopy) tied to the room top over the landing at 2300.
-- A **firefly sign** in the dark half (3250, 2624; flag `wood-sign-dark`).
-- Landmark: twin hummocks with the hawker's lane over them. Time: 1:30–2:30.
-
-### 9 `wood-lantern`: the first lantern, the broken face, the way down (3840×2992; purpose: teach + lock + combine; round 1)
-```
- 384 [W-high]═canopy══╗  ═══╗          ═══window╗║        ║[N out 3072-3584]
-1860            ┃root (dangler)          ▓thorn ║  shaft  ║ east face kickable above 2304
-1984  ══ledge(W-high)┃    (L1)·             band║         ║
-2304           ════P════ burrback (fenced)       ║kickable║ slick
-2432                         ══upper floor══════╗         ║
-2624 [W]══floor══ step ╝                        ╚═══════▒bark floor▒══╝
-                                                         ↓ the way down: R10's chute
-```
-- Floor y 2624, an upper level (1600–2752, y 2432). Root step (864–1024, y 2464) and platform **P** (one-way 1024–1536,
-  y 2304). **L1** (lantern) at (1280, 2048), 256 over P (4.0 of 9 with its guards gone). The burrback **on P**
-  (`fenced`, radius 180: it stays 1100–1460) and a **dangler** on a root shelf over P's east end (1480, 1860): both
-  guard L1, one snuff sends both off. The chunk's first two-creature combination (rescope item 1).
-- **The broken face** (shaft 3072–3584): west face kickable 2400–1920, a thorn band 1920–1600, slick above; east face
-  slick to 2304, kickable above. Kick up the west face, kick-glide across, up the east face to R11.
-- **The way down**: a rotten-bark **floor** at the shaft's foot (3200–3456) breaks to down cuts and drops her onto
-  R10's chute patch (one way). This is the loop: the lock (the shaft) and its key (the well) meet here. TODO render:
-  moonlight welling up through its seams, so the dead end reads as a door.
-- **The canopy line** from R8 crosses over L1 (a hanging ledge 448–704 y 1984 on a root from the canopy, with
-  **W-high** at (672, 1880): a first-run find dropped onto from above) to a **window** (448–704) into the shaft,
-  halfway up the broken face.
-- Round-1 fix: the west door is clear (the ledge's root hangs from the canopy, it no longer stands on the floor
-  where it boxed in the door and the spawn). Landmark: L1 over the two-level floor. Time: 2:20–4:10.
-
-### 10 `wood-well`: the chute, the old burrback, glade 2, the climb-out (11264×2240; purpose: mini-boss + glade; round 1)
-```
-  0 [N: hub well 384-640]  [out: climb 2560-2944]                         [shaft: from R9's floor 10880-11136]
- 448                                                                    ══L0══[P-chute]
- 640                                                          ══L1══
- 896                                         ══L2══(W-chute)·  (dangler over L2)
-1088                              ══L3══
-1216                ══L4══ (west end over the roof hole)
-1344 ▓roof▓║well║▓▓▓▓▓▓▓║climb║▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓║hole║
-1600              ║rest  ║  (W8)·   ┃gate floor-to-roof┃  THE PIT (sealed, camera lock)
-1888                          ═ledge═
-2112 ═══west hall═══╝     ╚═══glade 2 [P4]═══╝═════ pit floor, old burrback ═════════╝ catch 1840+ under the chute
-```
-- In from R9's floor onto **P-chute** (L0). The pit's camera lock now frames the gate too (bounds 3392–5696 ×
-  1280–2176; the curious first-timer stood at the gate with it off-screen). A one-way root step at the climb-out's
-  top (2560–2720, y 160): stand, jump, up through the hub's mesh. **The chute**: root ledges stepping down west in the dark, two 640 gaps
-  that want a jump-glide, a 384 and a 320; **W-chute** at (8736, 700) over L2 and a **dangler** (`dang-chute`, its
-  silk from the room top) over L2's landing. A fall is a catch back to the last ledge.
-- **The pit** (3584–5632 × 1344–2112): in through the roof hole off L4's west end. Sealed to the roof: the root gate
-  (3520, 1344–2112) is floor-to-roof, so no throw, pogo or glide gets past it while the old burrback lives (tested:
-  no-skip sweep). Camera lock. The old burrback sleeps at 4600 and wakes on her landing.
-- When it dies the gate opens: **glade 2** (3008–3520), **P4**, wall jump; **W8** (3392, 1600) over a ledge
-  (3264–3456, y 1888), a gimme behind the gate (18 of 27), out of reach from the pit.
-- **The climb-out** (2560–2944, both faces kickable down to 1888, walked under at floor level) rises to the hub's
-  grate; the top sets `wood-climbout`, which lifts the well lid. **The west hall** under the well: the shortcut down
-  lands here (~2700 px of fall), a short walk to P4.
-- A fade here re-forms her at P-chute (the room's `reform` point wins over a patch in another room: a small sim
-  rule), so the pit is retried from the chute, not from the hub. Landmark: the sealed pit under its roof hole.
-
-### 14 `wood-caps`: the cap stair (3840×2688; purpose: teach + secret; optional; round 1)
-```
- 470 (W-c3)·  ▒root▒                                              the hub's NW door is east, 2368-2624
- 640 ║chute║ ══top══(stone)
-1184         ▄cap-4▄  ║step 3 ║
-1500                          (W-c2)·      branch (dang-c2)
-1760          ▒bark▒[hollow] ▄cap-3▄ ═step 2═══
-2176                                   ▄cap-2▄ ═step 1═
-2440                                                 (W-c1)·   branch (dang-c1)
-2624 ↓ s (to R6's bough)                      ▄cap-1▄══════════════════════════════[E]
-```
-- North-west of the hub, over R6's east end (23744, 5376). In from the hub's cap climb at the east door (floor 2624).
-- **The dangler alone** (`dang-c1`, W-c1 lighting the way in, ~700 px of floor lit before its thread). Then **the cap
-  stair**: four steps west and up, each cap against the next step's face so a bounce never meets an underside:
-  cap-1 (mid) → step 1 (2208) → cap-2 (mid) → step 2 (1792) → cap-3 (big) → step 3 (1216) → cap-4 (big) → the top
-  (640). **Together**: `dang-c2` hangs over step 2 where cap-2 lands her, W-c2 292 above.
-- **The secret**: rotten bark in step 3's face (1024–1088) hides the **moonlit hollow** (quick wings: beat free in
-  2). **The top**: the wood's **moth-stone** (draws `wood-floor` on the map), W-c3, and the **hanging root** (bark,
-  192–256 × 448–640): cut it and step west, a trigger sets `wood-root-ladder` (TODO render: the root falls as
-  Tatter's ladder in the hub; from then on Tatter is ahead), and she drops down the chute (0–192) onto R6's return
-  bough: east to the hub. A loop of ~4 minutes. Patches: none (P3 is a door away); a fade re-forms her at the door.
-- Measured: four bounces to the top with no lamp catch; the hollow grants quick wings; the root cut sets the flag
-  and the drop lands on the bough at R6 y ~160. Landmark: the stair of caps climbing the dark.
-
-### 11 `wood-climb`: the wall-jump test and the look back (2048×2560; purpose: test + vista)
-```
- 640 ║ shaft ║═══top shelf═══════[P5]═══════════════[E out 384-640]
-1000 ║ (W10)·║ hawker home (256, 1100): dive lane over the top third
-1280 ║▲      ║   ← east face: thorn band 1600-1280
-1600 ║ (L2)· ║   middle third: L2's field bends every crossing
-1920 ║      ▲║   ← west face: thorn band 2240-1920; S2 niche at 2080
-2560 ╚[S in]═╝ shaft 0-512 (faces at 0 and 512)
-```
-- One 512 shaft (it lines up with R9's), climbing 1920 to the top shelf, with alternating broken faces:
-  - lower third: the west face kickable, with a thorn band 2240–1920 above it; the east face kickable 2240–1600;
-  - middle third: **L2** (lantern, spin −1) at (256, 1600), whose field (R 360) covers the shaft, so every
-    kick-glide across is bent; the east face has a thorn band 1600–1280, and the west face is kickable 1920–1000;
-  - top third: **W10** at (256, 1000) (spin 1; its field and L2's just touch) with hawker `hawk-climb` (home (256,
-    1100)) diving across the shaft. Dodge by kicking away.
-- **S2** (risk line): a 64 px niche in the west thorn band at y 2080 with a wick. Kick-glide into it.
-- Top shelf (512–2048, y 640): **P5** at 1600, no Tatter. **The look back**: a camera lift over the canopy, the
-  hatching tree far off west under the moon. E exit at the top.
-- Time: 2:30–4:00.
-
-### 12 `wood-web`: the orb web and the approach (4480×2176; purpose: teach + rest)
-```
- 640                                           ══DJ══(wick)
- 896 [W]═entry═╗          ╭──web r640──╮
-1024           ║S3▐      │    (W9)    │      ╔cap╗══approach══[P6]══[E door]
-1344           ║bark    │   weaver    │      ║trunk 3200 (kickable to 1024 only)
-1600           ╚═══ hall floor 768-3200 ═══════╝   ↓stub log
-```
-- Entry ledge (0–768, y 896) → drop to the hall floor (768–3200, y 1600), safe all the way.
-- **The orb web**: a disk of radius 640 centred on **W9** (1984, 960), anchored to the canopy, two root columns and
-  floor stakes. It fills the hall from y 320 to the floor. Touching it is Caught (a creature's Caught): the weaver
-  runs out at 5 px/f and bites after a 24-frame count, 1 damage. Cuts from outside sever strands, and the weaver
-  senses touches, not cuts.
-  - CP: **cut the lower-west sector** (~6 cuts) to open a doorway at floor level. One sector near the entry already
-    hangs cut.
-  - Options: snuff W9 (the weaver disperses and the web goes dark and harmless), or glide through an outer cell.
-- **S3**: a rotten-bark panel in the hall's west wall (768–832, y 1088–1344), one kick up, with an alcove under the
-  entry ledge holding a lantern.
-- The trunk at 3200 is kickable from the floor to 1024 and **capped there with an overhang**. It climbs 576 to the
-  approach shelf (3328–4480, y 1024).
-- **The approach**: dark, quiet, silk thick on the trunks. **P6** at 4096, no Tatter. The arena door is the E exit,
-  floor level.
-- **DJ ledge** (3584–3840, y 640, slick faces): 384 over the shelf (a double jump reaches it). The capped trunk stops
-  a kick-glide.
-
-### 13 `wood-grove`: the Weaver and the canopy edge (4736×2304; purpose: boss + exit)
-- **Arena** at x 0–2176: §6. The camera locks until `wood-weaver-down`.
-- **Chimney**: the silk curtain on the east trunk (y 1344–1600) opens onto a chimney (2176–2560, kickable both
-  faces). It climbs ~960 to the edge shelf (2560–4736, y 640). **W-relit** hangs at (2368, 1100), mid-chimney: its
-  field covers the chimney, so she is pulled or caught in the climb and snuffs it there (critical path). As she tops
-  out, the firefly crosses the frame and leaves over the edge.
-- **The edge**: **P7** at 3200. While she rests, **Tatter walks up out of the chimney** (insects climb bark) and sits
-  beside her: her victory opened its road. The **exit vista** (camera lift): the valley below and the mountain
-  larger than at the title. One flicker lamp far off blinks the firefly's rhythm (three short, one long). E exit at
-  the shelf's end: a long glide down into the valley's arrival room.
+### Area 2 decisions kept from draft 2
+- The great lamp's ring flames are part of it: their moths feed the heart and burst out together.
+- The Weaver tests one thing a phase: spokes only in P1, a heart of R 700 until P3, three ring flames on a retry,
+  and P2 swings over half the arena with the safe side always opposite. There is no cling.
+- The exit gate is a silk curtain that falls with the Weaver. The valley doc owns the landing and the way back up.
+- Tatter walks up the chimney to P7 after the Weaver.
+- The relit flame is in the chimney she has to climb.
 
 ---
 
-## 8. Collectibles and completion
+## Changelog
 
-| Lamp id | Room | Kind | Moths | When | How |
-|---|---|---|---|---|---|
-| `wood-wicks:wick-caught` | 3 | wick | 5 | CP | cut after beating free, or on the way in |
-| `wood-wicks:wick-first` | 3 | wick | 5 | CP | from the root knob |
-| `wood-wicks:wick-high` | 3 | wick | 5 | optional (wall jump) | kick off the hanging trunk |
-| `wood-burrow:wick-burr` | 4 | wick | 5 | CP | jump-cut over the burrback |
-| `wood-burrow:wick-high` | 4 | wick | 5 | optional (wall jump + glide) | from shelf H |
-| `wood-glidewalk:wick-landing` | 6 | wick | 5 | CP | on T2 |
-| `wood-glidewalk:wick-line` | 6 | wick | 5 | CP | the high line's pull |
-| `wood-glidewalk:wick-ledge` | 6 | wick | 5 | CP | on T4 with the burrback |
-| `wood-glidewalk:wick-pocket` | 6 | wick | 5 | secret | rotten-bark floor |
-| `wood-hollow:wick-crown` | 7 | wick | 5 | optional (wall jump) | top of the up-shaft |
-| `wood-hollow:lantern-gap` | 7 | lantern | 10 | postgame (fling) | fling anchor, or a skilled cut |
-| `wood-hollow:wick-firefly` | 7 | wick | 5 | postgame (fling / DJ + glide) | the glow-cap from the glimpse |
-| `wood-hawkers:wick-hawk` | 8 | wick | 5 | CP | jump-cut |
-| `wood-hawkers:wick-bark` | 8 | wick | 5 | secret | rotten bark, dark half |
-| `wood-lantern:lantern-hall` | 9 | lantern | 10 | CP | 2 jump-cuts from P |
-| `wood-lantern:wick-high` | 9 | wick | 5 | postgame (DJ) | from P |
-| `wood-well:wick-pit` | 10 | wick | 5 | CP | from the ledge behind the gate |
-| `wood-climb:lantern-shaft` | 11 | lantern | 10 | CP | cuts from kicks |
-| `wood-climb:wick-niche` | 11 | wick | 5 | risk line | thorn niche |
-| `wood-climb:wick-top` | 11 | wick | 5 | CP | past the hawker |
-| `wood-web:wick-web` | 12 | wick | 5 | CP-adjacent | the web's hub |
-| `wood-web:lantern-bark` | 12 | lantern | 10 | secret | rotten bark, west wall |
-| `wood-web:wick-high` | 12 | wick | 5 | postgame (DJ) | from the approach |
-| `wood-grove:great` | 13 | great (5 ring + heart) | 60 | CP | the Weaver |
-| `wood-grove:wick-relit` | 13 | wick (story) | 5 | CP | in the chimney |
+### Draft 3 (2026-10-18): area 1 rewritten from the director's redesign (5e31bee)
+- **Area 1 rebuilt around one place:** the hollow oak at the bottom of the bowl, and the way out up its trunk.
+  - The vista shows the oak.
+  - The hub asks one question: one way on, the glimpse inside the trunk, Tatter looking up, the walls sliding.
+  - The area ends at the crown with the cloud of every freed moth and Tatter's root.
+- **Rooms:**
+  - added: R7b `wood-heart`, the trunk climb and crown;
+  - rebuilt: R9 as `wood-silk`;
+  - reworked: R3, R4, R6, R7, R8 and R10's stair;
+  - removed: R14 `wood-caps`, the hub's cap climb, the alcove well and its lid;
+  - merged: R11 `wood-climb` into R7b.
+- **The core set is cut to three things:** the lamp's three moments (caught, thrown, snuffed); three predators, one
+  per moment (beetle, dangler, hawker), plus the juvenile and the old beetle; and glide and claws.
+  - Cut: the seed-cases, the mid-air thorn branch, W-hummock, R6's critical-path bark wall.
+  - Deferred to area 2: bounce caps, the lantern, the canopy line.
+- **New level rule:** light is the fast line, the dark is the slow line. Every critical-path room with a lamp has a
+  slower, safe dark way.
+- **The throw is the critical path** (≥ 9 critical-path snuffs for every bot). The pogo comes from bark floors, not
+  from a required skill check at minute 3.
+- **Removed as stale:** the old area 1 §1–§11, the old 13-room graph, beat sheet, metrics and exit criteria, and the
+  old area 1 lamp table.
 
-**Totals:** 25 lamps.
+### Draft 2 (answers paper review 1; real lure numbers)
+- The hub well moved off the walkway, and the climb-out came up through the hub floor.
+- The pogo ladder.
+- R8 split into `wood-hawkers` and `wood-lantern`.
+- Glide gaps re-derived from real trajectories, and W4/M removed.
+- The Weaver rebuilt.
+- The wall-jump ladder escalates.
+- R1–R5 reopen with wall jump.
+- Tatter walks; the glimpse at the hub; the relit flame on the critical path.
+- The review's §4 leaks closed.
 
-| | Lamps | Moths | Running total |
-|---|---|---|---|
-| Critical path | 14 (12 small for 70, the great lamp 60, the relit wick 5) | **135** | 135 |
-| First run's optional lamps and secrets (both high wicks, the pocket, the crown, S1, S2, S3) | 7 | 40 | **175 reachable on the first run** |
-| Postgame (fling and double jump) | 4 | 25 | **200**, the Tier 1 wood total |
-
-The map shows a lamp once it has been on screen, plus a per-region "unseen" count. **Nothing on the first run can be
-missed for good** (§3, the return).
-
-**Secrets** (all paying in moths, one language): the rotten bark is drifting spores and 3 cuts. It is taught on the
-CP in R6 and reused at once in R6's floor pocket, then in S1 (R8) and S3 (R12). S2 is a visible risk line. The high
-wicks and the crown are visible locks opened by wall jump.
-
-**First health milestone: at 110 moths** (§11 decision 3). A critical-path player has ~70 before the Weaver and
-crosses 110 in the great lamp's burst, with 20 moths of margin. An explorer who takes every optional lamp before the
-boss (110) gets the pip just before the Weaver: the reward for exploring arrives when it is useful. Each snuff gives
-1 health back, so the ring flames heal her in P1.
-
----
-
-## 9. Metrics targets for the playtest harness
-
-Personas (`memory/playtest-harness.md`): naive, explorer, speedrunner, cautious, plus the first-timer agent. "Lost"
-is the harness's (no progress for 10 s, counted in full). Rows follow the expected route. A room the route enters
-twice has two rows, and the harness sums them.
-
-| Room (visit) | Time (first-timer) | Max lost | Deaths | First-run lamps (naive / explorer) |
-|---|---|---|---|---|
-| 1 `wood-hatch` | 0:20–0:45 | 0:10 | 0 | none |
-| 2 `wood-chase` | 0:30–1:00 | 0:15 | 0 | none |
-| 3 `wood-wicks` | 1:00–2:00 | 0:30 | 0 | 2/3 / 3/3 (the high wick on the return) |
-| 4 `wood-burrow` | 1:30–3:00 | 0:30 | 0–1 | 1/2 / 2/2 |
-| 5 `wood-glade` | 0:45–1:30 | 1:00 (tapper) | 0 | none |
-| 6 `wood-glidewalk` | 3:00–4:30 | 0:45 | 0–1 (2–4 pips) | 3/4 / 4/4 |
-| 7 `wood-hollow` (first) | 0:45–1:30 | 1:00 | 0 | 0/1 / 1/1 |
-| 8 `wood-hawkers` | 1:30–2:30 | 0:30 | 0–1 | 1/2 / 2/2 |
-| 9 `wood-lantern` (to the lock, and back) | 2:20–4:10 | 1:00 | 0–1 | 1/1 / 1/1 |
-| 10 `wood-well` | 3:00–5:00 | 0:30 | 1–2 | 1/1 / 1/1 |
-| 7 hollow (crown) | 0:45–1:30 | 0:30 | 0 | |
-| 8 → 9 (walk east and the shaft) | 1:25–2:30 | 0:30 | 0 | |
-| 11 `wood-climb` | 2:30–4:00 | 0:45 | 0–1 | 2/3 / 3/3 |
-| 12 `wood-web` | 3:00–4:30 | 1:00 | 0–1 | 1/2 / 2/2 |
-| 13 `wood-grove` (fight, chimney, edge) | 5:00–9:00 | 0:30 | 1–3 | 2/2 / 2/2 |
-| **Region** | **27–47 min, median ~38** | **≤ 2:00 anywhere** | **3–7** | **naive ≥ 13 of 21 first-run lamps; first-timer ≥ 16; explorer 21/21** |
-
-Also:
-- The speedrunner finishes in < 12 min and the explorer (with the R1–R5 return) in 50–60.
-- The naive bot reaches the hub in ≤ 12 min. It is the wayfinding check for the guided opening, and it can't do
-  bosses.
-- No deaths in rooms 1–3. Deaths sit at the peaks (R10, R11, R13).
-- Backtracking ≤ 3 min on the expected route. The return from the boss door to the hub is ≤ 60 s.
-
----
-
-## 10. Exit criteria, and what we cut first
-
-**The wood is done in grey when:**
-1. **The run finishes with no softlock and no skipped gate.**
-   - The explorer bot and the first-timer agent go from the hatch to the valley glide, and the symbolic world check
-     finds no softlock.
-   - The breaker bot finds no first-run skip of: R5's lip, the hub's well, up-shaft, grate and far branch (with the
-     full jump × beat-timing sweep at L-gap), R9's shaft, R10's well walls and root gate, R12's capped trunk, the
-     three DJ ledges, the arena lock and the curtain.
-   - Reported skips are allowed if no softlock follows.
-2. **Nobody is lost for long:** no first-timer persona is lost for more than 2 minutes anywhere, or 60 s at the hub.
-3. **The timing holds:** the median first-timer run is 35–45 minutes, each row is inside its §9 range ± 30%, and
-   deaths sit where the curve peaks.
-4. **Every ability is taught before it is tested.**
-   - Every room has a purpose tag.
-   - Wall jump's lock comes ≥ 8 min before its key on both routes.
-   - Glide, wall jump and the pogo each run the §4 ladder in the rooms named.
-   - Every lamp kind and creature is met alone before it is paired.
-5. **The bosses are fair.**
-   - The Weaver passes the replay test. A first-timer survives ≥ 60 s on the first attempt, the median is 1–3
-     deaths, a retry reaches P3 in ≤ 90 s, and the run back is < 15 s.
-   - The first-timer beats the old burrback in ≤ 3 attempts.
-6. **The layout lints pass**: doors into the dark, no creature in sight of a patch, threat ≤ 1.5 a lit screen, every
-   dead end pays, and every glide gap passes the trace overlay with the margins in "Measured reach" at the top.
-7. **The postgame is honest.** The postgame count is only claimed once the valley's landing has a way back up to
-   R13's edge (tier honesty, world.md §3.7), so this is an exit criterion for the valley doc too.
-8. **Matt plays it and says it's fun.**
-
-**Cut first if it runs long** (in order; each keeps the region whole):
-1. Weaver P2 (two phases, P1 → P3).
-2. The chase's length (a short ordinary descent). The vista and the title stay.
-3. The R1–R5 return (the bough, R5's trunk, the high wicks). W1 and W3 then have to be forced: W1 over the dip's
-   exit lip, W3 on the step.
-4. S2 and the R6 floor pocket.
-5. The relit wick's moths. The relight stays as a picture.
-6. The crown's postgame lamps move to the valley's double-jump list.
-
-Never cut: the first catch, the first snuff, the seed-case gap, both glades, the hub, the Weaver's P1 and P3, the
-vista and the title, the glimpse and the relight.
-
----
-
-## 11. Big decisions made (for Matt's veto)
-
-1. **Thirteen rooms, twelve new.** R8 is split so that the hawker and the lantern each arrive alone (review problem
-   3, Matt's call). The second hawker is cut. The approach stays the dark end of the web room, and the edge stays
-   part of the grove.
-2. **25 lamps and ~200 moths in the wood**, up from world.md's 10 lamps and ~115. The core loop is the lamp, secrets
-   must be lamps, and both abilities need lamps to reopen. Lamps are parameter rows, so the cost is layout time.
-3. **First health milestone at 110 moths, not ~140.** It lands for everyone in the great lamp's burst, and for an
-   explorer just before the Weaver. Veto keeps 140: explorers then cross it at the Weaver, and others in the
-   valley.
-4. **The great lamp's ring flames are part of it.** Their moths feed the heart and burst out together.
-5. **The Weaver tests one thing a phase,** with spokes only in P1, a heart of R 700 until P3, three ring flames on a
-   retry, and P2 swings over half the arena with the safe side always opposite. There is no cling: a face is safe
-   only while she kicks.
-6. **The exit gate is a silk curtain** that falls with the Weaver, not world.md's "the pull drags her off the edge".
-   The valley doc owns the landing and the way back up.
-7. **Glide's lock comes ~5 min before its key.** Glide comes at minute 5 (core), so the 10-minute rule can't hold.
-   Glide's back payoff (W-hi4) needs wall jump too.
-8. **The hub's far-side shortcut is the grate at the foot of the up-shaft** (glade 2's climb-out). There is no
-   boss-to-hub drop: the boss door is ~50 s from the hub.
-9. **The pogo is an ability ladder**: the burrback's shell (free), the seed-case gap (required, safe, minute 4), the
-   old burrback (only pogos while braced), then the Weaver's P3. No pip can be lost before minute 3.
-10. **The soft order at the hub stays, but steered.** The well is in a dark alcove you turn back into, so
-    hawkers-first is the natural route. Well-first still keeps every ladder honest, because wall jump's first lock
-    is R3's high wick at 1:30.
-11. **R1–R5 reopen with wall jump** (R6's return bough, R5's east trunk and hollow, two high wicks). It is an optional
-    ~5 min trip with nothing missable left behind.
-12. **One secret language:** rotten bark, taught on the CP in R6 and reused at once in R6's floor.
-13. **Tatter appears at P1, P3 and P7 only**, and walks to each. At P7 it walks up the chimney after her victory
-    opened the way. It is not at the glades, P5 or P6.
-14. **The firefly's glimpse happens at the hub, on the real branch,** so its glow-cap is a lock that burns overhead
-    all region. **The relit flame is in the chimney** she has to climb, so re-snuffing it is the critical path.
-15. **Lanterns are designed static** until the path-follow block exists. The swing is welcome later, and no room
-    depends on it.
-16. **The wood runs ~38 minutes at the median** (35–45 target). journey.md's 45–60 isn't the target.
-
----
-
-## 12. Changelog: built vs paper (greybox, 2026-10-18)
+### Built vs paper (greybox, 2026-10-18)
+History of the build against draft 2. Rooms and rows named here may since have been cut by draft 3.
 
 What the greybox build changed, each measured in the sim (`tests/unit/wood-rooms.test.ts`, memory/rooms.md).
 Rooms built: R2–R10. R11 `wood-climb` is a stub.
