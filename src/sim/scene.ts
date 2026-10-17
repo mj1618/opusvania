@@ -150,6 +150,13 @@ export interface EnemySpawn {
    */
   orbit?: string;
   period?: number;
+  /**
+   * Hawker: every blow of it sends her toward this x (room px), up and over, never away (round 4: the crown
+   * hawker throws her onto the rim, never off it).
+   */
+  rim?: number;
+  /** Once this story flag is set it leaves for good (`enemyDisperse`; round 4: the crown hawker at the finale). */
+  until?: string;
   /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
   sets?: string;
   /**

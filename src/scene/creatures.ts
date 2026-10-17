@@ -43,6 +43,8 @@ const base = {
   senses,
   /** A story flag set when it dies (src/sim/kit.ts: the old burrback's root gate). */
   sets: z.string().min(1).optional(),
+  /** Once this story flag is set it leaves for good (round 4: the crown hawker when the finale begins). */
+  until: z.string().min(1).optional(),
 };
 
 export const ENEMIES = z
@@ -89,6 +91,7 @@ export const ENEMIES = z
           sight: int.min(60).max(900).optional(),
           orbit: z.string().min(1).optional(),
           period: int.min(90).max(900).optional(),
+          rim: int.optional(),
         })
         .strict(),
       z

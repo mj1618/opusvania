@@ -168,6 +168,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     ramSpeed: 0,
     orbit: spawn.orbit ? (scene?.lures ?? []).findIndex((l) => l.id === spawn.orbit) : -1,
     period: Math.max(0, spawn.period ?? 0),
+    catchSeen: 1,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);
@@ -308,6 +309,9 @@ export function updateEnemies(
     }
   }
   let touch = -1;
+  const finale =
+    state.kit.story > 0 &&
+    (scene.triggers ?? []).some((tr) => tr.id === state.kit.storyBy && tr.finale === true);
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
     if (!e) continue;
@@ -332,16 +336,43 @@ export function updateEnemies(
     }
     e.modeFrames++;
     const K = KINDS[e.kind];
+    // (On her screen as she was caught? Kept while she is free, frozen while she is held.)
+    if (p.lure < 0 && p.grab < 0)
+      e.catchSeen =
+        Math.abs(e.x + e.w / 2 - (p.x + p.w / 2)) <= t.enemies.screenHalfW &&
+        Math.abs(e.y + e.h / 2 - (p.y + p.h / 2)) <= t.enemies.screenHalfH
+          ? 1
+          : 0;
     // A lamp-guarder whose lamp has gone out gives up (creatures.md §1.2): once, after any tumble.
     // (A dive under way is committed: it lands, then the hawker leaves.)
     if (e.guard >= 0 && !e.dispersed && e.mode !== 'dead' && e.mode !== 'hurt' && e.mode !== 'dive') {
       if ((state.lures.hp[e.guard] ?? 1) <= 0) disperse(e, K, I);
     }
+    // (`until`: its story flag is set: it leaves for good, whatever it was doing. And a finale's held release
+    // (a `finale` trigger's story hold, round 4: the crown hawker dived red through the frame) sends every
+    // creature of the room away.)
+    const until = scene.enemies?.[i]?.until;
+    if (!e.dispersed && e.mode !== 'dead' && ((until && state.save.flags.includes(until)) || finale))
+      disperse(e, K, I);
     const alive = K.update(e, i, I);
     // Unseen (the dark in a lamp room; empty hands in the test grove), a creature that is not already
     // in a fight with her does not notice her, and its touch does her no harm (she slips past).
     const seen = seenBy(e, I);
     aware(e, K, I, seen);
+    // (A drop onto a `bouncy` one's top is a pogo, harmless or not: the old burrback, round 4. A down slash
+    // is left to the blow and the usual stomp: a pogo on a braced shell still counts.)
+    if (
+      p.attack !== 'down' &&
+      K.bouncy?.(e, t) &&
+      e.mode !== 'dead' &&
+      e.mode !== 'sleep' &&
+      p.x < e.x + e.w &&
+      e.x < p.x + p.w &&
+      p.y < e.y + e.h &&
+      e.y < p.y + p.h &&
+      stomp(e, p, t, events, true)
+    )
+      continue;
     if (!alive) continue;
     // Contact: its touch hurts, except for the first beat after it was hit, while it is calmed,
     // inside a lit lantern's sanctuary, and when it does not see her (she carries nothing and it is
@@ -376,8 +407,8 @@ export function updateEnemies(
  * She comes down on its back (falling, her feet within `enemies.stompPx` of its top) while a down slash
  * of hers is under way: she bounces as off a pogo (`enemyBlock` slash `down`), nothing is taken from either.
  */
-function stomp(e: EnemyState, p: PlayerState, t: Tuning, events: SimEvent[]): boolean {
-  if (p.attack !== 'down' || p.grounded || p.vy < 0 || p.mode !== 'normal') return false;
+function stomp(e: EnemyState, p: PlayerState, t: Tuning, events: SimEvent[], any = false): boolean {
+  if ((!any && p.attack !== 'down') || p.grounded || p.vy < 0 || p.mode !== 'normal') return false;
   // (Where her feet were at the start of this step: a fast fall moves her 20-30 px a frame.)
   if (p.y + p.h - Math.max(0, p.vy) > e.y + t.enemies.stompPx) return false;
   p.vy = -t.attack.pogoSpeed;

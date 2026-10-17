@@ -472,6 +472,12 @@ export const defaultTuning = withVariants({
     /** Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. */
     hitstopFrames: 4,
     /**
+     * Her screen, half width and height (room px, about the 1920 x 1080 view, a little in): a creature off it
+     * when she was caught starts no strike on her until she is free (`EnemyState.catchSeen`, round 4).
+     */
+    screenHalfW: 900,
+    screenHalfH: 500,
+    /**
      * Extra hitstop on the killing blow, for her and the body (feel review problem 2): a kill holds 7 on
      * a cut, 10 on the finisher, 5 on a pogo.
      */
@@ -677,6 +683,24 @@ export const defaultTuning = withVariants({
     /** The first `firstTellRams` rams of a fight (this life) are told `firstTellMult` x as long (0 = none). */
     firstTellRams: 0,
     firstTellMult: 1,
+    /** ... and run at `firstRamSpeedMult` x `chargeSpeed` (round 4: "slower first rams"). */
+    firstRamSpeedMult: 1,
+    /**
+     * Round 4 (area1-video-r2 #2, the pit): `lungeOnJump` = a jump of hers in its tell (in front of it, after
+     * `lungeAfterFrames` of it, not away from it) sets the ram off at once, under her (any jump in the tell
+     * clears it); `bodyHarmless` = only its ram hurts, its body otherwise shoves her out (`risePush`);
+     * `landBounce` = coming down on its top bounces her (a pogo with no cut), never a hurt; `touchRestFrames` =
+     * after its ram hit her it may not brace again for this long (no ram after ram while she is down).
+     */
+    lungeOnJump: false,
+    lungeAfterFrames: 6,
+    bodyHarmless: false,
+    landBounce: false,
+    touchRestFrames: 0,
+    /** After its touch hurt her it is calm (harmless, noticing nothing) this long, walking away (0 = not). */
+    touchCalmFrames: 0,
+    /** It braces at her under a roof lower than `strikeHeadroomPx` too (its ram pulls up at the roof's mouth). */
+    braceUnderRoof: false,
     ramUnderMax: 40,
     underExtraPx: 60,
     // (First-timer r2: the plain one's touch is its drawn dome too.)
@@ -768,6 +792,17 @@ export const defaultTuning = withVariants({
     passRadius: 260,
     passHeight: 150,
     passKnockDown: 9,
+    /**
+     * Round 4 (area1-video-r2 #4: "hunts the caught" hit 0 of 9; a mashing player is free in ~0.4 s): after a
+     * pass it rests `passRestFrames` on its perch (a catch then is safe: the timing); caught in its orbit any
+     * later, it swoops at once, a pass of `snapPassFrames`, crossing the orbit 6 + 10 frames after the catch.
+     * 0 = no snatch.
+     */
+    passRestFrames: 90,
+    snapPassFrames: 20,
+    /** A blow of a hawker with a `rim` (spawn): free, she is kicked toward it at `rimKick` px/f, lifted `rimLift`. */
+    rimKick: 9,
+    rimLift: 11,
     stallFrames: 34,
     perchUpPx: 170,
     perchSidePx: 110,
@@ -913,12 +948,16 @@ export const defaultTuning = withVariants({
     hp: 2,
     // It hunts the stop (the director's dangler): it tells once she has stood still in its sight (lit, below
     // it, within `noticePx` sideways) for `stopFrames`, moving no faster than `stillVx`. 0 = on sight.
+    // (Round 4, area1-video-r2 #8: "danglers barely hit": bots stood still under one 17 frames in a whole run.
+    // A slow step counts as a stop now, and so does a landing under it; the tell is shorter.)
     noticePx: 220,
-    stopFrames: 8,
-    stillVx: 1.5,
+    stopFrames: 6,
+    stillVx: 3,
+    /** A landing of hers in its sight is a stop too (it tells at once). */
+    landStop: true,
     minDrop: 120,
     maxDrop: 640,
-    tellFrames: 34,
+    tellFrames: 30,
     dropFrames: 14,
     swingFrames: 48,
     swingPx: 130,
@@ -1352,7 +1391,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       chargeSpeed: 16,
       recoverFrames: 70,
       recoverTiredFrames: 70,
-      recoverWallFrames: 120,
+      // (Round 4: a ram into a wall lays it open 3 s: baiting it from a ledge is rewarded.)
+      recoverWallFrames: 180,
       knockScale: 0.5,
       feintFrames: 18,
       // (Long enough to answer after the feint with a 20-30 frame reaction.)
@@ -1379,6 +1419,16 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // (area1-plan-r3 #8: casual runs faded 8-9 times and gave up; first tries lasted 11-21 s.)
       firstTellRams: 2,
       firstTellMult: 1.5,
+      firstRamSpeedMult: 0.6,
+      // (area1-video-r2 #2: casual tries lasted 11-15 s: hit standing, rammed again while down, pinned at the gate.)
+      lungeOnJump: true,
+      // (Its den's escape ledges (192 px up): its ram pulls up at a ledge's mouth, open: under a ledge she is
+      // never pinned, and baiting a ram there is a window.)
+      strikeHeadroomPx: 200,
+      braceUnderRoof: true,
+      bodyHarmless: true,
+      landBounce: true,
+      touchRestFrames: 90,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,
@@ -1403,6 +1453,10 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       huntStopPx: -1000,
       landHuntPx: 0,
       knockScale: 1.6,
+      // (First-timer r4: "the juvenile took 2 health by contact while I was swinging at it". Harmless while
+      // staggered by a cut, and after its touch it turns and wanders off, calm, for 2.5 s: one pip a meeting.)
+      hurtSafeFrames: 30,
+      touchCalmFrames: 150,
       domeShoulder: 0.58,
       value: 0,
       valueFinisher: 0,

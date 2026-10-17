@@ -26,7 +26,7 @@ import type { Scene, SolidRect } from '../scene';
 import { seenScale } from '../seen';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
-import { frames, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
+import { frames, heldUnseen, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
 import { SENSE_WALLET, seenBy } from './senses';
 
 type L = Tuning['lampwing'];
@@ -314,6 +314,61 @@ function strikeOut(info: StepInfo): boolean {
   return true;
 }
 
+/**
+ * A blow toward the rim (`EnemySpawn.rim`): out of a lamp's hold (or caught in a pass) she is thrown up and
+ * over toward it, as a throw (`lures.freeSpeed`, the throw's frames); free, she is kicked toward it with a lift.
+ */
+function toRim(info: StepInfo, t: L, rim: number): void {
+  const p = info.state.player;
+  const d = rim > p.x + p.w / 2 ? 1 : -1;
+  p.vx = 0;
+  let held = p.lure >= 0;
+  for (let i = info.events.length - 1; i >= 0 && i >= info.events.length - 12; i--) {
+    const x = info.events[i];
+    if (x?.type === 'lureFree' && x.how === 'hurt') held = true;
+  }
+  if (held) {
+    const L = info.t.lures;
+    p.pullX = d * Math.SQRT1_2 * L.freeSpeed;
+    p.vy = -Math.SQRT1_2 * L.freeSpeed - L.freeLift;
+    p.lureThrow = Math.max(0, Math.round(L.throwFrames));
+    p.thrown = true;
+    return;
+  }
+  p.pullX = 0;
+  p.kickX = d * t.rimKick;
+  p.vy = Math.min(p.vy, -t.rimLift);
+}
+
+/** A pass begins: `n` frames of swoop after the pull-back (`enemyDive` at the flame). */
+function swoop(e: EnemyState, info: StepInfo, t: L, f: { x: number; y: number }, n: number): void {
+  const span = frames(t.diveWindupFrames) + n;
+  const cx = e.x + e.w / 2;
+  const cy = e.y + e.h / 2;
+  setMode(e, 'dive', span);
+  e.span = span;
+  e.fromX = cx;
+  e.fromY = cy;
+  e.targetX = f.x - e.side * t.passRadius;
+  e.targetY = f.y - t.passHeight;
+  e.vx = 0;
+  e.vy = 0;
+  e.rx = 0;
+  e.ry = 0;
+  info.events.push({
+    type: 'enemyDive',
+    id: e.id,
+    kind: e.kind,
+    x: cx,
+    y: cy,
+    tx: f.x,
+    ty: f.y,
+    dir: -e.side,
+    frames: span,
+    dive: 1,
+  });
+}
+
 /** Was she standing when the blow came (her feet on a top)? */
 function onGround(info: StepInfo): boolean {
   const p = info.state.player;
@@ -356,7 +411,21 @@ function rhythm(e: EnemyState, info: StepInfo, t: L): boolean {
     drift(e, info.scene, t);
     face(e, f.x - cx, 0);
     e.flap += t.flapHover;
-    if (--e.timer <= 0) {
+    const p = info.state.player;
+    // (Round 4: caught in its orbit once its rest after a pass is over, she is snatched at once: the pass
+    // crosses the orbit `diveWindupFrames` + half of `snapPassFrames` after the catch, before a masher is free.
+    // Caught in the rest just after a pass, she has the time to beat free: that is the timing.)
+    if (
+      t.snapPassFrames > 0 &&
+      p.lure === e.orbit &&
+      e.modeFrames >= frames(t.passRestFrames) &&
+      !heldUnseen(e, p)
+    ) {
+      swoop(e, info, t, f, frames(t.snapPassFrames, 1));
+    } else if (--e.timer <= 0 && heldUnseen(e, p)) {
+      // (Held helpless and it was off her screen as she was caught: it waits.)
+      e.timer = 1;
+    } else if (e.timer <= 0) {
       const n = frames(t.passTellFrames, 1);
       setMode(e, 'curious', n);
       info.events.push({
@@ -373,33 +442,15 @@ function rhythm(e: EnemyState, info: StepInfo, t: L): boolean {
     steer(e, 0, 0, t.curiousAccel);
     drift(e, info.scene, t);
     e.flap += t.flapCurious;
-    if (--e.timer <= 0) {
-      const n = frames(t.diveWindupFrames) + frames(t.passFrames, 1);
-      setMode(e, 'dive', n);
-      e.span = n;
-      e.fromX = cx;
-      e.fromY = cy;
-      e.targetX = f.x - e.side * t.passRadius;
-      e.targetY = f.y - t.passHeight;
-      e.vx = 0;
-      e.vy = 0;
-      e.rx = 0;
-      e.ry = 0;
-      info.events.push({
-        type: 'enemyDive',
-        id: e.id,
-        kind: e.kind,
-        x: cx,
-        y: cy,
-        tx: f.x,
-        ty: f.y,
-        dir: -e.side,
-        frames: n,
-        dive: 1,
-      });
-    }
+    if (--e.timer <= 0) swoop(e, info, t, f, frames(t.passFrames, 1));
   } else {
-    // The pass: a pull-back, then a curve from its perch down through the flame and up to the mirror perch.
+    // The pass: a pull-back, then a curve from its perch down through the flame and up to the mirror perch
+    // (through her, if she circles in that orbit: it takes a moth from it, and she is one).
+    const p = info.state.player;
+    if (p.lure === e.orbit) {
+      f.x = p.x + p.w / 2;
+      f.y = p.y + p.h / 2;
+    }
     const w = frames(t.diveWindupFrames);
     const k = e.span - e.timer + 1;
     let ux = f.x - e.fromX;
@@ -611,6 +662,8 @@ function climb(e: EnemyState, info: StepInfo): void {
 /** It has noticed her (or is ready to go again): the tell. */
 function tell(e: EnemyState, info: StepInfo): void {
   const p = info.state.player;
+  // (Not at one held helpless who never saw it coming: round 4.)
+  if (heldUnseen(e, p)) return;
   const n = frames(rowOf(info.t, e).curiousFrames, 1);
   setMode(e, 'curious', n);
   e.targetX = p.x + p.w / 2;
@@ -698,6 +751,9 @@ export const lampwing: KindRules = {
     const G = info.t.goal;
     // (On a rhythm only its pass through the orbit is a danger: its perch and its tell are not.)
     if (e.orbit >= 0 && (e.mode === 'perch' || e.mode === 'curious')) return true;
+    // (Its pull-back is still the tell: one climbing past its perch as a pass begins is not struck, round 4.)
+    if (e.orbit >= 0 && e.mode === 'dive' && e.span - e.timer < frames(rowOf(info.t, e).diveWindupFrames))
+      return true;
     if (e.mode === 'curious' && e.modeFrames <= rowOf(info.t, e).noticeSafeFrames) return true;
     // Stalled at the bottom of its dive it is open; and for a beat as it lifts away. Having given up
     // (it hangs, then flies home) it is no danger either: its dive is its attack, and a body left
@@ -1031,6 +1087,12 @@ export const lampwing: KindRules = {
     if (e.mode === 'dead') return;
     const t = rowOf(info.t, e);
     const p = info.state.player;
+    // (`rim`: every blow of it sends her toward the rim, up and over, never off it: the crown, round 4.)
+    const rim = info.scene.enemies?.find((s) => s.id === e.id)?.rim;
+    if (rim !== undefined) {
+      toRim(info, t, rim);
+      if (e.orbit >= 0 && e.mode === 'dive') return;
+    }
     // On a rhythm: a moth caught in the orbit as it passes is struck straight down (into the tunnel under
     // a throw gap: a pip and the slow way), and the pass goes on to the other perch.
     if (e.orbit >= 0 && e.mode === 'dive') {
@@ -1052,6 +1114,7 @@ export const lampwing: KindRules = {
     // Struck out of a flame's orbit (it hunts the caught): she flies out along the throw she was aiming
     // (the arc drawn while she circles), not wherever the blow's side would have sent her (human-like r1:
     // in R8 the blow dropped her into the thorn bed under the throw gap).
+    if (rim !== undefined) return;
     if (t.huntCaught && strikeOut(info)) return;
     // A hawker blow on one standing knocks her straight up, never sideways (area1-plan-r3: the crown hawker
     // must never carry her over the rim). (`hurtPlayer` has already cleared `grounded`: read her feet.)

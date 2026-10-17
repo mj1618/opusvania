@@ -74,6 +74,14 @@ export function segmentBlocked(scene: Scene, x0: number, y0: number, x1: number,
 }
 
 /** What `update` of a kind is told about this step. */
+/**
+ * She is held (a lamp's orbit or a grab) and it was off her screen when the catch began: it may start no
+ * strike on her until she is free (round 4: nothing arrives from off-screen while she is helpless).
+ */
+export function heldUnseen(e: EnemyState, p: { lure: number; grab: number }): boolean {
+  return (p.lure >= 0 || p.grab >= 0) && e.catchSeen === 0;
+}
+
 export interface StepInfo {
   state: GameState;
   scene: Scene;
@@ -171,6 +179,8 @@ export interface KindRules {
   deathHold?(t: Tuning): number;
   /** Coming down on its back in a down slash bounces her instead of hurting her (a shell: the burrbacks). */
   stompable?(e: EnemyState): boolean;
+  /** Coming down on its top bounces her even without a slash (and whatever it is doing): a drop onto it is a pogo. */
+  bouncy?(e: EnemyState, t: Tuning): boolean;
   /** Her box overlaps its box: does its body really touch her (its drawn shape)? Default: yes. */
   touches?(e: EnemyState, p: { x: number; y: number; w: number; h: number }, t: Tuning): boolean;
   /** A blow going `dir` that lands does not stagger it (the old burrback's braced shell takes a pogo and rams on). */

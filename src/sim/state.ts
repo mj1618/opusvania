@@ -628,6 +628,12 @@ export interface EnemyState {
    */
   orbit: number;
   period: number;
+  /**
+   * 1 = it was on her screen (`enemies.screenHalfW/H` of her) when her latest catch began (a lamp's hold, a
+   * grab), 0 = it was not: then it starts no strike on her until she is free (round 4: nothing arrives from
+   * off-screen while she is helpless). Kept up to date while she is free.
+   */
+  catchSeen: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */

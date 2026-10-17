@@ -210,7 +210,7 @@ describe('the old burrback', () => {
   const pit = (x = 2000) => room([{ id: 'o', kind: 'oldBurrback', x, y: FLOOR, facing: -1 }]);
   const O = T.oldBurrback;
 
-  it('its tell runs on its own clock: the ram comes windupFrames after the brace, whether she is up or down', () => {
+  it('its tell runs on its own clock (never waits for her landing); a jump of hers in it sets the ram off at once (round 4)', () => {
     for (const jumpAt of [-1, 0, 4, 10, 20]) {
       const s = newSim(pit());
       const o = enemy(s, 'o');
@@ -227,7 +227,16 @@ describe('the old burrback', () => {
           break;
         }
       }
-      expect(f).toBe(Math.round(O.windupFrames * O.firstTellMult));
+      const tell = Math.round(O.windupFrames * O.firstTellMult);
+      if (jumpAt < 0) expect(f).toBe(tell);
+      // (Her jump, `jumpAt` + 1 frames in, sets it off once `lungeAfterFrames` of the tell have run and her
+      // feet are over its top.)
+      else {
+        expect(f).toBeGreaterThanOrEqual(Math.max(jumpAt + 1, O.lungeAfterFrames + 1));
+        expect(f).toBeLessThan(tell);
+        const p = s.state.player;
+        expect(p.y + p.h).toBeLessThanOrEqual(o.y);
+      }
     }
   });
 
@@ -429,6 +438,72 @@ describe('the old burrback', () => {
     s.place(o.x + o.w + 30, FLOOR);
     s.state.player.facing = -1;
     expect(types(s.run('A1 .2'))).toContain('enemyHit');
+  });
+
+  // Round 4 (area1-video-r2 #2: casual tries lasted 11-15 s: hit standing, rammed again while down, pinned at the gate).
+  it('round 4: under an escape ledge she is never pinned: the ram pulls up at its mouth, open', () => {
+    // A ledge 192 px up against the west wall, as in the den.
+    const s = newSim(
+      room([{ id: 'o', kind: 'oldBurrback', x: 650, y: FLOOR, facing: -1, radius: 1000 }], [], {
+        solids: [
+          { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+          { tag: 'ground', x: 0, y: 0, w: 300, h: FLOOR },
+          { tag: 'root', x: 300, y: FLOOR - 192, w: 128, h: 32 },
+        ],
+      }),
+    );
+    const o = enemy(s, 'o');
+    o.mode = 'walk';
+    s.place(330, FLOOR);
+    const ev: SimEvent[] = [];
+    for (let i = 0; i < 400 && !types(ev).includes('enemyRecover'); i++) ev.push(...s.run('.1'));
+    process.stderr.write(
+      `${JSON.stringify(ev.filter((e) => e.type !== 'step').map((e) => [e.type, (e as { cause?: string }).cause]))} ${o.x} ${o.mode}\n`,
+    );
+    expect(types(ev)).toContain('enemyCharge');
+    expect(of(ev, 'enemyRecover')[0]?.cause).toBe('ledge');
+    expect(types(ev)).not.toContain('hurt');
+    expect(o.stunned).toBe(true);
+    expect(o.x).toBeGreaterThanOrEqual(428);
+  });
+
+  it('round 4: a drop onto its top bounces her (shut, whatever it is doing); its body never hurts, only its ram', () => {
+    for (const mode of ['walk', 'windup', 'recover'] as const) {
+      const s = newSim(pit());
+      const o = enemy(s, 'o');
+      o.mode = mode;
+      o.timer = 60;
+      o.strikeCd = 600;
+      s.place(o.x + o.w / 2, o.y - 200);
+      const ev = s.run('.40');
+      process.stderr.write(
+        `${mode} ${JSON.stringify(ev.filter((e) => e.type !== 'step').map((e) => e.type))} ${s.state.player.y} ${o.y} ${o.mode}\n`,
+      );
+      expect(types(ev)).not.toContain('hurt');
+      expect(of(ev, 'enemyBlock').length).toBeGreaterThan(0);
+    }
+    // Pressed against its side while it walks (or braces): shoved out, never hurt.
+    const s = newSim(pit());
+    const o = enemy(s, 'o');
+    o.mode = 'walk';
+    o.strikeCd = 600;
+    s.place(o.x + 10, FLOOR);
+    const ev = s.run('R60');
+    expect(types(ev)).not.toContain('hurt');
+  });
+
+  it('round 4: after its ram hits her it may not brace again for touchRestFrames; the first rams of a try are slower', () => {
+    const s = newSim(pit());
+    const o = enemy(s, 'o');
+    o.mode = 'walk';
+    s.place(o.x - O.strikeMinPx - 60, FLOOR);
+    const ev: SimEvent[] = [];
+    for (let i = 0; i < 400 && !types(ev).includes('hurt'); i++) ev.push(...s.run('.1'));
+    const charge = of(ev, 'enemyCharge')[0];
+    expect(charge?.frames).toBe(Math.ceil((charge?.px ?? 0) / (O.chargeSpeed * O.firstRamSpeedMult)));
+    expect(types(ev)).toContain('hurt');
+    const after = s.run(`.${O.touchRecoverFrames + O.touchRestFrames - 2}`);
+    expect(types(after)).not.toContain('enemyWindup');
   });
 });
 
@@ -874,6 +949,107 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
         expect(types(after)).toContain('lureFree');
         expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
       }
+  });
+
+  it('round 4: caught after its rest, she is snatched before a masher is free (a pass through her, struck down)', () => {
+    const s = newSim(scene());
+    s.place(1400, FLOOR);
+    let ev: SimEvent[] = [];
+    for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
+    for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
+    s.run(`.${H.passRestFrames + 2}`);
+    s.place(2000, 540);
+    // Mashing from the first frame, as fast as beats count (`lures.beatCd` apart): still held as it crosses.
+    const cd = T.lures.beatCd;
+    const seq = ['.4', 'J1', `.${cd}`, 'J1', `.${cd}`, 'J1', '.30'].join(' ').split(' ');
+    let f = 0;
+    let at = -1;
+    for (const tok of seq) {
+      const m = /^(\D*)(\d+)$/.exec(tok);
+      for (let k = 0; k < Number(m?.[2] ?? 0) && at < 0; k++, f++)
+        if (of(s.run(`${m?.[1] ?? '.'}1`), 'hurt').some((e) => e.source?.kind === 'hawker')) at = f;
+    }
+    // Struck as it crosses the orbit (`diveWindupFrames` + half its snap pass after the catch), straight down.
+    expect(at).toBeGreaterThan(0);
+    expect(at).toBeLessThanOrEqual(H.diveWindupFrames + H.snapPassFrames);
+    expect(s.state.player.vy).toBeGreaterThan(0);
+    expect(s.state.player.vx).toBe(0);
+  });
+
+  it('round 4: a rim (spawn) sends her toward it, up and over, whatever struck her', () => {
+    const s = newSim(
+      room(
+        [{ id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, orbit: 'w', guards: 'w', rim: 2600 }],
+        [wick('w', 2000, 500)],
+      ),
+    );
+    s.place(1400, FLOOR);
+    let ev: SimEvent[] = [];
+    for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
+    for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
+    s.run(`.${H.passRestFrames + 2}`);
+    s.place(2000, 540);
+    const x0 = s.state.player.x;
+    let hit = false;
+    for (let i = 0; i < 60 && !hit; i++) hit = types(s.run('.1')).includes('hurt');
+    expect(hit).toBe(true);
+    expect(s.state.player.vy).toBeLessThan(0);
+    s.run('.20');
+    expect(s.state.player.x).toBeGreaterThan(x0 + 100);
+  });
+
+  it("round 4: a finale (a `finale` trigger's held release) sends it away; so does its `until` flag", () => {
+    const s = newSim(
+      room(
+        [{ id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, orbit: 'w', guards: 'w' }],
+        [wick('w', 2000, 500)],
+        {
+          triggers: [
+            { id: 'crown', x: 1300, y: 600, w: 200, h: 200, sets: 'crown', hold: 120, finale: true },
+          ],
+        } as Partial<Scene>,
+      ),
+    );
+    s.place(1400, FLOOR);
+    const ev = s.run('.10');
+    expect(types(ev)).toContain('storyHold');
+    expect(of(ev, 'enemyDisperse')[0]?.id).toBe('h');
+    const u = newSim(
+      room(
+        [{ id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, until: 'crown' }],
+        [wick('w', 2000, 500)],
+      ),
+    );
+    u.place(1400, FLOOR);
+    expect(types(u.run('.5'))).not.toContain('enemyDisperse');
+    u.state.save.flags.push('crown');
+    expect(of(u.run('.2'), 'enemyDisperse')[0]?.id).toBe('h');
+  });
+});
+
+describe('round 4: nothing arrives from off-screen while she is helpless', () => {
+  it('a dangler off her screen when a lamp caught her does not drop on her until she is free', () => {
+    // A dangler over a wick far from where she stands (off her screen); she is caught by that wick (thrown
+    // there, say): it waits until she is free.
+    const s = newSim(
+      room([{ id: 'd', kind: 'dangler', x: 2000, y: 300, facing: 1 }], [wick('w', 2000, 600)], {
+        solids: [
+          { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
+          { tag: 'trunk', x: 1800, y: 240, w: 400, h: 60 },
+        ],
+      }),
+    );
+    s.place(300, FLOOR);
+    s.run('.2');
+    s.place(2000, 600);
+    const ev = s.run('.60');
+    const caught = ev.findIndex((e) => e.type === 'lureCaught');
+    expect(caught).toBeGreaterThanOrEqual(0);
+    expect(enemy(s, 'd').catchSeen).toBe(0);
+    const held = ev.slice(caught);
+    const free = held.findIndex((e) => e.type === 'lureFree');
+    const tell = held.findIndex((e) => e.type === 'enemyWindup');
+    expect(tell === -1 || (free >= 0 && tell > free)).toBe(true);
   });
 });
 

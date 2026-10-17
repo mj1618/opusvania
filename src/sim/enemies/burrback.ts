@@ -27,7 +27,16 @@ import type { Scene } from '../scene';
 import { seenScale } from '../seen';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
-import { frames, gap2, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
+import {
+  frames,
+  gap2,
+  heldUnseen,
+  type KindRules,
+  mix,
+  type StepInfo,
+  segmentBlocked,
+  setMode,
+} from './common';
 import { seenBy } from './senses';
 
 /** The numbers of this burrback: the plain one's, or the old burrback's (a variant row, tuning.ts). */
@@ -332,7 +341,7 @@ function roofAhead(e: EnemyState, scene: Scene, d: number, px: number): boolean 
 function brace(e: EnemyState, info: StepInfo, over = false): boolean {
   const B = rowOf(info.t, e);
   const p = info.state.player;
-  if (B.strikePx <= 0 || e.strikeCd > 0 || e.calm > 0) return false;
+  if (B.strikePx <= 0 || e.strikeCd > 0 || e.calm > 0 || heldUnseen(e, p)) return false;
   if (p.hp <= 0 || p.faded > 0 || p.kindling >= 0 || p.kindlingLamp >= 0 || info.state.goal.gathered)
     return false;
   // (Not at one dropping onto it from high above, nor at one in the air right over it, coming down
@@ -357,8 +366,9 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
     const behind = pc < e.x + e.w / 2 ? MAX_X - (e.x + e.w) : e.x - MIN_X;
     if (gap < B.strikeMinPx && behind > 8) return false;
   }
-  if (burrback.harmless?.(e, info)) return false;
-  if (lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) return false;
+  if (sheltered(e, info)) return false;
+  // (The old burrback braces at her under a ledge too (`braceUnderRoof`): its ram pulls up at the ledge's mouth, open.)
+  if (!B.braceUnderRoof && lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) return false;
   span(e, info.scene, B);
   const inside = p.x + p.w > RANGE_L && p.x < RANGE_R;
   if (!inside && !provoked) return false;
@@ -376,9 +386,7 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
     });
   }
   e.chargeLeft = frames(B.chargePx, 1);
-  // (The first rams of a fight are told longer (area1-plan-r3 #8): `firstTellRams` of them, x `firstTellMult`.)
-  const base = e.span > 0 ? e.span : B.windupFrames;
-  const n = frames(e.rams < B.firstTellRams ? base * B.firstTellMult : base, 1);
+  const n = tellFrames(e, B);
   // (Curled, it uncurls into the brace.)
   e.tuck = 0;
   // (A fresh exchange: the old burrback's feint comes first, one pogo a brace, its shell shut.)
@@ -399,7 +407,7 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
     dir: e.facing,
     frames: n,
     px: e.chargeLeft,
-    speed: B.chargeSpeed,
+    speed: e.rams < B.firstTellRams ? B.chargeSpeed * B.firstRamSpeedMult : B.chargeSpeed,
   });
   return true;
 }
@@ -464,6 +472,32 @@ function spend(
  * jump let go: the shortest fall), at most `ramUnderMax`; and the ram long enough to carry it past her.
  * 0 when she is on the ground (the ordinary ram: she jumps it as it comes).
  */
+/** Its brace's tell, frames. (The first rams of a fight are told longer (area1-plan-r3 #8): `firstTellRams` of them, x `firstTellMult`.) */
+/** Open on its back (the old burrback), or inside a lit lantern's sanctuary: it can do her no harm, nor brace. */
+function sheltered(e: EnemyState, info: StepInfo): boolean {
+  // (Open on its back, staggered by her cuts included, the old burrback's touch does nothing.)
+  if (e.stunned) return true;
+  return groundSanctuaryDepth(info.state, info.scene, info.t.goal, e.x, e.x + e.w, e.y + e.h) > 0;
+}
+
+function tellFrames(e: EnemyState, B: Row): number {
+  const base = e.span > 0 ? e.span : B.windupFrames;
+  return frames(e.rams < B.firstTellRams ? base * B.firstTellMult : base, 1);
+}
+
+/** She has jumped (rising, her feet over its top) in front of it, within its ram's reach, not away from it. */
+function lunges(e: EnemyState, info: StepInfo): boolean {
+  const p = info.state.player;
+  if (p.grounded || p.vy >= 0 || p.hp <= 0 || p.faded > 0) return false;
+  const pc = p.x + p.w / 2;
+  const ec = e.x + e.w / 2;
+  if ((pc - ec) * e.facing <= 0) return false;
+  if ((p.vx + p.pullX) * e.facing > 0.5) return false;
+  const gap = e.facing > 0 ? p.x - (e.x + e.w) : e.x - (p.x + p.w);
+  // (Once her feet are over its top: a ram set off sooner would meet her still rising out of its way.)
+  return gap <= e.chargeLeft && p.y + p.h <= e.y && p.y + p.h > e.y - e.h;
+}
+
 function underJump(e: EnemyState, info: StepInfo, B: Row): number {
   const p = info.state.player;
   if (p.grounded || p.hp <= 0 || p.faded > 0) return 0;
@@ -747,6 +781,22 @@ export const burrback: KindRules = {
     if (e.roused > 0) e.roused--;
     if (e.stirred > 0) e.stirred--;
     const free = (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0;
+    // (Round 4, the pit: only its ram hurts; otherwise its body shoulders her out, never pins her.
+    // Not while it lies open: she may stand in it and cut.)
+    if (
+      B.bodyHarmless &&
+      B.risePush > 0 &&
+      !e.stunned &&
+      (free || e.mode === 'recover' || e.mode === 'hurt' || e.mode === 'windup') &&
+      p.x < e.x + e.w &&
+      e.x < p.x + p.w &&
+      p.y < e.y + e.h &&
+      e.y < p.y + p.h &&
+      p.y + p.h > e.y + info.t.enemies.stompPx
+    ) {
+      const away = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+      if (p.kickX * away < B.risePush) p.kickX = away * B.risePush;
+    }
     // Asleep (memory/creatures.md): its lamp went out, or an old burrback in its den before she comes
     // down. Curled where it lies, harmless. The old one wakes when she is down near it.
     if (e.mode === 'sleep') {
@@ -873,6 +923,9 @@ export const burrback: KindRules = {
     }
     if (e.mode === 'windup') {
       e.vx = 0;
+      // (Round 4: she jumps in its tell, in front of it and not away: it rams now, under her jump.)
+      if (B.lungeOnJump && e.timer > 1 && tellFrames(e, B) - e.timer >= B.lungeAfterFrames && lunges(e, info))
+        e.timer = 1;
       // (A first mini-boss feints only from its second health third: the first third teaches the plain ram.)
       if (--e.timer <= 0 && B.feintFrames > 0 && e.feints === 0 && e.hp <= e.hpMax * B.feintFrom) {
         // The old burrback's feint: the first brace was a lie. Its shell drops, then it braces again.
@@ -898,6 +951,8 @@ export const burrback: KindRules = {
         // She jumped in the tell and is up in the air in front of it: the ram passes under the jump
         // in progress (human-like r1: a quick reaction must never land in the ram).
         e.ramSpeed = B.ramUnderJump ? underJump(e, info, B) : 0;
+        // (Round 4: the first rams of a try are slower too: a late jump still clears them.)
+        if (e.ramSpeed === 0 && e.rams < B.firstTellRams) e.ramSpeed = B.chargeSpeed * B.firstRamSpeedMult;
         events.push({
           type: 'enemyCharge',
           id: e.id,
@@ -1113,9 +1168,9 @@ export const burrback: KindRules = {
 
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */
   harmless(e, info) {
-    // (Open on its back, staggered by her cuts included, the old burrback's touch does nothing.)
-    if (e.stunned) return true;
-    return groundSanctuaryDepth(info.state, info.scene, info.t.goal, e.x, e.x + e.w, e.y + e.h) > 0;
+    // (Round 4: only its ram hurts (`bodyHarmless`); the body shoulders her out instead.)
+    if (rowOf(info.t, e).bodyHarmless && e.mode !== 'charge' && e.mode !== 'feint') return true;
+    return sheltered(e, info);
   },
 
   /** Its touch hurt her (or met her kindling): it is shoved back from her, flinches, and turns away. */
@@ -1132,7 +1187,8 @@ export const burrback: KindRules = {
     if (e.mode === 'windup' || e.mode === 'charge') {
       e.facing = away;
       spend(e, info, 'touch');
-      e.strikeCd = Math.max(e.strikeCd, rehit);
+      // (Round 4: no ram after ram while she is down: `touchRestFrames` before it may brace again.)
+      e.strikeCd = Math.max(e.strikeCd, rehit, e.timer + frames(B.touchRestFrames));
       e.knockVx = away * Math.max(0, B.touchRecoil);
       e.teeter = 0;
       e.alertCd = e.timer + frames(B.alertCooldown);
@@ -1140,6 +1196,7 @@ export const burrback: KindRules = {
     }
     const n = frames(B.touchFlinchFrames, 1);
     setMode(e, 'alert', n);
+    if (B.touchCalmFrames > 0) e.calm = Math.max(e.calm, frames(B.touchCalmFrames));
     e.strikeCd = Math.max(e.strikeCd, n + frames(B.strikeCooldown), rehit);
     e.knockVx = away * Math.max(0, B.touchRecoil);
     e.rx = 0;
@@ -1196,6 +1253,12 @@ export const burrback: KindRules = {
 
   /** Her down slash on its back is always a pogo (the framework's stomp). */
   stompable: () => true,
+
+  /**
+   * Coming down on its top bounces her (`landBounce`: the old burrback, round 4), not while it lies open (she
+   * may land in it and cut).
+   */
+  bouncy: (e, t) => rowOf(t, e).landBounce && !e.stunned,
 
   /** The old burrback's braced shell takes a pogo without a stagger: it rams on under her. */
   tough: (e, dir, t) => rowOf(t, e).pogoShell && e.braced && dir === 'down',

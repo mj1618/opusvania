@@ -82,6 +82,22 @@ round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is"
   22 of 24 at the first attempt, 17-67 s; masher still always fades. Human-like (HEAD e6023a5 + this, 9 runs): all 7
   that reached wood-well killed it at the first try, 0 fades there, 1-3 hits, 15.5-24.6 s (casual 18.5 s, skilled
   15.5-19.7 s); the 2 casual runs that did not finish were lost earlier (8/10 rooms).
+- **Round 4** (area1-video-r2 #2: casual tries still 11-15 s, 5-7 fades). Traced with the human-like bots: hit
+  standing (a casual "hop over" is a 76 px tap, it is 96 tall), rammed again while down, pinned under the west escape
+  ledge at the gate wall, chipped by its walking body. Now (`tuning.oldBurrback`):
+  - `lungeOnJump`: her jump in its tell (in front, not away, after 6 f) sets the ram off the frame her feet clear its
+    top, under her: any full jump in the tell clears it. A tap that never clears it still meets the ram.
+  - the first 2 rams of a try (rams reset on a fade: a try is a life) run at 0.6x (`firstRamSpeedMult`) as well.
+  - `bodyHarmless`: only the ram hurts; its body (walking, braced, winded, rising) shoulders her out (`risePush`).
+  - `landBounce`: a drop onto its shut top (no down slash) bounces her; open on its back, she lands in it and cuts.
+  - `touchRestFrames` 90: after its ram hits her, no brace for 1.5 s. `recoverWallFrames` 180 (was 120).
+  - `strikeHeadroomPx` 200 + `braceUnderRoof`: under an escape ledge (192 px up) it still braces, and its ram pulls
+    up at the ledge's mouth, open. She is never pinned under one.
+  - Pilots: masher fades every seed in ~16 s, 0 landed; slow pilot 22 of 24 first attempt, 15-105 s, 0-5 hits.
+    Human-like (9 runs, 3928655 + this): every run that reached the pit killed it; pit fades 1 in all (casual s2,
+    was 5 / 5 / 7); fights casual 18 / 78 s, average 17-22 s, skilled 13-15 s (under the 20-40 s aim).
+  - Bot limit seen: a bot under a ledge flush with the wall jumps at its underside for minutes. **Escape ledges
+    should be one-ways** (she jumps up through them) or stand off the wall.
 
 ## The plain burrback, round 2 (first-timer casual r2: "↓+C on it hurt me", "hit from a body-length", "it slid to
 where I landed")
@@ -169,8 +185,31 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
   apart) is free long before the next (unit tests). So the skill is: wait for the swoop, then catch and throw.
 - **`straightKnock`** (hawker row): any other blow of it while she stands knocks her straight up, never sideways (the
   crown rim). Struck in the air or caught, she flies along her aimed throw (`strikeOut`) as before.
+- **Round 4** (area1-video-r2 #4: 0 hawker hits on a caught moth in 9 runs: a masher is free in ~0.4 s):
+  - after a pass it rests `passRestFrames` 90 on its perch: a catch then is safe (the timing). Caught in its orbit
+    any later, it snatches at once: a `snapPassFrames` 20 pass (no tell; its rhythm was the tell), crossing the orbit
+    16 f after the catch, before the fastest masher is free.
+  - a pass bends through her when she circles in its orbit (it takes a moth; she is one): a mistimed catch is struck.
+  - its pull-back (6 f) is harmless, still the tell (crown: a climber wall-jumped into its perch as a pass began).
+  - `rim: <x>` (spawn): every blow of it sends her toward that x, up and over (caught: thrown at the throw's speed
+    at 45°; free: `rimKick` 9, `rimLift` 11). For the crown: the rim she must never be knocked off.
+  - `until: '<flag>'` (any creature): it leaves once that flag is set. And a `finale` trigger's held release sends
+    every creature of the room away (the crown hawker dived red through the finale).
 - Lab station F (`?room=lab-creatures`, x ~13500): hawk-f on a rhythm through wick-f. Greybox reads: the tell ring at
   the perch, then the swoop's trail through the flame.
+
+## Round 4 for every hunter: nothing arrives from off-screen while she is helpless
+`EnemyState.catchSeen`: whether it was within `enemies.screenHalfW/H` (900 x 500) of her as her latest catch (a lamp's
+hold, a grab) began. If not, it starts no strike on her until she is free (`heldUnseen` in common.ts: the dangler's
+drop, a hawker's tell, a rhythm pass, a burrback's brace). First-timer r4: "a dangler dropped from off-screen while I
+was caught".
+- **Dangler** (r4: "barely hit": bots stood still under one 17 frames a run): a slow step (`stillVx` 3) counts as a
+  stop, `stopFrames` 6, a landing in its sight is a stop (`landStop`), tell 30 f. The greybox tell draws the swing's
+  arc (render, 660b2f4).
+- **Juvenile** (r4: "it took 2 health by contact while I swung at it"): harmless 30 f after a cut (`hurtSafeFrames`),
+  and after its touch it is calm 150 f, walking away (`touchCalmFrames`): one pip a meeting.
+- **Blocks**: a bigger block hitstop (8) or recoil (12) broke the grove's tuned masher / reader pilots and the old
+  burrback's slow pilot; the clink stays 6 f / 8 px/f and is render's and audio's to make loud.
 
 ## Composed encounters and placement guidance (for the level builder)
 - Creatures ignore each other (no collisions), so any overlap works; one lure can be guarded by several (a snuff

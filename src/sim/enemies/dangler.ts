@@ -30,7 +30,7 @@ import { cycleSine } from '../paths';
 import { solidAt } from '../physics/aabb';
 import type { EnemyState } from '../state';
 import type { Tuning } from '../tuning';
-import { frames, type KindRules, type StepInfo, segmentBlocked, setMode } from './common';
+import { frames, heldUnseen, type KindRules, type StepInfo, segmentBlocked, setMode } from './common';
 import { seenBy } from './senses';
 import { segmentInBox } from './web';
 
@@ -211,7 +211,15 @@ export const dangler: KindRules = {
       const p = info.state.player;
       const still = p.grounded && Math.abs(p.vx) <= D.stillVx && sees(e, info);
       e.lost = still ? e.lost + 1 : 0;
-      if (e.strikeCd === 0 && (D.stopFrames > 0 ? e.lost >= D.stopFrames : sees(e, info))) {
+      // (A landing under it is a stop too: round 4.)
+      if (D.landStop && info.stir === 'land' && p.grounded && sees(e, info))
+        e.lost = Math.max(e.lost, D.stopFrames);
+      // (Not on one held helpless by a lamp who never saw it coming: round 4.)
+      if (
+        e.strikeCd === 0 &&
+        !heldUnseen(e, p) &&
+        (D.stopFrames > 0 ? e.lost >= D.stopFrames : sees(e, info))
+      ) {
         e.lost = 0;
         tell(e, info);
       }
