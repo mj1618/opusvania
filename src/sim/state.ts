@@ -876,6 +876,12 @@ export interface RoomLocal {
   kit: KitState;
   /** The room's boss fight (memory/bosses.md), null in a room without one. */
   boss: BossState | null;
+  /**
+   * Where she first stood in this room (feet centre; the first ground that passes the safe checks after she
+   * came in): her door. A fade with no moon patch to go to and no room `reform` point re-forms her here,
+   * never beside what faded her (feel review round 2, problem 7). Null until she has stood.
+   */
+  entry: { x: number; y: number } | null;
 }
 
 export interface GameState {
@@ -908,6 +914,8 @@ export interface GameState {
   kit: KitState;
   /** The room's boss fight (memory/bosses.md), null in a room without one. */
   boss: BossState | null;
+  /** Her door into this room (`RoomLocal.entry`). */
+  entry: { x: number; y: number } | null;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -964,6 +972,7 @@ export function cloneState(s: GameState): GameState {
     rest: { ...s.rest },
     kit: cloneKit(s.kit),
     boss: s.boss ? { ...s.boss } : null,
+    entry: s.entry ? { ...s.entry } : null,
   };
 }
 

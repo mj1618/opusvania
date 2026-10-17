@@ -953,6 +953,12 @@ describe('R8 wood-hawkers: the hawker over the hummocks, the canopy line', () =>
   it('going west from the dark half, the naive habit hops the mound (wick-bark out of its way) and reaches the hub', () => {
     const s = play('wood-hawkers', ['glide']);
     s.g.teleport(3500, 2624);
+    // (The route, with W7 already out and its hawker gone. With it live the naive habit takes 4 hits stuck at
+    // x ~1492 under its dives and fades; it only got through before because a fade re-formed her close by.
+    // Since a fade re-forms her at her door (feel review round 2, problem 7) she meets it the same way again.)
+    const hawk = (s.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-hawk');
+    s.g.state.lures.hp[hawk] = 0;
+    s.g.state.lures.out[hawk] = 1;
     let jumpUntil = -1;
     let f = 0;
     for (; f < 3000 && s.g.state.room === 'wood-hawkers'; f++) {

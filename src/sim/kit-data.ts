@@ -55,6 +55,12 @@ export interface FlagTrigger {
   w: number;
   h: number;
   sets: string;
+  /**
+   * A held story beat (journey.md: input held <= 3 s): the step it sets its flag (once a save), no input
+   * reaches her for `hold` frames (at most `kit.storyHoldMax`): she slows to a stand while the staging plays.
+   * `storyHold` / `storyHoldEnd`; she cannot be hurt meanwhile.
+   */
+  hold?: number;
 }
 
 /**

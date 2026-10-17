@@ -172,8 +172,10 @@ export function createEnemies(scene: Scene, t: Tuning): EnemyState[] {
 }
 
 /**
- * Living enemies go back to where they started, calm and rested, but **they keep their wounds**
- * (`enemyReset.healed` is 0 now); dead ones stay dead (their glints still arrive). `enemyReset` for
+ * Living enemies go back to where they started, calm and rested. **In lamp rooms they heal** (feel review
+ * round 2, problem 7: with wounds kept every fight could be won by attrition; a death costs a walk now, from
+ * the last moon patch or the room's door, HK / Ori); `enemyReset.healed` says how much. **The test grove
+ * and scenes built in code (`scene.senses` wallet) keep their wounds**, the old rule: `enemyReset` for
  * each one that was away from its start, so it can be shown. Why no healing (playtest 5): a fight
  * has a second beat now, so one who only stands and cuts pays two lights a burrback; re-formed with
  * two lights against a healed one she faded again, for ever (piloted: naive-pilot.test.ts). With
@@ -186,7 +188,8 @@ export function resetEnemies(state: GameState, scene: Scene, t: Tuning, events?:
     const s = list[i];
     if (!e || !s || e.mode === 'dead') continue;
     const fresh = createEnemy(s, t, scene);
-    fresh.hp = Math.min(fresh.hpMax, Math.max(1, e.hp));
+    const kept = Math.min(fresh.hpMax, Math.max(1, e.hp));
+    fresh.hp = scene.senses === 'lamp' ? fresh.hpMax : kept;
     // (A web keeps its cut strands; one whose lamp went out stays dispersed.)
     if (e.kind === 'web') fresh.cut = e.cut;
     if (e.dispersed) {
@@ -196,7 +199,7 @@ export function resetEnemies(state: GameState, scene: Scene, t: Tuning, events?:
     }
     fresh.hitFrame = e.hitFrame;
     state.enemies[i] = fresh;
-    const healed = 0;
+    const healed = fresh.hp - kept;
     if (events && (healed > 0 || e.x !== fresh.x || e.y !== fresh.y))
       events.push({
         type: 'enemyReset',

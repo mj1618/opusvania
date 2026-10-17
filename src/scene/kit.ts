@@ -23,7 +23,9 @@ export const KIT_FIELDS = {
     )
     .optional(),
   gates: z.array(z.object({ ...rect, flag: id, kick }).strict()).optional(),
-  triggers: z.array(z.object({ ...rect, sets: id }).strict()).optional(),
+  triggers: z
+    .array(z.object({ ...rect, sets: id, hold: int.min(1).max(180).optional() }).strict())
+    .optional(),
   caps: z
     .array(
       z
@@ -108,7 +110,7 @@ interface KitRoom {
   seedCases?: Array<{ id: string; x: number; y: number }> | undefined;
   bark?: Array<Box & { id: string }> | undefined;
   gates?: Array<Box & { id: string; flag: string }> | undefined;
-  triggers?: Array<Box & { id: string; sets: string }> | undefined;
+  triggers?: Array<Box & { id: string; sets: string; hold?: number | undefined }> | undefined;
   caps?: Array<Box & { id: string }> | undefined;
   mothStones?: Array<{ id: string; x: number; y: number }> | undefined;
   signs?: Array<{ id: string; x: number; y: number }> | undefined;

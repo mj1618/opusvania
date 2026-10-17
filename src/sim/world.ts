@@ -175,6 +175,7 @@ export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boo
     kit: createKit(scene, t, save),
     // The room's boss (memory/bosses.md): beaten for good, a retry, or a first meeting; it sets up its own lures and creature.
     boss: createBoss(scene, t, { lures, enemies, save }),
+    entry: null,
   };
 }
 

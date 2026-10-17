@@ -312,7 +312,15 @@ export function step(
   }
   // Shut in the cocoon: presses stir it, no input moves her.
   const shut = updateHatch(state, S, input, state.prevInput, t, events);
-  const live = state.exit || state.caught || shut ? 0 : input;
+  // A held story beat (a trigger's `hold`, src/sim/kit.ts): no input while it lasts; a button still held as
+  // it ends is not a press (she would jump the moment it let go).
+  const story = state.kit.story > 0;
+  const storyEnd = story && --state.kit.story === 0;
+  if (storyEnd) {
+    const sp = state.player;
+    events.push({ type: 'storyHoldEnd', id: state.kit.storyBy, x: sp.x + sp.w / 2, y: sp.y + sp.h });
+  }
+  const live = state.exit || state.caught || shut || story ? 0 : input;
   // The end of a fade: she re-forms at her last moon patch (any room: everything earned is kept),
   // else at the last light / safe ground, and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
@@ -344,8 +352,11 @@ export function step(
       resetBoss(state, scene, t, events);
     } else {
       const light = restPoint(state, S, t);
-      // (No light: the room's own re-form point, if it names one, before her safe ground.)
-      reformPlayer(state, S, P, events, light ?? S.reform);
+      // (No light: the room's own re-form point, if it names one, else her door into this room: never
+      // beside what faded her (feel review round 2, problem 7); her safe ground only if she never stood here.)
+      // (The test grove and scenes built in code, `senses` wallet, keep the old rule: her safe ground.)
+      const door = S.senses === 'lamp' ? (state.entry ?? undefined) : undefined;
+      reformPlayer(state, S, P, events, light ?? S.reform ?? door);
       goalReformed(state.goal, light);
       resetEnemies(state, S, t, events);
       resetBoss(state, scene, t, events);
@@ -355,6 +366,8 @@ export function step(
   // stops) and nothing can hurt her.
   const held = goalHolds(state.goal, t.goal);
   const ran = updatePlayer(state, S, held ? heldInput(state, S, t.goal) : live, P, t.pods, events);
+  // (After its last held step: whatever she still holds is not a press when input comes back.)
+  if (storyEnd) state.player.inputLock = 0xffff;
   // Her offer (memory/giving.md): a glint given this step, one arriving.
   updateOffer(state, S, t, held ? 0 : live, held, events);
   // The level kit (memory/level-kit.md): triggers set flags, gates open, thorns hurt and send her back.

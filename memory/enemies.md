@@ -152,6 +152,14 @@ The rule in one line: **stand and mash loses, read the tell and punish wins, and
   home, calm, not healed; `enemyReset.healed` is always 0). Why: re-formed at 2 lights against a healed 4-5 hp
   burrback the masher faded for ever (piloted: a hand that glided over burr-path the first time looped there).
   With wounds kept every attempt counts; the price is the fade's (a third of the wallet, the walk back).
+- **Since feel review round 2 (problem 7, 2026-10-18) that is the test grove's rule only** (`scene.senses` wallet,
+  and scenes built in code). In lamp rooms (every room JSON) a fade costs a walk, not attrition: she re-forms at the
+  moon patch (as before), else the room's `reform`, else **her door** (`state.entry`: the first ground she stood on
+  in the room), never beside the fight, **whole** (not `reformHp`), and **the creatures heal** (`enemyReset.healed`).
+  Fall catches and thorns stay cheap (last ground, movement-controller.md / level-kit.md). Old burrback pilot after
+  it: all 24 win; 20- and 25-frame hands in 1-2 attempts; the 30-frame sloppy hand in 3-9 (it was 1-3 by attrition).
+  R8: the naive habit going west takes 4 hits stuck at the mound (x ~1492) under hawk-first's dives and fades; it
+  only got through before because the fade re-formed it close by (a level / creature finding, reported).
 - **`fenced: true`** (scene, with a `radius`): neither ram nor shove takes it out of its range. burr-ledge
   only: hopping its ram used to end off the ledge's west end, on the floor.
 - **What it never does**: brace at one with a solid lower than 136 px over her ground (the doorway under

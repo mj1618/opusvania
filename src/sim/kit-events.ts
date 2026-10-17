@@ -52,6 +52,13 @@ export type KitEvent =
       recoil: number;
     }
   | { type: 'flagSet'; flag: string; by: string; x: number; y: number }
+  /**
+   * A held story beat (a trigger's `hold`, journey.md: <= 3 s): from the next step no input reaches her for
+   * `frames` (she slows to a stand), then `storyHoldEnd`; a button still held then is not a press (`x`, `y` =
+   * her feet).
+   */
+  | { type: 'storyHold'; id: string; frames: number; x: number; y: number }
+  | { type: 'storyHoldEnd'; id: string; x: number; y: number }
   | { type: 'gateOpen'; id: string; flag: string; x: number; y: number; w: number; h: number }
   /**
    * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it

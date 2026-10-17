@@ -14,7 +14,7 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `seedCases` | `[{id, x, y}]` centre | static pogo target, box `kit.seedCase.size` 56 square, never breaks, never blocks |
 | `bark` | `[{id, x, y, w, h, floor?, hp?, kick?}]` | rotten bark: a solid until `hp` (default 3) cuts; `floor: true` = a floor panel (down cuts only) |
 | `gates` | `[{id, x, y, w, h, flag, kick?}]` | a solid while `save.flags` lacks `flag` (the silk curtain) |
-| `triggers` | `[{id, x, y, w, h, sets}]` | her box centre inside sets the flag `sets`, once |
+| `triggers` | `[{id, x, y, w, h, sets, hold?}]` | her box centre inside sets the flag `sets`, once; **`hold`** (frames, <= `kit.storyHoldMax` 180: journey.md's 3 s) makes it a held story beat: from the next step no input for `hold` frames, untouchable, `storyHold {id, frames}` / `storyHoldEnd {id}`, a button still held at the end is not a press (feel review round 2, problem 8: for the staging's vista and glimpse) |
 | `lures[].swing` | `{length, reach?, period?, phase?}` | the lure hangs `length` under a pivot over its `x, y` (the bottom of the arc), swings `reach` px each side, one swing there and back per `period` frames |
 | `camera.zones` | `[{id, x, y, w, h, zoom?, fit?, lock?, bounds?}]` | render only: inside the rect (her body centre) the view eases to `zoom` (`fit`: the frame inside the 16:9 safe area) and keeps inside `bounds` (`lock`: the zone itself) |
 | `routes[].flags` | `string[]` | the world check: the way needs these flags |

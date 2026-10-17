@@ -401,6 +401,8 @@ export const defaultTuning = withVariants({
    */
   kit: {
     thorns: { damage: 1, holdFrames: 30, returnInvuln: 60, safeMargin: 96 },
+    /** The longest held story beat a trigger may ask for (`hold`), frames: journey.md's 3 s. */
+    storyHoldMax: 180,
     seedCase: { size: 56, clangHitstop: 6, clangRecoil: 8 },
     bark: { hp: 3, hitstop: 4, breakHitstop: 8 },
     /**

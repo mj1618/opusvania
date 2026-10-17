@@ -53,6 +53,9 @@ export interface KitState {
   /** Firefly signs (src/sim/finds.ts): the one she stands by (-1 none) and for how many still frames. */
   signAt: number;
   signStill: number;
+  /** A held story beat (a trigger's `hold`): frames of it left (no input reaches her), and the trigger. */
+  story: number;
+  storyBy: string;
 }
 
 /** The save key of a piece of this room. */
@@ -79,6 +82,8 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     capPogo: -1,
     signAt: -1,
     signStill: 0,
+    story: 0,
+    storyBy: '',
   };
 }
 
@@ -95,6 +100,8 @@ export function cloneKit(k: KitState): KitState {
     capPogo: k.capPogo,
     signAt: k.signAt,
     signStill: k.signStill,
+    story: k.story,
+    storyBy: k.storyBy,
   };
 }
 
@@ -427,6 +434,14 @@ export function updateKit(
       if (save.flags.includes(tr.sets)) continue;
       save.flags.push(tr.sets);
       events.push({ type: 'flagSet', flag: tr.sets, by: tr.id, x: tr.x + tr.w / 2, y: tr.y + tr.h / 2 });
+      // A held story beat: no input reaches her for its length (step), and nothing hurts her.
+      const hold = Math.min(Math.round(tr.hold ?? 0), Math.round(t.kit.storyHoldMax));
+      if (hold > 0) {
+        kit.story = hold;
+        kit.storyBy = tr.id;
+        p.invuln = Math.max(p.invuln, hold);
+        events.push({ type: 'storyHold', id: tr.id, frames: hold, x: cx, y: p.y + p.h });
+      }
     }
   }
   // A creature whose death opens the way (`sets`: the old burrback's root gate, wood.md R10).

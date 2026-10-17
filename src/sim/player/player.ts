@@ -1559,6 +1559,8 @@ export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): 
   if (ok) {
     p.groundX = cx;
     p.groundY = bottom;
+    // Her door into the room: the first ground she stood on here (a fade re-forms her there).
+    if (!state.entry) state.entry = { x: cx, y: bottom };
   }
   if (p.safeFrames >= P.safeFrames) {
     p.safeX = cx;
@@ -1603,8 +1605,10 @@ export function reformPlayer(
   keepOffer(p, old);
   p.invuln = P.reformInvulnFrames;
   freshStart(p, P.tuning);
-  // A fade costs: she comes back with part of her health (a lit lantern is where she is made whole).
-  p.hp = Math.max(1, Math.min(p.hpMax, Math.round(P.tuning.health.reformHp)));
+  // What a fade costs. In lamp rooms a walk: she is whole, and so are the creatures (feel review round 2,
+  // problem 7; HK / Ori). In the test grove, part of her health (a lit lantern is where she is made whole).
+  p.hp =
+    scene.senses === 'lamp' ? p.hpMax : Math.max(1, Math.min(p.hpMax, Math.round(P.tuning.health.reformHp)));
   state.player = p;
   const fx = p.x + p.w / 2;
   const fy = p.y + p.h;
