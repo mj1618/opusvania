@@ -147,6 +147,13 @@ export const defaultTuning = withVariants({
     turn: 0.9,
     /** A hold carried over from a ground jump only glides once she is this far below the launch height. */
     carriedDropPx: 16,
+    /**
+     * With the wings and no double jump left, a press after walking off an edge is a jump only in the
+     * first `coyoteFrames` of the coyote window; later in it, held, it is the glide (the walk-off glide she meant: curious
+     * first-timer, "pressing jump as I left the edge counted as a jump", into R6's thorn branch). A coyote
+     * jump is never `carried`: held, it glides from the apex.
+     */
+    coyoteFrames: 3,
   },
   /**
    * Thorn slash (rules: memory/combat.md): what all three steps of the combo share. The steps'
@@ -1202,7 +1209,8 @@ export const defaultTuning = withVariants({
   },
   /**
    * The hatching (`scene.hatch`, src/sim/hatch.ts): she is shut in her cocoon until `presses`
-   * presses of any button (counted after `listenFrom` frames: the picture fades up first), or until
+   * presses of any button or direction (counted from the first frame; it breaks no sooner than
+   * `listenFrom`: the picture fades up first), or until
    * `autoFrames` pass. With no input it stirs on its own every `autoStirEvery` frames from `autoStirFrom`.
    */
   hatch: {

@@ -723,7 +723,8 @@ function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
 function groundJump(c: Ctx, kind: JumpKind): void {
   c.p.vy = -c.P.jumpSpeed;
   c.p.vx += c.inX * c.P.hBoost;
-  c.p.carried = true;
+  // (A coyote jump is off a ledge already: there is a drop under it, so its hold glides from the apex.)
+  c.p.carried = kind !== 'coyote';
   c.p.launchY = c.p.y;
   jumpCommon(c, kind, c.inX);
 }
@@ -779,9 +780,21 @@ function groundSoon(c: Ctx): boolean {
   return false;
 }
 
+/**
+ * The coyote window still gives a jump: `coyote` frames left, and with the wings and no double jump in
+ * hand only the first `glideCoyoteFrames` of it (later, a held press is the walk-off glide she meant;
+ * with a double jump left a press in the air is a jump anyway, so the window stays whole).
+ */
+function coyoteJump(c: Ctx): boolean {
+  const p = c.p;
+  const P = c.P;
+  if (p.coyote <= 0) return false;
+  return !P.glide || p.dj > 0 || p.coyote > P.coyoteFrames - P.glideCoyoteFrames;
+}
+
 function tryJump(c: Ctx): void {
   const p = c.p;
-  if (p.jumpBuf > 0 && (p.grounded || p.coyote > 0)) {
+  if (p.jumpBuf > 0 && (p.grounded || coyoteJump(c))) {
     const onOneWayOnly = p.grounded && !c.solid(p.x, p.y + 1) && oneWayUnder(c.scene, p.x, p.y, p.w, p.h);
     if (c.held(ActionBit.down) && onOneWayOnly) {
       p.dropTimer = c.P.dropThroughFrames;
@@ -888,7 +901,7 @@ function endGlide(c: Ctx, reason: GlideEndReason): void {
 function jumpPending(c: Ctx): boolean {
   const p = c.p;
   if (p.djBuf > 0 && p.dj > 0) return true;
-  return p.jumpBuf > 0 && (p.coyote > 0 || groundSoon(c) || wallInRange(c) !== 0);
+  return p.jumpBuf > 0 && (coyoteJump(c) || groundSoon(c) || wallInRange(c) !== 0);
 }
 
 /**

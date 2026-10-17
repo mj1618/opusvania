@@ -148,13 +148,10 @@ describe('abilities', () => {
 });
 
 describe('the hatching', () => {
-  it('shut in: no input moves her; three presses (after the fade-up) break the cocoon', () => {
+  it('shut in: no input moves her; three presses of any button break the cocoon', () => {
     const s = sim(WOOD_HATCH);
     const x0 = s.state.player.x;
-    // Presses while the picture fades up do not count.
-    const early = s.run(J, 1);
-    expect(early.some((e) => e.type === 'hatchStir')).toBe(false);
-    s.run(R, s.t.hatch.listenFrom);
+    s.run(0, s.t.hatch.listenFrom);
     expect(s.state.player.x).toBe(x0);
     const stirs: SimEvent[] = [];
     for (let i = 0; i < 3; i++) {
@@ -172,6 +169,27 @@ describe('the hatching', () => {
     expect(kinds).not.toContain('jump');
     s.run(R, 30);
     expect(s.state.player.x).toBeGreaterThan(x0 + 100);
+  });
+
+  it('jump and a move key are presses too, even while the picture fades up; it breaks once it listens (curious first-timer)', () => {
+    // The first-timer's opening: J10 .90, then R20 .60 J20 (A and X came after): jump, right, jump.
+    const s = sim(WOOD_HATCH);
+    const x0 = s.state.player.x;
+    const ev = s.run(J, 10).concat(s.run(0, 90), s.run(R, 20), s.run(0, 60), s.run(J, 20));
+    expect(ev.filter((e) => e.type === 'hatchStir' && !e.auto)).toHaveLength(3);
+    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({ auto: false, frames: 181 });
+    expect(ev.some((e) => e.type === 'jump')).toBe(false);
+    // Three quick presses during the fade-up count, and the cocoon breaks as it starts to listen.
+    const q = sim(WOOD_HATCH);
+    const early = q.run(J, 1).concat(q.run(0, 2), q.run(R, 1), q.run(0, 2), q.run(J, 1));
+    expect(early.filter((e) => e.type === 'hatchStir')).toHaveLength(3);
+    expect(early.some((e) => e.type === 'hatch')).toBe(false);
+    const rest = q.run(0, q.t.hatch.listenFrom);
+    expect(rest.find((e) => e.type === 'hatch')).toMatchObject({
+      auto: false,
+      frames: q.t.hatch.listenFrom + 1,
+    });
+    expect(q.state.player.x).toBe(x0);
   });
 
   it('with no input it stirs on its own and breaks after autoFrames', () => {
@@ -236,9 +254,10 @@ describe('falls and the exit', () => {
     expect(enter).toBeGreaterThan(0);
     expect(ev[enter + 1]).toMatchObject({ type: 'spawn', ...WOOD_HATCH.spawn });
     // A fresh room: the cocoon again, the save kept.
+    // (Right still held as it starts again counts as a stir: a move key is a press.)
     expect(s.state.hatch).toEqual({
       frames: expect.any(Number),
-      presses: 0,
+      presses: expect.any(Number),
       done: false,
     });
     expect(s.state.save.abilities).toEqual(['glide']);

@@ -80,6 +80,8 @@ export interface MoveParams {
   glideDecel: number;
   glideTurn: number;
   glideCarriedDropPx: number;
+  /** With glide owned: airborne frames of the coyote window in which a press is still a jump. */
+  glideCoyoteFrames: number;
 
   /** The live tuning (the slash's geometry is read from it by `slashBox`). */
   tuning: Tuning;
@@ -241,6 +243,7 @@ export function resolveParams(t: Tuning, abilities: readonly AbilityId[] = ABILI
     glideDecel: gl.decel,
     glideTurn: gl.turn,
     glideCarriedDropPx: gl.carriedDropPx,
+    glideCoyoteFrames: Math.max(0, Math.round(gl.coyoteFrames)),
 
     tuning: t,
     steps: [slashStep(t.slash1), slashStep(t.slash2), slashStep(t.slash3)],

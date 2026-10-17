@@ -137,6 +137,29 @@ describe('hazard returns never chain', () => {
     expect(hold(s, R | J, 1).some((e) => e.type === 'jump')).toBe(true);
   });
 
+  it('a walk-off glide pressed a beat late (after the coyote jump frames) passes under the branch to T4 (curious first-timer)', () => {
+    // (Her kit at R6: the wings, no double jump. With the double jump, a press after the window is that.)
+    for (const late of [defaultTuning.glide.coyoteFrames, defaultTuning.assist.coyoteFrames - 1, 10]) {
+      const s = newSim(GAP);
+      s.state.save.abilities = ['glide'];
+      s.place(LIP - 200, 1472);
+      hold(s, 0, 40);
+      let ev: SimEvent[] = [];
+      for (let i = 0; i < 120 && !ev.some((e) => e.type === 'fall'); i++) ev = hold(s, R, 1);
+      hold(s, R, late);
+      const after = hold(s, R | J, 300);
+      expect(
+        after.some((e) => e.type === 'jump'),
+        `late ${late}`,
+      ).toBe(false);
+      expect(
+        after.some((e) => e.type === 'thornHit'),
+        `late ${late}`,
+      ).toBe(false);
+      expect(feet(s).y, `late ${late}`).toBe(1984);
+    }
+  });
+
   it('a re-form after a fade: a fade-in, and the held jump waits to be pressed afresh', () => {
     const s = toTheLip(40);
     s.state.player.hp = 1;

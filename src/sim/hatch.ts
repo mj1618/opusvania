@@ -7,9 +7,9 @@ import type { Tuning } from './tuning';
 /**
  * The hatching (scene 1, docs/design/scenes/01-hatching-branch.md): a room with `scene.hatch` starts
  * with her shut in her cocoon. Her body already stands at the spawn on the branch, but no input
- * moves her. Presses of any button (a bit of the input that was not held the step before) stir the
- * cocoon, counted from `tuning.hatch.listenFrom` on (the picture is still fading up before that);
- * the `presses`-th breaks it. With no input it stirs on its own and breaks after `autoFrames`.
+ * moves her. Presses of any button, a direction too (a bit of the input that was not held the step
+ * before), stir the cocoon from the first frame; the `presses`-th breaks it, but not before
+ * `tuning.hatch.listenFrom` (the picture is still fading up). With no input it stirs on its own and breaks after `autoFrames`.
  * Render (the acting) draws the cocoon from `state.hatch` and these events; she is hidden until `hatch`.
  */
 
@@ -37,7 +37,10 @@ export function updateHatch(
   const need = Math.max(1, Math.round(H.presses));
   const auto = Math.max(1, Math.round(H.autoFrames));
   h.frames++;
-  const press = (input & ~prev) !== 0 && h.frames > H.listenFrom;
+  // Every press counts, a move key's too, even while the picture still fades up (curious first-timer,
+  // 2026-10-17: jump and right in the first seconds were lost, "I thought it had frozen"); the cocoon
+  // only breaks once it is listening.
+  const press = (input & ~prev) !== 0 && h.presses < need;
   const p = state.player;
   const x = p.x + p.w / 2;
   const y = p.y + p.h;
@@ -51,7 +54,7 @@ export function updateHatch(
   ) {
     events.push({ type: 'hatchStir', x, y, auto: true, presses: h.presses, of: need, frames: h.frames });
   }
-  if (h.presses >= need || h.frames >= auto) {
+  if ((h.presses >= need && h.frames > H.listenFrom) || h.frames >= auto) {
     h.done = true;
     events.push({ type: 'hatch', x, y, cx: at.x, cy: at.y, auto: h.presses < need, frames: h.frames });
   }

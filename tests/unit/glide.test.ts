@@ -242,6 +242,49 @@ describe('wing glide', () => {
     expect(names(ev)).toEqual(['fall', 'jump:coyote']);
   });
 
+  it('with the wings, a press late in the coyote window is the walk-off glide she meant, not a jump (curious first-timer)', () => {
+    // Walk off the ledge, then press jump `k` frames after the `fall` and hold it.
+    const off = (k: number, t = cloneTuning(defaultTuning), abilities = ['glide']) => {
+      const s = newSim(cliff(1200), t);
+      s.state.save.abilities = abilities as typeof s.state.save.abilities;
+      s.place(2000, 200);
+      let ev: SimEvent[] = [];
+      for (let i = 0; i < 60 && !ev.some((e) => e.type === 'fall'); i++) ev = s.run('R1');
+      if (k > 0) s.run(`R${k}`);
+      return names(s.run('R+J30')).filter((n) => n !== 'step');
+    };
+    // The window's first `glide.coyoteFrames` frames: a coyote jump, as before.
+    for (let k = 0; k < G.coyoteFrames; k++) expect(off(k)[0], `k ${k}`).toBe('jump:coyote');
+    // Later in it: no jump, the wings open at once.
+    const coyote = defaultTuning.assist.coyoteFrames;
+    for (let k = G.coyoteFrames; k < coyote; k++) {
+      const n = off(k);
+      expect(
+        n.filter((x) => x.startsWith('jump')),
+        `k ${k}`,
+      ).toEqual([]);
+      expect(n[0], `k ${k}`).toBe('glideStart');
+    }
+    // Without the wings the whole window is a coyote jump.
+    const t = cloneTuning(defaultTuning);
+    t.assists.glide = false;
+    for (let k = 0; k < coyote; k++) expect(off(k, t)[0], `no wings, k ${k}`).toBe('jump:coyote');
+    // With a double jump in hand a press in the air is a jump anyway: the whole window stays a coyote jump.
+    for (let k = 0; k < coyote; k++)
+      expect(off(k, cloneTuning(defaultTuning), ['glide', 'doubleJump'])[0], `double jump, k ${k}`).toBe(
+        'jump:coyote',
+      );
+  });
+
+  it('a coyote jump held glides from its apex (there is a drop under it), a ground jump only below its launch', () => {
+    const s = newSim(cliff(1200));
+    s.place(2000, 200);
+    let ev: SimEvent[] = [];
+    for (let i = 0; i < 60 && !ev.some((e) => e.type === 'fall'); i++) ev = s.run('R1');
+    const n = names(s.run('R+J80')).filter((x) => x !== 'step');
+    expect(n.slice(0, 3)).toEqual(['jump:coyote', 'apex', 'glideStart']);
+  });
+
   it('steers gently: a little faster than a run, and a turn takes its time', () => {
     const s = falling();
     s.run('R+J60');
