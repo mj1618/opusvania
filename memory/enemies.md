@@ -342,7 +342,12 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
   not safe ground while their lampwing lives. Starts
   as the scene spawn. If at re-form a living enemy's start is within 200 px of it anyway, the scene
   spawn is used. `teleport` keeps the old safe spot (being placed somewhere does not make it safe)
-  and her health.
+  and her health. Never inside a catch zone (R5's chasm has a floor under its catch: put back there, caught
+  again, for ever).
+- **Last ground** (`player.groundX/groundY`, 2026-10-17): the same checks on ANY grounded frame, no 30-frame wait.
+  A fall catch and a thorn's return put her back there (inset from its lip, `returnPoint`); a fade still re-forms
+  at the 30-frame safe ground. Why: first-timers on wood-hatch hop every bend, so safe ground never refreshed, and
+  each fall from S2 put them back on S1 behind the burl ("back to the cocoon"). Test: `hatch-walk.test.ts`.
 - The sim's first use of a scene tag: `pool`.
 
 ## What render gets

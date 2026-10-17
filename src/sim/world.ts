@@ -278,6 +278,8 @@ export function enterRoom(
   const ground = groundBelow(scene, fx, fy - 1);
   p.safeX = ground === null ? scene.spawn.x : fx;
   p.safeY = ground === null ? scene.spawn.y : ground;
+  p.groundX = p.safeX;
+  p.groundY = p.safeY;
   p.safeFrames = 0;
   const firstVisit = !state.save.visited.includes(to);
   remember(state.save.visited, to);

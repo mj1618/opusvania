@@ -99,6 +99,8 @@ export function continueState(
   const fy = p.y + p.h;
   p.safeX = fx;
   p.safeY = fy;
+  p.groundX = fx;
+  p.groundY = fy;
   events.push({ type: 'roomEnter', room: room.id, from: 'continue', x: fx, y: fy });
   events.push({ type: 'spawn', x: fx, y: fy });
   return state;
@@ -194,6 +196,8 @@ export function placePlayer(
   // Being placed somewhere does not make it safe ground: the last safe spot stands until she earns a new one.
   state.player.safeX = old.safeX;
   state.player.safeY = old.safeY;
+  state.player.groundX = old.groundX;
+  state.player.groundY = old.groundY;
   // Slashes stay numbered on: targets remember the last slash that hit them (`hitBy`), so a
   // number used again would pass through whatever it hit before.
   state.player.attackSeq = old.attackSeq;
@@ -294,9 +298,10 @@ export function step(
   // Caught after a fall: held a moment, then back on her last safe ground (it costs nothing).
   if (state.caught && ++state.caught.frames >= catchHold(state, t)) {
     const id = state.caught.id;
-    const safe = returnPoint(state.player.safeX, state.player.safeY, S, t);
+    // The last ground she stood on (any length of time), inset from its lip: a fall costs the gap.
+    const safe = returnPoint(state.player.groundX, state.player.groundY, S, t);
     // (Not where her natural next jump carries her straight back into thorns.)
-    const back = clearOfThorns(state, safe.x, safe.y, state.player.safeX, S, t, P);
+    const back = clearOfThorns(state, safe.x, safe.y, state.player.groundX, S, t, P);
     const x = back.x;
     const y = back.y;
     events.push({ type: 'fallReturn', id, x, y, fadeIn: Math.max(0, Math.round(t.room.returnFadeIn)) });

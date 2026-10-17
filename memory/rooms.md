@@ -34,7 +34,7 @@ ground runs over them: movement-controller.md "Rolling ground"). Generated from 
 stretch table below is the source); a test checks widths, abutting, steps <= 12 and a roll >= 8 per stretch.
 | stretch | x | tops (roll) | parent (`from`) | end |
 |---|---|---|---|---|
-| S1 | 224-1504 | 1024 -> 1006 (flat +-2 under the cocoons, 430-1100) | tree `west` (230, 1070) | burl: S2 abuts 64 higher |
+| S1 | 224-1504 | 1024 -> 1030 (flat +-2 under the cocoons, 430-1100), then **a rise of 48 px rects 1120-1504 to 954** | tree `west` (230, 1070) | burl: S2 abuts 10 higher (it was a 61 px step, a wall: first-timers' `R120` from the cocoon stood at 1484, "a small step blocked my walk"; `hatch-walk.test.ts` checks every abutting step <= 12) |
 | S2 | 1504-2048 | 938-960 | S1 | fork: gap A 256, S3 ~96 higher |
 | S3 | 2304-2720 | 854-872 | S2 | snap: gap 160 to another tree's limb, 128 higher |
 | S4 | 2880-3296 | 729-740 (the crown) | tree `crown` (3262, 770), grows west | trunk: its root is the crown tree |

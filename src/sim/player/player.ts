@@ -144,6 +144,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     offerTarget: null,
     safeX: Math.round(feetX),
     safeY: y + h,
+    groundX: Math.round(feetX),
+    groundY: y + h,
     safeFrames: 0,
     coyote: 0,
     jumpBuf: 0,
@@ -1542,8 +1544,17 @@ export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): 
   }
   // Never where a thorn bed is within reach of her box (memory/level-kit.md): she is put back here.
   if (ok) ok = thornAt(scene, p, P.tuning.kit.thorns.safeMargin) < 0;
+  // Never inside a catch zone (a floor under a chasm, for the camera): being put back there is caught again.
+  if (ok && scene.catches) {
+    const cy = p.y + p.h / 2;
+    for (const z of scene.catches) if (cx >= z.x && cx < z.x + z.w && cy >= z.y && cy < z.y + z.h) ok = false;
+  }
   if (ok) ok = !enemyNear(state.enemies, cx, p.y + p.h / 2, P.safeEnemyPx, P.tuning);
   p.safeFrames = ok ? p.safeFrames + 1 : 0;
+  if (ok) {
+    p.groundX = cx;
+    p.groundY = bottom;
+  }
   if (p.safeFrames >= P.safeFrames) {
     p.safeX = cx;
     p.safeY = bottom;
@@ -1594,6 +1605,8 @@ export function reformPlayer(
   const fy = p.y + p.h;
   p.safeX = fx;
   p.safeY = fy;
+  p.groundX = fx;
+  p.groundY = fy;
   events.push({
     type: 'reform',
     x: fx,

@@ -207,6 +207,13 @@ export interface PlayerState {
   safeX: number;
   safeY: number;
   safeFrames: number;
+  /**
+   * The last ground she stood on that passes the same checks, for any length of time (feet centre): where a
+   * fall catch or thorns put her back (inset from its lip), so a fall costs the gap, not the stretch behind
+   * it (first-timers on wood-hatch, 2026-10-17: put back behind S1's burl after every fall from S2).
+   */
+  groundX: number;
+  groundY: number;
 
   // --- Controller internals (timers, buffers). Renderers should not need these.
   coyote: number;
