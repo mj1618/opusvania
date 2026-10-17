@@ -247,24 +247,96 @@ export function summary(): Record<string, unknown> {
 
 let bursting: { done: boolean; said: string[]; frames: number } | null = null;
 
+/** Keys a player has besides the moves (`{Tab}` in a burst): the map, restart, sound, full screen, Esc. */
+export const PLAYER_KEYS: Record<string, string> = {
+  Tab: 'Tab',
+  Map: 'Tab',
+  R: 'KeyR',
+  Restart: 'KeyR',
+  M: 'KeyM',
+  Enter: 'Enter',
+  Esc: 'Escape',
+  Escape: 'Escape',
+};
+/** Designer keys (labels, collision overlay, tuning panel): only in a session started with `--dev`. */
+export const DEV_KEYS: Record<string, string> = { G: 'KeyG', F2: 'F2', Panel: 'Backquote' };
+
+/** One animation frame of a burst: the move buttons held, and any other keys held down. */
+interface BurstStep {
+  mask: number;
+  keys: string[];
+}
+
 /**
- * Plays `script` (the input DSL: `R60 R+J20 .30`, one token per run of frames) in real time with real
- * keys, then pauses the game (the agent thinks with the world still). `burstStatus()` polls it.
+ * A burst's script: the move DSL (`R60 R+J20 .30`) and keys in braces, `{Tab}` (pressed for 2 frames) or
+ * `{Tab}30` (held 30). Unknown keys, and designer keys without `dev`, are an error (the agent is told).
  */
-export function burst(script: string): void {
+export function parseBurst(script: string, dev = false): BurstStep[] {
+  const out: BurstStep[] = [];
+  for (const tok of script.trim().split(/\s+/).filter(Boolean)) {
+    const k = /^\{(\w+|`)\}(\d+)?$/.exec(tok);
+    if (k) {
+      const name = k[1] ?? '';
+      const code = PLAYER_KEYS[name] ?? (dev ? DEV_KEYS[name] : undefined);
+      if (!code)
+        throw new Error(
+          `No key {${name}}: a player has ${Object.keys(PLAYER_KEYS)
+            .map((q) => `{${q}}`)
+            .join(' ')} besides the moves`,
+        );
+      const n = Number(k[2] ?? 2);
+      for (let i = 0; i < n; i++) out.push({ mask: 0, keys: [code] });
+      continue;
+    }
+    for (const mask of parseInputScript(tok)) out.push({ mask, keys: [] });
+  }
+  return out;
+}
+
+let mapOpen = false;
+let hideLabels = true;
+
+/** First-timer sessions: designer labels and room notes stay off (every room turns them back on: re-assert). */
+export function setLabels(on: boolean): void {
+  hideLabels = !on;
+  const d = window.__game.debug as unknown as { labels?: (on?: boolean) => boolean };
+  d.labels?.(on);
+}
+
+function keepLabelsOff(): void {
+  if (!hideLabels) return;
+  const d = window.__game.debug as unknown as { labels?: (on?: boolean) => boolean };
+  d.labels?.(false);
+}
+
+/**
+ * Plays `script` (`parseBurst`) in real time with real keys, one step per animation frame (the map pauses
+ * the sim, so the burst runs on the page's clock), then pauses the game (the agent thinks with the world
+ * still). `burstStatus()` polls it.
+ */
+export function burst(script: string, dev = false): void {
   const g = window.__game;
-  const masks = parseInputScript(script);
+  const steps = parseBurst(script, dev);
   const title = (room: string) =>
     (GAME_WORLD.rooms[room]?.scene as { title?: string } | undefined)?.title ?? room;
   const b = { done: false, said: [] as string[], frames: 0 };
   bursting = b;
   let held = 0;
-  const f0 = g.state().frame;
-  let lastF = f0;
-  g.resume();
+  let keys: string[] = [];
+  let lastF = g.state().frame;
+  let room = g.state().room;
+  let i = 0;
+  // Under the map the sim stands (frozen); out of it, real time.
+  if (mapOpen) g.freeze();
+  else g.resume();
+  keepLabelsOff();
   const tick = (): void => {
     const st = g.state();
     const f = st.frame;
+    if (st.room !== room) {
+      room = st.room;
+      keepLabelsOff();
+    }
     if (f > lastF) {
       for (const e of g.events(f - lastF) as unknown as SimEvent[]) {
         const w = say(e, title);
@@ -272,17 +344,30 @@ export function burst(script: string): void {
       }
       lastF = f;
     } else if (f < lastF) lastF = f;
-    const i = f - f0;
-    b.frames = Math.max(0, i);
-    if (i >= masks.length) {
+    b.frames = i;
+    const step = steps[i++];
+    // Keys down for this frame (a key held over frames is pressed once).
+    const want = step?.keys ?? [];
+    for (const code of keys)
+      if (!want.includes(code))
+        window.dispatchEvent(new KeyboardEvent('keyup', { code, key: code, bubbles: true }));
+    for (const code of want)
+      if (!keys.includes(code)) {
+        window.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true }));
+        if (code === 'Tab') mapOpen = !mapOpen;
+        if (code === 'KeyR') b.said.push('restarted');
+        if (code === 'Tab') b.said.push(mapOpen ? 'opened the map' : 'closed the map');
+      }
+    keys = want;
+    if (!step) {
       press(0, held);
       g.pause();
+      keepLabelsOff();
       b.done = true;
       return;
     }
-    const m = masks[i] ?? 0;
-    press(m, held);
-    held = m;
+    press(step.mask, held);
+    held = step.mask;
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

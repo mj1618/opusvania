@@ -21,21 +21,33 @@ STUDIO.md "Playtesting without Matt". Reports go to `playtest-reports/` (gitigno
 
 ## The first-timer agent (`npm run firsttimer`, tools/playtest/firsttimer.ts)
 A Claude sub-agent plays in the page with real keys, a burst at a time, the game paused between its turns. Commands
-(one per turn; a background server holds the browser; needs `npm run dev`):
+(one per turn; a background server holds the browser):
 `start [--room wood-hatch] [--name s1] [--abilities glide]` (prints the session dir and a first screenshot),
-`act "R60 R+J20 .30" [--every 2]` (real keys in real time; prints what happened in a player's words — hits, deaths,
-falls, rooms, abilities, catches — where she is, and the screenshots: every 2 s and at those moments),
-`look`, `status`, `note "text" [--mood lost|stuck|unfair|fun|ok]`, `stop` (report.md + heatmaps + trace from the
-whole session, and `journal.md`: every act and note with its screenshot). Keys: R L U D, J jump, X dash, A cut, O
-offer, `.` nothing; a number is frames (60 = 1 s); `+` holds two. **Brief to paste to the sub-agent:**
+`act "R60 R+J20 .30 {Tab}" [--every 2]` (real keys in real time; prints what happened in a player's words — hits,
+deaths, falls, rooms, abilities, catches, the map — where she is, and the screenshots: every 2 s and at those
+moments), `look`, `status`, `note "text" [--mood lost|stuck|unfair|fun|ok]`, `stop` (report.md + heatmaps + trace,
+and `journal.md`: every act and note with its screenshot). Keys: R L U D, J jump, X dash, A cut, O offer, `.`
+nothing; a number is frames (60 = 1 s); `+` holds two; a player's other keys in braces: `{Tab}` (the map: it
+freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, `{Esc}`, `{Enter}`; `{Tab}30` holds.
+- **What it sees is what a player sees**: greybox designer labels and room notes are off (every room's init turns
+  them back on, so the burst re-asserts it on each room change); designer keys `{G}` `{F2}` `{Panel}` are refused.
+  `start --labels` keeps the labels, `--dev` allows those keys: only when the orchestrator asks.
+- **It plays a pinned clean build**: `start` makes (or refreshes, when HEAD moved) a detached worktree of HEAD in
+  `.scratch/playtest-snapshot` (gitignored; node_modules linked), serves it with its own Vite on `--snap-port` 5193
+  (left running between sessions, restarted for a new HEAD; its pid in `.scratch/playtest-snapshot.json`) and runs the
+  session server from it. The client commands import nothing of the game. So a half-edited room file in the working
+  tree cannot break a session; what gets played is the last commit. `--tree` plays the working tree on the dev
+  server instead (`--url`, default 5180).
+**Brief to paste to the sub-agent:**
 > You are playing Lampfall for the first time. Know nothing about it beyond what you see. Run `npm run firsttimer --
-> start --name <you>` from the repo root, then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s),
-> Read what happened and the screenshots. Every minute or at any moment that matters, `note` what you think, in the
-> first person and plainly: what you think you should do ("I think the moths want me to follow them"), when you are
-> lost ("I'm lost: I've walked this branch three times", `--mood lost`), stuck, a hit that felt unfair and why
-> (`--mood unfair`), what you enjoyed (`--mood fun`), what you did not understand. Don't read the code, the room files
-> or the design docs. Play until you reach <goal> or 20 minutes of game time, then `stop` and reply with the journal's
-> path and your five strongest impressions.
+> start --name <you>` from the repo root, then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s;
+> moves `R L U D`, `J` jump, `X` dash, `A` cut, `.` wait, a number of frames after each, `+` to combine, and `{Tab}`
+> for the map, `{R}` to restart), Read what happened and the screenshots. Every minute or at any moment that matters,
+> `note` what you think, in the first person and plainly: what you think you should do ("I think the moths want me to
+> follow them"), when you are lost ("I'm lost: I've walked this branch three times", `--mood lost`), stuck, a hit that
+> felt unfair and why (`--mood unfair`), what you enjoyed (`--mood fun`), what you did not understand. Don't read the
+> code, the room files or the design docs. Play until you reach <goal> or 20 minutes of game time, then `stop` and
+> reply with the journal's path and your five strongest impressions.
 
 ## Files
 `observe.ts` (what is on screen), `map.ts` (the persona's map: surfaces from solids and the kit's standing pieces —
