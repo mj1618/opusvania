@@ -23,6 +23,8 @@
  * --region name       a region run: from the world's start, `--until none`, all the region's rooms in one
  *                      report (<stamp>-region.md) against the region doc's §9 targets (docs/design/regions/<name>.md)
  * --upto room          the chunk ends there: a run is through once she leaves that room by another way than in
+ * --chunk a..b,c       the chunk's rooms (`a..b` = the region doc's rows from a to b): through once she has been
+ *                      in every one (and out of --upto, if given); the speedrunner heads for the nearest not yet
  * --goal room          where the speedrunner heads (default: the placed room furthest from the start)
  * --url, --out dir     dev server (default http://localhost:5180), reports dir (default playtest-reports)
  */
@@ -62,6 +64,7 @@ const { values: args } = parseArgs({
     out: { type: 'string', default: 'playtest-reports' },
     region: { type: 'string' },
     upto: { type: 'string' },
+    chunk: { type: 'string' },
     goal: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -211,6 +214,18 @@ async function main(): Promise<void> {
     dirs.push(dir);
   } else {
     const region = args.region;
+    // `--chunk a..b,c`: rooms in the region doc's order (its §9 rows) from a to b, plus c.
+    const docOrder = Object.keys(targets);
+    const chunkRooms = args.chunk
+      ? args.chunk.split(',').flatMap((part) => {
+          const [a, b] = part.split('..');
+          if (!b) return [part];
+          const i = docOrder.indexOf(a ?? '');
+          const j = docOrder.indexOf(b);
+          if (i < 0 || j < 0) throw new Error(`--chunk ${part}: ${a} or ${b} is not a row of the region doc`);
+          return docOrder.slice(i, j + 1);
+        })
+      : null;
     const rooms = region ? [GAME_WORLD.start] : (args.room ?? 'wood-hatch').split(',');
     const traces: RunTrace[] = [];
     const personas = (args.persona ?? '').split(',').filter(Boolean);
@@ -245,6 +260,7 @@ async function main(): Promise<void> {
               until: region || args.until === 'none' ? 'none' : 'exit',
               lostAfter,
               ...(args.upto ? { upto: args.upto } : {}),
+              ...(chunkRooms ? { chunk: chunkRooms } : {}),
               ...(args.goal ? { goal: args.goal } : {}),
             });
             trace = r.trace;
@@ -275,7 +291,7 @@ async function main(): Promise<void> {
         }
       });
       const end = args.upto ? order.indexOf(args.upto) : -1;
-      const chunk = end >= 0 ? order.slice(0, end + 1) : order;
+      const chunk = chunkRooms ?? (end >= 0 ? order.slice(0, end + 1) : order);
       const md = regionMarkdown(traces, chunk, targets, {
         when: new Date().toISOString().slice(0, 16).replace('T', ' '),
         command,

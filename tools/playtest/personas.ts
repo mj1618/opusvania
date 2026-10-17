@@ -19,6 +19,8 @@ import type { World } from '../../src/sim/world';
 import { chooseTactic, fightTactics, foe } from './fight';
 import {
   type Candidate,
+  capChain,
+  capClimbLine,
   chooseLine,
   climbLine,
   dirBit,
@@ -28,10 +30,11 @@ import {
   leapLines,
   linesFor,
   nearSurface,
+  onCap,
   onSurface,
   type SimCtx,
 } from './lines';
-import { Mind, type Move, moveKey, type Surface, yAt } from './map';
+import { Mind, type Move, moveKey, type Surface, topUnder, yAt } from './map';
 import type { Obs } from './observe';
 
 const D = ActionBit.down;
@@ -61,6 +64,8 @@ export interface PersonaWorld {
   world?: World;
   /** The room a speedrunner heads for (default: the placed room furthest from the start). */
   goal?: string;
+  /** A chunk of rooms to cover: the speedrunner heads for the nearest it has not been in. */
+  goals?: string[];
 }
 
 /** The placed room the most link hops from the start (the end of the region as built). */
@@ -81,7 +86,11 @@ export function furthestRoom(world: World): string {
 export function makePersona(name: string, seed = 1, w: PersonaWorld = {}): Persona {
   const world = w.world;
   const goal = w.goal ?? (world ? furthestRoom(world) : undefined);
-  const known = { ...(world ? { world } : {}), ...(goal ? { goal } : {}) };
+  const known = {
+    ...(world ? { world } : {}),
+    ...(goal ? { goal } : {}),
+    ...(w.goals ? { goals: w.goals } : {}),
+  };
   switch (name) {
     case 'naive':
       return new Naive(seed);
@@ -191,16 +200,45 @@ class Naive implements Persona {
   private turns = 0;
   /** Where it last jumped at a wall. */
   private wallX = -1000;
+  /** Turn-rounds in this room, all told (a lock here: try what the floor offers). */
+  private turnedHere = 0;
+  /** Falls from an edge (`room:x/64`): an odd count means "jump from it next time". */
+  private readonly fellAt = new Map<string, number>();
+  private lastEdge = '';
+  private catching = false;
   private room = '';
 
   constructor(readonly seed: number) {}
 
-  decide(o: Obs, scene: Scene, _ctx?: SimCtx): number {
+  decide(o: Obs, scene: Scene, ctx?: SimCtx): number {
     const f = o.frame;
     if (o.shut) return f % 8 < 2 ? J : 0;
-    if (o.held) return 0;
+    if (o.held) {
+      // Fell into a catch: remember the edge it set out from (it tries the other way there next time).
+      if (ctx?.state.caught && this.lastEdge && !this.catching) {
+        this.fellAt.set(this.lastEdge, (this.fellAt.get(this.lastEdge) ?? 0) + 1);
+        this.catching = true;
+      }
+      return 0;
+    }
+    this.catching = false;
     // Caught by a lure: mash jump (beats her free).
     if (o.lured) return dirBit(this.dir) | (f % 6 < 2 ? J : 0);
+    // Stuck in this room once already and standing on rotten bark: hop and cut down at it (the panel gives).
+    const opened = ctx?.state.save.opened ?? [];
+    const panel = (scene.bark ?? []).find(
+      (b) =>
+        b.floor &&
+        !opened.includes(`${scene.id}:${b.id}`) &&
+        o.feetX > b.x + 8 &&
+        o.feetX < b.x + b.w - 8 &&
+        Math.abs(o.feetY - b.y) < 140,
+    );
+    if (panel && this.turns + this.turnedHere > 0) {
+      const m = o.p.grounded ? (this.last & J ? 0 : J) : o.p.vy > 0 && !(this.last & A) ? A | D : 0;
+      this.last = m;
+      return m;
+    }
     // The way on: right, until an exit is in view (then toward it).
     const exit = o.exits[0];
     if (exit && !this.exitSeen) {
@@ -219,6 +257,7 @@ class Naive implements Persona {
       }
       this.room = o.room;
       this.turns = 0;
+      this.turnedHere = 0;
       this.best = Number.NEGATIVE_INFINITY;
       this.bestAt = f;
     }
@@ -230,6 +269,7 @@ class Naive implements Persona {
       this.turnUntil = f + 180;
       this.bestAt = f + 180;
       this.turns++;
+      this.turnedHere++;
       this.notes.push(`f${f}: no headway for 8 s at x ${Math.round(o.feetX)}, turned round for 3 s`);
       // Stuck at the same lock again: the way on is the other way (back to the drop it passed).
       if (this.turns >= 2) {
@@ -251,15 +291,18 @@ class Naive implements Persona {
     // held, through the landing and on (so the next edge is walked off with the wings open: a walk-off
     // glide); it lets go for one frame only to press again at a wall. Before that: 14-frame jumps.
     const glider = o.abilities.includes('glide');
+    // An edge it fell from walking off (a catch below it): next time, a jump from it (held: the wings).
+    if (gap) this.lastEdge = `${o.room}:${Math.round(o.feetX / 64)}`;
+    const fellHere = gap && (this.fellAt.get(this.lastEdge) ?? 0) % 2 === 1;
     let jump: boolean;
-    if (f >= this.jumpUntil + 1 && (wall || (gap && !(glider && this.holding)))) {
+    if (f >= this.jumpUntil + 1 && (wall || (gap && (!(glider && this.holding) || fellHere)))) {
       // The brief's 14 frames; at the same wall again, a full jump (a step a short hop does not clear).
       const again = wall && Math.abs(o.feetX - this.wallX) < 16;
       if (wall) this.wallX = o.feetX;
       this.jumpUntil = f + (again ? 22 : 14);
       if (glider && !wall) this.holding = true;
     }
-    if (glider && this.holding) jump = !(wall && this.last & J);
+    if (glider && this.holding) jump = !((wall || fellHere) && this.last & J && f >= this.jumpUntil - 13);
     else jump = f < this.jumpUntil;
     // A creature right in front: a cut (anyone who has the button presses it).
     const front = o.enemies.some(
@@ -302,6 +345,8 @@ interface PlannerOpts {
   /** The world, and the room it heads for (a speedrunner's knowledge of the route). */
   world?: World;
   goal?: string;
+  /** Rooms to cover (a region run's chunk): it heads for the nearest it has not been in. */
+  goals?: string[];
 }
 
 /** Something to go to. `leave`: on arriving, keep going that way (off an end, into an exit). */
@@ -316,6 +361,10 @@ interface Target {
   drop?: boolean;
   /** Also arrived when this is true (a pickup taken, a light seen up close). */
   done?: (o: Obs) => boolean;
+  /** Up a run of bounce caps from this one, into what it cannot see yet. */
+  caps?: { x: number; y: number; w: number };
+  /** An exit under a floor it must open: cut the bark panel from above, or drop through the one-way. */
+  cover?: 'bark' | 'oneway';
   /** Up this face into what it cannot see yet (it owns wall jump); `exit`: out through the top. */
   climb?: { faceX: number; w: number; exit?: boolean };
 }
@@ -395,6 +444,8 @@ class Planner implements Persona {
     left: boolean;
     hits0: number;
     foreseenHits: number;
+    /** The room it set out in (a climb out of it goes on into the next). */
+    room: string;
   } | null = null;
   /** Lines chosen (for the report) and how many candidates were played ahead in all. */
   readonly chosen: Array<{ f: number; line: string; frames: number; hits: number; caught: number }> = [];
@@ -506,10 +557,13 @@ class Planner implements Persona {
           mem.given.add(`exit:${back}`);
           mem.arrival = `exit:${back}`;
         }
+        // The way on: away from the side she came in by (in from the east: west).
+        const ex = (scene.exits ?? []).find((q) => q.id === back);
+        this.wayOn = ex?.edge === 'e' ? -1 : ex?.edge === 'w' ? 1 : o.feetX > scene.width / 2 ? -1 : 1;
       }
       this.room = o.room;
       // A climb out through the top goes on into this room; anything else stops at the crossing.
-      if (this.active?.goal.kind !== 'exit') this.active = null;
+      if (this.active?.goal.kind !== 'exit' && this.active?.goal.kind !== 'rise') this.active = null;
     }
     let m = this.minds.get(o.room);
     if (!m || m.scene !== scene) {
@@ -759,7 +813,16 @@ class Planner implements Persona {
     }
     if (t && (t.done?.(o) ?? false)) this.given.add(t.key);
     let cands = this.candidates(o, mind).filter((c) => !this.given.has(c.key));
-    if (cands.length === 0) cands = this.turnBack(o, mind, f);
+    if (cands.length === 0) {
+      const dbg = (globalThis as { __ptDebug?: (s: string) => void }).__ptDebug;
+      if (dbg)
+        dbg(
+          `f${f} no candidates; all: ${this.candidates(o, mind)
+            .map((c) => c.key)
+            .join(' ')}; given ${[...this.given].join(' ')}`,
+        );
+      cands = this.turnBack(o, mind, f);
+    }
     if (cands.length === 0) {
       this.target = null;
       return null;
@@ -800,7 +863,8 @@ class Planner implements Persona {
     this.notes.push(`f${f}: nothing new here: back out by ${pick}`);
     const id = pick.slice(5);
     const e = this.exitsSeen.get(id);
-    return e ? [{ ...this.exitTarget(mind, id, e, o.feetX), rank: 0 }] : [];
+    const t = e ? this.exitTarget(mind, id, e, o.feetX) : null;
+    return t ? [{ ...t, rank: 0 }] : [];
   }
 
   /**
@@ -833,7 +897,16 @@ class Planner implements Persona {
       return hops;
     };
     if (!this.hops) {
-      this.hops = bfs(this.goal, false);
+      // A chunk to cover (`goals`): the nearest of its rooms not yet been in.
+      const todo = (this.opt.goals ?? []).filter((r) => !this.roomsBeen.has(r));
+      if (todo.length) {
+        const from = bfs(room, true);
+        const near = todo
+          .filter((r) => from.has(r))
+          .sort((a, b) => (from.get(a) ?? 0) - (from.get(b) ?? 0))[0];
+        if (near) this.goal = near;
+      }
+      this.hops = bfs(this.goal ?? room, false);
       if (!this.hops.has(room)) {
         const ahead = [...bfs(room, true).entries()]
           .filter(([r]) => !this.roomsBeen.has(r))
@@ -859,16 +932,27 @@ class Planner implements Persona {
     // Exits it gave up on (the arrival opening among them) leave the forward frontier open.
     const exits = [...this.exitsSeen.entries()]
       .map(([id, e]) => this.exitTarget(mind, id, e, o.feetX))
-      .filter((e) => !this.given.has(e.key));
+      .filter((e): e is Target => !!e && !this.given.has(e.key));
     // A one-way drop is a turn back on purpose (the hub's well): every other way first.
     const oneWay = (key: string) =>
       (mind.scene.exits ?? []).some((q) => `exit:${q.id}` === key && q.oneWay === true);
     if (this.opt.pick === 'exit' && exits.length > 0)
       return exits.map((e) => ({ ...e, rank: this.hopsToGoal(o.room, e.key.slice(5)) }));
-    if (this.opt.pick === 'forward' || this.opt.pick === 'exit') {
-      // Forward: a way through before a one-way drop.
+    // No exit it can take (a gate that a fight opens, a lock): the room itself, the way on first.
+    if (this.opt.pick === 'exit')
+      return [
+        ...this.frontier(o, mind, true).map((c) => ({ ...c, rank: 1 })),
+        ...this.frontier(o, mind, false).map((c) => ({ ...c, rank: 2 })),
+      ];
+    if (this.opt.pick === 'forward') {
+      // Forward: a way through before a one-way drop; a way up it can see (caps, a climb) counts as a way
+      // through (the hub's cap wall to R14).
+      const ups = this.frontier(o, mind, true).filter((c) => c.caps || c.climb);
       if (exits.length > 0)
-        return exits.map((e) => ({ ...e, rank: this.opt.pick === 'forward' && oneWay(e.key) ? 1 : 0 }));
+        return [
+          ...exits.map((e) => ({ ...e, rank: oneWay(e.key) ? 1 : 0 })),
+          ...ups.map((c) => ({ ...c, rank: 0 })),
+        ];
       return this.frontier(o, mind, true).map((c) => ({ ...c, rank: 1 }));
     }
     // Explorer: pickups, lights, unwalked ground, then dangling ends, then exits.
@@ -896,7 +980,8 @@ class Planner implements Persona {
         done: () => this.lightsVisited.has(id),
       });
     }
-    for (const c of this.frontier(o, mind, false)) out.push({ ...c, rank: c.leave ? 2 : 1 });
+    for (const c of this.frontier(o, mind, false))
+      out.push({ ...c, rank: c.leave || c.caps || c.climb ? 2 : 1 });
     for (const e of exits) out.push({ ...e, rank: oneWay(e.key) ? 4 : 3 });
     return out;
   }
@@ -906,6 +991,7 @@ class Planner implements Persona {
     mind.refresh();
     const out: Target[] = [];
     for (const s of mind.surfaces) {
+      if (s.cap) continue;
       for (let x = s.x0 + 64; x < s.x1 - 32; x += CELL) {
         const y = yAt(s, x);
         const key = cellKey(x, y);
@@ -916,7 +1002,7 @@ class Planner implements Persona {
           why: `unwalked ground at ${Math.round(x)}`,
           x,
           y,
-          stand: (q) => same(q, s),
+          stand: (q) => standsAt(q, x, y),
           done: () => this.visited.has(key),
         });
       }
@@ -948,8 +1034,33 @@ class Planner implements Persona {
         });
       }
     }
+    // Bounce caps it can get onto, rising out of sight: up them, into what it cannot see yet.
+    for (const k of mind.kitStanding()) {
+      if (k.kind !== 'cap' || k.y > o.view.y + o.view.h || k.y < o.view.y - 64) continue;
+      const cx = k.x + k.w / 2;
+      const floor = mind.surfaces
+        .filter(
+          (q) =>
+            !q.cap &&
+            q.x0 - 260 < k.x + k.w &&
+            q.x1 + 260 > k.x &&
+            yAt(q, Math.max(q.x0, Math.min(q.x1, cx))) - k.y < 250,
+        )
+        .sort((a, b) => Math.abs((a.x0 + a.x1) / 2 - cx) - Math.abs((b.x0 + b.x1) / 2 - cx))[0];
+      if (!floor) continue;
+      const sx = Math.max(floor.x0 + 24, Math.min(floor.x1 - 24, cx));
+      const fy = yAt(floor, sx);
+      out.push({
+        key: `caps:${k.x},${k.y}`,
+        why: `up the caps from ${Math.round(k.x)}, ${Math.round(k.y)}`,
+        x: sx,
+        y: fy,
+        stand: (q) => standsAt(q, sx, fy),
+        caps: { x: k.x, y: k.y, w: k.w },
+      });
+    }
     // Faces rising out of sight (she owns the wall jump): up them, into what she cannot see yet.
-    if (mind.climber && !forwardOnly)
+    if (mind.climber)
       for (const fc of mind.faces()) {
         if (fc.x <= 0 || fc.x >= mind.scene.width) continue;
         const sx = fc.x - fc.w * 26;
@@ -966,7 +1077,7 @@ class Planner implements Persona {
           why: `up the face at ${Math.round(fc.x)}`,
           x: sx,
           y: fy,
-          stand: (q) => same(q, floor),
+          stand: (q) => standsAt(q, sx, fy),
           climb: { faceX: fc.x, w: fc.w },
         });
       }
@@ -978,7 +1089,7 @@ class Planner implements Persona {
     id: string,
     e: { x: number; y: number; edge: string },
     from: number,
-  ): Target {
+  ): Target | null {
     mind.refresh();
     // A way out at the top (a shaft): up a face under it, if she owns the wall jump.
     if (e.edge === 'n' && mind.climber) {
@@ -1005,13 +1116,49 @@ class Planner implements Persona {
           why: `exit ${id} (up the shaft)`,
           x: sx,
           y: yAt(floor, sx),
-          stand: (q) => same(q, floor),
+          stand: (q) => standsAt(q, sx, yAt(floor, sx)),
           climb: { faceX: fc.x, w: fc.w, exit: true },
         };
       }
     }
     // A hole in a floor (a south exit): stand on a floor that ends at its edge, however deep the shaft.
     const span = e.edge === 's' ? (mind.scene.exits ?? []).find((q) => q.id === id) : undefined;
+    if (span) {
+      // Something over the hole: a shut gate or shortcut (no way, for now: blocked for the route), a rotten
+      // bark floor panel (stand on it and cut it open from above), or a one-way mesh (stand on it, drop through).
+      const covers = (r: { x: number; w: number }) =>
+        Math.min(r.x + r.w, span.to) - Math.max(r.x, span.from) >= (span.to - span.from) / 2;
+      const kit = mind
+        .kitStanding()
+        .filter((k) => k.kind !== 'cap' && covers(k) && k.y + k.h >= (span.at ?? mind.scene.height) - 900);
+      // A one-way mesh over the hole is a floor to stand on (the hub's grate over R10's climb-out): dropping
+      // through it is possible, but it is not the way on (it skips the pit: a sequence break, reported).
+      const meshOver = mind.surfaces.some(
+        (q) => q.oneWay && Math.min(q.x1, span.to) - Math.max(q.x0, span.from) >= (span.to - span.from) / 2,
+      );
+      if (kit.some((k) => k.kind !== 'bark') || meshOver) {
+        this.blocked.add(`${this.room}#${id}`);
+        return null;
+      }
+      const bark = kit.sort((a, b) => a.y - b.y)[0];
+      const mesh = mind.surfaces.find(
+        (q) => q.oneWay && Math.min(q.x1, span.to) - Math.max(q.x0, span.from) >= (span.to - span.from) / 2,
+      );
+      if (bark || mesh) {
+        const cx = bark ? bark.x + bark.w / 2 : (span.from + span.to) / 2;
+        const cy = bark ? bark.y : (mesh?.pieces[0]?.y ?? 0);
+        const on = bark ? mind.under(cx, cy) : (mesh ?? null);
+        if (!on) return null;
+        return {
+          key: `exit:${id}`,
+          why: `exit ${id} (${bark ? 'through the bark floor' : 'down through the mesh'})`,
+          x: cx,
+          y: cy,
+          stand: (q) => standsAt(q, cx, cy),
+          cover: bark ? 'bark' : 'oneway',
+        };
+      }
+    }
     // The lip on her side of it.
     const lip = span
       ? mind.surfaces
@@ -1090,7 +1237,7 @@ class Planner implements Persona {
       if (!ok && a.target?.leave === undefined)
         this.notes.push(`f${f}: ${a.name} did not go as foreseen (${why})`);
     };
-    if (o.held && a.goal.kind === 'exit' && ctx.state.exit) {
+    if (o.held && (a.goal.kind === 'exit' || (a.goal.kind === 'rise' && a.goal.through)) && ctx.state.exit) {
       // Out of a room with no world beyond (a test room): that was the way out.
       if (!ctx.world) {
         end(true, 'out');
@@ -1108,12 +1255,16 @@ class Planner implements Persona {
       a.hits0 = o.p.hurtSeq;
       if (a.move) this.failed(a.move, f, 'a hit it did not foresee', mind);
     }
-    if (p.grounded && !o.lured && a.goal.kind === 'exit') {
-      if (o.room !== a.goal.room && p.contactFrames >= 6 && o.feetY < scene.height - 32) {
+    if (
+      p.grounded &&
+      !o.lured &&
+      (a.goal.kind === 'exit' || (a.goal.kind === 'rise' && a.goal.through && o.room !== a.room))
+    ) {
+      if (o.room !== a.room && p.contactFrames >= 6 && o.feetY < scene.height - 32) {
         end(true, 'through');
         return 0;
       }
-    } else if (p.grounded && !o.lured) {
+    } else if (p.grounded && !o.lured && !onCap(ctx.state, scene)) {
       const goal = a.goal;
       if (goal.kind === 'surface' && onSurface(ctx.state, goal.surface)) {
         end(true, 'landed');
@@ -1182,6 +1333,7 @@ class Planner implements Persona {
       left: false,
       hits0: o.p.hurtSeq,
       foreseenHits: c.outcome.hits,
+      room: o.room,
     };
     this.chosen.push({
       f,
@@ -1240,6 +1392,7 @@ class Planner implements Persona {
             left: true,
             hits0: o.p.hurtSeq,
             foreseenHits: c.outcome.hits,
+            room: o.room,
           };
           this.chosen.push({
             f,
@@ -1251,6 +1404,11 @@ class Planner implements Persona {
           return this.runLine(o, ctx, mind, scene);
         }
       }
+    }
+    if (!p.grounded && t.cover) {
+      // Over the panel: a down cut on the way down (it breaks after a few); through the mesh: keep falling.
+      if (t.cover === 'bark') return p.vy > 0 && !(this.lastMask & A) ? A | D : 0;
+      return D;
     }
     if (!p.grounded) {
       // Falling with no line (thrown, or off an end it leaves by): steer toward the target, wings open.
@@ -1270,8 +1428,14 @@ class Planner implements Persona {
       this.routeFrom = cur.id;
       this.routeVersion = version;
       if (!this.route) {
+        const dbg = (globalThis as { __ptDebug?: (s: string) => void }).__ptDebug;
+        if (dbg)
+          dbg(
+            `f${f} no route from ${cur.x0}-${cur.x1}@${cur.pieces[0]?.y} to ${t.why}; surfaces ${mind.surfaces.map((q) => `${q.x0}-${q.x1}@${q.pieces[0]?.y}${q.oneWay ? 'o' : ''}`).join(' ')}`,
+          );
         this.giveUp(t, 'no route on what it has seen', f);
-        return this.wander(o, scene);
+        // Stand and think (the next target comes next frame): wandering on walked her off ledges she had climbed.
+        return 0;
       }
     }
     const m = this.route[0];
@@ -1290,11 +1454,35 @@ class Planner implements Persona {
       const look = this.edgeLook(o, m, toEdge);
       if (look >= 0) return look;
     }
-    const tx = Math.max(to.x0 + 40, Math.min(to.x1 - 40, t.x));
-    const cands = linesFor(m, cur, to, tx, scene, o.abilities, this.hands(), {
+    let tx = Math.max(to.x0 + 40, Math.min(to.x1 - 40, t.x));
+    let cands = linesFor(m, cur, to, tx, scene, o.abilities, this.hands(), {
       waits: this.waits(o),
       faces: mind.faces(),
     });
+    // Onto a bounce cap: the move goes on off it (and off the caps after it) to the first real ground.
+    if (to.cap) {
+      const caps: Surface[] = [to];
+      let final: Surface | undefined;
+      for (const b of this.route.slice(1)) {
+        if (b.kind !== 'bounce') break;
+        const q = mind.surfaces.find((z) => z.id === b.to);
+        if (!q) break;
+        if (q.cap) caps.push(q);
+        else {
+          final = q;
+          break;
+        }
+      }
+      if (!final) {
+        this.route = null;
+        mind.bad.add(moveKey(m));
+        return 0;
+      }
+      const fin = final;
+      tx = Math.max(fin.x0 + 40, Math.min(fin.x1 - 40, t.x));
+      cands = cands.map((c) => capChain(c, caps, fin, tx));
+      return this.startLine(o, ctx, scene, mind, cur, { kind: 'surface', surface: fin }, cands, m, null);
+    }
     return this.startLine(o, ctx, scene, mind, cur, { kind: 'surface', surface: to }, cands, m, null);
   }
 
@@ -1342,6 +1530,30 @@ class Planner implements Persona {
     const p = o.p;
     const f = o.frame;
     const dx = t.x - o.feetX;
+    if (t.caps) {
+      // Through when she stands on ground above the first cap (the shelf she set out from does not count).
+      const c = t.caps;
+      const goal: Goal = { kind: 'rise', fromY: c.y, rise: 8 };
+      const n = 'up the bounce caps';
+      return this.startLine(
+        o,
+        ctx,
+        scene,
+        mind,
+        cur,
+        goal,
+        [{ name: n, make: () => capClimbLine(n, scene, c, this.hands()) }],
+        null,
+        t,
+      );
+    }
+    if (t.cover) {
+      // Over the panel or the mesh, then: down through the mesh (down + jump), or hop and cut down at the bark.
+      if (p.grounded && Math.abs(dx) > 24) return dirBit(Math.sign(dx));
+      if (t.cover === 'oneway') return f % 4 < 2 ? D | J : D;
+      if (p.grounded) return this.lastMask & J ? 0 : J;
+      return p.vy > 0 && !(this.lastMask & A) ? A | D : 0;
+    }
     if (t.climb) {
       // Up a face into what it cannot see yet: the look-ahead only keeps her off thorns and slick bark.
       const c = t.climb;
@@ -1349,7 +1561,7 @@ class Planner implements Persona {
         return dirBit(Math.sign(c.faceX - c.w * 26 - o.feetX));
       const goal: Goal = c.exit
         ? { kind: 'exit', id: t.key.slice(5), room: o.room }
-        : { kind: 'rise', fromY: o.feetY, rise: 240 };
+        : { kind: 'rise', fromY: o.feetY, rise: 240, through: true };
       const next = (r: string) => ctx.world?.rooms[r]?.scene;
       const faces = mind.faces();
       const cands: Candidate[] = [];
@@ -1454,6 +1666,15 @@ class Planner implements Persona {
 const CELL = 256;
 function cellKey(x: number, y: number): string {
   return `${Math.floor(x / CELL)},${Math.round(y / 64)}`;
+}
+
+/**
+ * Does she stand on `q` at (x, y)? Targets on a point, not on a surface captured once: surfaces are rebuilt
+ * and grow (a bark panel seen joins the floor beside it) as more of the room is seen.
+ */
+export function standsAt(q: Surface, x: number, y: number): boolean {
+  if (x < q.x0 - 8 || x > q.x1 + 8) return false;
+  return Math.abs(topUnder(q, Math.max(q.x0, Math.min(q.x1, x))) - y) <= 8;
 }
 
 /** Surfaces are rebuilt (new ids) as more of the room is seen: compare them by geometry. */

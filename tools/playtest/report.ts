@@ -315,7 +315,7 @@ export function regionMarkdown(
   for (const t of traces) {
     const how =
       t.outcome === 'through'
-        ? `through the chunk (out of ${meta.upto})`
+        ? `through the chunk${meta.upto ? ` (out of ${meta.upto})` : ''}`
         : t.outcome === 'lost'
           ? `lost in ${t.rooms[t.rooms.length - 1]?.room ?? '?'}`
           : t.outcome === 'done'

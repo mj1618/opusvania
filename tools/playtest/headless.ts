@@ -39,6 +39,8 @@ export interface RunOpts {
   at?: { x: number; y: number };
   /** A chunk of a region: the run is through once she leaves this room by a way other than the one she came in by. */
   upto?: string;
+  /** The chunk's rooms: through once she has been in every one (and out of `upto`, if given). */
+  chunk?: string[];
 }
 
 export interface HeadlessResult {
@@ -65,7 +67,9 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
   const persona = makePersona(
     opts.persona,
     opts.personaSeed ?? 1,
-    world ? { world, ...(opts.goal ? { goal: opts.goal } : {}) } : {},
+    world
+      ? { world, ...(opts.goal ? { goal: opts.goal } : {}), ...(opts.chunk ? { goals: opts.chunk } : {}) }
+      : {},
   );
   const rec = new Recorder(opts.persona, room.id, opts.seed ?? 1, 'headless', {
     lostAfter: (opts.lostAfter ?? 10) * 60,
@@ -86,6 +90,8 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
   const tape: number[] = [];
   let outcome = 'timeout';
   let uptoArrival = '';
+  let uptoDone = false;
+  const been = new Set<string>();
   for (let i = 0; i < maxFrames; i++) {
     const view = viewRect(lerpCamera(cam, cam, 1));
     const mask = persona.decide(observe(game.state, scene, view), scene, {
@@ -110,7 +116,11 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
         uptoArrival = link?.exit ?? '';
       }
     const out = events.find((e) => e.type === 'roomExit');
-    if (opts.upto && out?.type === 'roomExit' && game.state.room === opts.upto && out.id !== uptoArrival) {
+    if (opts.upto && out?.type === 'roomExit' && game.state.room === opts.upto && out.id !== uptoArrival)
+      uptoDone = true;
+    been.add(game.state.room);
+    const covered = !opts.chunk || opts.chunk.every((r) => been.has(r));
+    if ((uptoDone || !opts.upto) && (opts.upto || opts.chunk) && covered) {
       outcome = 'through';
       break;
     }

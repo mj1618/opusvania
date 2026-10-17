@@ -22,9 +22,11 @@ export interface Surface {
   x1: number;
   pieces: Piece[];
   oneWay: boolean;
+  /** A bounce cap's top (never stood on: it throws her up this many px, jump held). */
+  cap?: number;
 }
 
-export type MoveKind = 'walk' | 'jump' | 'up' | 'drop' | 'through' | 'climb' | 'cut';
+export type MoveKind = 'walk' | 'jump' | 'up' | 'drop' | 'through' | 'climb' | 'cut' | 'bounce';
 
 export interface Move {
   from: number;
@@ -44,6 +46,8 @@ export interface Move {
   pogo?: boolean;
   /** A climb: the face she kicks up first (`dir` = the way she holds into it). */
   faceX?: number;
+  /** A bounce: off the cap `from` is (it throws her up this many px with jump held). */
+  capRise?: number;
 }
 
 /** Most px between a launch, the seed-cases and the landing for a pogo chain the planner trusts. */
@@ -164,8 +168,9 @@ export function surfaceAt(surfaces: readonly Surface[], x: number, y: number, sl
   let bd = Number.POSITIVE_INFINITY;
   for (const s of surfaces) {
     if (x < s.x0 - 24 || x > s.x1 + 24) continue;
-    const d = Math.abs(topUnder(s, x) - y);
-    if (d <= slack && d < bd) {
+    // Over its own range beats hanging past another's end (two surfaces abut at one height: the mesh by the floor).
+    const d = Math.abs(topUnder(s, x) - y) + (x >= s.x0 && x <= s.x1 ? 0 : 3);
+    if (d <= slack + 3 && d < bd) {
       bd = d;
       best = s;
     }
@@ -181,7 +186,7 @@ export interface Reach {
 }
 
 /** Reach for what she owns, with a margin (memory/movement-controller.md "Reach"). */
-export function reachFor(abilities: readonly string[], margin = 0.82): Reach {
+export function reachFor(abilities: readonly string[], margin = 0.95): Reach {
   const dj = abilities.includes('doubleJump');
   const glide = abilities.includes('glide');
   const H = dj ? 464 : 272;
@@ -241,7 +246,8 @@ export function buildMoves(
         }
         const pogo = dx > reach.across(dy) && Math.abs(dy) <= 64 && pogoChain(pogos, ax, bx, ya);
         if (dx > reach.across(dy) && !pogo) continue;
-        const walk = dx <= 24 && dy > 0;
+        // Abutting at about the same height (a one-way mesh beside the floor), or a step down: walked.
+        const walk = dx <= 24 && (dy > 0 || (dx <= 2 && Math.abs(dy) <= ROLL));
         push({
           from: a.id,
           to: b.id,
@@ -386,6 +392,41 @@ export function buildClimbs(surfaces: readonly Surface[], faces: readonly Face[]
   return out;
 }
 
+/**
+ * Bounces: off a cap's top to a surface whose top she rises over (a little short of the full held rise) within
+ * reach sideways (the wings add more on the way down). Moves from a cap are only bounces: nobody stands on one.
+ */
+export function buildBounces(surfaces: readonly Surface[], glide: boolean): Move[] {
+  const out: Move[] = [];
+  for (const c of surfaces) {
+    if (!c.cap) continue;
+    const cy = c.pieces[0]?.y ?? 0;
+    for (const b of surfaces) {
+      if (b === c) continue;
+      const bx = Math.max(b.x0, Math.min(b.x1, (c.x0 + c.x1) / 2));
+      const by = topUnder(b, bx);
+      const rise = cy - by;
+      if (rise > c.cap * 0.92) continue;
+      const side = Math.max(0, b.x0 - c.x1, c.x0 - b.x1);
+      const fall = Math.max(0, -rise);
+      if (side > 420 + (glide ? 2.2 * (c.cap + fall) * 0.5 : 0.6 * fall)) continue;
+      out.push({
+        from: c.id,
+        to: b.id,
+        kind: 'bounce',
+        dir: Math.sign(bx - (c.x0 + c.x1) / 2) || 1,
+        launchX: (c.x0 + c.x1) / 2,
+        capRise: c.cap,
+        cost: side + Math.abs(rise) * 0.5 + 40,
+        key: `bounce:${c.x0},${cy}>${b.x0},${b.pieces[0]?.y ?? 0}`,
+        gap: side,
+        rise: -rise,
+      });
+    }
+  }
+  return out;
+}
+
 /** A move by its geometry (stable when the surfaces are rebuilt with new ids). */
 export function moveKey(m: Move): string {
   return m.key;
@@ -460,15 +501,32 @@ export interface KitRect {
   y: number;
   w: number;
   h: number;
-  kind: 'bark' | 'gate' | 'shortcut';
+  kind: 'bark' | 'gate' | 'shortcut' | 'cap';
+  /** A cap: the rise it throws her, jump held (kit.caps tiers x heldScale). */
+  rise?: number;
   /** Gone when the save has this in `opened` (bark, shortcuts: `room:id`) or `flags` (a gate's flag). */
   open: string;
   kick?: boolean | 'east' | 'west';
 }
 
 /** The kit pieces of a room that stand until something opens them. */
+/** kit.caps (src/sim/tuning.ts): tiers and the held scale. The look-ahead has the exact numbers anyway. */
+const CAP_TIERS = { small: 320, mid: 448, big: 640 } as const;
+const CAP_HELD = 1.2;
+
 export function kitRects(scene: Scene): KitRect[] {
   const out: KitRect[] = [];
+  for (const c of scene.caps ?? [])
+    out.push({
+      x: c.x,
+      y: c.y,
+      w: c.w,
+      h: c.h,
+      kind: 'cap',
+      open: '',
+      rise: (c.height ?? CAP_TIERS[c.tier ?? 'mid']) * CAP_HELD,
+      ...(c.kick !== undefined ? { kick: c.kick } : {}),
+    });
   for (const b of scene.bark ?? [])
     out.push({
       x: b.x,
@@ -612,6 +670,12 @@ export class Mind {
     return this.abilities.split(',').includes('wallJump');
   }
 
+  /** The kit's pieces standing now (bark not broken, gates shut, shortcuts not opened), with their kind. */
+  kitStanding(): KitRect[] {
+    const n = this.scene.solids.length;
+    return this.kit.filter((_, j) => !this.openSet.has(n + j));
+  }
+
   /** Known solids standing now (indices into `rects`). */
   standing(): number[] {
     return [...this.solids].filter((i) => !this.openSet.has(i)).sort((a, b) => a - b);
@@ -638,7 +702,18 @@ export class Mind {
       const r = this.rects[i] as SolidRect;
       return { x: r.x, y: r.y, w: r.w, h: r.h, bark: i >= n && this.kit[i - n]?.kind === 'bark' };
     });
-    this.moves = buildMoves(this.surfaces, this.reach, this.scene.seedCases ?? [], walls);
+    // Cap tops: marked with their rise; the only moves off them are bounces.
+    const caps = this.kit.filter((k) => k.kind === 'cap');
+    for (const q of this.surfaces) {
+      const c = caps.find(
+        (k) => q.x0 >= k.x - 1 && q.x1 <= k.x + k.w + 1 && Math.abs((q.pieces[0]?.y ?? 0) - k.y) <= 1,
+      );
+      if (c?.rise) q.cap = c.rise;
+    }
+    this.moves = buildMoves(this.surfaces, this.reach, this.scene.seedCases ?? [], walls).filter(
+      (m) => !this.surfaces.find((q) => q.id === m.from)?.cap,
+    );
+    this.moves.push(...buildBounces(this.surfaces, this.abilities.split(',').includes('glide')));
     if (this.abilities.split(',').includes('wallJump'))
       this.moves.push(...buildClimbs(this.surfaces, facesOf(played, standing), this.reach));
   }

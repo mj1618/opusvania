@@ -54,7 +54,7 @@ export interface Line {
 export type Goal =
   | { kind: 'surface'; surface: Surface }
   /** Any ground at least `rise` px above where she started (a climb into what she cannot see yet), or an exit. */
-  | { kind: 'rise'; fromY: number; rise: number }
+  | { kind: 'rise'; fromY: number; rise: number; through?: boolean }
   /** Off an end into what it cannot see: down on any ground but the start (or through an exit). */
   | { kind: 'leap' }
   /** Out through exit `id` of room `room`, and down on ground in the room it leads to (a climb out of a shaft). */
@@ -80,7 +80,9 @@ export function onSurface(s: GameState, surf: Surface): boolean {
   const p = s.player;
   if (!p.grounded) return false;
   const f = feet(s);
-  if (f.x < surf.x0 - 24 || f.x > surf.x1 + 24) return false;
+  // Feet over it (not just her box's edge on its end: abutting surfaces at one height would both count).
+  const m = Math.min(8, (surf.x1 - surf.x0) / 4);
+  if (f.x < surf.x0 + m || f.x > surf.x1 - m) return false;
   return Math.abs(topUnder(surf, f.x) - f.y) <= 6;
 }
 
@@ -90,6 +92,12 @@ export function nearSurface(s: GameState, surf: Surface | null, slack = 96): boo
   const f = feet(s);
   if (f.x < surf.x0 - slack || f.x > surf.x1 + slack) return false;
   return Math.abs(topUnder(surf, Math.max(surf.x0, Math.min(surf.x1, f.x))) - f.y) <= 12;
+}
+
+/** Down on a bounce cap's top (a touch, not a landing: it throws her up the next frame). */
+export function onCap(s: GameState, scene: Scene): boolean {
+  const f = feet(s);
+  return (scene.caps ?? []).some((c) => f.x > c.x - 24 && f.x < c.x + c.w + 24 && Math.abs(f.y - c.y) <= 6);
 }
 
 function caughtNow(s: GameState): boolean {
@@ -105,7 +113,10 @@ export function simulate(ctx: SimCtx, scene: Scene, line: Line, start: Surface |
   let hits = 0;
   let caught = 0;
   let left = false;
-  const world = goal.kind === 'exit' ? ctx.world : undefined;
+  // A climb out through the top (an exit, or a climb into the unknown that comes out of the room) goes on
+  // in the next room: it is through once she stands there.
+  const world = goal.kind === 'exit' || goal.kind === 'rise' ? ctx.world : undefined;
+  const room0 = ctx.state.room;
   for (let k = 0; k < line.max; k++) {
     const mask = line.act(s, k, prev);
     prev = mask;
@@ -127,16 +138,18 @@ export function simulate(ctx: SimCtx, scene: Scene, line: Line, start: Surface |
         continue;
       }
       if (e.type === 'roomExit') {
-        // Out by an exit: fine for a leap or a climb into the unknown, never by a one-way drop by chance.
-        const oneWay = (scene.exits ?? []).some((q) => q.id === e.id && q.oneWay === true);
-        const ok = goal.kind !== 'surface' && !oneWay;
+        // Out by an exit: fine for a climb into the unknown (on into the next room, with a world), never
+        // for a leap, never by a one-way drop by chance.
+        const oneWay = (sc.exits ?? []).some((q) => q.id === e.id && q.oneWay === true);
+        const ok = goal.kind === 'rise' && !!goal.through && !oneWay;
+        if (ok && world) continue;
         return { ok, frames: k, hits, caught, why: `exit ${e.id}`, x: f.x, y: f.y };
       }
     }
     if (s.caught) return { ok: false, frames: k, hits, caught, why: 'held', x: f.x, y: f.y };
     const p = s.player;
     if (!p.grounded) left = true;
-    if (p.grounded && !caughtNow(s)) {
+    if (p.grounded && !caughtNow(s) && !onCap(s, sc)) {
       if (goal.kind === 'exit') {
         // Through: standing in the next room, not just set down at its seam.
         const h = world?.rooms[s.room]?.scene.height ?? Number.POSITIVE_INFINITY;
@@ -147,6 +160,12 @@ export function simulate(ctx: SimCtx, scene: Scene, line: Line, start: Surface |
       }
       if (goal.kind === 'surface' && onSurface(s, goal.surface))
         return { ok: true, frames: k, hits, caught, why: 'landed', x: f.x, y: f.y };
+      if (goal.kind === 'rise' && s.room !== room0) {
+        const h = world?.rooms[s.room]?.scene.height ?? Number.POSITIVE_INFINITY;
+        if (!s.exit && p.contactFrames >= 6 && f.y < h - 32)
+          return { ok: true, frames: k, hits, caught, why: 'through', x: f.x, y: f.y };
+        continue;
+      }
       if (goal.kind === 'rise' && f.y <= goal.fromY - goal.rise)
         return { ok: true, frames: k, hits, caught, why: 'rose', x: f.x, y: f.y };
       // Down somewhere else after setting out: not this line (unless any ground will do).
@@ -639,7 +658,12 @@ export function chooseLine(
       why.set(o.why, (why.get(o.why) ?? 0) + 1);
       continue;
     }
-    const sc = score(o);
+    // A leap into the unknown: the farther on (and the higher) it comes down, the better (a glide over the
+    // gap rather than a drop into what is under it).
+    const p0 = ctx.state.player;
+    const on =
+      goal.kind === 'leap' ? Math.abs(o.x - (p0.x + p0.w / 2)) * 1.5 - (o.y - (p0.y + p0.h)) * 0.5 : 0;
+    const sc = score(o) - on;
     if (sc < bestScore) {
       bestScore = sc;
       best = { cand, outcome: o, tried: cands.length, fails: '' };
@@ -655,4 +679,129 @@ export function chooseLine(
   }
   const none: Outcome = { ok: false, frames: 0, hits: 0, caught: 0, why: fails, x: 0, y: 0 };
   return { cand: null, outcome: none, tried: cands.length, fails };
+}
+
+/**
+ * A move onto a bounce cap that goes on off it (and off the caps after it) to `final`: the candidate's own
+ * line takes her onto the first cap; jump is held as she meets each cap (the held bounce); after each bounce
+ * she steers to the next cap, then onto `final` (wings open on the way down).
+ */
+export function capChain(cand: Candidate, caps: readonly Surface[], final: Surface, tx: number): Candidate {
+  const name = `${cand.name}, off ${caps.length} cap(s)`;
+  return {
+    name,
+    make: () => {
+      const inner = cand.make();
+      let i = 0;
+      return {
+        name,
+        max: inner.max + 300 * caps.length,
+        act(s, k, prev) {
+          const p = s.player;
+          const f = feet(s);
+          const cap = caps[i];
+          // Off cap i: on to the next.
+          if (cap) {
+            const top = cap.pieces[0]?.y ?? 0;
+            const over = f.x > cap.x0 - 8 && f.x < cap.x1 + 8;
+            if (over && Math.abs(f.y - top) < 40 && p.vy < -4) i++;
+          }
+          const next = caps[i];
+          if (i === 0) {
+            // Still on the way to the first cap: its own line, with jump held as she comes down onto it.
+            let m = inner.act(s, k, prev);
+            if (next && !p.grounded && p.vy > 0 && f.x > next.x0 - 40 && f.x < next.x1 + 40) m |= J;
+            return m;
+          }
+          if (next) {
+            const cx = (next.x0 + next.x1) / 2;
+            let m = Math.abs(cx - f.x) > 10 ? dirBit(Math.sign(cx - f.x)) : 0;
+            if (p.vy > 0) m |= J;
+            return m;
+          }
+          let m = steer(s, final, tx, null);
+          if (p.vy > 2 && s.save.abilities.includes('glide')) m |= J;
+          return m;
+        },
+      };
+    },
+  };
+}
+
+/**
+ * Up a run of bounce caps into what she cannot see yet (the hub's bracket caps): onto `first` from where
+ * she stands (a jump if it is above her), then after each bounce on to the nearest cap below her within
+ * reach (jump held as she meets it), until she comes down on ground. The look-ahead says if it goes.
+ */
+export function capClimbLine(
+  name: string,
+  scene: Scene,
+  first: { x: number; y: number; w: number },
+  hands: Hands,
+  max = 900,
+): Line {
+  let last = -1;
+  let jumpUntil = -1;
+  return {
+    name,
+    max,
+    act(s, k, prev) {
+      const p = s.player;
+      if (caughtNow(s)) return caughtMask(k, hands.cut);
+      const f = feet(s);
+      const caps = scene.caps ?? [];
+      const cx = first.x + first.w / 2;
+      if (p.grounded && !onCap(s, scene)) {
+        // On the ground: under the first cap's side, then a full jump onto it (or walk off onto it).
+        const dx = cx - f.x;
+        if (first.y < f.y - 16) {
+          // From beside it, not under it (the head would hit its underside): 50 px off its near end.
+          let side = f.x >= cx ? 1 : -1;
+          // Not out of the room (a cap by the door): the other side.
+          if ((side < 0 && first.x - 50 < 30) || (side > 0 && first.x + first.w + 50 > scene.width - 30))
+            side = -side;
+          const spot = side > 0 ? first.x + first.w + 50 : first.x - 50;
+          if (Math.abs(spot - f.x) > 12) return dirBit(Math.sign(spot - f.x));
+          if (prev & J) return 0;
+          jumpUntil = k + 22;
+          return J;
+        }
+        return dirBit(Math.sign(dx));
+      }
+      // Off a cap just now: remember which (the next is another).
+      caps.forEach((c, i) => {
+        if (f.x > c.x - 8 && f.x < c.x + c.w + 8 && Math.abs(f.y - c.y) < 40 && p.vy < -4) last = i;
+      });
+      // The next: the nearest cap under her (or level) she can still come down on.
+      let best = -1;
+      let bd = Number.POSITIVE_INFINITY;
+      // Caps she can still come down on: not above what is left of her rise, not too far below.
+      const rise = p.vy < 0 ? (p.vy * p.vy) / 2.4 : 0;
+      caps.forEach((c, i) => {
+        if (i === last && caps.length > 1) return;
+        if (c.y < f.y - rise - 8 || c.y > f.y + 700) return;
+        const d = Math.abs(c.x + c.w / 2 - f.x) + Math.max(0, c.y - f.y) * 0.3;
+        if (d < bd && Math.abs(c.x + c.w / 2 - f.x) < 760) {
+          bd = d;
+          best = i;
+        }
+      });
+      const target =
+        best >= 0 ? caps[best] : last < 0 ? (first as { x: number; y: number; w: number }) : null;
+      let m = 0;
+      // Rising beside a cap still above her feet: straight up until over its top, then onto it.
+      const rising =
+        last < 0 &&
+        target &&
+        target.y < f.y + 4 &&
+        p.vy < 0 &&
+        (f.x < target.x - 8 || f.x > target.x + target.w + 8);
+      if (target && !rising) {
+        const tcx = target.x + target.w / 2;
+        if (Math.abs(tcx - f.x) > 10) m |= dirBit(Math.sign(tcx - f.x));
+      }
+      if (k < jumpUntil || p.vy > 0) m |= J;
+      return m;
+    },
+  };
 }

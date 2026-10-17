@@ -3,7 +3,10 @@
 STUDIO.md "Playtesting without Matt". Reports go to `playtest-reports/` (gitignored).
 
 ## Run it
-- `npm run playtest -- --region wood --upto wood-well` = **the region run**: every persona, headless, from the world's
+- `npm run playtest -- --region wood --chunk wood-hatch..wood-well,wood-caps --upto wood-well` = **the region run**
+  for chunk 1 (R1-R10 + R14). `--chunk a..b,c` = the region doc's §9 rows from a to b plus c: a run is `through` once
+  she has been in every chunk room (and left `--upto` by another way than in); the speedrunner heads for the nearest
+  chunk room it has not been in. Without `--chunk`, `--upto` alone is the end. It is every persona, headless, from the world's
   start (`--until none`), until it leaves `--upto` by another way than it came in (`through`), gives up lost, or stops.
   One combined `<stamp>-region.md` (time per room, longest lost stretch, deaths / catches / hits, lamps put out / seen /
   there, all against wood.md §9; encounters; moths; abilities and when; how each run ended) beside the per-persona
@@ -75,9 +78,14 @@ room and the world graph (it has run it before).
   goal moves to the nearest room it has not been in. Cautious = the exits it sees (a one-way last), else forward ground.
   Out of things to do: **turn back** by the exit it has left by least (not the one it came in by unless it is the only
   one). A new ability clears every give-up (the shaft, the far ledge get another go).
-- **Moves** (map.ts): walk on (rolling steps <= 16 px), jump across, jump up beside a higher end, drop off an end, drop
-  through a one-way, **cut** through standing rotten bark in a gap, **climb** a kickable face (it owns wall jump) to a
-  surface above. A wall in a gap higher than a jump means no jump. Reach from movement-controller.md "Reach" (glide table
+- **Moves** (map.ts): walk on (rolling steps <= 16 px; abutting tops at one height, a mesh by the floor), jump across,
+  jump up beside a higher end, drop off an end, drop through a one-way, **cut** through standing rotten bark in a gap,
+  **climb** a kickable face (it owns wall jump) to a surface above, **bounce** off a cap's top (caps are kit solids in
+  the map, tops marked with their held rise; nobody stands on one) to ground or the next cap: a move onto a cap plays
+  as one line with the bounces after it (`capChain`). Covered exits: a hole under a **bark floor panel** is taken by
+  standing on it and hopping into down cuts (R9's panel into R10); under a shut gate or shortcut, or a **one-way mesh**
+  (the hub's grate), it is not a way on (blocked for the route). Frontier also has **caps into the unknown** (a cap it
+  can get onto: up the run of caps from there, `capClimbLine`, the hub's B1-B3 to NW). A wall in a gap higher than a jump means no jump. Reach from movement-controller.md "Reach" (glide table
   included) with an 18% margin; the look-ahead has the last word.
 - **Lines** (lines.ts): before each move it plays every candidate it knows forward in a copy of the sim and plays the
   best for real: plain jump (3 edges x 3 holds), jump-glide, double jump, standing hop (narrow steps), walk off,
@@ -118,25 +126,25 @@ room and the world graph (it has run it before).
 - **encounters**: per creature, from its first act about her to its last; hits it gave; killed / dispersed / passed.
 - **outcome**: `exit` (`--until exit`), `through` (out of `--upto`), `done` (nothing left it wants), `lost`, `timeout`.
 
-## Region run R1-R10, 2026-10-18 (HEAD a1e0d56 + the working copy)
-| persona | ended | time | deaths | hits | lost | abilities |
+## Region run chunk 1 (R1-R10 + R14), 2026-10-18 (HEAD 0d46c2e, the rooms of 489b31f / fe620a4)
+| persona | ended | time | deaths | hits | rooms | abilities |
 |---|---|---|---|---|---|---|
-| naive | lost in R9 (bounces R8 <-> R9) | 3:26 | 0 | 2 | 2:00 | glide 0:38 |
-| explorer | through R10 | 4:21 | 0 | 3 | 1:28 | glide 1:17, wall jump 3:59 |
-| speedrunner | through R10 | 1:46 | 0 | 2 | 0:10 | glide 0:44, wall jump 1:42 |
-| cautious | through R10 | 4:10 | 1 | 6 | 0:31 | glide 1:48, wall jump 3:58 |
-Findings for the level agent (each reproduced in the sim, not just the bots):
-- **R9 wood-lantern's west door is shut by the DJ ledge's stalk** (trunk 288-352, y 672-1280, `kick: false`): from the
-  `w` door at x 0 nothing gets past x 268 (jumps top out under the ledge). The room's `spawn` (300, 1280) sits inside
-  the stalk. Every bot coming from R8 turns back after 1 s; the naive one ping-pongs R8 / R9 until it gives up.
-- **R10's root gate can be skipped**: the speedrunner and the cautious bot pogo off the old burrback's braced shell
-  onto the gate's top (y 1088, x 2048-2112) and walk into glade 2 for wall jump with the old burrback alive. Only the
-  explorer killed it (bait into the gate, cut it stunned, pogo; 1 hit).
-- **R8's root shelf going west**: wick-bark (2660, 1216) pulls a jump pressed against the root post (x 2784) down: it
-  tops out at y 1110, 22 px short of the shelf. The naive bot is stuck there going back west, so it never reaches the
-  hub's well. A jump from a few steps back clears it.
-- Bot times are 3-15x under the first-timer targets (e.g. R6 0:12-0:42 vs 3:00-4:30): judge times with the first-timer
-  agent and Matt.
+| naive | lost in R10 (the old burrback: 7 fades, 13 hits; it "can't do bosses", wood.md §9) | 7:27 | 7 | 17 | 10 of 11 | glide 0:37 |
+| explorer | through | 5:19 | 0 | 6 | 11 of 11 | glide 1:14, wall jump 4:41 |
+| speedrunner | through | 2:12 | 0 | 2 | 11 of 11 | glide 0:43, wall jump 1:54 |
+| cautious | through | 6:55 | 0 | 5 | 11 of 11 | glide 1:46, wall jump 6:39 |
+Old burrback: explorer 2 hits, speedrunner 0, cautious 1, all killed. Explorer frees 65 moths. Bot times are 3-15x under
+the first-timer targets: judge times with the first-timer agent and Matt.
+Finding for the level agent: **the hub's root mesh over R10's climb-out is a way into R10 from above**: standing on it,
+down + jump drops her through it and down the climb-out to glade 2 (wall jump) with the pit and the old burrback skipped
+(reproduced in the sim). The bots treat a mesh over an exit as not the way on, so their numbers do not use it.
+What the bots learned this round: the bark floor panel, the mesh as a floor, bounce caps (chains and climbs into the
+unknown, from beside a cap, not under it), the way on from the side she came in by (`wayOn`), a stuck speedrunner
+explores the room (the fight that opens the gate), a leap never leaves the room, a cautious bot leaps where it lands
+farthest on and takes a way up it sees as a way through, landings count only with the feet over the surface (abutting
+tops), targets on points (surfaces grow as more is seen), reach margin 0.95 (the look-ahead decides), standing to think
+instead of wandering when a target has no route, the naive bot cuts a bark floor when stuck on it and jumps an edge it
+fell from walking off.
 
 ## Known limits
 - Look-ahead lines and fights step a copy of the whole sim: a creature's timers and the room past the view are known
