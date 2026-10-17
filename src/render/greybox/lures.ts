@@ -18,7 +18,7 @@ import { GB } from './palette';
 import { STAGING } from './staging';
 
 interface Fx {
-  kind: 'beat' | 'hit' | 'snuff' | 'catch' | 'free';
+  kind: 'beat' | 'hit' | 'snuff' | 'catch' | 'free' | 'now';
   x: number;
   y: number;
   /** Seconds since it started. */
@@ -29,7 +29,7 @@ interface Fx {
   r: number;
 }
 
-const LIFE = { beat: 0.35, hit: 0.25, snuff: 0.9, catch: 0.4, free: 0.45 } as const;
+const LIFE = { beat: 0.35, hit: 0.25, snuff: 0.9, catch: 0.4, free: 0.45, now: 0.33 } as const;
 
 /**
  * The dark a snuff leaves (feel review problem 4, memory/feel.md): a flat disc grows from the flame to
@@ -149,9 +149,13 @@ export class LureView {
           aimShown = true;
           this.aimOn = true;
         }
-      } else if (e.type === 'lureFree')
+      } else if (e.type === 'lureFree') {
         this.fx.push({ kind: 'free', x: sim.player.cx, y: sim.player.cy, t: 0, life: LIFE.free, r: 20 });
-      else if (e.type === 'lureSnuff') {
+        // Beaten free: "strike now" (first-timer r6: the catch took ~10 lamps to learn). For the throw's launch, the
+        // window where a cut snuffs it, a bright ring closes on the flame and the flame flashes.
+        if (e.how === 'beat')
+          this.fx.push({ kind: 'now', x: e.x, y: e.y, t: 0, life: tuning.lures.throwFrames / 60, r: 64 });
+      } else if (e.type === 'lureSnuff') {
         this.fx.push({ kind: 'snuff', x: e.x, y: e.y, t: 0, life: LIFE.snuff, r: 20 });
         this.outT.set(e.id, 0);
         this.moths.free(e.id, e.x, e.y, e.moths);
@@ -357,7 +361,18 @@ export class LureView {
         continue;
       }
       const ease = 1 - (1 - u) * (1 - u);
-      if (f.kind === 'beat') {
+      if (f.kind === 'now') {
+        const r = f.r * (1 - ease) + 14;
+        front.circle(f.x, f.y, r).stroke({ color: GB.flameHot, width: 4, alpha: 0.95 });
+        front.circle(f.x, f.y, 12 + 6 * (1 - u)).fill({ color: GB.flameHot, alpha: 0.9 * (1 - u) });
+        for (let k = 0; k < 4; k++) {
+          const a = (k * Math.PI) / 2 + Math.PI / 4;
+          front
+            .moveTo(f.x + Math.cos(a) * (r + 4), f.y + Math.sin(a) * (r + 4))
+            .lineTo(f.x + Math.cos(a) * (r + 14), f.y + Math.sin(a) * (r + 14))
+            .stroke({ color: GB.flameHot, width: 3, alpha: 0.9 });
+        }
+      } else if (f.kind === 'beat') {
         front
           .circle(f.x, f.y, f.r + 40 * ease)
           .stroke({ color: GB.flameHot, width: 4 * (1 - u) + 1, alpha: 1 - u });

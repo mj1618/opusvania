@@ -9,7 +9,7 @@
  * units. The digits are painted once into a canvas with their own soft shadow and warm glow, so
  * they read over any of the three zones without a box behind them.
  */
-import { CanvasSource, Container, Rectangle, Sprite, Texture } from 'pixi.js';
+import { CanvasSource, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
 import { STAGE_HOLD } from '../camera/stage-cam';
@@ -118,8 +118,13 @@ const DIGITS = 4;
 /** Canvas pixels per logical px in the digit atlas. */
 const RES = 3;
 
+/** "A moment" in a held beat: the crescent's radius and inset (px), opacity, breath (rad/s); the edge bands. */
+export const MOMENT = { r: 16, inset: 64, alpha: 0.55, rate: 1.6, bands: 6, edge: 90, edgeAlpha: 0.35 };
+
 export class Hud {
   readonly layer = new Container({ label: 'hud' });
+  /** "A moment" (first-timer r6: a held pan read as a freeze): a small breathing crescent in the corner and a soft edge. */
+  private readonly moment = new Graphics({ label: 'hud-moment' });
   private readonly group = new Container();
   private readonly icon = new GlintBatch(72);
   private readonly pips = new LanternPips();
@@ -195,6 +200,7 @@ export class Hud {
     }
     this.shake.addChild(this.health.root, this.group, this.pips.root, this.icon.mesh);
     this.layer.addChild(
+      this.moment,
       this.prompts.root,
       this.shake,
       this.moths.root,
@@ -290,6 +296,46 @@ export class Hud {
    * `view`: the visible view this frame (contract.ts ViewSize). The corner cluster (lights, count,
    * pips) sits in its real top-left corner; the end summary stays centred in the safe area.
    */
+  /**
+   * While a beat holds the view: the frame's edges darken softly and a pale crescent breathes in its lower right
+   * corner (`MOMENT`), saying "a moment, it comes back to you" without words. Gone as the hold lets go.
+   */
+  private drawMoment(clock: number, view: ViewSize, held: number): void {
+    const g = this.moment.clear();
+    if (held <= 0.01) return;
+    const M = MOMENT;
+    const breath = 0.75 + 0.25 * Math.sin(clock * M.rate);
+    // The edges: a few nested bands, darkest outside.
+    for (let i = 0; i < M.bands; i++) {
+      const d = (i * M.edge) / M.bands;
+      const a = (M.edgeAlpha / M.bands) * held;
+      g.rect(view.left, view.top + d, view.w, M.edge / M.bands).fill({ color: 0x000000, alpha: a });
+      g.rect(view.left, view.top + view.h - d - M.edge / M.bands, view.w, M.edge / M.bands).fill({
+        color: 0x000000,
+        alpha: a,
+      });
+      g.rect(view.left + d, view.top, M.edge / M.bands, view.h).fill({ color: 0x000000, alpha: a });
+      g.rect(view.left + view.w - d - M.edge / M.bands, view.top, M.edge / M.bands, view.h).fill({
+        color: 0x000000,
+        alpha: a,
+      });
+    }
+    // The crescent: an outer arc and an inner one, offset.
+    const cx = view.left + view.w - M.inset;
+    const cy = view.top + view.h - M.inset;
+    const r = M.r;
+    const pts: number[] = [];
+    for (let k = 0; k <= 16; k++) {
+      const a = -Math.PI / 2 + (k / 16) * Math.PI;
+      pts.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    for (let k = 16; k >= 0; k--) {
+      const a = -Math.PI / 2 + (k / 16) * Math.PI;
+      pts.push(cx - r * 0.35 + Math.cos(a) * r * 0.85, cy + Math.sin(a) * r * 0.95);
+    }
+    g.poly(pts).fill({ color: 0xdfe6f2, alpha: M.alpha * held * breath });
+  }
+
   update(dt: number, clock: number, sim: SimView, view: ViewSize = SAFE_VIEW, cam?: CameraView): void {
     hudLink.view = view;
     // The wallet as she sees it: while she kindles a lantern the glints streaming out of her have
@@ -444,6 +490,7 @@ export class Hud {
       held *
       (3 - 2 * held);
     this.prompts.root.alpha = held;
+    this.drawMoment(clock, view, STAGE_HOLD.held);
     this.shake.visible = this.live > 0.003;
     this.summary.update(dt, clock, sim);
     this.prompts.update(dt, clock, sim);

@@ -114,7 +114,7 @@ export class GreyboxLayer {
     // Webs first (their strands), then the creatures over them (memory/creatures.md).
     drawWebs(g, sim.scene, sim.enemies, sim.player);
     this.creatureView.onEvents(sim.events, sim);
-    this.creatureView.draw(dt, clock, sim, this.creatureBack.clear(), g);
+    this.creatureView.draw(dt, clock, sim, this.creatureBack.clear(), g, frame.camera.zoom);
     this.motes.onEvents(sim.events);
     this.motes.update(dt, sim.player, this.moteGfx.clear());
     this.labels.visible = GREYBOX.labels;

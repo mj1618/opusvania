@@ -57,7 +57,7 @@ export const STAGING = {
     dust: 18,
     dustFall: 260,
     crackIn: 0.4,
-    bladeAlpha: 0.22,
+    bladeAlpha: 0.08,
     pieces: 7,
     fallSecs: 1.4,
     pour: 1.8,
@@ -911,13 +911,14 @@ export class StagingView {
     if (!fell) {
       back.rect(P.x, P.y, P.w, P.h).fill({ color: C_DEN.plug, alpha: 0.95 });
       if (this.denCrackT >= 0) {
-        // One blade of moonlight through a crack in it, down to the den's floor.
+        // One blade of moonlight through a crack in it, down to the den's floor: faint (first-timer r6 read the crack and
+        // its beam as a target to reach; it is only the first light).
         const k = Math.min(1, this.denCrackT / T.crackIn);
         const cx = col.x;
         back
           .moveTo(cx - 3, P.y)
           .lineTo(cx + 9, P.y + P.h)
-          .stroke({ color: C_DEN.light, width: 2, alpha: 0.9 * k });
+          .stroke({ color: C_DEN.light, width: 1.5, alpha: 0.4 * k });
         back
           .poly([cx - 4, P.y + P.h, cx + 10, P.y + P.h, cx + 26, col.foot, cx - 20, col.foot])
           .fill({ color: C_DEN.light, alpha: T.bladeAlpha * k });

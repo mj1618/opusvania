@@ -115,6 +115,8 @@ interface Shard {
 
 /** The slam's floor warning (px each way at most) and its shockwave (px/s, its life). */
 export const SLAM_FX = { warnPx: 900, wave: 2200, life: 0.6 };
+/** Small creatures at a wide frame: drawn x (`zoomAt` / zoom), up to `maxScale`; the pale rim under them. */
+const SMALL = { zoomAt: 1.1, maxScale: 2.2, rim: 0.18 };
 /** A carriers' trail: px between scent dots, their radius, opacity. */
 const TRAIL_FX = { every: 26, dot: 2, alpha: 0.35 };
 
@@ -289,6 +291,8 @@ export class CreatureView {
 
   /** Reads this render frame's events. */
   /** `sim` (optional): her, for the recoil puff of a blocked cut. */
+  /** The camera's zoom this frame (small creatures are drawn bigger when it is low). */
+  private zoom = 1;
   /** The slash in progress is a throw-cut (`slash.heavy`). */
   private heavyOn = false;
   /** Her centre x this frame (the dangler's tell swings toward her side). */
@@ -464,8 +468,9 @@ export class CreatureView {
   }
 
   /** Draws every creature: bodies into `back` (under her), danger parts and effects into `front`. */
-  draw(dt: number, clock: number, sim: SimView, back: Graphics, front: Graphics): void {
+  draw(dt: number, clock: number, sim: SimView, back: Graphics, front: Graphics, zoom = 1): void {
     this.herX = sim.player.cx;
+    this.zoom = zoom;
     this.trails(back, sim);
     for (const f of this.fx.values()) {
       f.hitT += dt;
@@ -649,6 +654,17 @@ export class CreatureView {
       xf.wy = e.y + h / 2;
       xf.sy = -sy;
       const pts = xf.map(domePts(w, h, shoulder, this.pa));
+      // The open window, loud (first-timer r6: "never unambiguous that only the flipped state takes damage"): a
+      // pulsing green glow round it, under the shell.
+      if (old) {
+        const pulse = 0.5 + 0.5 * Math.sin(clock * 9);
+        const gx = e.x + w / 2;
+        const gy = e.y + h * 0.6;
+        back.ellipse(gx, gy, w * 0.75, h * 0.7).fill({ color: CREATURE.open, alpha: 0.12 + 0.12 * pulse });
+        back
+          .ellipse(gx, gy, w * 0.75, h * 0.7)
+          .stroke({ color: CREATURE.open, width: 3, alpha: 0.5 + 0.4 * pulse });
+      }
       back.poly(pts).fill({ color: white ? CREATURE.flash : CREATURE.stun });
       back.poly(pts).stroke({ color: CREATURE.open, width: 3 });
       if (old) this.cracks(back, e, xf, h, shoulder, CREATURE.ridge);
@@ -663,8 +679,9 @@ export class CreatureView {
       if (e.timer > 0) {
         const of = Math.max(e.timer, e.modeFrames + e.timer);
         const cx = e.x + w / 2;
-        front.rect(cx - w / 2, e.y - 24, w, 4).fill({ color: CREATURE.belly, alpha: 0.6 });
-        front.rect(cx - w / 2, e.y - 24, (w * e.timer) / of, 4).fill({ color: CREATURE.open });
+        const bh = old ? 8 : 4;
+        front.rect(cx - w / 2, e.y - 24, w, bh).fill({ color: CREATURE.belly, alpha: 0.6 });
+        front.rect(cx - w / 2, e.y - 24, (w * e.timer) / of, bh).fill({ color: CREATURE.open });
       }
       if (white) front.poly(pts).fill({ color: CREATURE.flash, alpha: 0.95 });
       return;
@@ -797,6 +814,27 @@ export class CreatureView {
    * its back the pale wing of a dead moth it carries home.
    */
   private carrier(
+    e: EnemyState,
+    clock: number,
+    back: Graphics,
+    front: Graphics,
+    sq: number,
+    white: boolean,
+  ): void {
+    const fy = e.y + e.h;
+    const cx = e.x + e.w / 2;
+    // Readable at a wide frame (first-timer r6: "the ants were specks"): drawn bigger as the camera pulls out, about
+    // its feet, with a pale rim under it.
+    const k = Math.min(SMALL.maxScale, Math.max(1, SMALL.zoomAt / Math.max(0.05, this.zoom)));
+    back.setTransform(k, 0, 0, k, cx * (1 - k), fy * (1 - k));
+    front.setTransform(k, 0, 0, k, cx * (1 - k), fy * (1 - k));
+    back.ellipse(cx - 2 * e.facing, fy - 7, 22, 9).fill({ color: CREATURE.carried, alpha: SMALL.rim });
+    this.carrierBody(e, clock, back, front, sq, white);
+    back.setTransform(1, 0, 0, 1, 0, 0);
+    front.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  private carrierBody(
     e: EnemyState,
     clock: number,
     back: Graphics,

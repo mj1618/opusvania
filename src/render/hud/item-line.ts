@@ -16,7 +16,18 @@ export const ITEM_LINES: Record<string, string> = {
   dash: 'Dash.',
   quickWings: 'Quick wings: beat free in two.',
   keenBlade: 'Keen blade: a longer reach to the flame.',
+  nightEyes: 'Night eyes: the map shows the lamps you have not seen.',
+  /** A moth milestone (`healthUp`): one more light. */
+  healthUp: 'A new light kindles.',
 };
+
+/** A grant's line, and never a code name: an id with no line reads as words ("nightEyes" -> "Night eyes."). */
+export function itemLine(key: string): string {
+  const line = ITEM_LINES[key];
+  if (line) return line;
+  const words = key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
+}
 
 /** Seconds and placement (safe-area units: y as a share of its height). */
 export const ITEM_LINE = { in: 0.35, hold: 5, out: 0.9, y: 0.8, size: 30, maxW: 0.8, alpha: 0.92 };
@@ -63,9 +74,16 @@ export class ItemLine {
   update(dt: number, sim: SimView): void {
     const tw = sim.scene.marks?.stage?.twitch;
     for (const e of sim.events) {
-      const key = e.type === 'gladeGrant' ? e.ability : e.type === 'hollowGrant' ? e.upgrade : '';
+      const key =
+        e.type === 'gladeGrant'
+          ? e.ability
+          : e.type === 'hollowGrant'
+            ? e.upgrade
+            : e.type === 'healthUp'
+              ? 'healthUp'
+              : '';
       if (key) {
-        this.text.text = ITEM_LINES[key] ?? key;
+        this.text.text = itemLine(key);
         this.t = 0;
       } else if (e.type === 'roomEnter') {
         this.catches = 0;

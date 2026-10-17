@@ -79,6 +79,15 @@ The dangler's tell draws its swing: dashes down the drop, then round the arc tow
   quick wings flick her wings, night eyes sends a wave that makes every burning lamp in the room glint. The map
   draws unseen burning lamps as pulsing rings once night eyes is owned.
 
+## First-timer r6 (2026-10-18)
+- **Strike now**: beating free of a lamp (`lureFree` how `beat`) closes a bright ring on the flame with four ticks
+  over the throw's launch (`lures.throwFrames`), the window where a cut snuffs it.
+- **Item lines** never show a code name (`itemLine`): night eyes has its line; `healthUp` says "A new light kindles."
+- **The boss's open window** is loud: a pulsing green glow round the flipped old burrback and a thicker bar.
+- **Small creatures at a wide frame** (carriers): drawn up to 2.2x as the zoom drops below 1.1, a pale rim under them.
+- **"A moment"** in a held beat (HUD `MOMENT`): the frame's edges darken softly and a pale crescent breathes in the
+  lower right corner, with the HUD fade, her look and the camera's drift.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.
