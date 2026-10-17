@@ -55,6 +55,8 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
   Every session has its own Chromium and a fresh context, so its slot is its own (tested: two at once, progress in
   one, R in the other shows none of it). The journal states the save at start; each `{R}` notes what it gave back
   (`R: back to the moon patch <id> in <room> (moths n, owns ...)`). Human-like renders boot `?room=` and never press R.
+  Making a snapshot is locked (`.scratch/playtest-snap.lock`: two `start`s at once on a new commit raced), and a port
+  where anything answers (another tool's server, even a 404) is not free.
 - **Events are read by identity, not by frame** (live.ts `fresh`): `{R}` and a reload reset the frame count, and a
   frame-window cursor re-read the whole log (round 2: ~1,100 duplicate screenshots and nonsense totals).
 **Brief to paste to the sub-agent:**

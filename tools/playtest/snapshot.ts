@@ -13,10 +13,11 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { loadError } from './report';
 
 export interface Snap {
@@ -41,6 +42,16 @@ export function alive(pid: number): boolean {
 export async function up(url: string): Promise<boolean> {
   try {
     return (await fetch(url)).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Something answers on this port at all (any status: another tool's server is not a free port). */
+async function taken(port: number): Promise<boolean> {
+  try {
+    await fetch(`http://localhost:${port}`);
+    return true;
   } catch {
     return false;
   }
@@ -72,6 +83,27 @@ export function hold(root: string, sha: string, pid = process.pid): void {
  * (their snapshots stay). `port`: the first port tried.
  */
 export async function pinnedBuild(root: string, port = 5193, inUse: Iterable<string> = []): Promise<Snap> {
+  // One maker at a time (two sessions started at once on a new commit both made it and raced for a port).
+  const lock = join(git(root, 'rev-parse', '--show-toplevel'), '.scratch', 'playtest-snap.lock');
+  mkdirSync(dirname(lock), { recursive: true });
+  for (let i = 0; ; i++) {
+    try {
+      writeFileSync(lock, String(process.pid), { flag: 'wx' });
+      break;
+    } catch {
+      const age = Date.now() - (existsSync(lock) ? statSync(lock).mtimeMs : 0);
+      if (age > 180_000 || i > 600) rmSync(lock, { force: true });
+      else await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+  try {
+    return await makeBuild(root, port, inUse);
+  } finally {
+    rmSync(lock, { force: true });
+  }
+}
+
+async function makeBuild(root: string, port: number, inUse: Iterable<string>): Promise<Snap> {
   const repo = git(root, 'rev-parse', '--show-toplevel');
   const head = git(repo, 'rev-parse', 'HEAD');
   const sha = head.slice(0, 7);
@@ -121,8 +153,8 @@ export async function pinnedBuild(root: string, port = 5193, inUse: Iterable<str
   let snap = reg[sha];
   if (!snap || !alive(snap.pid) || !(await up(`http://localhost:${snap.port}`))) {
     let p = port;
-    const taken = new Set(Object.values(reg).map((v) => v.port));
-    while (taken.has(p) || (await up(`http://localhost:${p}`))) p++;
+    const ours = new Set(Object.values(reg).map((v) => v.port));
+    while (ours.has(p) || (await taken(p))) p++;
     const vite = spawn('npx', ['vite', '--port', String(p), '--strictPort'], {
       cwd: dir,
       detached: true,
