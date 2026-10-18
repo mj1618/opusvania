@@ -28,23 +28,50 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
   roughened where it meets air: tops 2 px (the lit lip stays on the collision to its edge), faces a 5 px lip
   overhang then -rf..+4 (she must never seem to stand in the paint), undersides in lumps; corners open on both
   sides rounded (7 px on top, up to 44 underneath).
-- HK's cave rule: the silhouette is the shape, the material lives in a band along open edges (stepped dark insets
-  toward `bodyDeep` inside; bands of value, fibres along faces, splinters a few px out). Hall: fibre strata under
+- HK's cave rule: the silhouette is the shape, the material lives in a band along open edges. The inside sinks to
+  `bodyDeep` by a grid distance field (soft blobs, deeper the farther from air): stepped rect insets drew
+  rectangles inside rectangles. Bands of value, fibres along faces, splinters a few px out. Hall: fibre strata under
   tops. Night: moonlit bark plates along the log under every top. Roots: twisted root cords near the top.
+- Breakup (review r1 "rects from afar"): a face that takes no kick (per face: `kick: 'east'` leaves the west face
+  sheer) wanders 3x and more on a tall face, mostly inward, with burls; tops overhang 8 px; a narrow column ending in
+  the air ends rounded with a tangle of root tails under it; long undersides hang root / fibre tails (thick ones in
+  the roots); roots spill over every top corner above a long open face. Undersides stay within ~36 px below the
+  collision (more and she seems to bonk on paint). Interior rooms are roofed: a solid along the top has no lit top.
 - **Small rects alone in the air (h <= 72, not touching anything) are shelves**: a bracket fungus (hall, cache), a
   root rung (roots), a snapped stub (night), hung from the solid above on roots / silk (`hangers`). One-ways too.
   A floating slab read as a brick; a hung shelf reads as a place.
 - `lanternTops(room)` gives the exposed tops for pieces that lie on them (the roots' water).
-- Weak: big blocks still read as blocks from far off (rect collision); the edge band carries it close up.
+- Weak: the climb faces (kick faces) must stay near-straight, so a chimney between two big blocks still reads
+  as two blocks (C1's crest).
 
 ## The backdrops inside the giant (lr-back.ts, layers/lantern-back.ts)
 - Composed in layer coords, baked by bg-bake's atmosphere pass (`lanternAtm`, `lanternFog`), `LayerView` for mist.
-- Hall far2: the hollow's far wall as long fibres with the grain, splits, silver moon cracks (live shimmer), warm
-  light along the lamp band. Hall mid: heartwood columns flared at floor and vault, fibre curtains, small dead
-  brackets, old webs with moths. Roots: descending root masses (far), big wet roots and rootlet curtains (mid).
+  Depth by atmosphere (the Ginso / City of Tears structure): the farther, the paler and hazier; near layers dark.
+- Anything that must line up with the room maps the room point into the layer for the chamber camera that shows it
+  (`Placer`, `toLayer`, `vaultAt` / `floorAt` from the room's ceiling and floor: `ceilFloor`). Chamber zones lock
+  sideways, so each chamber's camera x is fixed: the far wall glows behind the real lamps, cracks sit behind holes.
+- Hall: far0 the far inner wall (ring grain looping like the ribs, knotholes, moon cracks), far1 and far2 a nave of
+  ribs with pointed arches springing into the vault (a log on its side: its rings loop overhead) rooted in prongs,
+  strings of far lamps (live twinkling sprites); mid near-dark heartwood pillars, the vault's hanging lobes,
+  curtains, webs. Ribs drawn as straight bundles: wavy ones read as theatre curtains.
+- Cache: one far2 wall, the firefly's knot: growth rings round the centrepiece landmark, spokes, jars in ring cells,
+  glow-cap garlands; the mid keeps its pillars 620 px clear of the centrepiece.
+- Roots: far0/1 hazed root silhouettes and cyan specks, far2 root masses (soft rims: bright ones read as noise),
+  a pale mist band behind the play (`LR_BACK.mist`) so her silhouette and the dark terrain read against it.
+- Pixi Graphics: one `fill()` over several overlapping `poly()`s cancels where they overlap (holes): fill each.
 - **Live pools**: behind every burning lamp the wall glows (a soft add sprite on far2 and mid placed at
   `px - (1 - f)(cam - anchor)`): put a lamp out and its patch of wall goes dark, so the hall shows progress.
   `LR_BACK.pool` (radius 380 / 260, alpha 0.16 / 0.1): at 0.32 the whole hall was an orange fog.
+
+## Moonlight and moths (moonlight.ts, moths.ts)
+- `Moonlight`: a shaft from every `marks.moonholes` point (as wide as the ceiling exit it is in, else an 80 px crack,
+  fainter) down to the first ground under it (`landingY`: one-ways and thin shelves stand in it), a striated beam
+  mesh behind the terrain (`airBack`) plus a faint veil over everything, dust in it, a pool and a point light where
+  it lands, and a silver wash on far2 / mid behind it. A room's boss hole (nearest `boss.hub`) stays shut until
+  `bossCue moonhole`, open for good once the flag is saved.
+- `MothClouds`: every warm lamp's cloud as GPU instances (two meshes share the geometry: the far half of each loop
+  in `goal` behind the lamps, the near half in `air`): lit cream near the flame, dark cut-outs at the edge; they
+  scatter in a breath when the lamp goes out and gather back over 3.5 s. `MOTHS.per` x lamp size each.
 
 ## The pieces (render/lantern/)
 - `lamps.ts`: Physalis calyx lamps glowing from inside (edge darkest, 7 soft steps to a hot middle, ribs, sepals, an
@@ -64,8 +91,12 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
 - `creatures.ts`: one spider painter (abdomen up with a pale chevron pattern, head down, eight jointed legs,
   eyes that kindle red on the tell) for danglers (thread, tell line to the drop point, splay on the drop, trail on
   the swing, belly-up when cut down), spiderlings (`fight`/`respawn`: 0.62 size, paler), webs (strands sag with
-  length, dew), and the Gloamweaver (x3.3; P1 dark shield = only eyes and leg glints; P2 tell arc in glinting silk +
-  an ember wash on the floor band; hanging open on its thread; exposed belly-up pale with a glow; silk doors).
+  length, dew), and the Gloamweaver: a near-black silhouette (`pose.ink`, heavier legs) carried by rim light (`Rim`:
+  the two strongest burning wicks within 760 px in silver, the Gloam lamp warm, her own light close), cold bright
+  eyes that flare red on a tell. P1's lunge (sim: `bossTell lunge` with `px, py`): rearing toward the landing, a
+  beaded thread to it and an ember wash there; the run with legs thrown forward; crouched at rest. P2's tell arc in
+  glinting silk; its thread only in a fight's P2 / P3 (before, `pivot` is stale). Exposed: belly-up, pale. Silk doors.
+  Shoot it with `--pickups`: `&nopickups` also drops the creatures.
 - `fx.ts`: on `slashHit` a white-gold flash where the blade met it, a bright cut line across it, sparks the way
   the cut went; kill: a ring and motes in the creature's colour; `glowGain`: sparks streak from the blow into her;
   clangs (cold star; heartwood duller with chips), wall sparks, bark chips / spore puffs / a break's shower, her hurt
@@ -80,8 +111,14 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
 - `vista.ts`: where the night room marks a `vista` landmark, a hazy range under the moon with snow on its moonlit
   side and the valley's lamp field twinkling below, near screen-fixed over the far composite (far2 hosts it), fading
   in as the camera comes east and up. Weak: the wood's mid giants still stand in front of it at the crest.
+- `night-back.ts` (night only): two treelines of the forest below on far2 (the wood's far0 / far1 are rendered off-tree
+  into one opaque `far-composite` sprite on far2: anything put in far0 / far1 directly is hidden, and far2 children
+  added before it are covered), sinking under the vista; the giant's broken crown (bare limbs out of the log, rimmed
+  by the moon) on mid behind the chamber with the `nest` landmark. A1 was ~60% empty sky (review r1).
+- `kit.ts` covers in the night are a fallen limb (`logCover`: bark plates, moss, its broken end's rings), not a box.
 - HUD `hud/glow.ts`: glass beads under the health lights, one per pip (3 sparks), filling in thirds; flash on a
-  filled pip, a ring when full. Only in glow rooms.
+  filled pip, a ring when full. Only in glow rooms, and there health stays up the whole time (hud/index.ts: it used
+  to fade 3.6 s after a glint while the beads stayed: review r1 B1).
 
 ## Sound (src/audio/bake-lr.ts, route-lr.ts; muted by default)
 - Her light is glass and air, the firefly's lamps are the hum (route-play). glowChime (pitched up the chord by fill,
@@ -90,15 +127,20 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
   bellChime (pitched per ring), bellDull, bellAnswer (chord), signNote (the signs' phrase, `signNotes` on the sim
   clock: kit.ts `phraseLit` and route-lr `PHRASE` must agree), mendDraw / mendLand. Beds `BEDS['lr-*']`.
   Moonwicks are left out of the lamp hum. Levels in `AUDIO.lr`; a hall fight measured -24.9 LUFS, -4.2 dBTP.
+- The Gloamweaver's fight is the loudest stretch (`AUDIO.gloam`, route-lr, only when the room's boss kind is
+  `gloamweaver`: the wood's Weaver keeps its sound): `pulse` (a lub-dub heartbeat at the creature while the fight is
+  on, every 54 / 46 / 38 frames by phase, faster when she is low; `fightPulse` in `ambient`), `hiss` (its rear), the
+  lunge's tell and run, the doors sealing, each phase, dazzled / opened / thread cut / defeat; hits crack heavy
+  (route-play `BIG`). The driver tape measured -21.5 LUFS (was -29.8) against the hall's -25.8, peak -1 dBFS.
+  `snapOf` carries `boss` (stage, phase, creature centre, phase start, her health low).
 
-## Shots and what is weak (2026-10-18, end of round 1)
+## Shots and what is weak (2026-10-18, review r1 fixes)
 - `shots/lanternroot/<1920x1080|2560x1080|1440x1080>/<room>/wide-*.png` (gitignored; `npm run shots -- --room lr-hall
-  --only=wide --pickups --size WxH`). Every shape is covered, no bars.
-- Weak: big rect blocks still read as blocks from afar; the roots are very dark (by design, but the walk's rim is
-  thin there); the vista is mostly hidden by the wood's mid giants; bramble crowns read a little like willows;
-  the snuff's moth burst is small for a wick (the sim's moth count); spiderlings and the boss's P3 wrap of the
-  Gloam lamp are simple; no map hollows yet (P2); the cache is the hall's look plus garlands, no firefly-lamp
-  centrepiece yet.
+  --only=wide --pickups --size WxH`). Before the r1 fixes: `shots/lanternroot/before-r1/`.
+- Weak: the chimney's climb faces keep C1's crest blocky; the floors are long straight walk lines with a dark mass
+  under them (rightly flat, but little else breaks them); far-lamp strings and the moth clouds are the only motion
+  in the hall's distance; the vista is still partly behind the C1 terrain; spiderlings and P3's wrap are simple; no
+  map hollows (P2).
 
 ## Wired to the level's sim (2026-10-18, after 8dd43ab / 7d31e93)
 - Camera: a zone's `frames` sets its slide (camera/index.ts `stepZones`; Lanternroot's chambers 20, else
@@ -124,9 +166,11 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
   position at frames 50..800). A tape played as one chain diverges (creatures, lamps); one line per place does not.
 
 ## Dev loop (what worked)
-- The shared tree is mid-edit by the level agent: iterate in a private worktree mirrored from it (`rsync src/
-  content/`) with its own vite on another port (5180 is the orchestrator's), and shoot with a scratch script
-  (`?room=<id>&manual`, teleport, step, tick, screenshot). `__game.boss({phase: n})` sets up a boss phase.
+- The shared tree is mid-edit by the level agent (its rooms may not even validate mid-change): iterate in a private
+  worktree at HEAD with only `src/render` and `src/audio` mirrored in (`rsync --delete`), its own vite on another
+  port (5180 is the orchestrator's), and shoot with a scratch script (`?manual&world=proto-1&room=<id>`, teleport,
+  `cam({x, y, zoom})` for a wide look, step, tick, screenshot). `__game.boss({phase: n})` sets up a boss phase;
+  kindle is the `B` letter in the input DSL (`g.input('B3 .200')` next to a cold bud).
 - Commit only render / audio paths; verify each commit on a clean worktree of HEAD with the files copied in
   (typecheck, lint, unit, e2e) and diff the grove's and the hatch's wide stops against HEAD.
 - zsh does not split `$FILES`: write such loops in bash scripts.

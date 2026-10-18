@@ -89,6 +89,10 @@ a bell when full, kindle swell, gutter ticks quickening, frost, fan, moss shimme
 cap's chime pitched per ring and its muffled knock, the answer's chord, the signs' phrase (`signNotes` in `ambient`,
 on the sim clock, agreeing with render's `phraseLit`), mend drawn in / landing. `AUDIO.lr` levels, `BEDS['lr-*']`.
 Moonwicks are left out of `snap.lures` (no lamp hum). A hall fight: -24.9 LUFS, -4.2 dBTP.
+The Gloamweaver's fight (review r1 B5: it was the quietest stretch, -29.8 LUFS; `gloamweaver` was in none of
+route-play's creature sets, so its hits made no crack and its tells no sound): `AUDIO.gloam`, a heartbeat `pulse`
+under the fight by phase, `hiss` on its rear, the boss events routed in route-lr only for a `gloamweaver` boss. The
+driver tape: -21.5 LUFS, peak -1 dBFS, LRA 8.5. A new kind needs adding to route-play's `CREATURES` (and `BIG`).
 
 ## Review clips and levels (2026-10-18)
 Made from `lab-feel` (the fling toy room) with a closed-loop probe in the sim (a scratch script that steps

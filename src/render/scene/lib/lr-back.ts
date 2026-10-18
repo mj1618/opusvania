@@ -933,10 +933,15 @@ export function buildLanternMid(
   vault(g, x0, x1, vaultY, 200, col.pillar, r);
   // Heartwood pillars: near-dark, flared into floor and vault, twisted from two or three bundles.
   const n = Math.max(2, Math.round(rect.w / 1000));
+  // (The cache keeps its middle clear: nothing stands in front of the firefly-lamp and its rings.)
+  const marks = P.room.marks as { landmarks?: Array<{ kind: string; x: number; y: number }> } | undefined;
+  const centre = marks?.landmarks?.find((l) => l.kind === 'centrepiece');
+  const keep = centre ? toLayer(P, centre.x, centre.y, f).x : Number.NaN;
   for (let i = 0; i < n; i++) {
     const x = x0 + (rect.w * (i + rr(r, 0.2, 0.8))) / n;
     const w = rr(r, 80, 150);
     const side = r() < 0.5 ? -1 : 1;
+    if (Math.abs(x - keep) < 620) continue;
     for (let k = 0; k < 2; k++) {
       rib(
         g,

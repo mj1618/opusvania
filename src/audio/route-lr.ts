@@ -48,6 +48,11 @@ const LIGHT = new Set([
   'bellAnswer',
 ]);
 
+/** A room whose boss is the Gloamweaver. */
+function isGloam(ctx: RouteContext): boolean {
+  return (ctx.scene as { boss?: { kind?: string } }).boss?.kind === 'gloamweaver';
+}
+
 export function routeLantern(
   ev: { type: string },
   i: number,
@@ -55,6 +60,8 @@ export function routeLantern(
   ctx: RouteContext,
 ): Cue[] | null {
   if (!LIGHT.has(ev.type)) return null;
+  // The boss events are the Gloamweaver's only (the wood's Weaver keeps its own sound).
+  if (ev.type.startsWith('boss') && ev.type !== 'bossCue' && !isGloam(ctx)) return null;
   const e = ev as LightLoose;
   const L = AUDIO.lr;
   const B = AUDIO.gloam;
@@ -243,7 +250,7 @@ export function signNotes(snap: AudioSnap, ctx: RouteContext): Cue[] {
  */
 export function fightPulse(snap: AudioSnap, ctx: RouteContext): Cue[] {
   const b = snap.boss;
-  if (b?.stage !== 'fight') return [];
+  if (b?.stage !== 'fight' || !isGloam(ctx)) return [];
   const B = AUDIO.gloam;
   const every = Math.round(
     (B.pulseEvery[Math.min(B.pulseEvery.length - 1, Math.max(0, b.phase - 1))] ?? 48) * (b.low ? 0.8 : 1),

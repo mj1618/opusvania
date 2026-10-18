@@ -355,7 +355,7 @@ export class Creatures {
     const s = 13 * SPIDER.great * Math.max(1, e.w / 72);
     const floor = spec.floor ?? spec.arena.y + spec.arena.h;
     // The thread from its pivot (P2's drops; P1 hunts on its orb with none).
-    if (b.thread && b.phase !== 1) {
+    if (b.thread && b.stage === 'fight' && b.phase >= 2) {
       g.moveTo(b.pivotX, b.pivotY).lineTo(ex, e.y);
       g.stroke({ color: SPIDER.silk, width: 2.4, alpha: 0.6 });
     }
