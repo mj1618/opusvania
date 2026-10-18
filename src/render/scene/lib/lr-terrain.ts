@@ -338,13 +338,15 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   // Per face: `kick: 'east'` climbs only on its east face, so its west face is sheer (and the other way).
   const sheerE = s.kick === false || s.kick === 'west';
   const sheerW = s.kick === false || s.kick === 'east';
+  // A long sheer face wanders further (hollows of a metre on a cliff the height of the room), always mostly in.
+  const tall = Math.min(2.6, Math.max(1, s.h / 320));
   const face = (y: number, sd: number, sheer: boolean): number => {
-    const amp = sheer ? 3 : 1;
+    const amp = sheer ? 3 * tall : 1;
     // The lip: the top overhangs its face a little (a rounded nose), then the face undercuts under it.
     const lip = Math.exp(-(((y - y0) / 22) ** 2));
     const wob = 0.6 * wobble(y, sd, 210) + 0.28 * wobble(y, sd + 3, 60) + 0.12 * wobble(y, sd + 9, 18);
     // Burls on a sheer face: slow swellings out and hollows in, so a long face is never a ruler.
-    const burl = sheer ? rf * 0.9 * Math.max(0, wobble(y, sd + 51, 140)) ** 2 : 0;
+    const burl = sheer ? rf * 0.9 * tall * Math.max(0, wobble(y, sd + 51, 140 * tall)) ** 2 : 0;
     return lip * 8 + (1 - lip) * (wob * rf * 0.6 * amp - rf * 0.4 * amp + burl);
   };
   // Top edge, west to east.

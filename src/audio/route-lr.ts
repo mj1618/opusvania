@@ -23,6 +23,13 @@ type LightLoose = {
 
 const LIGHT = new Set([
   'bossCue',
+  'bossLock',
+  'bossPhase',
+  'bossTell',
+  'bossAttack',
+  'bossOpen',
+  'bossThreadCut',
+  'bossDefeat',
   'glowGain',
   'mendStart',
   'mend',
@@ -50,12 +57,13 @@ export function routeLantern(
   if (!LIGHT.has(ev.type)) return null;
   const e = ev as LightLoose;
   const L = AUDIO.lr;
+  const B = AUDIO.gloam;
   const f = snap.frame;
   const h = snap.hero;
   const mine = (sound: SoundId, db: number, over: Partial<Cue> = {}, k = 0): Cue =>
     cue(sound, 'hero', ctx, f, i * 8 + k, { x: h.x, y: h.y - 40, db, place: 'hero', priority: 4, ...over });
   const placed = (
-    bus: 'lantern' | 'world',
+    bus: 'lantern' | 'world' | 'creatures' | 'combat',
     sound: SoundId,
     db: number,
     over: Partial<Cue> = {},
@@ -66,14 +74,67 @@ export function routeLantern(
     (ctx.events ?? []).findIndex((o) => (o as { type: string }).type === e.type) === i;
   switch (e.type) {
     case 'bossCue': {
-      // The Gloamweaver's P3: the moon-hole opens (a cold bloom, the moss lighting round the hub).
       const c = ev as { set?: string; cue?: string };
+      // P1: its lunge ran into silver light, dazzled: a cold flare and the thump of it falling.
+      if (c.set === 'p1' && c.cue === 'dazzled')
+        return [
+          placed('lantern', 'kindle', L.kindleDb, { priority: 7, cents: 700 }),
+          placed('creatures', 'hiss', B.hissDb, { cents: 500, priority: 6 }, 1),
+          placed('creatures', 'slam', B.slamDb, { delay: 0.25, priority: 7 }, 2),
+        ];
+      // P3: the moon-hole opens (a cold bloom, the moss lighting round the hub).
       if (c.set !== 'p3' || c.cue !== 'moonhole') return null;
       return [
         placed('lantern', 'kindle', L.kindleDb + 2, { priority: 7, far: 0.3, cents: -500 }),
         placed('lantern', 'mossOn', L.mossDb + 4, { delay: 0.3 }, 1),
+        placed('creatures', 'slam', B.slamDb - 2, { delay: 0.1, priority: 6, cents: -300 }, 2),
       ];
     }
+    // --- The Gloamweaver (the level's loudest minutes: memory/audio.md "Lanternroot"). ---
+    case 'bossLock':
+      // The doors seal: a slam of old silk and wood, the rumble under it.
+      return [
+        placed('creatures', 'slam', B.slamDb, { priority: 8 }),
+        placed('creatures', 'rumble', B.rumbleDb, { cents: -700, delay: 0.05 }, 1),
+      ];
+    case 'bossPhase':
+      return [
+        placed('creatures', 'hiss', B.hissDb + 2, { cents: -300, priority: 8 }),
+        placed('creatures', 'rear', B.rearDb, { cents: -700, delay: 0.1, priority: 7 }, 1),
+      ];
+    case 'bossTell': {
+      // Its tells you can hear: a hiss as it rears for a lunge, silk drawn taut before a drop.
+      const t = ev as { attack?: string; frames?: number };
+      if (t.attack === 'lunge')
+        return [
+          placed('creatures', 'hiss', B.hissDb, { priority: 8 }),
+          placed('creatures', 'rear', B.rearDb, { cents: -500, priority: 7 }, 1),
+        ];
+      return [placed('creatures', 'silkTense', B.silkDb, { cents: -700, priority: 7 })];
+    }
+    case 'bossAttack': {
+      const t = ev as { attack?: string };
+      return t.attack === 'lunge'
+        ? [
+            placed('creatures', 'dive', B.diveDb, { cents: -900, priority: 8 }),
+            placed('creatures', 'rumble', B.rumbleDb, { cents: -500, priority: 6 }, 1),
+          ]
+        : [placed('creatures', 'drop', B.diveDb, { cents: -700, priority: 8 })];
+    }
+    case 'bossOpen':
+      // Down and open: its cry, and the thump of its body on the floor.
+      return [
+        placed('creatures', 'rear', B.rearDb + 2, { cents: 400, priority: 8 }),
+        placed('creatures', 'slam', B.slamDb - 3, { priority: 7 }, 1),
+      ];
+    case 'bossThreadCut':
+      return [placed('creatures', 'silkSnap', B.silkDb + 4, { cents: -500, priority: 8 })];
+    case 'bossDefeat':
+      return [
+        placed('creatures', 'slam', B.slamDb + 2, { priority: 9 }),
+        placed('creatures', 'hiss', B.hissDb, { cents: -1200, delay: 0.1 }, 1),
+        placed('lantern', 'bellAnswer', L.bellAnswerDb, { delay: 1.2, priority: 8, far: 0.2 }, 2),
+      ];
     case 'glowGain': {
       // A spark (or a few) reaching her: a glass tick climbing the chord with how full she is; full, a bell.
       const max = Math.max(1, e.max ?? 18);
@@ -174,4 +235,27 @@ export function signNotes(snap: AudioSnap, ctx: RouteContext): Cue[] {
     });
   });
   return out;
+}
+
+/**
+ * The Gloamweaver's fight under everything: a heartbeat at the arena while the fight is on, quickening each phase
+ * and as her health falls (the climax is the loudest, most driven stretch of the level: review proto-1 r1 B5).
+ */
+export function fightPulse(snap: AudioSnap, ctx: RouteContext): Cue[] {
+  const b = snap.boss;
+  if (b?.stage !== 'fight') return [];
+  const B = AUDIO.gloam;
+  const every = Math.round(
+    (B.pulseEvery[Math.min(B.pulseEvery.length - 1, Math.max(0, b.phase - 1))] ?? 48) * (b.low ? 0.8 : 1),
+  );
+  if ((snap.frame - b.since) % Math.max(20, every) !== 0) return [];
+  return [
+    cue('pulse', 'creatures', ctx, snap.frame, 120, {
+      x: b.x,
+      y: b.y,
+      db: B.pulseDb + (b.phase - 1) * B.pulseRise,
+      priority: 5,
+      far: 0.1,
+    }),
+  ];
 }

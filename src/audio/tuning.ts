@@ -283,6 +283,21 @@ export const AUDIO = {
     mendDb: -28,
     mendLandDb: -22,
   },
+  /**
+   * The Gloamweaver (bus `creatures`): its tells, moves and the fight's heartbeat. The fight is the loudest stretch
+   * of Lanternroot: these sit above the creatures' levels. Heartbeat every n frames per phase.
+   */
+  gloam: {
+    hissDb: -15,
+    rearDb: -16,
+    slamDb: -12,
+    rumbleDb: -17,
+    diveDb: -15,
+    silkDb: -19,
+    pulseDb: -15,
+    pulseRise: 1.5,
+    pulseEvery: [54, 46, 38] as readonly number[],
+  },
   /** Creatures' tells and moves (bus `creatures`): peaks (dB). */
   creatures: {
     creakDb: -24,

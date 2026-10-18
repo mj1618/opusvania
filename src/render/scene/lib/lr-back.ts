@@ -348,7 +348,16 @@ function curtain(g: Graphics, x: number, y: number, len: number, n: number, colo
 }
 
 /** A root descending from above: a tapered ribbon wandering down, with a fork or two. */
-function root(g: Graphics, x: number, y0: number, len: number, w: number, r: Rng, depth = 0): number[] {
+function root(
+  g: Graphics,
+  x: number,
+  y0: number,
+  len: number,
+  w: number,
+  r: Rng,
+  color: number,
+  depth = 0,
+): number[] {
   const line: number[] = [];
   let px = x;
   let py = y0;
@@ -362,7 +371,8 @@ function root(g: Graphics, x: number, y0: number, len: number, w: number, r: Rng
     py += Math.sin(a) * step;
   }
   if (line.length < 6) return line;
-  g.poly(ribbon(line, (t) => w * (1 - t) ** 0.8 + 2.4));
+  // (Each filled on its own: a fork over its root in one fill would cut a hole.)
+  g.poly(ribbon(line, (t) => w * (1 - t) ** 0.8 + 2.4)).fill(color);
   if (depth < 2 && w > 14) {
     const nn = line.length / 2;
     const forks = 1 + Math.floor(r() * 2);
@@ -375,6 +385,7 @@ function root(g: Graphics, x: number, y0: number, len: number, w: number, r: Rng
         len * rr(r, 0.3, 0.6),
         w * rr(r, 0.35, 0.6),
         r,
+        color,
         depth + 1,
       );
     }
@@ -626,7 +637,6 @@ export function buildLanternDeep(
     // Root silhouettes in cold haze, the floor a pale mist bank behind the play.
     const n = Math.round(rect.w / (far ? 200 : 300));
     for (let i = 0; i < n; i++) {
-      g.fill(far ? 0x0e1c26 : 0x0a141c);
       root(
         g,
         rr(r, x0, x1),
@@ -634,8 +644,8 @@ export function buildLanternDeep(
         rr(r, rect.h * 0.4, rect.h * 0.95),
         rr(r, 30, 80) * (far ? 0.6 : 1),
         r,
+        far ? 0x0e1c26 : 0x0a141c,
       );
-      g.fill(far ? 0x0e1c26 : 0x0a141c);
     }
     // Far glowworm threads and bio-light: specks of cyan.
     for (let i = 0; i < Math.round(rect.w / (far ? 90 : 140)); i++) {
@@ -733,9 +743,7 @@ export function buildLanternFar(
       for (let i = 0; i < n; i++) {
         const x = rr(r, x0, x1);
         const w = rr(r, 30, 90) * (1 + k * 0.3);
-        g.fill(mix(0x0c1820, 0x050a0e, k * 0.4));
-        const line = root(g, x, y0 - 40, rr(r, 500, rect.h * 0.95), w, r);
-        g.fill(mix(0x0c1820, 0x050a0e, k * 0.4));
+        const line = root(g, x, y0 - 40, rr(r, 500, rect.h * 0.95), w, r, mix(0x0c1820, 0x050a0e, k * 0.4));
         if (line.length > 8 && k === 2) {
           // A thin cold rim down its lit flank.
           const rim: number[] = [];
@@ -900,9 +908,7 @@ export function buildLanternMid(
       const x = x0 + (rect.w * (i + rr(r, 0.1, 0.9))) / n;
       const w = rr(r, 60, 130);
       L.reset(x, (y0 + y1) / 2, 160, rect.h / 2, 0.9);
-      g.fill(col.pillar);
-      const line = root(g, x, y0 - 60, rr(r, rect.h * 0.6, rect.h * 1.1), w, r);
-      g.fill(col.pillar);
+      const line = root(g, x, y0 - 60, rr(r, rect.h * 0.6, rect.h * 1.1), w, r, col.pillar);
       if (line.length > 8) {
         const side = r() < 0.5 ? -1 : 1;
         const rim: number[] = [];
@@ -917,8 +923,8 @@ export function buildLanternMid(
     // Curtains of rootlets.
     for (let i = 0; i < Math.round(rect.w / 200); i++) {
       const x = rr(r, x0, x1);
-      for (let k = 0; k < 8; k++) root(g, x + rr(r, -40, 40), y0 - 20, rr(r, 200, 600), rr(r, 3, 8), r, 2);
-      g.fill(col.curtain);
+      for (let k = 0; k < 8; k++)
+        root(g, x + rr(r, -40, 40), y0 - 20, rr(r, 200, 600), rr(r, 3, 8), r, col.curtain, 2);
     }
     return { content: c, lights: L };
   }

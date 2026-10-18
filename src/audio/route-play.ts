@@ -24,13 +24,14 @@ const CREATURES = new Set([
   'web',
   'weaver',
   'weaverBoss',
+  'gloamweaver',
   'dangler',
   'juvenileBurrback',
   'carrier',
 ]);
 const BEETLES = new Set(['burrback', 'juvenileBurrback', 'oldBurrback']);
 const FLYERS = new Set(['hawker', 'lampwing']);
-const BIG = new Set(['oldBurrback', 'weaverBoss']);
+const BIG = new Set(['oldBurrback', 'weaverBoss', 'gloamweaver']);
 
 /** The variant whose length (s) is nearest `s`. */
 function nearest(list: readonly number[], s: number): number {

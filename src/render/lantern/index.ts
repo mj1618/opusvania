@@ -24,6 +24,7 @@ import { GlowPool } from './glow';
 import { Kit } from './kit';
 import { Lamps } from './lamps';
 import { Moonlight } from './moonlight';
+import { NightBack } from './night-back';
 import { Vista } from './vista';
 import { RootWater } from './water';
 
@@ -36,6 +37,8 @@ export class LanternPieces implements EnvModule {
   private depth: InteriorDepth | null = null;
   private vista: Vista | null = null;
   private moon: Moonlight | null = null;
+  private night: NightBack | null = null;
+  private anchorY = 0;
   private readonly back = new Graphics();
   private readonly front = new Graphics();
   private readonly glowBack = new GlowPool('lr-glow-back');
@@ -50,7 +53,10 @@ export class LanternPieces implements EnvModule {
       | { landmarks?: Array<{ kind: string; x: number; y: number }> }
       | undefined;
     const v = marks?.landmarks?.find((l) => l.kind === 'vista');
+    // The night's own backdrop (the forest below, the giant's crown) under the vista.
+    if (LOOK.band === 'night') this.night = new NightBack(ctx);
     if (v && LOOK.band === 'night') this.vista = new Vista(ctx.layers, v);
+    this.anchorY = ctx.layers.anchor.y;
     if (isInterior() && LOOK.band) this.moon = new Moonlight(ctx.scene, ctx.layers, ctx.lights, LOOK.band);
     if (isInterior() && LOOK.band)
       this.depth = new InteriorDepth(ctx.renderer, ctx.layers, LOOK.band, ctx.scene.width, LOOK.seed);
@@ -98,6 +104,7 @@ export class LanternPieces implements EnvModule {
     this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
     this.vista?.update(camera, clock);
+    this.night?.update(clock, camera.x, camera.y, this.anchorY);
     if (this.depth && LOOK.band) {
       this.depth.update(camera, sim.player);
       drawMotes(clock, sim, camera, LOOK.band, this.glowFront);

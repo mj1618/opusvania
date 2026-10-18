@@ -19,7 +19,7 @@ import type { GameState, PlayerState } from '../sim/state';
 import type { Tuning } from '../sim/tuning';
 import { SOUNDS, type SoundId } from './bake';
 import { dbToGain, hash01, salt } from './dsp';
-import { routeLantern, signNotes } from './route-lr';
+import { fightPulse, routeLantern, signNotes } from './route-lr';
 import { type PlayEvent, routePlay } from './route-play';
 import { AUDIO, type BusId, bedOf, LAMP_BEAT, LAMP_HZ, PITCH } from './tuning';
 
@@ -85,6 +85,24 @@ export interface AudioSnap {
     /** What it is doing (`EnemyState.mode`): ants skitter only while they walk. */
     mode?: string;
   }>;
+  /** A boss fight: its stage and phase, the creature's centre, the frame the phase began, her health low. */
+  boss?: { stage: string; phase: number; x: number; y: number; since: number; low: boolean };
+}
+
+/** The boss fight as the sound reads it (loosely: the fields are the boss framework's). */
+function bossSnap(state: GameState): AudioSnap['boss'] {
+  const b = (state as { boss?: { stage?: string; phase?: number; phaseTime?: number; id?: string } }).boss;
+  if (!b?.stage) return undefined;
+  const e = state.enemies.find((x) => x.kind === 'gloamweaver' || x.kind === 'weaverBoss');
+  const p = state.player;
+  return {
+    stage: b.stage,
+    phase: b.phase ?? 1,
+    x: e ? e.x + e.w / 2 : p.x,
+    y: e ? e.y + e.h / 2 : p.y,
+    since: state.frame - (b.phaseTime ?? 0),
+    low: p.hp <= Math.max(1, Math.floor(p.hpMax / 3)),
+  };
 }
 
 export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
@@ -140,6 +158,7 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
     lures,
     wallet: state.pickups.count,
     seenLevel: p.seenLevel ?? 0,
+    boss: bossSnap(state),
     creatures: state.enemies
       .filter((e) => !e.gone)
       .map((e) => ({
@@ -448,8 +467,9 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
   const out: Cue[] = [];
   const seed = ctx.seed;
   const bed = bedOf(snap.room ?? ctx.scene.id);
-  // Lanternroot's firefly signs flashing their phrase near her (route-lr.ts).
+  // Lanternroot's firefly signs flashing their phrase near her, and the Gloamweaver's heartbeat (route-lr.ts).
   out.push(...signNotes(snap, ctx));
+  out.push(...fightPulse(snap, ctx));
   // Drips: rare, at canopy positions across the view, duller and wetter the farther back.
   if (bed.drips > 0 && hash01(seed, f, salt('drip')) < bed.drips / (F.dripMeanS * 60)) {
     const u = hash01(seed, f, salt('drip'), 1);

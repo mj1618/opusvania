@@ -42,6 +42,9 @@ export const LR_SOUNDS = {
   signNote: 4,
   mendDraw: 2,
   mendLand: 2,
+  // The Gloamweaver's fight: a heartbeat under it, and its hiss as it rears.
+  pulse: 3,
+  hiss: 3,
 } as const;
 export type LrSoundId = keyof typeof LR_SOUNDS;
 
@@ -248,5 +251,41 @@ export const LR_RECIPES: Record<LrSoundId, Recipe> = {
   mendLand(sr, r) {
     const n = len(sr, 2);
     return normalize([bowl(sr, r, n, PITCH.D4, 3, 0.5)]);
+  },
+  pulse(sr, r) {
+    // Lub-dub: two deep thumps in the chest (sub and its knock), the second softer, a breath of low air.
+    const d = 0.75;
+    const x = new Float32Array(len(sr, d));
+    for (const [t0, g] of [
+      [0, 1],
+      [0.21, 0.62],
+    ] as const) {
+      const f = 44 + r() * 4;
+      modes(
+        x,
+        sr,
+        [
+          { f, tau: 0.16, amp: g },
+          { f: f * 1.6, tau: 0.09, amp: g * 0.55 },
+          { f: f * 3.1, tau: 0.03, amp: g * 0.25 },
+        ],
+        at(sr, t0),
+        0.004,
+      );
+    }
+    biquad(x, sr, 'lowpass', 420);
+    mixInto(x, push(sr, r, d, 180, arEnv(0.005, 0.02, 0.18, d)), 0.35);
+    return normalize([shape(x, sr, arEnv(0.002, 0, 1e3, d))]);
+  },
+  hiss(sr, r) {
+    // A great spider rearing: a chittering hiss (noise sweeping down, fluttered by its mouthparts).
+    const d = 0.7;
+    const x = swept(sr, r, d, (t) => exp(5200, 1500, t / d), 1.4, arEnv(0.04, 0.1, 0.35, d));
+    for (let i = 0; i < x.length; i++)
+      x[i] = (x[i] as number) * (0.6 + 0.4 * Math.sin((i / sr) * Math.PI * 2 * 31));
+    // (Nothing but glass reaches past ~9 kHz: the hiss stays below it.)
+    biquad(x, sr, 'lowpass', 5200);
+    biquad(x, sr, 'lowpass', 5200);
+    return normalize([x]);
   },
 };

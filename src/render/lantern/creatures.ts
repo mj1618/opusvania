@@ -37,6 +37,16 @@ export const SPIDER = {
   youngPale: 0.3,
   /** The Gloamweaver's size against a dangler's body. */
   great: 3.3,
+  /** The Gloamweaver: its body near-black (a silhouette against the light), eyes cold and bright, legs longer. */
+  greatBody: 0x0c080c,
+  greatLeg: 0x0a060a,
+  greatEye: 0xd8ffe8,
+  greatEyeGlow: 2.2,
+  /** Rim light from a burning moonwick (silver) and the Gloam lamp (warm): reach px, strength. */
+  rimWick: 0xd4e4ff,
+  rimLamp: 0xffb070,
+  rimReach: 760,
+  rimK: 1.1,
 } as const;
 
 interface Pose {
@@ -52,9 +62,19 @@ interface Pose {
   tell: number;
   /** Dark shield (the Gloamweaver in P1): 0 = seen, 1 = only its eyes. */
   dark: number;
+  /** 0..1: the body inked toward the Gloamweaver's near-black (a silhouette, its rims carry it). */
+  ink: number;
 }
 
-const P: Pose = { spread: 0, rot: 0, walk: 0, flip: 0, tell: 0, dark: 0 };
+const P: Pose = { spread: 0, rot: 0, walk: 0, flip: 0, tell: 0, dark: 0, ink: 0 };
+
+/** Light catching one side of a spider: direction toward the light (unit, world), colour, strength 0..1. */
+export interface Rim {
+  dx: number;
+  dy: number;
+  color: number;
+  k: number;
+}
 
 /** A spider: abdomen up toward its thread, head down; `s` = abdomen radius. */
 function spider(
@@ -67,6 +87,9 @@ function spider(
   pale: number,
   clock: number,
   seed: number,
+  rims: readonly Rim[] = [],
+  eyeIdle: number = SPIDER.eye,
+  eyeGlow = 1,
 ): void {
   const cs = Math.cos(pose.rot);
   const sn = Math.sin(pose.rot);
@@ -74,8 +97,8 @@ function spider(
   const at = (u: number, v: number): [number, number] => [x + u * cs - v * sn, y + u * sn + v * cs];
   const dark = pose.dark;
   const alpha = 1 - dark * 0.8;
-  const body = mix(SPIDER.body, SPIDER.open, pose.flip * 0.55 + pale);
-  const leg = mix(SPIDER.leg, SPIDER.open, pose.flip * 0.35 + pale * 0.8);
+  const body = mix(mix(SPIDER.body, SPIDER.open, pose.flip * 0.55 + pale), SPIDER.greatBody, pose.ink);
+  const leg = mix(mix(SPIDER.leg, SPIDER.open, pose.flip * 0.35 + pale * 0.8), SPIDER.greatLeg, pose.ink);
   // Legs: four a side, radiating from the cephalothorax like a star (front pair toward the head, back pair toward
   // the abdomen), each femur out from the body to a high knee, the tibia bending back in toward the head end.
   const cy = s * 0.95;
@@ -102,14 +125,33 @@ function spider(
     }
   }
   // Femurs thick, tibiae fine: a spider's legs taper to the tips.
+  // (The Gloamweaver's are heavier: a silhouette has to carry it in the dark.)
+  const heavy = 1 + 0.45 * pose.ink;
   for (const [bx, by, kx, ky] of legs) g.moveTo(bx, by).lineTo(kx, ky);
-  g.stroke({ color: leg, width: Math.max(1.4, s * 0.15), alpha, join: 'round', cap: 'round' });
+  g.stroke({ color: leg, width: Math.max(1.4, s * 0.15 * heavy), alpha, join: 'round', cap: 'round' });
   for (const [, , kx, ky, fx, fy] of legs) g.moveTo(kx, ky).lineTo(fx, fy);
-  g.stroke({ color: leg, width: Math.max(1, s * 0.08), alpha, join: 'round', cap: 'round' });
+  g.stroke({ color: leg, width: Math.max(1, s * 0.08 * heavy), alpha, join: 'round', cap: 'round' });
   // The light catching each femur's upper edge (the lamp's glint on them, even in the dark), and the knees.
   for (const [bx, by, kx, ky] of legs) g.moveTo(bx, by - 1).lineTo(kx, ky - 1);
   g.stroke({ color: SPIDER.legLit, width: Math.max(0.8, s * 0.045), alpha: 0.6 * (1 - dark * 0.5) });
   for (const [, , kx, ky] of legs) g.circle(kx, ky, Math.max(1, s * 0.07)).fill({ color: leg, alpha });
+  // Rim light on the legs: each segment's edge toward the light.
+  for (const rm of rims) {
+    if (rm.k <= 0.01) continue;
+    const o = Math.max(0.8, s * 0.075);
+    for (const [bx, by, kx, ky, fx, fy] of legs) {
+      g.moveTo(bx + rm.dx * o, by + rm.dy * o)
+        .lineTo(kx + rm.dx * o, ky + rm.dy * o)
+        .lineTo(fx + rm.dx * o * 0.5, fy + rm.dy * o * 0.5);
+    }
+    g.stroke({
+      color: rm.color,
+      width: Math.max(0.8, s * 0.03),
+      alpha: Math.min(1, rm.k * 0.8),
+      join: 'round',
+      cap: 'round',
+    });
+  }
   // Abdomen (up) and cephalothorax (down).
   const ab = at(0, -s * 0.15);
   g.ellipse(ab[0], ab[1], s, s * 1.12).fill({ color: body, alpha });
@@ -132,8 +174,18 @@ function spider(
   });
   const ce = at(0, cy);
   g.ellipse(ce[0], ce[1], s * 0.48, s * 0.5).fill({ color: mix(body, 0x000000, 0.15), alpha });
+  // Rim light on the abdomen and the head: a crescent on the side toward each light.
+  for (const rm of rims) {
+    if (rm.k <= 0.01) continue;
+    const a = Math.atan2(rm.dy, rm.dx);
+    g.arc(ab[0], ab[1], s * 1.04, a - 1.05, a + 1.05);
+    g.stroke({ color: rm.color, width: Math.max(1.2, s * 0.07), alpha: Math.min(1, rm.k) });
+    g.arc(ce[0], ce[1], s * 0.5, a - 0.9, a + 0.9);
+    g.stroke({ color: rm.color, width: Math.max(1, s * 0.05), alpha: Math.min(1, rm.k) * 0.8 });
+    glow.add(ab[0] + rm.dx * s, ab[1] + rm.dy * s, s * 0.9, rm.color, 0.08 * rm.k);
+  }
   // Eyes: a little cluster at the head end; they kindle with the tell (the hunt colour) and always glint.
-  const eyeC = pose.tell > 0 ? mix(SPIDER.eye, SPIDER.hunt, Math.min(1, pose.tell * 1.5)) : SPIDER.eye;
+  const eyeC = pose.tell > 0 ? mix(eyeIdle, SPIDER.hunt, Math.min(1, pose.tell * 1.5)) : eyeIdle;
   // Two rows of eyes, the middle pair largest (an orb-weaver's), each a small wet glint.
   for (let k = 0; k < 8; k++) {
     const row = k < 4 ? 0 : 1;
@@ -143,12 +195,12 @@ function spider(
     g.circle(e[0], e[1], Math.max(0.8, s * 0.055 * big)).fill({ color: eyeC, alpha: 0.6 + 0.35 * big });
   }
   const eyes = at(0, cy + s * 0.3);
-  const glint = 0.12 + 0.5 * pose.tell + 0.45 * dark + 0.06 * Math.sin(clock * 3 + seed);
+  const glint = (0.12 + 0.5 * pose.tell + 0.45 * dark + 0.06 * Math.sin(clock * 3 + seed)) * eyeGlow;
   glow.add(
     eyes[0],
     eyes[1],
     s * (0.5 + pose.tell * 0.8 + dark * 0.3),
-    pose.tell > 0 ? SPIDER.hunt : SPIDER.eye,
+    pose.tell > 0 ? mix(eyeIdle, SPIDER.hunt, Math.min(1, pose.tell * 1.5)) : eyeIdle,
     glint,
   );
 }
@@ -226,6 +278,7 @@ export class Creatures {
     const pose = P;
     pose.tell = tell;
     pose.dark = 0;
+    pose.ink = 0;
     pose.flip = 0;
     pose.walk = 0;
     pose.rot = 0;
@@ -280,7 +333,12 @@ export class Creatures {
     }
   }
 
-  /** The Gloamweaver: body, thread, its tells; P1's dark shield; exposed, pale and belly-up. */
+  /**
+   * The Gloamweaver: a great near-black silhouette whose legs and back catch the light of every burning wick near it
+   * (silver) and of its Gloam lamp (warm), its eyes cold and bright in the dark. Its tells: the eyes flaring red as
+   * it rears, a thread of silk to where its lunge will land and an ember wash on that floor; the lunge itself a run
+   * along that line with its legs thrown forward; at rest after it, crouched; exposed, pale and belly-up.
+   */
   private gloam(
     e: EnemyState,
     clock: number,
@@ -296,17 +354,21 @@ export class Creatures {
     const ey = e.y + e.h / 2;
     const s = 13 * SPIDER.great * Math.max(1, e.w / 72);
     const floor = spec.floor ?? spec.arena.y + spec.arena.h;
-    // The thread from its pivot (P2) or from the hub (climbing back).
-    if (b.thread) {
+    // The thread from its pivot (P2's drops; P1 hunts on its orb with none).
+    if (b.thread && b.phase !== 1) {
       g.moveTo(b.pivotX, b.pivotY).lineTo(ex, e.y);
       g.stroke({ color: SPIDER.silk, width: 2.4, alpha: 0.6 });
     }
-    // P2's tell: the arc it will swing, in glinting silk, and the floor it sweeps, a faint ember wash.
     const W = tuning.weaverBoss;
+    const G = (tuning as unknown as { gloam?: { lungeTell?: number } }).gloam;
     let tell = 0;
     if (b.tell === 'swing' || b.tell === 'drop' || b.tell === 'lunge') {
       const of =
-        b.tell === 'swing' ? W.tellFrames + W.dropFrames : b.tell === 'lunge' ? W.lungeTell : W.dropTell;
+        b.tell === 'swing'
+          ? W.tellFrames + W.dropFrames
+          : b.tell === 'lunge'
+            ? (G?.lungeTell ?? W.lungeTell)
+            : W.dropTell;
       tell = Math.max(0, Math.min(1, 1 - b.tellFrames / Math.max(1, of)));
       if (b.tell === 'swing') {
         const n = 28;
@@ -321,13 +383,57 @@ export class Creatures {
         }
         front.stroke({ color: SPIDER.silk, width: 2, alpha: 0.2 + 0.35 * tell });
       }
+      if (b.tell === 'lunge' && !b.thread) {
+        // The line it will run: a thread of silk shot ahead to the floor where it lands, beaded with light.
+        const tx = b.pivotX;
+        const ty = b.pivotY;
+        front.moveTo(ex, ey).lineTo(tx, ty + e.h / 2);
+        front.stroke({ color: SPIDER.silk, width: 1.4, alpha: 0.15 + 0.45 * tell });
+        for (let k = 1; k <= 6; k++) {
+          const u = (k / 6 + clock * 0.8) % 1;
+          glow.add(ex + (tx - ex) * u, ey + (ty + e.h / 2 - ey) * u, 9, SPIDER.hunt, 0.25 * tell);
+        }
+      }
       const x0 = b.tellX0;
       const x1 = b.tellX1;
       for (let k = 0; k < 6; k++) {
         const x = x0 + ((x1 - x0) * (k + 0.5)) / 6;
-        glow.add(x, floor - 6, (x1 - x0) / 6, SPIDER.hunt, 0.05 + 0.14 * tell, 16);
+        glow.add(x, floor - 6, (x1 - x0) / 6, SPIDER.hunt, 0.08 + 0.22 * tell, 18);
       }
     }
+    // The lights that catch it: the burning wicks near it (silver) and the Gloam lamp (warm).
+    const rims: Rim[] = [];
+    const lures = sim.scene.lures ?? [];
+    for (let i = 0; i < lures.length; i++) {
+      const l = lures[i];
+      if (!l || (sim.lures.hp[i] ?? 0) <= 0) continue;
+      const wick = (l.kind as string) === 'moonwick';
+      const lamp = (l.kind as string) === 'gloam' || l.id === spec.heart;
+      if (!wick && !lamp) continue;
+      const dx = l.x - ex;
+      const dy = l.y - ey;
+      const d = Math.hypot(dx, dy);
+      const reach = SPIDER.rimReach * (lamp ? 1.3 : 1);
+      if (d > reach || d < 1) continue;
+      rims.push({
+        dx: dx / d,
+        dy: dy / d,
+        color: wick ? SPIDER.rimWick : SPIDER.rimLamp,
+        k: SPIDER.rimK * (1 - d / reach) ** 1.2,
+      });
+    }
+    rims.sort((a, c) => c.k - a.k);
+    rims.length = Math.min(rims.length, 2);
+    // Her own light finds it when she is close (the dark never quite hides it from her).
+    const p = sim.player;
+    const pd = Math.hypot(p.cx - ex, p.cy - ey);
+    if (pd < 420 && pd > 1)
+      rims.push({
+        dx: (p.cx - ex) / pd,
+        dy: (p.cy - ey) / pd,
+        color: SPIDER.rimWick,
+        k: 0.5 * (1 - pd / 420),
+      });
     const pose = P;
     pose.tell = tell;
     pose.flip = 0;
@@ -335,20 +441,43 @@ export class Creatures {
     pose.rot = 0;
     pose.spread = 0.6;
     pose.dark = 0;
+    pose.ink = 1;
     const m = e.mode;
+    const heading = (hx: number, hy: number): number => Math.atan2(-hx, hy);
     if (b.phase === 1 && (m === 'hunt' || m === 'sit')) {
-      // On its orb in the dark: upright on the web (head toward the hub), walking, shielded.
-      pose.dark = 1;
+      // On its orb in the dark: upright on the web (head toward the hub), walking.
       pose.walk = Math.hypot(e.vx, e.vy) > 0.2 ? clock * 10 : 0;
       pose.rot = Math.atan2(-((b as { ux?: number }).ux ?? 0), (b as { uy?: number }).uy ?? 1);
       pose.spread = 0.85;
+    } else if (m === 'windup' && b.tell === 'lunge') {
+      // Rearing at her: head toward where it will land, legs thrown wide, a shiver.
+      pose.rot = heading(b.pivotX - ex, b.pivotY - ey) + Math.sin(clock * 40) * 0.04 * tell;
+      pose.spread = 0.7 + 0.3 * tell;
+    } else if (m === 'dive' && !b.thread) {
+      // The lunge: a run down the line, legs thrown forward.
+      pose.rot = heading(b.pivotX - ex, b.pivotY - ey);
+      pose.spread = 1;
+      pose.walk = clock * 30;
+      for (let k = 1; k <= 3; k++) {
+        const hx = Math.sin(pose.rot);
+        const hy = -Math.cos(pose.rot);
+        front
+          .moveTo(ex + hx * s * (0.6 + k * 0.5) - k * 6, ey + hy * s * (0.6 + k * 0.5))
+          .lineTo(ex + hx * s * (1.4 + k * 0.7) - k * 6, ey + hy * s * (1.4 + k * 0.7));
+      }
+      front.stroke({ color: SPIDER.silk, width: 1.2, alpha: 0.3 });
+    } else if (m === 'stall' && !b.thread) {
+      // Crouched where it landed, gathering itself.
+      pose.spread = 0.5 + 0.05 * Math.sin(clock * 5);
     } else if (m === 'recover' && b.thread) {
       // Winded on its thread: hanging limp and open (the window).
       pose.spread = 0.75 + 0.05 * Math.sin(clock * 3);
       pose.rot = Math.sin(clock * 1.4) * 0.12;
+      pose.ink = 0.4;
     } else if (m === 'recover') {
       pose.flip = 1;
       pose.walk = clock * 12;
+      pose.ink = 0.3;
     } else if (m === 'fall') {
       pose.spread = 1;
       pose.rot = Math.sin(clock * 6) * 0.6;
@@ -359,7 +488,7 @@ export class Creatures {
       // Wrapped round the Gloam lamp at the hub: legs gathered round it.
       pose.spread = 0.3;
     } else if (m === 'climb') pose.walk = clock * 12;
-    spider(g, glow, ex, ey, s, pose, 0, clock, 7);
+    spider(g, glow, ex, ey, s, pose, 0, clock, 7, rims, SPIDER.greatEye, SPIDER.greatEyeGlow);
     // Exposed: open, a pale glow on its belly so the window reads; the moon's light on it.
     if (m === 'recover') glow.add(ex, ey, s * 1.6, SPIDER.open, 0.18 + 0.06 * Math.sin(clock * 6));
     // Sealed doors: sheets of old silk.

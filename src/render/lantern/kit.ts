@@ -23,6 +23,7 @@ import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import type { CameraView, SimView } from '../contract';
 import { mix, wind } from '../scene/lib/look';
+import { LOOK } from '../scene/lib/room-look';
 import { hash01 } from './config';
 import type { GlowPool } from './glow';
 
@@ -664,6 +665,61 @@ export class Kit {
     if (ans > 0) glow.add(x, y, 90, B.ring, 0.25 * ans * (0.85 + 0.15 * Math.sin(clock * 2)));
   }
 
+  /**
+   * A fallen limb over the hidden space: a rounded log body (its ends tapered and broken), bark plates running along
+   * it with moonlit upper edges, moss on its back, the broken end showing its rings. It thins as she goes in.
+   */
+  private logCover(g: Graphics, x: number, y: number, w: number, h: number, k: number, id: string): void {
+    const a = 0.97 * k;
+    const top = y - 12;
+    const bot = y + h + 6;
+    const pts: number[] = [];
+    // Its outline: a long rounded body, the west end running on out of the room, the east end broken off.
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24;
+      const xx = x - 40 + (w + 40) * t;
+      pts.push(xx, top + 8 * Math.sin(t * 9 + hash01(id, 1) * 6) - 10 * Math.sin(Math.PI * t));
+    }
+    for (let i = 0; i <= 10; i++) {
+      // The broken end: jagged splinters.
+      const t = i / 10;
+      pts.push(x + w + 6 + (i % 2 ? -14 : 6) * hash01(id, 10 + i), top + (bot - top) * t);
+    }
+    for (let i = 24; i >= 0; i--) {
+      const t = i / 24;
+      pts.push(x - 40 + (w + 40) * t, bot + 6 * Math.sin(t * 7 + 2));
+    }
+    g.poly(pts).fill({ color: LOG.bark, alpha: a });
+    // Bark plates along it, their upper edges catching the moon.
+    for (let row = 0; row < 5; row++) {
+      const yy = top + 18 + row * ((bot - top - 30) / 5);
+      let xx = x - 30 + hash01(id, 20 + row) * 40;
+      let n = 0;
+      while (xx < x + w - 30) {
+        const len = 60 + 120 * hash01(id, 40 + row * 13 + n);
+        const x1 = Math.min(x + w - 24, xx + len);
+        g.poly([xx, yy, x1, yy + 2, x1 - 6, yy + 10, xx + 4, yy + 9]).fill({
+          color: LOG.plate,
+          alpha: a * 0.9,
+        });
+        g.moveTo(xx + 3, yy).lineTo(x1 - 3, yy + 1.5);
+        g.stroke({ color: LOG.lit, width: 1.2, alpha: a * (0.5 - row * 0.08) });
+        xx = x1 + 6 + 20 * hash01(id, 70 + n++);
+      }
+    }
+    // Moss on its back.
+    g.moveTo(x - 40, top + 2);
+    for (let i = 0; i <= 20; i++) g.lineTo(x - 40 + ((w + 30) * i) / 20, top + 2 - 3 * hash01(id, 90 + i));
+    g.stroke({ color: LOG.moss, width: 4, alpha: a });
+    // The broken end: rings round the dark heart (the hollow inside).
+    const cx = x + w - 6;
+    const cy = (top + bot) / 2;
+    const ry = (bot - top) / 2 - 6;
+    for (let r = 3; r >= 1; r--)
+      g.ellipse(cx, cy, 10 + r * 6, ry * (0.35 + r * 0.2)).stroke({ color: LOG.ring, width: 2, alpha: a });
+    g.ellipse(cx, cy, 10, ry * 0.32).fill({ color: 0x020304, alpha: a });
+  }
+
   private cover(
     g: Graphics,
     x: number,
@@ -675,6 +731,10 @@ export class Kit {
     clock: number,
   ): void {
     const C = KIT.cover;
+    if (LOOK.band === 'night') {
+      this.logCover(g, x, y, w, h, k, id);
+      return;
+    }
     // A curtain of roots in front of the hidden space: a dark mass, its lower edge breaking into hanging strands
     // that sway a little, a few lit fibres on the edge (it is a thing, not a hole in the picture).
     g.poly(ragged(x - 16, y - 16, w + 32, h + 8, id, 18)).fill({ color: C.body, alpha: 0.97 * k });
@@ -724,6 +784,9 @@ export class Kit {
 }
 
 // --- shape helpers ---------------------------------------------------------------------------------
+
+/** The night's covers: a fallen limb lying over the hidden space (H1's hollow log), not a dark box. */
+const LOG = { bark: 0x0c1218, plate: 0x16202a, lit: 0x6a8aa8, ring: 0x1c2630, moss: 0x2a4a48 } as const;
 
 /** A rect with ragged, slightly rounded edges (`r` px of rag). */
 function ragged(x: number, y: number, w: number, h: number, id: string, r: number): number[] {
