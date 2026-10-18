@@ -21,6 +21,7 @@
  */
 import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
+import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import { mix, wind } from '../scene/lib/look';
 import { LOOK } from '../scene/lib/room-look';
@@ -857,11 +858,22 @@ function motes(
   }
 }
 
+/** The signs' phrase timing in seconds, from the sim's tuning (`bells.sign`, in frames; the old seconds if absent). */
+export function signTiming(): { beat: number; short: number; long: number; rest: number } {
+  const S = (tuning as { bells?: { sign?: { beat: number; short: number; long: number; rest: number } } })
+    .bells?.sign;
+  return S
+    ? { beat: S.beat / 60, short: S.short / 60, long: S.long / 60, rest: S.rest / 60 }
+    : { beat: 0.18, short: 0.28, long: 0.7, rest: 2.2 };
+}
+
 /** 0..1: how lit a firefly's tail is now, flashing `rhythm` (`.` short gap, `-` long) and pausing, on loop. */
 export function phraseLit(rhythm: string, clock: number): number {
-  const beat = 0.18;
-  const gaps = [...rhythm].map((c) => (c === '-' ? 0.7 : 0.28));
-  const total = gaps.reduce((a, b) => a + b, 0) + beat * (gaps.length + 1) + 2.2;
+  // The sign's timing is the sim's (`tuning.bells.sign`, frames): the cap counts against the same numbers.
+  const T = signTiming();
+  const beat = T.beat;
+  const gaps = [...rhythm].map((c) => (c === '-' ? T.long : T.short));
+  const total = gaps.reduce((a, b) => a + b, 0) + beat * (gaps.length + 1) + T.rest;
   let t = clock % total;
   for (let k = 0; k <= gaps.length; k++) {
     if (t < beat) return Math.sin((t / beat) * Math.PI);

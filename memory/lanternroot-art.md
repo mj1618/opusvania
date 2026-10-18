@@ -137,6 +137,15 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
 ## Shots and what is weak (2026-10-18, review r1 fixes)
 - `shots/lanternroot/<1920x1080|2560x1080|1440x1080>/<room>/wide-*.png` (gitignored; `npm run shots -- --room lr-hall
   --only=wide --pickups --size WxH`). Before the r1 fixes: `shots/lanternroot/before-r1/`.
+- Signs: `phraseLit` (kit.ts) and the sound's `phrase()` (route-lr) read `tuning.bells.sign` (frames), so the
+  sign teaches the tempo the cap counts. The greybox boss label names phases from `bossRules(kind)`.
+- The Gloamweaver's `bossCue p1 dazzled` (its lunge into silver light): a big silver star, two rings, 40 sparks.
+- **Still open after round 1 (2026-10-18, session ended):** the stills in `shots/lanternroot/<size>/` and the clips
+  in `shots/lanternroot/play/` were made before the level's fix round (17b286c): re-shoot and remake the clips on it
+  (tapes: the edge keys changed, e.g. `lr-hall:hub->seal-foot`, `seal-foot->flag:seal-open`, `tunnel-w->...`,
+  `lr-cache:cache-floor->find:cache-vessel`); look at its new geometry drawn (the hub's root curtain, the flue's
+  caged lamp, silk gate and niche, the tunnel roof and lattice, the night's root knot, burl lid and sky limb) and
+  the lunge / dazzle in play; measure the boss fight's loudness on the new P1. C1's crest still reads as two blocks.
 - Weak: the chimney's climb faces keep C1's crest blocky; the floors are long straight walk lines with a dark mass
   under them (rightly flat, but little else breaks them); far-lamp strings and the moth clouds are the only motion
   in the hall's distance; the vista is still partly behind the C1 terrain; spiderlings and P3's wrap are simple; no

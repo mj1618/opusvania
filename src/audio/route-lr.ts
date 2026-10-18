@@ -4,6 +4,8 @@
  * flashing phrase, heard near them, on the sim's own clock so it keeps time with what render draws (kit.ts
  * `phraseLit`). The events are read loosely: the sound builds against a sim with or without them.
  */
+
+import { tuning } from '../sim/tuning';
 import type { SoundId } from './bake';
 import { type AudioSnap, type Cue, cue, type RouteContext } from './router';
 import { AUDIO } from './tuning';
@@ -203,10 +205,18 @@ export function routeLantern(
 }
 
 /** Seconds of a sign's flash, gaps by beat (`.` short, `-` long), and its pause: kit.ts `phraseLit` keeps the same. */
-export const PHRASE = { beat: 0.18, short: 0.28, long: 0.7, pause: 2.2 } as const;
+/** The signs' phrase in seconds: the sim's `tuning.bells.sign` (frames), as render's `phraseLit` reads it. */
+function phrase(): { beat: number; short: number; long: number; pause: number } {
+  const S = (tuning as { bells?: { sign?: { beat: number; short: number; long: number; rest: number } } })
+    .bells?.sign;
+  return S
+    ? { beat: S.beat / 60, short: S.short / 60, long: S.long / 60, pause: S.rest / 60 }
+    : { beat: 0.18, short: 0.28, long: 0.7, pause: 2.2 };
+}
 
 /** The onsets (s into one loop) of a phrase's flashes, and the loop's length. */
 export function phraseOnsets(rhythm: string): { at: number[]; total: number } {
+  const PHRASE = phrase();
   const gaps = [...rhythm].map((c) => (c === '-' ? PHRASE.long : PHRASE.short));
   const at: number[] = [];
   let t = 0;

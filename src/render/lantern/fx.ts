@@ -566,6 +566,45 @@ export class Fx {
           break;
         }
         case 'bossCue': {
+          if (ev.set === 'p1' && ev.cue === 'dazzled') {
+            // Its lunge ran into silver light: a big cold flash, rings bursting out, silver sparks everywhere.
+            const x = ev.x as number;
+            const y = ev.y as number;
+            this.add({
+              kind: 'star',
+              x,
+              y,
+              vx: 0,
+              vy: 0,
+              life: 0.35,
+              size: 150,
+              color: FX.silver,
+              a: 0,
+              b: 0,
+            });
+            for (const [life, size] of [
+              [0.5, 220],
+              [0.8, 360],
+            ] as const)
+              this.add({ kind: 'ring', x, y, vx: 0, vy: 0, life, size, color: FX.silver, a: 0, b: 0 });
+            for (let k = 0; k < 40; k++) {
+              const a = this.r() * Math.PI * 2;
+              const sp = 300 + this.r() * 700;
+              this.add({
+                kind: 'spark',
+                x,
+                y,
+                vx: Math.cos(a) * sp,
+                vy: Math.sin(a) * sp - 80,
+                life: 0.25 + this.r() * 0.35,
+                size: 2 + this.r() * 2,
+                color: FX.silver,
+                a: 0,
+                b: 0,
+              });
+            }
+            break;
+          }
           if (ev.set !== 'p3') break;
           if (ev.cue === 'moonhole') {
             // The plug falls out of the moon-hole: bark rains down, and the moon floods the arena (kept).

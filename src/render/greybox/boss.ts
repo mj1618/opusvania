@@ -6,6 +6,7 @@
  * events); never changes it. Animation runs on render time.
  */
 import { type Container, Graphics, type Text } from 'pixi.js';
+import { bossRules } from '../../sim/boss/index';
 import type { SimEvent } from '../../sim/events';
 import { cycleSine } from '../../sim/paths';
 import type { BossState, EnemyState } from '../../sim/state';
@@ -252,7 +253,8 @@ export class BossView {
     const spec = sim.scene.boss;
     if (!spec) return;
     const a = spec.arena;
-    const names = ['the ring', 'the drops', 'the floor', 'the heart'];
+    // Each boss's own phase table (the Weaver's ring, the Gloamweaver's hunt): the sim's rules name them.
+    const names = bossRules(spec.kind).phases.map((p) => p.name);
     const key =
       b.stage === 'down'
         ? `${spec.name}: beaten`
