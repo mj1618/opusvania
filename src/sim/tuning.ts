@@ -203,7 +203,7 @@ export const defaultTuning = withVariants({
     activeFrames: 6,
     /** Length of the whole slash (`slashEnd`), and the soonest the next one can start (press to press). */
     durationFrames: 14,
-    cooldownFrames: 17,
+    cooldownFrames: 18,
     /** Forward: reach ahead of the body centre and height. Up: reach from the body centre and width. */
     fwdReach: 110,
     fwdHeight: 88,
@@ -212,44 +212,47 @@ export const defaultTuning = withVariants({
     /** Weight of a hit (events), extra hitstop frames on top of the target's, knockback for targets (px/f). */
     power: 1,
     hitstopBonus: 0,
-    knockback: 6,
+    knockback: 7,
     /** Her own shove back on a forward hit, px/f. */
     recoil: 3,
     /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
-    recoilFoe: 4,
+    recoilFoe: 5,
     /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
     hitstopFoe: 0,
     /** Forward lunge on the ground, px/f at the start. Air hang, frames. */
     lunge: 3,
-    hangFrames: 4,
+    hangFrames: 3,
   },
   /** Combo step 2: the return cut. The same blow; the finisher can follow a little later. */
   slash2: {
     startupFrames: 1,
     activeFrames: 6,
     durationFrames: 14,
-    cooldownFrames: 19,
+    cooldownFrames: 18,
     fwdReach: 110,
     fwdHeight: 88,
     upReach: 124,
     upWidth: 100,
     power: 1,
     hitstopBonus: 0,
-    knockback: 6,
+    knockback: 7,
     recoil: 3,
     /** The same against a creature (a pod keeps `recoil`): the push she feels on a hit that counts. */
-    recoilFoe: 4,
+    recoilFoe: 5,
     /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
     hitstopFoe: 0,
     lunge: 3,
-    hangFrames: 4,
+    hangFrames: 3,
   },
-  /** Combo step 3: the finisher. A longer wind, a bigger and longer blow, a longer recovery. */
+  /**
+   * Combo step 3. Round 7 (Matt: "the attack feels average"): every cut has the same rhythm (HK's nail: a cut,
+   * a cut, a cut, no slow wind-up), the third still the finisher: twice the blow, wider, a harder shove.
+   */
   slash3: {
-    startupFrames: 3,
-    activeFrames: 8,
-    durationFrames: 20,
-    cooldownFrames: 27,
+    startupFrames: 1,
+    activeFrames: 6,
+    durationFrames: 14,
+    cooldownFrames: 18,
     fwdReach: 135,
     fwdHeight: 108,
     upReach: 144,
@@ -263,7 +266,7 @@ export const defaultTuning = withVariants({
     /** Extra hitstop on a creature, on top of `enemies.hitstopFrames` (pods use `hitstopBonus`). */
     hitstopFoe: 3,
     lunge: 5.5,
-    hangFrames: 6,
+    hangFrames: 3,
   },
   /** Lumen pods (src/sim/pods.ts): breakables that spill glints. A pod's toughness (`hp` 1-3) is scene data. */
   pods: {
@@ -482,8 +485,13 @@ export const defaultTuning = withVariants({
   },
   /** What every enemy shares (src/sim/enemies.ts). */
   enemies: {
-    /** Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. */
-    hitstopFrames: 4,
+    /**
+     * Hitstop when a slash hits one, frames (the combo step may add to it). The creature holds for as long. Round 7
+     * (Matt: "the attack feels average"): 5, a kill 6 more (it pops), a pogo 3.
+     */
+    hitstopFrames: 5,
+    /** After a blow lands on it, a creature cannot be hit again for this long (blows never mush into one). */
+    hitInvulnFrames: 8,
     /**
      * Her screen, half width and height (room px, about the 1920 x 1080 view, a little in): a creature off it
      * when she was caught starts no strike on her until she is free (`EnemyState.catchSeen`, round 4).
@@ -494,9 +502,9 @@ export const defaultTuning = withVariants({
      * Extra hitstop on the killing blow, for her and the body (feel review problem 2): a kill holds 7 on
      * a cut, 10 on the finisher, 5 on a pogo.
      */
-    killHitstopBonus: 3,
+    killHitstopBonus: 6,
     /** The same for a down slash (the pogo): short, so the bounce rhythm stays what it was. */
-    pogoHitstopFrames: 2,
+    pogoHitstopFrames: 3,
     /** A down slash under way as she comes down on a shell (her feet this far into its top, at most) is a pogo, never a hurt. */
     stompPx: 24,
     /** A cut that glances off a braced shell: she holds this long and is thrown back at this, px/f (fading by `attack.recoilDecay`). */
@@ -515,8 +523,8 @@ export const defaultTuning = withVariants({
     /** Collision box. */
     width: 52,
     height: 34,
-    /** Hit points unless the scene gives it its own (`hp`): two exchanges for one who reads it. */
-    hp: 5,
+    /** Hit points unless the scene gives it its own (`hp`). Round 7 (Matt): 3, fodder dies in 2-3 cuts. */
+    hp: 3,
     /** Walking speed, px/f. */
     speed: 1.6,
     /**
@@ -545,7 +553,8 @@ export const defaultTuning = withVariants({
     hurtSafeFrames: 8,
     /** Knockback (the slash's `knockback`, px/f) fades by this each frame; an up / down cut gives this share sideways. */
     knockDecay: 1,
-    knockVertical: 0.5,
+    // (Round 7: a pogo barely shoves it, so bounce after bounce stays on its back.)
+    knockVertical: 0.25,
     /** A shove may leave this much of it hanging over a ledge, never more: it does not fall. */
     teeterPx: 10,
     /**
@@ -1606,7 +1615,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       strikeMaxFrames: 34,
       diveWindupFrames: 6,
       diveBackPx: 24,
-      huntCaught: true,
+      // (Round 7: off; the lamp's hold becomes a fling's slowed aim, and nothing hunts her in it.)
+      huntCaught: false,
       straightKnock: true,
       // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
       touchCalmFrames: 180,

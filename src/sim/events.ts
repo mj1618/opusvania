@@ -206,6 +206,14 @@ export type SimEvent =
       step: number;
       power: number;
       knockback: number;
+      /**
+       * Round 7, for render and sound: a creature's `weight` (light fodder, a medium body, a heavy boss), whether
+       * this blow `kill`ed it, its `hpLeft`, and how hard it was `shove`d (px/f). Pods and flames leave them out.
+       */
+      weight?: 'light' | 'medium' | 'heavy';
+      kill?: boolean;
+      hpLeft?: number;
+      shove?: number;
     }
   /**
    * A blow landed: one per step that hits anything, on the frame of its first hit, for the camera

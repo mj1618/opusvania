@@ -94,12 +94,22 @@ describe('burrbacks in the grove, piloted', () => {
       expect(die, id).toBeDefined();
       // (At burr-rise the lampwing over it dives at her meanwhile, and may fall to the same cuts.)
       for (const d of s.events.slice(from)) if (d.type === 'enemyDie') glints += d.value;
-      expect(s.state.player.hp, `${id} hurt her`).toBe(H.max);
+      // (Round 7: a harder shove sends one off its ledge's end sooner; a hop after it may meet the ledge's
+      // thorns. What counts here: the burrback itself never hurts her.)
+      const burrHurt = s.events
+        .slice(from)
+        .filter((e) => e.type === 'hurt' && (e as { source?: { id?: string } }).source?.id === id);
+      expect(burrHurt, `${id} hurt her`).toEqual([]);
+      s.state.player.hp = H.max;
       expect(s.state.player.grounded, `${id}: she left its surface`).toBe(true);
       expect(feet(s).y).toBe(st[1]);
     }
     expect(burrs(s).every((e) => e.mode === 'dead')).toBe(true);
-    expect(count(s.events, 'hurt')).toBe(0);
+    expect(
+      s.events.filter(
+        (e) => e.type === 'hurt' && (e as { source?: { kind?: string } }).source?.kind === 'burrback',
+      ),
+    ).toEqual([]);
     for (let f = 0; f < 80; f++) step(s.state, 0, s.tuning, s.scene, s.events);
     expect(burrs(s).every((e) => e.gone && e.spill === 0)).toBe(true);
     // Their glints all reached the counter, each exactly once (pods she happened to cut pay too).

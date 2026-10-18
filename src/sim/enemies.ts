@@ -67,6 +67,13 @@ const KIND_LIST: EnemyKind[] = [
   'carrier',
 ];
 
+/** How heavy a blow on it reads (round 7: `slashHit.weight`, render's shake and sound): fodder, a body, a boss. */
+export function weightOf(kind: EnemyKind): 'light' | 'medium' | 'heavy' {
+  if (kind === 'oldBurrback' || kind === 'weaverBoss') return 'heavy';
+  if (kind === 'burrback' || kind === 'hawker' || kind === 'weaver' || kind === 'web') return 'medium';
+  return 'light';
+}
+
 /** The rules of a kind (its box, numbers and behaviour). */
 export function enemyRules(kind: EnemyKind): KindRules {
   return KINDS[kind];
@@ -637,8 +644,12 @@ export function slashEnemies(
     const K = KINDS[e.kind];
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;
+    // (Round 7: just hit, it takes no other blow for `hitInvulnFrames`: blows never mush into one. A down cut
+    // coming onto it then is a glance, so the pogo still bounces her.)
+    const invuln = e.hitFrame >= 0 && state.frame - e.hitFrame < frames(E.hitInvulnFrames);
+    if (invuln && !pogo) continue;
     // A throw-cut never glances: the kind answers it its own way first (area1-plan-r5 §2.2).
-    const heavy = throwCut(b);
+    const heavy = throwCut(b) && !invuln;
     if (heavy) {
       const hs = dir === 'fwd' ? (facing < 0 ? -1 : 1) : cx < px ? -1 : cx > px ? 1 : facing < 0 ? -1 : 1;
       const mode = e.mode;
@@ -653,7 +664,7 @@ export function slashEnemies(
     }
     // Its shell is forward and the cut meets it: it glances off. Nothing is taken, it does not
     // stagger, and this slash is spent on it.
-    if (!heavy && K.blocks?.(e, dir, px, t)) {
+    if (invuln || (!heavy && K.blocks?.(e, dir, px, t))) {
       e.hitBy = seq;
       BLOCKS++;
       events.push({
@@ -732,6 +743,10 @@ export function slashEnemies(
       step,
       power,
       knockback,
+      weight: weightOf(e.kind),
+      kill,
+      hpLeft: e.hp,
+      shove: kb,
     });
     if (e.hp > 0 || K.undying?.(e)) {
       const n = frames(K.hurtFrames(t), 1);

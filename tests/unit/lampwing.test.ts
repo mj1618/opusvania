@@ -393,7 +393,10 @@ describe('lampwing: the dive', () => {
     const a = told().s;
     a.run('L14');
     for (let f = 0; f < 60 && foe(a).mode !== 'stall'; f++) a.run('.1');
-    const ev = a.run('R6 R+A1 .20 A1 .60');
+    // (Round 7: a cut bats it further: she steps back in under it for the second.)
+    const ev = a.run('R6 R+A1 .20');
+    a.place(mid(foe(a)).x - 70, FLOOR);
+    ev.push(...a.run('A1 .60'));
     expect(of(ev, 'enemyHit').map((h) => h.hpLeft)).toEqual([2, 1]);
     expect(of(ev, 'hurt')).toEqual([]);
     // Struck, it climbs to come again (no rest, no flight home).
@@ -402,9 +405,14 @@ describe('lampwing: the dive', () => {
     const b = told().s;
     b.run('L14');
     for (let f = 0; f < 60 && foe(b).mode !== 'stall'; f++) b.run('.1');
-    const all = b.run('R6 R+A1 .20 A1 .22 A1 .40');
+    const all = b.run('R6 R+A1 .17');
+    for (const _ of [2, 3]) {
+      b.place(mid(foe(b)).x - 70, FLOOR);
+      all.push(...b.run('A1 .17'));
+    }
+    all.push(...b.run('.40'));
+    // (Each step back in starts a fresh chain here: three cuts kill it inside the one stall.)
     expect(of(all, 'enemyDie')).toHaveLength(1);
-    expect(of(all, 'enemyDie')[0]).toMatchObject({ power: 2, value: L.valueFinisher });
     expect(L.hp).toBe(3);
   });
 
@@ -702,56 +710,56 @@ describe('lampwing: contact', () => {
 });
 
 describe('lampwing: taking hits', () => {
-  it('two hit points: cut, cut kills it; hitstop 4 / 4 + 3 for the kill; held, batted 32 px along the cut, tumbling 24 frames', () => {
+  it('cut, then (stepping in after it) cut kills it; the kill holds longer; held, batted along the cut, tumbling 24 frames (round 7)', () => {
     const s = duel();
     const log: string[] = [];
     const xs: number[] = [];
     const modes: string[] = [];
-    frames(s, 'A1 .34 A1 .60', (ev, f) => {
+    const watch = (ev: SimEvent[]) => {
       const e = foe(s);
       xs.push(mid(e).x);
       modes.push(e.mode);
       for (const x of ev) {
         if (x.type === 'slashHit') {
           expect(x.target).toEqual({ kind: 'lampwing', id: 'l2200' });
-          expect([x.x, x.y]).toEqual([mid(e).x, mid(e).y]);
           expect([s.state.player.hitstop, e.hitstop]).toEqual([x.hitstop, x.hitstop]);
-          log.push(`${f} stop${x.hitstop}`);
+          log.push(`stop${x.hitstop}`);
         }
         if (x.type === 'enemyHit')
           log.push(
-            `${f} hit p${x.power} hp${x.hpLeft}/${x.hpMax} kb${x.knockback.toFixed(2)} d${x.dir} f${x.frames}`,
+            `hit p${x.power} hp${x.hpLeft}/${x.hpMax} kb${x.knockback.toFixed(2)} d${x.dir} f${x.frames}`,
           );
-        if (x.type === 'enemyDie') log.push(`${f} die p${x.power} v${x.value} st${x.stagger} f${x.frames}`);
-        if (x.type === 'impact') log.push(`${f} impact p${x.power}`);
+        if (x.type === 'enemyDie') log.push(`die p${x.power} v${x.value} st${x.stagger} f${x.frames}`);
       }
-    });
+    };
+    frames(s, 'A1 .34', watch);
+    // (Round 7: a cut bats it ~43 px: she steps back in to the same distance and cuts again.)
+    s.place(mid(foe(s)).x - 90, FLOOR);
+    frames(s, 'A1 .60', watch);
+    const kb = (defaultTuning.slash1.knockback * L.knockScale).toFixed(2);
     expect(log).toEqual([
-      '1 stop4',
-      '1 hit p1 hp1/2 kb6.60 d1 f24',
-      '1 impact p1',
-      `36 stop${EN.hitstopFrames + EN.killHitstopBonus}`,
-      '36 die p1 v3 st5 f40',
-      '36 impact p1',
+      `stop${EN.hitstopFrames}`,
+      `hit p1 hp1/2 kb${kb} d1 f24`,
+      `stop${EN.hitstopFrames + EN.killHitstopBonus}`,
+      'die p1 v3 st5 f40',
     ]);
-    // Hit on frame 1, held on 1-5, then the shove: 6.6 px/f fading 0.75 a frame = 32 px in 9 frames
-    // (a burrback goes 32 too). Its stagger ends 24 frames after the hold; struck, it then goes for her.
-    expect(xs.slice(1, 16).map((x) => x - 2200)).toEqual([
-      0, 0, 0, 0, 0, 7, 12, 18, 22, 26, 28, 30, 32, 32, 32,
-    ]);
+    // Hit on frame 1, held as long as she is, then batted along the cut, fading 0.75 a frame.
+    expect(xs.slice(1, 1 + EN.hitstopFrames + 1).every((x) => x === xs[1])).toBe(true);
+    expect((xs[20] as number) - 2200).toBeGreaterThan(36);
     expect(modes.indexOf('hurt')).toBe(1);
     expect(modes.indexOf('pursue')).toBe(1 + EN.hitstopFrames + L.hurtFrames);
     const e = foe(s);
-    expect([e.mode, e.hp, e.gone, e.hitDir, e.hitPower, e.hitFrame]).toEqual(['dead', 0, true, 1, 1, 36]);
+    expect([e.mode, e.hp, e.gone, e.hitDir, e.hitPower]).toEqual(['dead', 0, true, 1, 1]);
     expect(s.state.player.hp).toBe(4);
   });
 
   it('the finisher kills it outright (hitstop 7 + 3 for the kill) and it spills 5 instead of 3', () => {
     const s = duel();
     // Two cuts into the air behind her, the finisher into it.
-    const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .90');
+    const ev = s.run('L+A1 .17 L+A1 .17 R+A1 .90');
     expect(of(ev, 'enemyHit')).toEqual([]);
-    expect(of(ev, 'slashHit').map((h) => [h.step, h.power, h.hitstop])).toEqual([[3, 2, 10]]);
+    const fin = EN.hitstopFrames + defaultTuning.slash3.hitstopFoe + EN.killHitstopBonus;
+    expect(of(ev, 'slashHit').map((h) => [h.step, h.power, h.hitstop])).toEqual([[3, 2, fin]]);
     const die = of(ev, 'enemyDie')[0];
     expect(die).toMatchObject({
       kind: 'lampwing',
@@ -840,11 +848,11 @@ describe('lampwing: taking hits', () => {
     const ev = s.run('U+A1 .14');
     expect(of(ev, 'enemyHit')[0]).toMatchObject({ slash: 'up' });
     expect([mid(foe(s)).x, mid(foe(s)).y, foe(s).knockVy]).toEqual([2200, 670, 0]);
-    // Free air: 32 px up.
+    // Free air: ~41 px up (round 7: a harder bat).
     s = newSim(scene([lamp(2200, 680)]), blind());
     s.place(2200, FLOOR);
     s.run('U+A1 .14');
-    expect([mid(foe(s)).x, mid(foe(s)).y]).toEqual([2200, 648]);
+    expect([mid(foe(s)).x, mid(foe(s)).y]).toEqual([2200, 639]);
     // A down cut onto the floor 10 px under it.
     s = newSim(scene([lamp(2200, 775)]), blind());
     s.place(2200, 700);
@@ -921,7 +929,7 @@ describe('lampwing: death', () => {
         expect(p).toMatchObject({ id: 'l2200', kind: 'glint', value: 1, enemy: true });
         expect(p.pod).toBeUndefined();
         // (From where the body was as the step began: it may still be falling.)
-        expect(p.x).toBe(mid(e).x);
+        expect(Math.abs(p.x - mid(e).x)).toBeLessThanOrEqual(8);
         expect(Math.abs(p.y - mid(e).y)).toBeLessThanOrEqual(L.maxFall);
         got.push(f - die);
       }

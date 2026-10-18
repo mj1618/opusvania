@@ -204,7 +204,8 @@ describe('the pogo is an answer, not a skip (playtest 6: four bounces, 1.6-2.6 s
       const between = pogoExchanges(r.events);
       expect(between.length, name).toBeGreaterThanOrEqual(2);
       expect(Math.min(...between), name).toBeGreaterThanOrEqual(1);
-      expect(r.frames, name).toBeGreaterThan(60 * 6);
+      // (Round 7: 3 hp, a little shorter than playtest 6's five.)
+      expect(r.frames, name).toBeGreaterThan(60 * 4);
       expect(of(r.events, 'enemyBlock').filter((b) => b.slash === 'down').length, name).toBeGreaterThan(2);
     }
   });
@@ -220,10 +221,11 @@ describe('the pogo is an answer, not a skip (playtest 6: four bounces, 1.6-2.6 s
         summary(`SUMMARY pogo reader, ${name}`, r);
         expect(r.dead, name).toBe(true);
         expect(r.hits, name).toBe(0);
-        expect(
-          of(r.events, 'enemyHit').filter((h) => h.slash === 'down').length,
-          name,
-        ).toBeGreaterThanOrEqual(2);
+        // (Round 7: 3 hp: a pogo or two and a cut.)
+        const down = [...of(r.events, 'enemyHit'), ...of(r.events, 'enemyDie')].filter(
+          (h) => h.slash === 'down',
+        );
+        expect(down.length, name).toBeGreaterThanOrEqual(1);
       }
     // (Not burr-path: the pilot climbs onto the branch over it and never comes down.)
     for (const [id, x] of [

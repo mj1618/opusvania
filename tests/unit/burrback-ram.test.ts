@@ -290,7 +290,7 @@ describe('burrback: the ram', () => {
     expect(braced).toBe(0);
   });
 
-  it('hit weight: 4 frames of hitstop on a cut (7 on the finisher), it is shoved 32 px, she is pushed back 10; the recoil never takes her off a ledge', () => {
+  it('hit weight: hitstop on a cut (more on the finisher), it is shoved ~43 px, she is pushed back; the recoil never takes her off a ledge (round 7)', () => {
     const t = cloneTuning(defaultTuning);
     t.burrback.speed = 0;
     t.burrback.strikePx = 0;
@@ -299,12 +299,12 @@ describe('burrback: the ram', () => {
     const x0 = feet(s).x;
     const e0 = foe(s).x;
     const ev = s.run('A1 .30');
-    expect(of(ev, 'slashHit')[0]).toMatchObject({ hitstop: 4, step: 1 });
-    expect(foe(s).x - e0).toBe(32);
-    // Lunge 9 px forward, recoil 4 + 3 + 2 + 1 back: a net step back of 1 (against a pod it nets +3: recoil 3).
-    expect(feet(s).x - x0).toBe(9 - 10);
-    expect([defaultTuning.slash1.recoilFoe, defaultTuning.slash3.recoilFoe]).toEqual([4, 6]);
-    expect(EN.hitstopFrames + defaultTuning.slash3.hitstopFoe).toBe(7);
+    expect(of(ev, 'slashHit')[0]).toMatchObject({ hitstop: EN.hitstopFrames, step: 1 });
+    expect(foe(s).x - e0).toBe(43);
+    // Lunge 9 px forward, recoil 5 + 4 + 3 + 2 + 1 back: a net step back of 6.
+    expect(feet(s).x - x0).toBe(9 - 15);
+    expect([defaultTuning.slash1.recoilFoe, defaultTuning.slash3.recoilFoe]).toEqual([5, 6]);
+    expect(EN.hitstopFrames + defaultTuning.slash3.hitstopFoe).toBe(8);
     // On a ledge's very end with her back to the drop: the recoil is dropped rather than shove her off.
     const plat = { tag: 'floating' as const, x: 2000, y: 600, w: 300, h: 48 };
     const l = newSim({ ...flatScene({ solids: [plat] }), enemies: [{ ...burr(2100), y: 600 }] }, t);
@@ -374,24 +374,24 @@ describe('burrback: a fight with a second beat (playtest 5)', () => {
     return t;
   };
 
-  it('five hit points; the scene may give one its own (the teaching one has four)', () => {
-    expect(B.hp).toBe(5);
+  it('three hit points (round 7: fodder dies in 2-3 cuts); the scene may give one its own (the teaching one has four)', () => {
+    expect(B.hp).toBe(3);
     const s = newSim(scene([burr(2200), { ...burr(2600, -1, 'c'), hp: 4 }]));
-    expect([foe(s, 0).hp, foe(s, 0).hpMax, foe(s, 1).hp, foe(s, 1).hpMax]).toEqual([5, 5, 4, 4]);
+    expect([foe(s, 0).hp, foe(s, 0).hpMax, foe(s, 1).hp, foe(s, 1).hpMax]).toEqual([3, 3, 4, 4]);
     const hp = Object.fromEntries(
       (GROVE.enemies ?? []).filter((e) => e.kind === 'burrback').map((e) => [e.id, e.hp ?? B.hp]),
     );
     expect(hp).toEqual({
-      'burr-bank': 5,
+      'burr-bank': 3,
       'burr-path': 4,
-      'burr-ledge': 5,
-      'burr-root': 5,
-      'burr-shaft': 5,
-      'burr-rise': 5,
+      'burr-ledge': 3,
+      'burr-root': 3,
+      'burr-shaft': 3,
+      'burr-rise': 3,
     });
   });
 
-  it('the winded window is two cuts, not a kill: the third glances off a fresh brace; the second time it is tired and the whole chain lands, the finisher last', () => {
+  it('the winded window is two cuts, not a kill: the third glances off a fresh brace; the second window ends it (round 7: 3 hp)', () => {
     const s = newSim(scene([burr(2600, -1)]));
     s.place(2200, FLOOR);
     const r = fight(s, 0, true);
@@ -403,17 +403,17 @@ describe('burrback: a fight with a second beat (playtest 5)', () => {
     const tells = ev.flatMap((e, i) => (e.type === 'enemyWindup' ? [i] : []));
     expect(tells.length).toBe(2);
     const between = ev.slice(tells[0], tells[1]);
-    expect(of(between, 'enemyHit').map((h) => h.hpLeft)).toEqual([4, 3]);
+    expect(of(between, 'enemyHit').map((h) => h.hpLeft)).toEqual([2, 1]);
     const spent = of(ev, 'enemyRecover');
     expect(spent.map((x) => [x.tired, x.frames])).toEqual([
       [false, B.recoverFrames],
       [true, B.recoverTiredFrames],
     ]);
-    // The kill is the finisher (power 2), paying the finisher's worth.
-    expect(of(ev, 'enemyDie')[0]).toMatchObject({ power: 2, value: B.valueFinisher });
-    // A whole fight: two exchanges, about five seconds from the first tell.
-    expect(r.frames).toBeGreaterThan(200);
-    expect(r.frames).toBeLessThan(420);
+    // (Round 7: 3 hp: the second window's first cut is the kill.)
+    expect(of(ev, 'enemyDie')).toHaveLength(1);
+    // A whole fight: two exchanges, about three seconds from the first tell.
+    expect(r.frames).toBeGreaterThan(120);
+    expect(r.frames).toBeLessThan(300);
   });
 
   it('a ram that ends at a wall stuns it: 90 frames, room for the chain and more', () => {
@@ -502,7 +502,7 @@ describe('burrback: a fight with a second beat (playtest 5)', () => {
     expect(ledge).toMatchObject({ x: 3090, radius: 60, fenced: true });
   });
 
-  it('three on the road, mashed one after another without a rest: she fades before the third is down; the reader walks through all three', () => {
+  it('three on the road, mashed one after another without a rest: she pays most of her light; the reader walks through all three', () => {
     const order = [
       ['burr-path', 1900],
       ['burr-shaft', 3340],
@@ -520,8 +520,8 @@ describe('burrback: a fight with a second beat (playtest 5)', () => {
       hits += r.hits;
       faded = m.state.player.faded > 0 || m.state.player.hp <= 0 || m.state.goal.run.deaths > 0;
     }
-    expect(faded).toBe(true);
-    expect(hits).toBeGreaterThanOrEqual(defaultTuning.health.max);
+    // (Round 7: fodder dies in 2-3 cuts; the masher pays most of her light for the three, the reader nothing.)
+    expect(hits).toBeGreaterThanOrEqual(defaultTuning.health.max - 1);
     const rd = newSim(GROVE);
     let taken = 0;
     for (const [id, x] of order) {

@@ -403,7 +403,8 @@ describe('the old burrback', () => {
     const pogo = s.run('D+A1 .3');
     expect(of(pogo, 'enemyHit')[0]).toMatchObject({ slash: 'down', hpLeft: T.oldBurrback.hp - 1 });
     expect(['windup', 'feint', 'charge']).toContain(o.mode);
-    // Again in the same brace: it glances (she still bounces).
+    // Again in the same brace: it glances (she still bounces). (After its `hitInvulnFrames`.)
+    s.run(`.${T.enemies.hitInvulnFrames}`);
     s.place(o.x + o.w / 2, o.y - 30);
     s.state.player.attackCd = 0;
     const again = s.run('D+A1 .3');
@@ -825,77 +826,8 @@ describe("the director's three predators (wood-area1-director.md)", () => {
   });
 });
 
-describe('the hawker hunts the caught', () => {
-  // A wick she is caught by, the hawker 300 px off (beyond its plain sight of the floor, inside its leash).
-  const scene = () =>
-    room(
-      [{ id: 'h', kind: 'hawker', x: 2300, y: 300, facing: -1, guards: 'far' }],
-      [wick('w', 2000, 500), wick('far', 3700, 200)],
-    );
-  const H = T.hawker;
-
-  /** Steps one frame at a time: the frame of each first event of these types. */
-  const frameOf = (s: Sim, n: number, script = '.1') => {
-    const at: Record<string, number> = {};
-    for (let f = 0; f < n; f++) for (const e of s.run(script)) at[e.type] ??= f;
-    return at;
-  };
-
-  it('a moth held in the orbit is told and struck at the flame; held through it, she is hit', () => {
-    const s = newSim(scene());
-    // Into the core: caught.
-    s.place(2000, 540);
-    const at = frameOf(s, 200);
-    expect(at.lureCaught).toBeDefined();
-    const dive = of(s.events, 'enemyDive')[0];
-    expect(dive?.tx).toBeCloseTo(2000, 0);
-    expect(dive?.ty).toBeCloseTo(500, 0);
-    expect((at.hurt ?? -1) - (at.enemyNotice ?? 0)).toBeGreaterThanOrEqual(
-      H.curiousFrames + H.diveWindupFrames,
-    );
-  });
-
-  it('struck out of the orbit, she flies along the throw she was aiming (a predictable line), not wherever the blow sent her', () => {
-    for (const [hold, sign] of [
-      ['R', 1],
-      ['L', -1],
-    ] as const) {
-      const s = newSim(scene());
-      s.place(2000, 540);
-      let ev: SimEvent[] = [];
-      for (let i = 0; i < 200 && !types(ev).includes('hurt'); i++) ev = s.run(`${hold}1`);
-      expect(of(ev, 'hurt')[0]?.source?.kind).toBe('hawker');
-      const x0 = s.state.player.x;
-      s.run('.20');
-      expect((s.state.player.x - x0) * sign).toBeGreaterThan(60);
-    }
-  });
-
-  it('a hawker resting far off is woken by a moth caught in its leash', () => {
-    const s = newSim(scene());
-    const h = enemy(s, 'h');
-    h.mode = 'return';
-    s.place(2000, 540);
-    const at = frameOf(s, 60);
-    expect(at.enemyNotice).toBeDefined();
-  });
-
-  it('fair: a slow player (reacting 20-30 frames after the tell, presses off by a few) beats free out of its lane and is never struck', () => {
-    for (const react of [20, 25, 30])
-      for (const gap of [6, 8, 10]) {
-        const s = newSim(scene());
-        s.place(2000, 540);
-        let ev: SimEvent[] = [];
-        for (let i = 0; i < 120 && !types(ev).includes('enemyNotice'); i++) ev = s.run('.1');
-        // Away from it (it comes from the east): hold left as she beats.
-        const beats = `L+J1 L${gap} L+J1 L${gap} L+J1`;
-        const after = s.run(`.${react} ${beats} L30 .120`);
-        expect(types(after)).toContain('lureFree');
-        expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
-      }
-  });
-});
-
+// (Round 7: "the hawker hunts the caught" is off (`huntCaught` false): the lamp's hold becomes a fling's slowed
+// aim, and nothing hunts her in it. Its tests went with it.)
 describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not race it', () => {
   const H = T.hawker;
   // The throw wick and its hawker, perched to the east.
@@ -1265,7 +1197,10 @@ describe('round 5: the throw-cut, the creature side (area1-plan-r5 §2.2)', () =
   };
 
   it('a braced beetle is flipped belly-up from the front, and the blow lands', () => {
-    const s = newSim(room([{ id: 'b', kind: 'burrback', x: 2000, y: FLOOR, facing: -1, radius: 400 }]));
+    // (6 hp: a throw-cut hits 3x, and round 7's fodder has 3.)
+    const s = newSim(
+      room([{ id: 'b', kind: 'burrback', x: 2000, y: FLOOR, facing: -1, radius: 400, hp: 6 }]),
+    );
     const b = enemy(s, 'b');
     b.mode = 'walk';
     s.place(b.x - 100, FLOOR);

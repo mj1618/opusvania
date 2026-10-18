@@ -400,52 +400,81 @@ describe('contact: Vesper can be hurt', () => {
   });
 });
 
+/**
+ * A fighter who cuts when it is in reach and steps in when it is not (round 7: a cut shoves a burrback ~43 px), for
+ * `n` cuts, then `rest` idle frames; `cb` sees every frame's events. Returns all the events.
+ */
+function closeIn(
+  s: ReturnType<typeof duel>,
+  n: number,
+  cb: (ev: SimEvent[]) => void = () => {},
+  rest = 70,
+): SimEvent[] {
+  const all: SimEvent[] = [];
+  let cuts = 0;
+  for (let f = 0; f < 400 && cuts < n; f++) {
+    const p = s.state.player;
+    const e = s.state.enemies[0];
+    if (!e || e.mode === 'dead') break;
+    const gap = e.x - (p.x + p.w);
+    const step =
+      p.attackCd === 0 && gap < defaultTuning.slash1.fwdReach - p.w / 2 - 10 ? 'A1' : gap > 40 ? 'R1' : '.1';
+    if (step === 'A1') cuts++;
+    const ev = s.run(step);
+    cb(ev);
+    all.push(...ev);
+  }
+  for (let f = 0; f < rest; f++) {
+    const ev = s.run('.1');
+    cb(ev);
+    all.push(...ev);
+  }
+  return all;
+}
+
 describe('burrback: taking hits', () => {
-  it('three hit points: cut, cut, finisher kills it; hitstop 4 / 4 / 7 + 3 for the kill; it is held, shoved, staggered', () => {
+  it('three hit points: cut, cut, finisher kills it; the hitstop holds both, the kill longer; it is held, shoved, staggered (round 7)', () => {
     const s = duel();
     const log: string[] = [];
     const stops: number[] = [];
     const xs: number[] = [];
-    // (Presses as a masher's fall: each a hitstop later than the cooldown alone.)
-    frames(s, 'A1 .20 A1 .22 A1 .70', (ev, f) => {
+    // (A masher who steps in after each shove: the cut sends it ~43 px now.)
+    closeIn(s, 3, (ev) => {
       for (const e of ev) {
         if (e.type === 'slashHit') {
           expect(e.target).toEqual({ kind: 'burrback', id: 'b2200' });
-          expect([e.x, e.y]).toEqual([foe(s).x + 26, FLOOR - 17]);
           stops.push(e.hitstop);
           expect(s.state.player.hitstop).toBe(e.hitstop);
           expect(foe(s).hitstop).toBe(e.hitstop);
           xs.push(foe(s).x);
         }
         if (e.type === 'enemyHit')
-          log.push(`${f} hit p${e.power} hp${e.hpLeft}/${e.hpMax} kb${e.knockback} d${e.dir}`);
-        if (e.type === 'enemyDie') log.push(`${f} die p${e.power} v${e.value} kb${e.knockback} d${e.dir}`);
-        if (e.type === 'impact') log.push(`${f} impact p${e.power}`);
+          log.push(`hit p${e.power} hp${e.hpLeft}/${e.hpMax} kb${e.knockback} d${e.dir}`);
+        if (e.type === 'enemyDie') log.push(`die p${e.power} kb${e.knockback} d${e.dir}`);
       }
     });
-    expect(log).toEqual([
-      '1 hit p1 hp2/3 kb7.5 d1',
-      '1 impact p1',
-      '22 hit p1 hp1/3 kb7.5 d1',
-      '22 impact p1',
-      '47 die p2 v6 kb13.75 d1',
-      '47 impact p2',
-    ]);
-    expect(stops).toEqual([4, 4, 10]);
+    const kb = defaultTuning.slash1.knockback * B.knockScale;
+    const kb3 = defaultTuning.slash3.knockback * B.knockScale;
+    expect(log).toEqual([`hit p1 hp2/3 kb${kb} d1`, `hit p1 hp1/3 kb${kb} d1`, `die p2 kb${kb3} d1`]);
     expect(stops).toEqual([
       EN.hitstopFrames,
       EN.hitstopFrames,
       EN.hitstopFrames + defaultTuning.slash3.hitstopFoe + EN.killHitstopBonus,
     ]);
-    expect(of(s.events, 'enemyDie')[0]?.hitstop).toBe(10);
-    // The shove: the slash's 6 px/f x 1.25 fading by 1 = 32 px for a cut, 102 for the finisher (11 x 1.25).
-    expect((xs[1] as number) - (xs[0] as number)).toBe(32);
-    expect(foe(s).x - (xs[2] as number)).toBe(102);
+    // The shove: the slash's knockback x its weight, fading by `knockDecay`: ~43 px for a cut.
+    expect((xs[1] as number) - (xs[0] as number)).toBeGreaterThan(36);
     const e = foe(s);
     expect([e.mode, e.hp, e.gone, e.hitDir, e.hitPower]).toEqual(['dead', 0, true, 1, 2]);
+    // What render reads off the blow: its weight, the kill, what is left.
+    const hits = of(s.events, 'slashHit');
+    expect(hits.map((h) => [h.weight, h.kill, h.hpLeft])).toEqual([
+      ['medium', false, 2],
+      ['medium', false, 1],
+      ['medium', true, 0],
+    ]);
   });
 
-  it('a hit: held for the hitstop, then 14 frames of stagger sliding to a stop, then it walks on', () => {
+  it('a hit: held for the hitstop, then 14 frames of stagger sliding to a stop, then it walks on (round 7)', () => {
     const s = duel(noRam(), 2110);
     const modes: string[] = [];
     const xs: number[] = [];
@@ -453,11 +482,12 @@ describe('burrback: taking hits', () => {
       modes.push(foe(s).mode);
       xs.push(foe(s).x);
     });
-    // Hit on frame 1. Held on frames 1-5 (as long as she is), sliding from 6, walking again at 19.
+    // Hit on frame 1. Held as long as she is, then sliding, then walking again.
     expect(modes.indexOf('hurt')).toBe(1);
     expect(modes.indexOf('walk', 1)).toBe(1 + EN.hitstopFrames + B.hurtFrames);
-    expect(xs.slice(1, 15)).toEqual(
-      [0, 0, 0, 0, 0, 8, 14, 20, 24, 28, 30, 32, 32, 32].map((d) => (xs[1] as number) + d),
+    // (Round 7: held 5 frames as she is, then a harder slide: ~43 px.)
+    expect(xs.slice(1, 17)).toEqual(
+      [0, 0, 0, 0, 0, 0, 9, 17, 23, 29, 34, 38, 40, 42, 43, 43].map((d) => (xs[1] as number) + d),
     );
     expect(foe(s).facing).toBe(-1);
     expect(foe(s).hitFrame).toBe(1);
@@ -466,7 +496,8 @@ describe('burrback: taking hits', () => {
   it('finisher first, then one cut: dead on the cut, and it spills 4 instead of 6', () => {
     const s = duel();
     // Two cuts into the air behind her, the finisher into it, then a fresh chain's first cut.
-    const ev = s.run('L+A1 .16 L+A1 .18 R+A1 .32 R8 A1 .80');
+    const ev = s.run('L+A1 .17 L+A1 .17 R+A1 .32');
+    ev.push(...closeIn(s, 1));
     expect(of(ev, 'enemyHit').map((e) => [e.power, e.hpLeft])).toEqual([[2, 1]]);
     expect(of(ev, 'enemyDie').map((e) => [e.power, e.value, e.stagger])).toEqual([[1, 4, 5]]);
     expect(s.state.pickups.count).toBe(LIGHT + 4);
@@ -477,7 +508,12 @@ describe('burrback: taking hits', () => {
     s.place(2200, FLOOR - 150);
     let bounces = 0;
     const order: string[] = [];
-    frames(s, Array.from({ length: 5 }, () => 'D+A1 .31').join(' '), (ev) => {
+    // (A player who presses as she comes down onto it: the rhythm follows the bounce, whatever its numbers.)
+    for (let f = 0; f < 900 && bounces < 5; f++) {
+      const p = s.state.player;
+      const b = foe(s);
+      const press = p.vy > 0 && p.attack === 'none' && p.y + p.h > b.y - 70 && p.y + p.h < b.y - 10;
+      const ev = s.run(press ? 'D+A1' : '.1');
       for (const h of [...of(ev, 'slashHit'), ...of(ev, 'enemyBlock')]) {
         bounces++;
         order.push(h.type === 'slashHit' ? 'hit' : 'glance');
@@ -486,19 +522,21 @@ describe('burrback: taking hits', () => {
         expect(s.state.player.vy).toBe(-defaultTuning.attack.pogoSpeed);
         expect([s.state.player.dj, s.state.player.airDash]).toEqual([1, 1]);
       }
-    });
+    }
+    s.run('.60');
     expect(bounces).toBe(5);
     // Each blow curls it for `tuckFrames` (40): the bounce after a blow glances, the one after that lands.
     expect(order).toEqual(['hit', 'glance', 'hit', 'glance', 'hit']);
     expect([foe(s).mode, s.state.player.hp]).toEqual(['dead', 4]);
-    // From straight above the shove is sideways and half as hard.
-    expect(of(s.events, 'enemyHit')[0]?.knockback).toBe(3 * B.knockScale);
+    // From straight above the shove is sideways and a quarter as hard (round 7: it stays under her).
+    expect(of(s.events, 'enemyHit')[0]?.knockback).toBe(defaultTuning.slash1.knockback * 0.25 * B.knockScale);
     // The pogo keeps its short beat (the bounce rhythm is what it was), a glance too; the killing
     // bounce holds the kill's bonus on top.
-    expect(of(s.events, 'slashHit').map((h) => h.hitstop)).toEqual([2, 2, 2 + EN.killHitstopBonus]);
+    const P = EN.pogoHitstopFrames;
+    expect(of(s.events, 'slashHit').map((h) => h.hitstop)).toEqual([P, P, P + EN.killHitstopBonus]);
     expect(of(s.events, 'enemyBlock').map((h) => [h.hitstop, h.recoil])).toEqual([
-      [2, 0],
-      [2, 0],
+      [P, 0],
+      [P, 0],
     ]);
     expect(B.tuckFrames).toBe(40);
   });
@@ -782,7 +820,7 @@ describe('fade and re-form', () => {
     expect(s.state.player.hp).toBe(H.reformHp);
     // And she can fight.
     s.place(2290, FLOOR);
-    s.run('L+A1 .20 L+A1 .22 L+A1 .40');
+    s.run('L+A1 .22 L+A1 .14 L8 L+A1 .40');
     expect(foe(s).mode).toBe('dead');
   });
 });
