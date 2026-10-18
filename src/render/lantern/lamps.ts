@@ -455,7 +455,7 @@ export class Lamps {
     }
     this.light(cands);
     this.drawFx(dt, front, glowFront);
-    this.drawFreed(dt, clock, front);
+    this.drawFreed(dt, clock, front, glowFront);
   }
 
   private drawWick(
@@ -526,7 +526,9 @@ export class Lamps {
         glow.add(x, y, s * 5, W.halo, 0.08 + 0.03 * Math.sin(clock * 0.8 + i));
       }
     } else {
-      back.poly(bud).fill({ color: W.glass, alpha: 0.62 });
+      // Cold glass: mostly the dark behind it, a pale edge where it curves away, a frosted core.
+      back.poly(bud).fill({ color: W.glass, alpha: 0.38 });
+      back.poly(bud).stroke({ color: W.frost, width: 1.2, alpha: 0.45 });
       // Frost inside: a dim core and a few crystal ticks.
       back.ellipse(x, y + 2, s * 0.16, s * 0.24).fill({ color: W.frost, alpha: 0.35 });
       back.ellipse(x - s * 0.16, y - s * 0.1, 1.4, s * 0.2).fill({ color: 0xdfe8f2, alpha: 0.35 });
@@ -649,11 +651,13 @@ export class Lamps {
       }
       const e = 1 - (1 - u) * (1 - u);
       if (f.kind === 'snuff') {
-        if (u < 0.12) glow.add(f.x, f.y, 140 + 300 * u, 0xfff0d0, 0.9 * (1 - u / 0.12));
-        glow.add(f.x, f.y, 90 + 220 * e, LR.lamp.halo, 0.45 * (1 - u));
+        // The light leaves it in one breath: a brief hot core, the warm swelling out and fading, a thin ring of
+        // it running out (the moths' burst is the loud part).
+        if (u < 0.1) glow.add(f.x, f.y, 60 + 200 * u, 0xfff0d0, 0.7 * (1 - u / 0.1));
+        glow.add(f.x, f.y, 70 + 200 * e, LR.lamp.halo, 0.32 * (1 - u) * (1 - u));
         front
-          .circle(f.x, f.y, 24 + 210 * e)
-          .stroke({ color: LR.lamp.paperHot, width: 6 * (1 - u) + 1, alpha: 0.8 * (1 - u) });
+          .circle(f.x, f.y, 24 + 230 * e)
+          .stroke({ color: LR.lamp.paperHot, width: 1.6, alpha: 0.5 * (1 - u) * (1 - u) });
       } else if (f.kind === 'kindle') {
         // A silver bloom: a soft swell of light out of the bud, a faint ring running out ahead of it.
         glow.add(f.x, f.y, 40 + 260 * e, LR.wick.halo, 0.45 * (1 - u) * (1 - u));
@@ -683,7 +687,7 @@ export class Lamps {
     }
   }
 
-  private drawFreed(dt: number, clock: number, front: Graphics): void {
+  private drawFreed(dt: number, clock: number, front: Graphics, glow: GlowPool): void {
     for (let k = this.freed.length - 1; k >= 0; k--) {
       const m = this.freed[k] as Freed;
       m.age += dt;
@@ -706,8 +710,9 @@ export class Lamps {
       m.y += m.vy * dt;
       const fade = Math.min(1, m.age * 4) * Math.min(1, (m.life - m.age) * 1.5) * (d < 60 ? d / 60 : 1);
       const flap = Math.abs(Math.sin(clock * 30 + m.seed * 50));
-      const w = 5 + 3 * m.seed;
-      moth(front, m.x, m.y, w, flap, m.vx >= 0 ? 1 : -1, LR.lamp.freed, 0.9 * fade);
+      const w = 6 + 4 * m.seed;
+      moth(front, m.x, m.y, w, flap, m.vx >= 0 ? 1 : -1, LR.lamp.freed, 0.95 * fade);
+      if (m.age < 0.6) glow.add(m.x, m.y, 10, LR.lamp.halo, 0.3 * (1 - m.age / 0.6));
     }
     for (let k = this.scraps.length - 1; k >= 0; k--) {
       const s = this.scraps[k] as Scrap;

@@ -40,7 +40,7 @@ export const KIT = {
   thorn: { cane: 0x1a0e12, caneLit: 0x4a2a2a, tip: 0xe0d0c0 },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
   cover: { body: 0x040302, root: 0x120c08, edge: 0x2a1c12 },
-  sign: { stone: 0x26262c, stoneLit: 0x4c4c56, carve: 0x0c0c10, flash: 0xffc070 },
+  sign: { stone: 0x26262c, stoneLit: 0x5a5c68, carve: 0x0c0c10, flash: 0xffc070, glyph: 0x9fd8e0 },
   bell: {
     cap: 0xd8ceb8,
     capShade: 0x8a8070,
@@ -219,6 +219,9 @@ export class Kit {
       const r = hash01(s.id, 3);
       back.poly(stone(s.x, s.y + 4, 46, 70, r)).fill(KIT.sign.stone);
       back.poly(stone(s.x + 3, s.y, 36, 62, r + 0.3)).fill({ color: KIT.sign.stoneLit, alpha: 0.28 });
+      back.poly(stone(s.x, s.y + 4, 46, 70, r)).stroke({ color: KIT.sign.stoneLit, width: 1.5, alpha: 0.5 });
+      // Its carvings hold a faint glow of their own (pale lichen in the cuts): found in the dark, not shouted.
+      glow.add(s.x, s.y - 34, 30, KIT.sign.glyph, 0.12 + 0.04 * Math.sin(clock * 0.9 + i));
       // The firefly: a body, two wings, a lit tail.
       const fx = s.x;
       const fy = s.y - 44;

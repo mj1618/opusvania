@@ -34,7 +34,7 @@ export const LR = {
     maxLights: 9,
   },
   wick: {
-    glass: 0x7f8e9c,
+    glass: 0x5a6878,
     glassLit: 0xc8def4,
     frost: 0xb8c8d8,
     flame: 0xf2f8ff,
