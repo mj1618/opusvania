@@ -163,3 +163,10 @@ Contract with the builders (room data, render only; none placed yet):
   reach, a red crest with a bright edge and dust behind (it costs a pip on the floor); the ball is drawn at
   `rollTouchPx` (120 now); the crack's blade of light lands on the taproot (the spawn's `taproot` span), out of the
   ball's path.
+
+## Matt's play (2026-10-18): the world stops pointing at everything
+Matt found area 1 hand-holdy. Render no longer draws: the guide moths (`stage.guide`), strays (`stage.strays`),
+moonlight leaks (`stage.leaks`), the glade lip's wings-twitch (`stage.twitch`), the "C" attack glyph, the first
+catch's "hold a direction", and the glide reminder after catches. The marks stay in the schema and the rooms (the
+builders may remove them). Kept: the rest prompt (smaller, 0.35, only before her first rest), the once-only glide and
+wall-kick prompts, item lines. Don't add hints because an agent got stuck (STUDIO.md).

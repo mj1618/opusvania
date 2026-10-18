@@ -39,8 +39,6 @@ export const STAGING = {
   glimpse: { in0: 0.25, in1: 1.15, pulse0: 1.25, pulse1: 1.95, away0: 2.15, away1: 2.6 },
   /** The bask's rising moonlight motes. */
   bask: { motes: 14, rise: 120 },
-  /** The wings-twitch: two flicks in `len` s, then at most once every `every` s while she stands there. */
-  twitch: { len: 1.0, every: 6 },
   /** A hawker's snatch from a lamp's swarm: wing scales falling `fall` px over `secs` s. */
   snatch: { secs: 1.1, scales: 3, fall: 70 },
   /** The hatching tree far: drawn below a camera zoom of `from`, in full `over` lower. */
@@ -65,8 +63,6 @@ export const STAGING = {
     wallsIn: 1.5,
     wallAlpha: 0.6,
   },
-  /** Leaks: beams per crack, their length (px), fan (rad-ish per beam), opacity, shimmer rate. */
-  leaks: { beams: 4, len: 220, fan: 0.12, alpha: 0.12, shimmer: 0.9 },
   /** The wing carpet: px of floor per wing, a wing's length, how high the middle is piled, its opacity. */
   carpet: { every: 11, len: 30, pile: 18, alpha: 0.7 },
   /**
@@ -106,8 +102,6 @@ export const STAGING = {
     ring: 0xc6d4ff,
     ringAlpha: 0.55,
   },
-  /** The guide straggler: px ahead of her, px/s at most, moths, alpha; px from the end she must be to send it through, s to go. */
-  guide: { ahead: 360, speed: 420, count: 2, alpha: 0.85, through: 260, out: 1.4 },
   /** The moths climbing the oak: per moth freed, at most, px/s up, swirl (share of its width), alpha. */
   oak: { per: 0.25, max: 48, speed: 70, swirl: 0.35, alpha: 0.7 },
   /** The crown cloud: at most this many specks; seconds to lift away, the spread of their starts, the rise (px). */
@@ -188,10 +182,6 @@ export class StagingView {
   /** The title (screen space, with the far layer). */
   readonly farText = new Container({ label: 'greybox-staging-far' });
   private title: Text | null = null;
-  private catches = 0;
-  /** Seconds she has stood at the twitch spot; seconds since the last twitch started. */
-  private twitchStand = 0;
-  private twitchT = 1e6;
   /** The assisted wings: seconds since they opened by themselves (big = not lately) and the outline's fade. */
   private assistT = 1e6;
   private assistA = 0;
@@ -202,9 +192,6 @@ export class StagingView {
   private readonly puffs: { x: number; y: number; t: number }[] = [];
   /** Each circling lure's moths, once it is out: seconds since (they scatter). */
   private readonly scatter = new Map<string, number>();
-  /** The guide's place along its path (arc length, eased) and seconds since it went through the end. */
-  private guideS = -1;
-  private guideGone = -1;
   /** Seconds since the root was cut (large = not this visit). */
   private rootT = 1e6;
   /** The den: seconds since its crack / its fall this visit (big = before this visit, -1 = not yet). */
@@ -235,17 +222,13 @@ export class StagingView {
   onEvents(events: readonly SimEvent[]): void {
     for (const e of events) {
       if (e.type === 'roomEnter') {
-        this.catches = 0;
         this.scatter.clear();
-        this.guideS = -1;
-        this.guideGone = -1;
         this.cloudT = -1;
         this.denCrackT = -1;
         this.denFallT = -1;
         this.snatched.clear();
         this.puffs.length = 0;
-      } else if (e.type === 'fallCatch') this.catches++;
-      else if (e.type === 'glideStart') this.glideStarted = true;
+      } else if (e.type === 'glideStart') this.glideStarted = true;
       else if ((e as { type: string }).type === 'enemySnatch') {
         // A hawker's swoop through a lamp took one of its moths (the creatures' rhythm hawker).
         const sn = e as unknown as { lure?: string | number; x: number; y: number };
@@ -270,20 +253,16 @@ export class StagingView {
     if (!S) return;
     this.drawFar(far, clock, cam, sim);
     this.drawCarpet(back);
-    this.drawLeaks(back, clock);
-    this.drawStrays(front, clock);
     this.drawDen(back, front, dt, clock, sim);
     for (const p of S.props ?? []) this.deadMoth(back, p.x, p.y, p.facing ?? 1);
     for (const l of S.ladders ?? []) if (sim.save.flags.includes(l.flag)) this.ladder(back, l.x, l.y0, l.y1);
     this.drawRootFall(back, dt);
     this.drawOakClimb(back, clock, sim);
-    this.drawGuide(front, dt, clock, sim);
     this.drawCloud(front, dt, clock, sim, cam.zoom);
     this.drawStragglers(front, clock);
     this.drawCirclers(front, dt, clock, sim);
     this.drawGlimpse(front, clock);
     this.drawBask(front, clock, sim);
-    this.drawTwitch(back, dt, sim);
   }
 
   /**
@@ -539,34 +518,6 @@ export class StagingView {
     }
   }
 
-  private drawTwitch(g: Graphics, dt: number, sim: SimView): void {
-    const S = this.stage as StageMarks;
-    const tw = S.twitch;
-    if (!tw) return;
-    const T = STAGING.twitch;
-    const p = sim.player;
-    const at = this.catches >= tw.catches && p.grounded && Math.hypot(p.cx - tw.x, p.feetY - tw.y) < tw.r;
-    this.twitchStand = at && Math.abs(p.vx) < 0.5 ? this.twitchStand + dt : 0;
-    this.twitchT += dt;
-    if (this.twitchStand > 0.5 && this.twitchT > T.every) this.twitchT = 0;
-    if (this.twitchT >= T.len) return;
-    // Two flicks: her wings jerk half open off her back and fold again.
-    const u = this.twitchT / T.len;
-    const open = Math.max(0, Math.sin(u * Math.PI * 4)) ** 0.7;
-    const sx = p.cx - p.facing * 6;
-    const sy = p.cy - 6;
-    for (const s of [-1, 1]) {
-      const ang = -Math.PI / 2 + s * (0.25 + 0.9 * open);
-      const len = 26 + 22 * open;
-      g.moveTo(sx, sy)
-        .lineTo(sx + Math.cos(ang - 0.3 * s) * len * 0.7, sy + Math.sin(ang - 0.3 * s) * len * 0.7)
-        .lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len)
-        .lineTo(sx + Math.cos(ang + 0.35 * s) * len * 0.55, sy + Math.sin(ang + 0.35 * s) * len * 0.55)
-        .closePath()
-        .fill({ color: C.wing, alpha: 0.55 * open });
-    }
-  }
-
   /**
    * The great oak as a far landmark (plan r3 item 2: no frame before minute 14 said "the tree"), in every room it
    * stands outside of: a dark column taller than anything, its crown a dark mass with a pale ring of moonlight at
@@ -713,64 +664,6 @@ export class StagingView {
         width: Math.max(1, 6 * k * z),
         alpha: C.ring * share * pulse,
       });
-    }
-  }
-
-  /**
-   * The straggler that leads: it keeps `ahead` px along the path ahead of where she is (her nearest point on
-   * it), waits there wheeling, and goes on through the end once she nears it.
-   */
-  private drawGuide(g: Graphics, dt: number, clock: number, sim: SimView): void {
-    const G = this.stage?.guide;
-    if (!G || (G.until && sim.save.flags.includes(G.until))) return;
-    const pts = G.path;
-    let total = 0;
-    for (let i = 1; i < pts.length; i++)
-      total += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
-    // Her place along the path: the nearest point on any segment.
-    const p = sim.player;
-    let best = Number.POSITIVE_INFINITY;
-    let her = 0;
-    let acc = 0;
-    for (let i = 1; i < pts.length; i++) {
-      const [ax, ay] = pts[i - 1]!;
-      const [bx, by] = pts[i]!;
-      const l = Math.hypot(bx - ax, by - ay) || 1;
-      const u = Math.max(0, Math.min(1, ((p.cx - ax) * (bx - ax) + (p.cy - ay) * (by - ay)) / (l * l)));
-      const d = Math.hypot(ax + (bx - ax) * u - p.cx, ay + (by - ay) * u - p.cy);
-      if (d < best) {
-        best = d;
-        her = acc + u * l;
-      }
-      acc += l;
-    }
-    const want = Math.min(total, her + (G.ahead ?? STAGING.guide.ahead));
-    // Only ever onward; eased, never faster than a moth flies.
-    if (this.guideS < 0) this.guideS = want;
-    const step = STAGING.guide.speed * dt;
-    this.guideS = Math.max(this.guideS, Math.min(want, this.guideS + step));
-    if (this.guideGone < 0 && her > total - STAGING.guide.through) this.guideGone = 0;
-    let gone = 0;
-    if (this.guideGone >= 0) {
-      this.guideGone += dt;
-      gone = Math.min(1, this.guideGone / STAGING.guide.out);
-      if (gone >= 1) return;
-    }
-    const n = G.count ?? STAGING.guide.count;
-    for (let i = 0; i < n; i++) {
-      const lag = i * 40;
-      const a = along(pts, Math.max(0, this.guideS - lag) / total, AT);
-      const wx = Math.sin(clock * 1.7 + i * 2.1) * 28;
-      const wy = Math.cos(clock * 2.3 + i) * 16 - 30;
-      // Through the end: on along the last segment and out of sight.
-      const on = gone * 260;
-      moth(
-        g,
-        a.x + wx + a.tx * on,
-        a.y + wy + a.ty * on,
-        Math.sin(clock * 24 + i * 1.3),
-        (1 - gone) * STAGING.guide.alpha,
-      );
     }
   }
 
@@ -1003,67 +896,6 @@ export class StagingView {
                 .closePath()
                 .fill({ color: h < 0.3 ? C.wing : C.dead, alpha: T.wallAlpha * lit });
             }
-    }
-  }
-
-  /**
-   * Moonlight leaking through cracks (`stage.leaks`, round 6): from each crack a few thin pale beams fanned out of its
-   * face, long and faint, shimmering slowly: a hollow behind the bark, seen from across the room.
-   */
-  private drawLeaks(g: Graphics, clock: number): void {
-    const L = STAGING.leaks;
-    for (const [i, r] of (this.stage?.leaks ?? []).entries()) {
-      if (r.up) {
-        // Up through a floor panel's cracks: beams rising from its top, leaning a little each way.
-        for (let k = 0; k < L.beams; k++) {
-          const x = r.x + ((k + 0.5) / L.beams) * r.w;
-          const sh = 0.6 + 0.4 * Math.sin(clock * L.shimmer + k * 1.7 + i);
-          const len = L.len * (0.6 + 0.4 * hash01('leak', k + i * 7));
-          const lean = (k - (L.beams - 1) / 2) * L.fan * len;
-          g.poly([x - 2, r.y, x + 2, r.y, x + lean + 10, r.y - len, x + lean - 10, r.y - len]).fill({
-            color: C.moonlight,
-            alpha: L.alpha * sh,
-          });
-        }
-        g.rect(r.x, r.y, r.w, r.h).stroke({ color: C.moonlight, width: 1.5, alpha: 0.35 });
-        continue;
-      }
-      const dirs = r.dir === undefined || r.dir === 0 ? [-1, 1] : [r.dir];
-      for (const d of dirs)
-        for (let k = 0; k < L.beams; k++) {
-          const y = r.y + ((k + 0.5) / L.beams) * r.h;
-          const x0 = d > 0 ? r.x + r.w : r.x;
-          const sh = 0.6 + 0.4 * Math.sin(clock * L.shimmer + k * 1.7 + i);
-          const len = L.len * (0.6 + 0.4 * hash01('leak', k + i * 7));
-          const spread = (k - (L.beams - 1) / 2) * L.fan;
-          g.poly([
-            x0,
-            y - 2,
-            x0,
-            y + 2,
-            x0 + d * len,
-            y + spread * len + 10,
-            x0 + d * len,
-            y + spread * len - 10,
-          ]).fill({
-            color: C.moonlight,
-            alpha: L.alpha * sh,
-          });
-        }
-      g.rect(r.x, r.y, r.w, r.h).stroke({ color: C.moonlight, width: 1.5, alpha: 0.35 });
-    }
-  }
-
-  /** Stragglers circling a spot (`stage.strays`): moths wheeling round it, as round a lamp. */
-  private drawStrays(g: Graphics, clock: number): void {
-    for (const [i, s] of (this.stage?.strays ?? []).entries()) {
-      const n = s.count ?? 1;
-      for (let k = 0; k < n; k++) {
-        const a = clock * (1.3 + 0.4 * hash01('stray', k + i * 5)) + (k * Math.PI * 2) / n;
-        const x = s.x + Math.cos(a) * s.r;
-        const y = s.y + Math.sin(a) * s.r * 0.6 + Math.sin(clock * 2.3 + k) * 6;
-        moth(g, x, y, Math.sin(clock * 24 + k * 1.3), 0.9);
-      }
     }
   }
 

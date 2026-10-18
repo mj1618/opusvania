@@ -85,8 +85,6 @@ export class GreyboxLayer {
       this.creatures,
       this.moteGfx,
       this.front,
-      this.lures.glyph,
-      this.lures.aimLayer,
       this.world.front,
       this.kit.front,
       this.boss.front,

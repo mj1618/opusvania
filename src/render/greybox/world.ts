@@ -90,7 +90,7 @@ export class WorldView {
       }
     });
     if (!this.hint) {
-      this.hint = label('be still to rest', 0, 0, 0xd8e6ff, 18);
+      this.hint = label('be still to rest', 0, 0, 0xd8e6ff, 15);
       this.texts.addChild(this.hint);
     }
     // (Set inside the forEach above: TS cannot see that.)
@@ -98,7 +98,8 @@ export class WorldView {
     this.hint.visible = at !== null;
     if (at) {
       this.hint.position.set(Math.round(at.x), Math.round(at.y));
-      this.hint.alpha = 0.6 + 0.2 * Math.sin(clock * 2);
+      // (Subtle: Matt's play, 2026-10-18, the world stops pointing at everything; this one a person does need once.)
+      this.hint.alpha = 0.35;
     }
     for (const gl of scene.glades ?? []) {
       const taken = save.taken.includes(`${scene.id}:${gl.id}`);
