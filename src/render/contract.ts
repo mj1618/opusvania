@@ -102,6 +102,21 @@ export interface PlayerView extends Readonly<PlayerState> {
   readonly cy: number;
 }
 
+/**
+ * Lanternroot's room-local light pieces (the sim's `state.light`, src/sim/light-state.ts): a gust in flight,
+ * moonmoss solid or not, the bell-caps' counts, regrowing pods, respawning creatures, wick sets burned whole.
+ * Typed here loosely (every field optional) so render reads it in any build; absent outside Lanternroot.
+ */
+export interface LightView {
+  readonly gust?: { x: number; y: number; dx: number; dy: number; frames: number } | null;
+  readonly moss?: readonly number[];
+  readonly bells?: ReadonlyArray<{ n: number; last: number; seq: string }>;
+  readonly regrow?: readonly number[];
+  readonly respawn?: readonly number[];
+  readonly hidden?: readonly number[];
+  readonly sets?: readonly number[];
+}
+
 /** Read-only sim snapshot handed to the environment each render frame. */
 export interface SimView {
   /** Latest sim frame number (60 per second while the sim runs; stands still when frozen). */
@@ -131,6 +146,8 @@ export interface SimView {
   readonly kit: Readonly<KitState>;
   /** The room's boss fight (memory/bosses.md): its stage, phase, tell; null in a room without one. Read only. */
   readonly boss: Readonly<BossState> | null;
+  /** Lanternroot's light pieces (moss, bells, the gust: `LightView`); absent in other rooms. Read only. */
+  readonly light?: LightView;
 }
 
 /** Services every renderer gets at construction. */

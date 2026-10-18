@@ -22,9 +22,18 @@ const GROVE_DEEP_START = 3950;
 /** A zone edge this far out is never reached. */
 const OUT_OF_REACH = 100000;
 
+/**
+ * Lanternroot's layers (docs/design/levels/proto-1.md §8, memory/lanternroot-art.md): `night` is the wood
+ * kit at canopy height under the moon; `hall` the amber lamp hall inside the fallen giant's trunk; `roots`
+ * the black drowned roots under it; `cache` the firefly's workshop.
+ */
+export type LanternBand = 'night' | 'hall' | 'roots' | 'cache';
+
 export interface RoomLook {
   roomId: string;
-  kit: 'grove' | 'wood';
+  kit: 'grove' | 'wood' | 'lanternroot';
+  /** Lanternroot's layer (`art.band`); null in every other kit. */
+  band: LanternBand | null;
   seed: number;
   /** Added to the Grove's [cool / warm] and [warm / deep] edges in every zone function and shader. */
   zoneShift: { left: number; right: number };
@@ -42,6 +51,7 @@ export interface RoomLook {
 export const LOOK: RoomLook = {
   roomId: 'test-grove',
   kit: 'grove',
+  band: null,
   seed: 1,
   zoneShift: { left: 0, right: 0 },
   keyEntryX: 3400,
@@ -58,6 +68,20 @@ export function isGroveKit(): boolean {
   return LOOK.kit === 'grove';
 }
 
+/** A Lanternroot room (proto-1): its own playfield painter, game pieces and, inside the giant, backdrop. */
+export function isLantern(): boolean {
+  return LOOK.kit === 'lanternroot';
+}
+
+/** A Lanternroot room inside the giant or under it (no sky): the hall, the roots, the cache. */
+export function isInterior(): boolean {
+  return LOOK.kit === 'lanternroot' && LOOK.band !== 'night';
+}
+
+/** The lamp hall's key: warm lamplight. The roots': a thin cold moon through the cracks. */
+const HALL_KEY = 0xffc078;
+const ROOTS_KEY = 0x8fb0d8;
+
 /**
  * Sets the look from the room's `art` block. Call before any renderer is built: shaders are
  * compiled with the zone edges and the key light of the moment they are built.
@@ -65,7 +89,16 @@ export function isGroveKit(): boolean {
 export function setRoomLook(room: Room): void {
   const art = room.art;
   LOOK.roomId = room.id;
-  LOOK.kit = art?.kit ?? 'grove';
+  // (Read loosely: the room schema learns `lanternroot` / `band` with the level's rooms.)
+  const loose = art as { kit?: string; band?: string } | undefined;
+  LOOK.kit = (loose?.kit as RoomLook['kit'] | undefined) ?? 'grove';
+  const band = loose?.band;
+  LOOK.band =
+    LOOK.kit !== 'lanternroot'
+      ? null
+      : band === 'hall' || band === 'roots' || band === 'cache'
+        ? band
+        : 'night';
   LOOK.seed = art?.seed ?? 1;
   if (LOOK.kit === 'grove') {
     LOOK.zoneShift = { left: 0, right: 0 };
@@ -90,4 +123,14 @@ export function setRoomLook(room: Room): void {
   LOOK.keyEntryX = Math.round((room.width * moon.x) / 1920);
   LOOK.keyColor = MOON_KEY;
   LOOK.anchorY = art?.anchorY ?? null;
+  if (LOOK.band === 'hall' || LOOK.band === 'cache') {
+    // Inside the trunk: no sky. The key the bakes light with is the lamps' amber, from the upper right.
+    LOOK.moon = null;
+    LOOK.afterglow = null;
+    LOOK.keyColor = HALL_KEY;
+  } else if (LOOK.band === 'roots') {
+    LOOK.moon = null;
+    LOOK.afterglow = null;
+    LOOK.keyColor = ROOTS_KEY;
+  }
 }

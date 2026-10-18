@@ -270,6 +270,52 @@ export const WOOD_GRADE: ZoneGrade = {
   toeDepth: [0.72, 0.72, 0.72],
 };
 
+/**
+ * Lanternroot's grades inside the giant (room-look.ts `band`; the night layer keeps WOOD_GRADE). The hall is
+ * amber lamplight in umber dark: warm shadows that stay dark, gold highlights, the rich darks leaned brown, so
+ * the moon's silver (cracks, moonwicks, her) is the one cool thing. The roots are blue-black with cold teal
+ * accents (glow caps, glowworms, water) and her light. The cache is the hall, a shade richer.
+ */
+const HALL_GRADE: ZoneGrade = {
+  ...ZONE_GRADE,
+  exposure: [1.12, 1.12, 1.12],
+  contrast: [0.34, 0.34, 0.34],
+  pivot: [0.38, 0.38, 0.38],
+  shadowTint: [0x2a140a, 0x2a140a, 0x2a140a],
+  shadowLift: [0.14, 0.14, 0.14],
+  highlightTint: [0xffe4bc, 0xffe4bc, 0xffe4bc],
+  highlightWarmth: [0.5, 0.5, 0.5],
+  saturation: [1.08, 1.08, 1.08],
+  richSaturation: [1.3, 1.3, 1.3],
+  richTint: [0xffe8d2, 0xffe8d2, 0xffe8d2],
+  vignetteTint: [0x6a4a2a, 0x6a4a2a, 0x6a4a2a],
+  heroPocket: [1.3, 1.3, 1.3],
+  toeDepth: [0.74, 0.74, 0.74],
+};
+const ROOTS_GRADE: ZoneGrade = {
+  ...ZONE_GRADE,
+  exposure: [1.16, 1.16, 1.16],
+  contrast: [0.36, 0.36, 0.36],
+  pivot: [0.38, 0.38, 0.38],
+  shadowTint: [0x061626, 0x061626, 0x061626],
+  shadowLift: [0.18, 0.18, 0.18],
+  highlightTint: [0xe0f4ff, 0xe0f4ff, 0xe0f4ff],
+  highlightWarmth: [0.25, 0.25, 0.25],
+  saturation: [1.06, 1.06, 1.06],
+  richSaturation: [1.3, 1.3, 1.3],
+  richTint: [0xd8f0ff, 0xd8f0ff, 0xd8f0ff],
+  vignetteTint: [0x3a5a7a, 0x3a5a7a, 0x3a5a7a],
+  heroPocket: [1.1, 1.1, 1.1],
+  toeDepth: [0.7, 0.7, 0.7],
+};
+export const LANTERN_GRADE: Record<'hall' | 'roots' | 'cache', ZoneGrade> = {
+  hall: HALL_GRADE,
+  roots: ROOTS_GRADE,
+  cache: { ...HALL_GRADE, exposure: [1.16, 1.16, 1.16], saturation: [1.12, 1.12, 1.12] },
+};
+/** Their global overrides: lamps and glow caps bloom more than the moon may in the wood. */
+export const LANTERN_POST = { shoulder: 0.9, bloom: 0.6, paleCut: 0.85, vignette: 0.55 };
+
 /** Bloom targets, widest first. Fixed in logical units so the look does not depend on window size. */
 export const BLOOM_LEVELS: ReadonlyArray<readonly [number, number]> = [
   [960, 540],

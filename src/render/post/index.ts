@@ -24,8 +24,31 @@ import type { PointLight } from '../lights';
 import { fxDebug } from '../scene/lib/fx-debug';
 import { renderHeroMatte, renderPlayfieldMask } from '../scene/lib/fx-mask';
 import { zoneColor, zoneMix, zoneWeights } from '../scene/lib/fx-zones';
-import { isGroveKit } from '../scene/lib/room-look';
-import { GOAL_LIGHTS, MAX_LIGHTS, POST, WOOD_GRADE, WOOD_POST, ZONE_GRADE, type ZoneGrade } from './config';
+import { isGroveKit, isInterior, isLantern, LOOK } from '../scene/lib/room-look';
+import {
+  GOAL_LIGHTS,
+  LANTERN_GRADE,
+  LANTERN_POST,
+  MAX_LIGHTS,
+  POST,
+  WOOD_GRADE,
+  WOOD_POST,
+  ZONE_GRADE,
+  type ZoneGrade,
+} from './config';
+
+/** The kit's overrides of the global post knobs: the wood's, or Lanternroot's inside the giant. */
+function kitPost(): typeof WOOD_POST {
+  return isInterior() ? LANTERN_POST : WOOD_POST;
+}
+
+/** The kit's grade table. */
+function kitGrade(): ZoneGrade {
+  if (isGroveKit()) return ZONE_GRADE;
+  const band = LOOK.band;
+  return band === 'hall' || band === 'roots' || band === 'cache' ? LANTERN_GRADE[band] : WOOD_GRADE;
+}
+
 import { PostFilter } from './pipeline';
 
 export { POST } from './config';
@@ -133,13 +156,13 @@ export class PostStage {
     f.prefilterU.uHeroSource = lights.heroBloomSource;
 
     const u = f.u;
-    u.uMix[0] = isGroveKit() ? bloom.intensity : WOOD_POST.bloom;
+    u.uMix[0] = isGroveKit() ? bloom.intensity : kitPost().bloom;
     u.uMix[1] = lights.gain;
     u.uMix[2] = lights.haze;
     u.uMix[3] = POST.chroma;
     // The grade drifts with the scene's zones as the camera travels.
     const zw = zoneWeights(camera.x);
-    const ZG: ZoneGrade = isGroveKit() ? ZONE_GRADE : WOOD_GRADE;
+    const ZG: ZoneGrade = kitGrade();
     const za = ZG.amount;
     const zc = (zone: readonly [number, number, number], base: number, out: Float32Array): void => {
       zoneColor(zone, zw, out);
@@ -151,7 +174,7 @@ export class PostStage {
     const zn = (zone: readonly [number, number, number], base: number): number =>
       base + (zoneMix(zone, zw) - base) * za;
     u.uTone[0] = zn(ZG.exposure, grade.exposure);
-    u.uTone[1] = Math.min(isGroveKit() ? grade.shoulder : WOOD_POST.shoulder, 0.999);
+    u.uTone[1] = Math.min(isGroveKit() ? grade.shoulder : kitPost().shoulder, 0.999);
     u.uTone[2] = zn(ZG.contrast, grade.contrast);
     u.uTone[3] = zn(ZG.pivot, grade.pivot);
     zc(ZG.shadowTint, grade.shadowTint, u.uShadow);
@@ -160,7 +183,7 @@ export class PostStage {
     u.uHighlight[3] = zn(ZG.highlightWarmth, grade.highlightWarmth);
     u.uVignette[0] = vignette.inner;
     u.uVignette[1] = vignette.outer;
-    u.uVignette[2] = isGroveKit() ? vignette.strength : WOOD_POST.vignette;
+    u.uVignette[2] = isGroveKit() ? vignette.strength : kitPost().vignette;
     u.uVignette[3] = vignette.tintAmount;
     u.uSepLook[2] = vignette.lightKeep;
     u.uSepLook[3] = vignette.lightFrom;
@@ -212,6 +235,9 @@ export class PostStage {
     u.uGoalLook[0] = lights.goalCap;
     u.uGoalLook[1] = lights.goalPocket;
     u.uGoalLook[2] = lights.goalTint;
+    // Lanternroot: what already glows brighter than the lit-surface cap (a lamp's paper, a moonwick's glass)
+    // is not pulled down to it by its own light (0 elsewhere: the grove and the wood unchanged).
+    u.uGoalLook[3] = isLantern() ? 1 : 0;
 
     // Lights: world px -> safe-area heights (1080 logical px) from the view's top-left. Only those
     // whose reach touches the view are sent.
@@ -298,7 +324,7 @@ export class PostStage {
     lu.uShape[2] = lights.hazeReach;
     lu.uShape[3] = lights.background;
     lu.uDim = lights.inBrightPlaces;
-    u.uLightBack[0] = isGroveKit() ? bloom.paleCut : WOOD_POST.paleCut;
+    u.uLightBack[0] = isGroveKit() ? bloom.paleCut : kitPost().paleCut;
     const sceneH = this.ctx.scene.height;
     const high = Math.min(1, Math.max(0, (sceneH - SAFE_H / 2 - camera.y) / Math.max(1, sceneH - SAFE_H)));
     u.uLightBack[3] = bloom.wrap + (bloom.wrapHigh - bloom.wrap) * high;

@@ -30,14 +30,17 @@ import { isGreybox } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { GreyboxLayer } from '../greybox/index';
+import { LanternPieces } from '../lantern/index';
 import { destroyTree } from '../lifecycle';
 import { LayerTree } from './layer-tree';
 import { AirLayer } from './layers/air';
 import { FarLayers } from './layers/far';
 import { ForegroundLayer } from './layers/foreground';
+import { LanternBackLayer } from './layers/lantern-back';
 import { MidLayer } from './layers/mid';
 import { PlayfieldLayer } from './layers/playfield';
 import { SkyLayer } from './layers/sky';
+import { isInterior, isLantern } from './lib/room-look';
 
 /** What a module gets once, at init. */
 export interface SceneContext extends RenderContext {
@@ -71,6 +74,21 @@ const MODULES: ReadonlyArray<new () => EnvModule> = [
   AirLayer,
 ];
 
+/**
+ * Lanternroot (docs/design/levels/proto-1.md, memory/lanternroot-art.md): the night layer is the wood's
+ * modules plus the level's pieces (lamps, moonwicks, the kit, creatures, fx: render/lantern); inside the
+ * giant its own backdrop replaces sky, far and mid.
+ */
+const LANTERN_NIGHT: ReadonlyArray<new () => EnvModule> = [...MODULES, LanternPieces];
+const LANTERN_INSIDE: ReadonlyArray<new () => EnvModule> = [LanternBackLayer, PlayfieldLayer, LanternPieces];
+
+function modulesFor(scene: Scene): ReadonlyArray<new () => EnvModule> {
+  if (isGreybox(scene as Parameters<typeof isGreybox>[0])) return [GreyboxLayer];
+  if (isInterior()) return LANTERN_INSIDE;
+  if (isLantern()) return LANTERN_NIGHT;
+  return MODULES;
+}
+
 export class SceneRenderer {
   readonly layers: LayerTree;
   private readonly modules: EnvModule[] = [];
@@ -83,7 +101,7 @@ export class SceneRenderer {
   init(_scene: Scene = this.ctx.scene): void {
     const ctx: SceneContext = { ...this.ctx, viewScale: this.ctx.viewScale, layers: this.layers };
     // A greybox room (memory/greybox.md) builds none of the painted layers: one flat module instead.
-    for (const M of isGreybox(this.ctx.scene) ? [GreyboxLayer] : MODULES) {
+    for (const M of modulesFor(this.ctx.scene)) {
       const m = new M();
       m.init(ctx);
       this.modules.push(m);

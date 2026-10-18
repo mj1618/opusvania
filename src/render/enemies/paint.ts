@@ -200,6 +200,19 @@ export class Painter {
     return this.nv;
   }
 
+  /**
+   * Scales every vertex drawn since vertex `from` about (cx, cy) by `k` (a small creature drawn with a big
+   * one's rig: Lanternroot's juvenile beetle is the burrback at ~0.7).
+   */
+  scaleFrom(from: number, cx: number, cy: number, k: number): void {
+    const v = this.verts;
+    for (let i = from; i < this.nv; i++) {
+      const o = i * FLOATS;
+      v[o] = cx + ((v[o] as number) - cx) * k;
+      v[o + 1] = cy + ((v[o + 1] as number) - cy) * k;
+    }
+  }
+
   private full(): boolean {
     return this.nv > MAX_VERTS - 512 || this.ni > MAX_INDICES - 2048;
   }

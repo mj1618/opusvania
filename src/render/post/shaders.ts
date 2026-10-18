@@ -257,7 +257,7 @@ uniform vec4 uGoal[${GOAL_LIGHTS}];  // the goal's lights (lit lanterns, heart):
 uniform vec4 uSep;        // separation behind the hero: pivot luminance, width, lift, darkening
 uniform vec4 uSepLook;    // xy: the lift fades out between these two luminances; z: how much of the vignette lights are spared, w: from what value (max channel)
 uniform vec4 uSepTint;    // rgb: the colour of the lift (luminance 1), a: desaturation under it
-uniform vec4 uGoalLook;   // how much the lit-surface caps rise under them, how much the pocket lets go, extra light-colour tint, unused
+uniform vec4 uGoalLook;   // how much the lit-surface caps rise under them, how much the pocket lets go, extra light-colour tint, emissive kept (Lanternroot)
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -364,7 +364,9 @@ void main(void) {
     float top = max(lc.r, max(lc.g, lc.b));
     if (top > uLit.z * capUp) lc *= uLit.z * capUp / top;
     lc += lit.rgb * (ll * ll * uLightBack.y);
-    col = mix(col, lc, 1.0 - hero);
+    // (Lanternroot: a thing already brighter than the cap glows by itself: its light leaves it alone.)
+    float emissive = uGoalLook.w * smoothstep(cap * 0.9, cap * 1.7, ll);
+    col = mix(col, lc, (1.0 - hero) * (1.0 - emissive));
   }
   col += uHalo.rgb * (lit.a * uMix.z * (1.0 - hero));
 

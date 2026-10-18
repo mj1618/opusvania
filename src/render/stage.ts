@@ -336,6 +336,8 @@ export class RenderStage {
       rest: this.game.state.rest,
       kit: this.game.state.kit,
       boss: this.game.state.boss,
+      // (Lanternroot's light pieces: read loosely, the field is the level's sim.)
+      light: (this.game.state as { light?: SimView['light'] }).light,
     };
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);

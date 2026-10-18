@@ -22,6 +22,9 @@ import { tuning } from '../../../sim/tuning';
 import { viewTop } from '../../camera/index';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { prng } from '../lib/look';
+import { growLantern } from '../lib/lr-flora';
+import { LanternRim } from '../lib/lr-rim';
+import { LANTERN_BAKE, type LanternPlan, paintLanternTerrain } from '../lib/lr-terrain';
 import { bakeTerrain, GROVE_BAKE } from '../lib/pf-bake';
 import { paintBranchTerrain, WOOD_BAKE } from '../lib/pf-branch';
 import { growBranch } from '../lib/pf-branch-flora';
@@ -34,7 +37,7 @@ import { Rim } from '../lib/pf-rim';
 import { zoneAt } from '../lib/pf-shape';
 import { paintTerrain, type TerrainInfo } from '../lib/pf-terrain';
 import { Water } from '../lib/pf-water';
-import { isGroveKit, LOOK } from '../lib/room-look';
+import { isGroveKit, isLantern, LOOK } from '../lib/room-look';
 
 export const PLAYFIELD = {
   /** Terrain is baked at the view scale, clamped to this range (texture px per world px). */
@@ -70,7 +73,9 @@ export class PlayfieldLayer implements EnvModule {
   private flutter!: Flutter;
   private clippings!: Clippings;
   private info!: TerrainInfo;
-  private rim: Rim | null = null;
+  private rim: Rim | LanternRim | null = null;
+  /** Lanternroot's plan (lr-terrain.ts): what the pieces and the growth read. */
+  lantern: LanternPlan | null = null;
   /** Grass tufts as [x, top y, colour] triples (Garden.turf). */
   private turf: number[] = [];
   private poolX: [number, number] = [0, 0];
@@ -84,12 +89,16 @@ export class PlayfieldLayer implements EnvModule {
     const scene = ctx.scene;
     // The test grove keeps its hand-tuned painter; the wood kit paints one branch from the room's
     // rects (pf-branch.ts), grows its own plants (pf-branch-flora.ts) and lays a live rim on the path.
+    // Lanternroot (proto-1) paints any room's rects in its layer's material (lr-terrain.ts).
     const grove = isGroveKit();
-    const wood = grove ? null : paintBranchTerrain(scene, LOOK.seed);
-    const { paint, info } = wood ?? paintTerrain(scene);
+    const lantern = isLantern() && LOOK.band ? paintLanternTerrain(scene, LOOK.seed, LOOK.band) : null;
+    const wood = grove || lantern ? null : paintBranchTerrain(scene, LOOK.seed);
+    const { paint, info } = lantern ?? wood ?? paintTerrain(scene);
     this.info = info;
+    this.lantern = lantern?.plan ?? null;
     const scale = Math.min(PLAYFIELD.bakeScaleMax, Math.max(PLAYFIELD.bakeScaleMin, ctx.viewScale()));
-    const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist, wood ? WOOD_BAKE : GROVE_BAKE);
+    const look = lantern && LOOK.band ? LANTERN_BAKE[LOOK.band] : wood ? WOOD_BAKE : GROVE_BAKE;
+    const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist, look);
     paint.albedo.destroy();
     paint.relief.destroy();
 
@@ -103,7 +112,8 @@ export class PlayfieldLayer implements EnvModule {
       turf: [] as number[],
     };
     // (The top of the highest view: what hangs from the crown has to start above it.)
-    if (wood) growBranch(garden, wood.plan);
+    if (lantern) growLantern(garden, lantern.plan, LOOK.seed);
+    else if (wood) growBranch(garden, wood.plan);
     else growGarden(garden, info, scene.width, viewTop(scene));
     this.turf = garden.turf;
     const rect = this.field.rect;
@@ -126,6 +136,9 @@ export class PlayfieldLayer implements EnvModule {
     pf.addChild(baked.layer);
     if (wood) {
       this.rim = new Rim(wood.plan);
+      pf.addChild(this.rim.container);
+    } else if (lantern) {
+      this.rim = new LanternRim(lantern.plan);
       pf.addChild(this.rim.container);
     }
     pf.addChild(back.container, this.clippings.mesh, halo.container, this.flutter.mesh);

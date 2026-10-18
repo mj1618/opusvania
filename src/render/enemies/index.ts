@@ -16,12 +16,22 @@ import { tuning } from '../../sim/tuning';
 import { clamp, sat } from '../character/math';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
+import { isLantern } from '../scene/lib/room-look';
 import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
 import { BURR, LAMP } from './config';
 import { drawLampwing, LampRig } from './lampwing';
 import { Painter, type RGB, type Shade } from './paint';
 
 const MAX_P = 160;
+/** Kinds drawn on the burrback's rig (the juvenile only in Lanternroot), and on the lampwing's (the hawker). */
+function isBeetle(kind: string): boolean {
+  return kind === 'burrback' || (kind === 'juvenileBurrback' && isLantern());
+}
+function isMoth(kind: string): boolean {
+  return kind === 'lampwing' || (kind === 'hawker' && isLantern());
+}
+/** The juvenile beetle drawn on the burrback's rig at this size (its box is 38 x 26 against 52 x 34). */
+const BURR_JUVENILE = 0.72;
 const K_FRAG = 1;
 const K_MOTE = 2;
 const K_DUST = 3;
@@ -431,8 +441,8 @@ export class EnemyRenderer {
       if (ev.type === 'enemyTurn' && (ev.cause as string) === 'drop') {
         // It turns to hurry out from under her: a start and a look up.
         const i = this.byId.get(ev.id);
-        if (i !== undefined && ev.kind === 'burrback') this.rigs[i]?.startle();
-      } else if (ev.type === 'enemyHit' && ev.kind === 'burrback' && ev.slash === 'down') {
+        if (i !== undefined && isBeetle(ev.kind)) this.rigs[i]?.startle();
+      } else if (ev.type === 'enemyHit' && isBeetle(ev.kind) && ev.slash === 'down') {
         // A pogo landed: the blow pounds it flat (it curls).
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.rigs[i];
@@ -440,8 +450,8 @@ export class EnemyRenderer {
       } else if (ev.type === 'enemyTurn' && (ev.cause === 'lantern' || ev.cause === 'wary')) {
         const i = this.byId.get(ev.id);
         // `dir` is its new facing: what it turns from is on the other side.
-        if (i !== undefined && ev.kind === 'burrback') this.rigs[i]?.react(ev.cause, -ev.dir);
-      } else if (ev.type === 'enemyBlock' && ev.kind === 'burrback') {
+        if (i !== undefined && isBeetle(ev.kind)) this.rigs[i]?.react(ev.cause, -ev.dir);
+      } else if (ev.type === 'enemyBlock' && isBeetle(ev.kind)) {
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.rigs[i];
         if (!rig) continue;
@@ -457,10 +467,10 @@ export class EnemyRenderer {
           -ev.dir,
           ev.y + 17,
         );
-      } else if (ev.type === 'enemyRecover' && ev.kind === 'burrback') {
+      } else if (ev.type === 'enemyRecover' && isBeetle(ev.kind)) {
         const i = this.byId.get(ev.id);
         if (i !== undefined) this.rigs[i]?.spent(ev.cause, (ev as { broken?: boolean }).broken === true);
-      } else if (ev.type === 'enemyReset' && ev.kind === 'burrback') {
+      } else if (ev.type === 'enemyReset' && isBeetle(ev.kind)) {
         const i = this.byId.get(ev.id);
         if (i !== undefined) this.rigs[i]?.reset();
       } else if (
@@ -476,7 +486,7 @@ export class EnemyRenderer {
         this.scales(w.x, w.y, 4, -(w.dir || 1), -0.4, 1.2, 220, 5, 0.3);
       } else if (
         (ev.type === 'enemyGiveUp' && ev.cause === 'gift') ||
-        (ev.type === 'enemyGift' && ev.kind === 'lampwing')
+        (ev.type === 'enemyGift' && isMoth(ev.kind))
       ) {
         // She gave it a glint (memory/giving-render.md): it turns its lamp from her, dips, and goes home.
         const i = this.byId.get(ev.id);
@@ -487,7 +497,7 @@ export class EnemyRenderer {
         const dl = Math.hypot(dx, dy) || 1;
         rig.shy(dx / dl, dy / dl, 1);
         rig.giftDim = 1;
-      } else if (ev.type === 'enemyAware' && ev.kind === 'lampwing') {
+      } else if (ev.type === 'enemyAware' && isMoth(ev.kind)) {
         // It has seen her: the lamp flares and the body swings toward her.
         const i = this.byId.get(ev.id);
         const rig = i === undefined ? undefined : this.lamps[i];
@@ -623,11 +633,15 @@ export class EnemyRenderer {
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (!e) continue;
-      if (e.kind === 'lampwing') {
+      // (Lanternroot draws its hawkers on the lampwing's art and its juvenile beetles on the burrback's rig, small;
+      // other rooms keep what they had: memory/lanternroot-art.md.)
+      const lantern = isLantern();
+      if (e.kind === 'lampwing' || (lantern && e.kind === 'hawker')) {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
       }
-      if (e.kind !== 'burrback') continue;
+      const small = lantern && e.kind === 'juvenileBurrback';
+      if (e.kind !== 'burrback' && !small) continue;
       let rig = this.rigs[i];
       if (!rig) {
         rig = new BurrRig(i);
@@ -872,7 +886,13 @@ export class EnemyRenderer {
         for (let k = 0; k < 4; k++)
           this.dust(rig.x + (k - 1.5) * 12, rig.y - 26 + this.rand() * 8, (k - 1.5) * 14, 1.3, 0.8);
       }
+      const v0 = p.vertexCount;
+      const f0 = pf.vertexCount;
       if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+      if (small) {
+        p.scaleFrom(v0, rig.x, rig.y, BURR_JUVENILE);
+        pf.scaleFrom(f0, rig.x, rig.y, BURR_JUVENILE);
+      }
       if (rig.topNew) {
         rig.topNew = false;
         this.sparksUp(topHit.x, topHit.y, rig.topU, rig.y);
