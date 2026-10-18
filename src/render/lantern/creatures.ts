@@ -36,7 +36,7 @@ export const SPIDER = {
   young: 0.62,
   youngPale: 0.3,
   /** The Gloamweaver's size against a dangler's body. */
-  great: 2.6,
+  great: 3.3,
 } as const;
 
 interface Pose {
@@ -73,7 +73,7 @@ function spider(
   // Local frame: +v down along the body (head end), +u across.
   const at = (u: number, v: number): [number, number] => [x + u * cs - v * sn, y + u * sn + v * cs];
   const dark = pose.dark;
-  const alpha = 1 - dark * 0.88;
+  const alpha = 1 - dark * 0.8;
   const body = mix(SPIDER.body, SPIDER.open, pose.flip * 0.55 + pale);
   const leg = mix(SPIDER.leg, SPIDER.open, pose.flip * 0.35 + pale * 0.8);
   // Legs: four a side, from the cephalothorax, each a knee and a foot.
@@ -142,8 +142,14 @@ function spider(
     g.circle(e[0], e[1], Math.max(1, s * 0.07)).fill({ color: eyeC, alpha: 0.95 });
   }
   const eyes = at(0, cy + s * 0.3);
-  const glint = 0.12 + 0.5 * pose.tell + 0.25 * dark + 0.06 * Math.sin(clock * 3 + seed);
-  glow.add(eyes[0], eyes[1], s * (0.5 + pose.tell * 0.8), pose.tell > 0 ? SPIDER.hunt : SPIDER.eye, glint);
+  const glint = 0.12 + 0.5 * pose.tell + 0.45 * dark + 0.06 * Math.sin(clock * 3 + seed);
+  glow.add(
+    eyes[0],
+    eyes[1],
+    s * (0.5 + pose.tell * 0.8 + dark * 0.3),
+    pose.tell > 0 ? SPIDER.hunt : SPIDER.eye,
+    glint,
+  );
 }
 
 export class Creatures {
@@ -255,12 +261,15 @@ export class Creatures {
     for (let k = 0; k < strands.length; k++) {
       if (e.cut.charCodeAt(k) !== 48) continue;
       const s = strands[k] as [number, number, number, number];
-      // A strand sags a hair and catches the light along it.
-      const mx = (s[0] + s[2]) / 2;
-      const my = (s[1] + s[3]) / 2 + (slack ? 30 : 4);
+      // A strand sags with its length (silk is not a ruler), the sag stirring a little, and catches the light.
+      const len = Math.hypot(s[2] - s[0], s[3] - s[1]);
+      const flat = Math.abs(s[2] - s[0]) / Math.max(1, len);
+      const mx = (s[0] + s[2]) / 2 + Math.sin(clock * 0.7 + k) * len * 0.01;
+      const my =
+        (s[1] + s[3]) / 2 + len * (slack ? 0.25 : 0.035 + 0.04 * flat) + Math.sin(clock * 0.9 + k * 1.3) * 2;
       g.moveTo(s[0], s[1]).quadraticCurveTo(mx, my, s[2], s[3]);
     }
-    g.stroke({ color: SPIDER.silk, width: 1.3, alpha: slack ? 0.2 : 0.42 });
+    g.stroke({ color: SPIDER.silk, width: 1, alpha: slack ? 0.12 : 0.24 });
     // Dew at the ends of strands, glinting slowly.
     for (let k = 0; k < strands.length; k += 2) {
       if (e.cut.charCodeAt(k) !== 48) continue;
@@ -332,6 +341,10 @@ export class Creatures {
       pose.walk = Math.hypot(e.vx, e.vy) > 0.2 ? clock * 10 : 0;
       pose.rot = Math.atan2(-((b as { ux?: number }).ux ?? 0), (b as { uy?: number }).uy ?? 1);
       pose.spread = 0.85;
+    } else if (m === 'recover' && b.thread) {
+      // Winded on its thread: hanging limp and open (the window).
+      pose.spread = 0.75 + 0.05 * Math.sin(clock * 3);
+      pose.rot = Math.sin(clock * 1.4) * 0.12;
     } else if (m === 'recover') {
       pose.flip = 1;
       pose.walk = clock * 12;

@@ -105,8 +105,8 @@ const MATS: Record<LanternBand, Material> = {
     bodyDeep: 0x06080b,
     grain: 0x05070a,
     grainLit: 0x26343f,
-    top: 0x15262a,
-    topLit: 0x35575a,
+    top: 0x1b3236,
+    topLit: 0x467074,
     under: 0x030405,
     h: 0.58,
     bark: 0.7,
@@ -542,6 +542,12 @@ function hangers(
   }
 }
 
+/** The room's exposed tops (static solids), for the pieces that lie on them (the roots' water). */
+export function lanternTops(room: Room): Run[] {
+  const solids = room.solids.filter((s) => s.tag !== 'pool');
+  return findRuns(new Grid(room.width, room.height, solids)).tops;
+}
+
 /** Paints the room. Returns the paint for the bake, the playfield's info and the plan the rim / growth / pieces read. */
 export function paintLanternTerrain(
   room: Room,
@@ -657,8 +663,59 @@ export function paintLanternTerrain(
       );
     }
   }
-  // Fibre strata along the tops' upper face (the hall's and the log's grain runs across), near the edges only.
-  if (band !== 'roots') {
+  // The night log's flank: plates of bark running along it under every top, their upper edges catching the moon,
+  // fading into the dark lower down (a fallen giant's bark, not a block).
+  if (band === 'night') {
+    for (const run of runs.tops) {
+      if (run.x1 - run.x0 < 40) continue;
+      const sd = seed + run.x0 * 11 + run.y;
+      const r = rngFor(sd, 12);
+      for (let yy = run.y + 22, row = 0; row < 9; yy += range(r, 14, 22), row++) {
+        let x = run.x0 + range(r, -30, 10);
+        const fade = 1 - row / 9;
+        while (x < run.x1) {
+          const len = range(r, 70, 260);
+          const x1 = Math.min(run.x1, x + len);
+          if (grainNear((x + x1) / 2, yy, 80)) {
+            const th = range(r, 6, 13);
+            const base = (xx: number): number => yy + 3 * wobble(xx, sd + row, 90);
+            // The plate, a dark fissure under it, a moonlit lip on top.
+            p.solid(
+              strip(x, x1, base, 0, (xx) => th * Math.sin(Math.PI * clamp((xx - x) / len, 0, 1)) ** 0.4, 12),
+              m.body,
+              m.h + 0.06,
+              { bark: 1 },
+              0.9,
+            );
+            p.solid(
+              strip(
+                x + 6,
+                x1 - 6,
+                (xx) => base(xx) + th * 0.85,
+                0,
+                () => 2.2,
+                14,
+              ),
+              m.grain,
+              m.h - 0.1,
+              { bark: 1 },
+              0.8 * fade,
+            );
+            p.solid(
+              strip(x + 4, x1 - 4, base, -0.5, () => 1.8, 14),
+              m.grainLit,
+              m.h + 0.1,
+              { bark: 0.6 },
+              0.75 * fade,
+            );
+          }
+          x += len + range(r, 4, 26);
+        }
+      }
+    }
+  }
+  // Fibre strata along the tops' upper face (the hall's grain runs across), near the edges only.
+  if (band !== 'roots' && band !== 'night') {
     for (const run of runs.tops) {
       if (run.x1 - run.x0 < 24) continue;
       const sd = seed + run.x0 * 7 + run.y;

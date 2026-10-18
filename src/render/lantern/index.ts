@@ -15,17 +15,21 @@
  */
 import { Container, Graphics } from 'pixi.js';
 import type { EnvModule, SceneContext, SceneFrame } from '../scene/index';
+import { lanternTops } from '../scene/lib/lr-terrain';
+import { LOOK } from '../scene/lib/room-look';
 import { Creatures } from './creatures';
 import { Fx } from './fx';
 import { GlowPool } from './glow';
 import { Kit } from './kit';
 import { Lamps } from './lamps';
+import { RootWater } from './water';
 
 export class LanternPieces implements EnvModule {
   private lamps!: Lamps;
   private readonly kit = new Kit();
   private readonly creatures = new Creatures();
   private fx!: Fx;
+  private water: RootWater | null = null;
   private readonly back = new Graphics();
   private readonly front = new Graphics();
   private readonly glowBack = new GlowPool('lr-glow-back');
@@ -36,6 +40,13 @@ export class LanternPieces implements EnvModule {
   init(ctx: SceneContext): void {
     this.lamps = new Lamps(ctx.scene, ctx.lights);
     this.fx = new Fx(ctx.lights);
+    if (LOOK.band === 'roots') {
+      const w = new RootWater(ctx.scene, lanternTops(ctx.scene));
+      if (w.any) {
+        this.water = w;
+        ctx.layers.playfieldFront.addChild(w.container);
+      }
+    }
     const goal = ctx.layers.get('goal');
     goal.addChild(this.glowBack.container, this.back, this.glowMid.container);
     ctx.layers.air.addChild(this.front, this.glowFront.container);
@@ -47,6 +58,7 @@ export class LanternPieces implements EnvModule {
     this.lamps.onEvents(sim.events, sim);
     this.kit.onEvents(sim.events, sim);
     this.fx.onEvents(sim.events, sim);
+    this.water?.onEvents(sim.events, sim);
     this.back.clear();
     this.front.clear();
     this.glowBack.begin();
@@ -66,6 +78,7 @@ export class LanternPieces implements EnvModule {
     );
     this.creatures.draw(dt, clock, sim, camera, this.back, this.front, this.glowMid);
     this.fx.draw(dt, clock, sim, this.front, this.glowFront);
+    this.water?.draw(dt, clock, sim, camera, this.glowFront);
     this.glowBack.end();
     this.glowMid.end();
     this.glowFront.end();

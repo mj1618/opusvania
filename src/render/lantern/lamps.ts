@@ -368,12 +368,12 @@ export class Lamps {
       // The thread it hangs by (a swinging lamp's runs from its pivot).
       const topY = y - s * 0.62;
       const tieX = l.swing ? l.x : x;
-      const tieY = info.tieY ?? y - 260;
+      const tieY = info.tieY ?? y - 900;
       const thread = burning ? LR.lamp.silk : mix(LR.lamp.silk, 0x000000, 0.4);
       back
         .moveTo(tieX, tieY)
         .quadraticCurveTo((tieX + x) / 2 + 4 * Math.sin(clock * 0.7 + i), (tieY + topY) / 2, x, topY);
-      back.stroke({ color: thread, width: 1.4, alpha: info.tieY === null ? 0.35 : 0.6 });
+      back.stroke({ color: thread, width: 1.4, alpha: info.tieY === null ? 0.3 : 0.6 });
       if (info.tieY === null) {
         // No solid above: a dead twig out of the dark holds it.
         back

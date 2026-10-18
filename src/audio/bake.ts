@@ -9,6 +9,7 @@
  * zero, nothing but glass goes far above 9 kHz.
  */
 import { at, bowl, breath, click, exp, len, panned, type Recipe, rubbed, swell } from './bake-lib';
+import { LR_RECIPES, LR_SOUNDS } from './bake-lr';
 import { PLAY_RECIPES, PLAY_SOUNDS } from './bake-play';
 import {
   arEnv,
@@ -70,6 +71,8 @@ export const SOUNDS = {
   chordCatch: 3,
   // The greybox-era pass (bake-play.ts): her steps and wings, the blade, the lamps, the creatures.
   ...PLAY_SOUNDS,
+  // Lanternroot (bake-lr.ts): her light, the moonwicks, the moss, the gust, the cap and the signs.
+  ...LR_SOUNDS,
 } as const;
 export type SoundId = keyof typeof SOUNDS;
 
@@ -86,6 +89,9 @@ export const SLOW: Partial<Record<SoundId, number>> = {
   lampRest: 4,
   giftBowl: 4,
   heartGift: 4,
+  glowBell: 2,
+  bellAnswer: 2,
+  mendLand: 2,
 };
 
 /** The rate a sound is baked at, for a context running at `sr`. */
@@ -105,6 +111,7 @@ export interface Baked {
 
 const RECIPES: Record<SoundId, Recipe> = {
   ...PLAY_RECIPES,
+  ...LR_RECIPES,
   /** One soft *fff*: noise band-passed from ~1.8 kHz down to ~700 Hz in ~90 ms, a low push under it. */
   wing(sr, r) {
     const n = len(sr, 0.22);

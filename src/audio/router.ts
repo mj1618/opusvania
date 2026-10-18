@@ -19,6 +19,7 @@ import type { GameState, PlayerState } from '../sim/state';
 import type { Tuning } from '../sim/tuning';
 import { SOUNDS, type SoundId } from './bake';
 import { dbToGain, hash01, salt } from './dsp';
+import { routeLantern, signNotes } from './route-lr';
 import { type PlayEvent, routePlay } from './route-play';
 import { AUDIO, type BusId, bedOf, LAMP_BEAT, LAMP_HZ, PITCH } from './tuning';
 
@@ -101,6 +102,8 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
   const lures: NonNullable<AudioSnap['lures']> = [];
   (scene.lures ?? []).forEach((l, i) => {
     if ((state.lures.hp[i] ?? 0) <= 0) return;
+    // (A moonwick is her light, not the firefly's: it does not hum like a lamp.)
+    if ((l.kind as string) === 'moonwick') return;
     const f = flameAt(state.lures, i, l, state.frame, t);
     const row = lureRowNow(state.lures, i, l, t);
     lures.push({ i, x: f.x, y: f.y, kind: l.kind, reach: row.radius * AUDIO.lamp.reachScale });
@@ -247,6 +250,9 @@ export function cue(
  * route-play.ts; the grove's lanterns and giving are here.
  */
 export function route(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  // Lanternroot's light (route-lr.ts): her glow, the moonwicks, moss, the gust, the cap.
+  const lr = routeLantern(e, i, snap, ctx);
+  if (lr) return lr;
   const play = routePlay(e, i, snap, ctx);
   if (play) return play;
   // The test grove's giving (a carried chord catching, offers, gifts) sounds only where creatures see by it.
@@ -442,6 +448,8 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
   const out: Cue[] = [];
   const seed = ctx.seed;
   const bed = bedOf(snap.room ?? ctx.scene.id);
+  // Lanternroot's firefly signs flashing their phrase near her (route-lr.ts).
+  out.push(...signNotes(snap, ctx));
   // Drips: rare, at canopy positions across the view, duller and wetter the farther back.
   if (bed.drips > 0 && hash01(seed, f, salt('drip')) < bed.drips / (F.dripMeanS * 60)) {
     const u = hash01(seed, f, salt('drip'), 1);

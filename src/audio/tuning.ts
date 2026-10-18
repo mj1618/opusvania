@@ -63,6 +63,12 @@ export const BEDS: Record<string, RoomBed> = {
   'wood-rootshaft': { wind: -10, leaves: -10, hissHz: 2000, drips: 1.8, voice: false },
   'wood-rootroad': { wind: -11, leaves: -12, hissHz: 1800, drips: 1.5, voice: false },
   'wood-canopy': { wind: 3, leaves: 3, hissHz: 3800, drips: 0.3, voice: true },
+  // Lanternroot: the crown under the open moon (airy, the far voice); inside the trunk the wind is a hush far off
+  // and the lamps' hum carries; the drowned roots are still air and water dripping; the cache, close and dry.
+  'lr-night': { wind: 2, leaves: 1, hissHz: 3500, drips: 0.3, voice: true },
+  'lr-hall': { wind: -12, leaves: -14, hissHz: 2200, drips: 0.5, voice: false },
+  'lr-roots': { wind: -18, leaves: -20, hissHz: 1800, drips: 2.4, voice: false },
+  'lr-cache': { wind: -16, leaves: -18, hissHz: 2000, drips: 0.2, voice: false },
 };
 export const bedOf = (room: string): RoomBed => BEDS[room] ?? (BEDS.default as RoomBed);
 
@@ -250,6 +256,32 @@ export const AUDIO = {
     chimeGapS: 0.11,
     /** Beating free (the old catch): her wing on each press. */
     beatDb: -26,
+  },
+  /**
+   * Lanternroot (route-lr.ts, bake-lr.ts): her light (bus `hero`), the moonwicks and moss (`lantern`), the gust
+   * (`hero`), the cap and the signs (`world`). Peaks (dB). `glowCents`: the glow chime climbs the forest's chord
+   * by how full she is; `bellCents` per ring of the cap; `signPx`: a sign is heard flashing within this many px.
+   */
+  lr: {
+    glowDb: -30,
+    glowBellDb: -24,
+    glowCents: [0, 204, 498, 702, 906, 1200, 1404, 1698] as readonly number[],
+    kindleDb: -20,
+    refuseDb: -32,
+    gutterDb: -34,
+    coldDb: -30,
+    fanDb: -28,
+    mossDb: -30,
+    gustDb: -22,
+    gustHitDb: -30,
+    bellDb: -22,
+    bellDullDb: -26,
+    bellAnswerDb: -18,
+    bellCents: [0, 204, 498, 702, 906, 1200] as readonly number[],
+    signDb: -34,
+    signPx: 640,
+    mendDb: -28,
+    mendLandDb: -22,
   },
   /** Creatures' tells and moves (bus `creatures`): peaks (dB). */
   creatures: {

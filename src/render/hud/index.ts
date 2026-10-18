@@ -17,6 +17,7 @@ import { type CameraView, SAFE_VIEW, type SimView, type ViewSize } from '../cont
 import { GOAL } from '../goal/config';
 import { streamCount } from '../goal/logic';
 import { GlintBatch, K_FLARE, K_GLINT, K_SPARK } from '../pickups/batch';
+import { GlowMeter } from './glow';
 import { ItemLine } from './item-line';
 import { HealthLights } from './lights';
 import { hudLink } from './link';
@@ -160,6 +161,8 @@ export class Hud {
   /** Seconds since the last of the offering went in (0 while it runs). */
   private offerDone = 0;
   private readonly health = new HealthLights();
+  /** Lanternroot's glow meter under the lights (hud/glow.ts; only in glow rooms). */
+  private readonly glowMeter = new GlowMeter();
   private readonly shake = new Container();
   private readonly sprites: Sprite[] = [];
   private readonly glyphs: Texture[] = [];
@@ -214,7 +217,7 @@ export class Hud {
       this.lossSprites.push(s);
       this.group.addChild(s);
     }
-    this.shake.addChild(this.health.root, this.group, this.pips.root, this.icon.mesh);
+    this.shake.addChild(this.health.root, this.glowMeter.root, this.group, this.pips.root, this.icon.mesh);
     this.layer.addChild(
       this.slow,
       this.moment,
@@ -478,6 +481,7 @@ export class Hud {
     // the count or the pips are up, the lights are up too, each in its own fixed place.
     const pipsUp = this.pips.root.visible && this.pips.root.alpha > 0.003;
     H.update(dt, clock, sim, quiet, this.hold > 0 || pipsUp);
+    this.glowMeter.update(dt, clock, sim);
     this.shake.position.set(view.left + H.shakeX, view.top + H.shakeY);
 
     // The run is over: the cluster leaves the picture to the ending, and the summary comes.

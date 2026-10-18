@@ -15,11 +15,11 @@ export const LR_RIM = {
   colors: {
     night: { lit: 0x7aa69e, shade: 0x2b4846 },
     hall: { lit: 0xd9a868, shade: 0x5a3c22 },
-    roots: { lit: 0x6f9ea6, shade: 0x1c3034 },
+    roots: { lit: 0x86c0c4, shade: 0x2a4a50 },
     cache: { lit: 0xd29a5e, shade: 0x553823 },
   } as Record<LanternBand, { lit: number; shade: number }>,
   /** Brightness per band (the roots' wet glint is thinner). */
-  gain: { night: 1, hall: 0.95, roots: 0.75, cache: 0.9 } as Record<LanternBand, number>,
+  gain: { night: 1, hall: 0.95, roots: 1.15, cache: 0.9 } as Record<LanternBand, number>,
   band: 2.2,
   glow: 6,
   fuzz: 4.5,

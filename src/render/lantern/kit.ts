@@ -237,7 +237,8 @@ export class Kit {
       const near = Math.hypot(sim.player.cx - s.x, sim.player.cy - s.y) < 520;
       const read = this.readT.get(i);
       if (near || read !== undefined) {
-        const on = phraseLit(rhythm, clock + i * 1.7);
+        // (On the sim's clock, so the sound's chimes keep time: audio/route-lr.ts `signNotes`.)
+        const on = phraseLit(rhythm, sim.frame / 60 + i * 1.7);
         glow.add(fx, fy + 8, 14 + 12 * on, KIT.sign.flash, 0.15 + 0.7 * on);
         back.circle(fx, fy + 8, 3).fill({ color: mix(KIT.sign.carve, KIT.sign.flash, on), alpha: 1 });
       }
@@ -459,29 +460,43 @@ export class Kit {
 
   private bramble(g: Graphics, x: number, y: number, w: number, h: number, id: string, clock: number): void {
     const T = KIT.thorn;
-    const canes = Math.max(3, Math.round(h / 10));
-    for (let c = 0; c < canes; c++) {
-      const r = hash01(id, c);
-      const yy = y + h * (0.15 + 0.7 * ((c + 0.5) / canes)) + (r - 0.5) * 8;
-      const amp = 6 + r * 10;
-      const ph = r * 6.28;
-      const pts: number[] = [];
-      for (let xx = x - 10; xx <= x + w + 10; xx += 8) {
-        const sway = wind(xx, clock, r) * 1.5;
-        pts.push(xx, yy + Math.sin(xx * 0.03 + ph) * amp + sway);
-      }
-      g.moveTo(pts[0] as number, pts[1] as number);
-      for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k] as number, pts[k + 1] as number);
-      g.stroke({ color: c % 3 === 0 ? T.caneLit : T.cane, width: 3.2 + r * 2, cap: 'round', join: 'round' });
-      // Thorns along it: dark hooks with pale tips.
-      for (let k = 4; k < pts.length - 2; k += 4) {
-        const px = pts[k] as number;
-        const py = pts[k + 1] as number;
-        const up = (k / 4) % 2 === 0 ? -1 : 1;
-        const tx = px + (hash01(id, c * 31 + k) - 0.5) * 6;
-        const ty = py + up * (7 + hash01(id, c * 17 + k) * 5);
-        g.poly([px - 2.5, py, px + 2.5, py, tx, ty]).fill(T.cane);
-        g.circle(tx, ty, 1).fill({ color: T.tip, alpha: 0.8 });
+    // Canes arch out of the tangle's foot (and its sides when it is tall), cross and droop: never a lattice.
+    const n = Math.max(4, Math.min(34, Math.round((w * h) / 2600)));
+    for (let c = 0; c < n; c++) {
+      const r1 = hash01(id, c * 3);
+      const r2 = hash01(id, c * 3 + 1);
+      const r3 = hash01(id, c * 3 + 2);
+      const tall = h > w * 0.8;
+      const fromSide = tall && r3 < 0.5;
+      const sx = fromSide ? (r1 < 0.5 ? x : x + w) : x + r1 * w;
+      const sy = fromSide ? y + h * (0.2 + 0.8 * r2) : y + h + 4;
+      const dir = fromSide ? (sx === x ? 1 : -1) : r2 < 0.5 ? -1 : 1;
+      const reachX = dir * (0.3 + 0.7 * r3) * Math.min(w, 220);
+      const peakY = fromSide ? sy - (0.2 + 0.5 * r1) * h : y + (0.05 + 0.5 * r3) * h;
+      const ex = Math.max(x - 10, Math.min(x + w + 10, sx + reachX));
+      const ey = Math.min(y + h, peakY + (0.3 + 0.5 * r1) * h * 0.6);
+      const sw = wind(sx, clock, r1) * 3;
+      const cx1 = sx + reachX * 0.15;
+      const cy1 = peakY - 10;
+      const cx2 = sx + reachX * 0.75 + sw;
+      const cy2 = peakY - 6 + sw;
+      g.moveTo(sx, sy).bezierCurveTo(cx1, cy1, cx2, cy2, ex + sw, ey);
+      const lit = c % 4 === 0;
+      g.stroke({ color: lit ? T.caneLit : T.cane, width: 2.4 + r2 * 2.6, cap: 'round' });
+      // Thorns along the cane: hooked, dark, the tips pale.
+      for (let k = 1; k < 9; k++) {
+        const t = k / 9;
+        const it = 1 - t;
+        const px = it * it * it * sx + 3 * it * it * t * cx1 + 3 * it * t * t * cx2 + t * t * t * (ex + sw);
+        const py = it * it * it * sy + 3 * it * it * t * cy1 + 3 * it * t * t * cy2 + t * t * t * ey;
+        const side = k % 2 === 0 ? -1 : 1;
+        const len = 5 + hash01(id, c * 17 + k) * 5;
+        const tx = px + side * len * 0.6 * dir;
+        const ty = py - len * 0.8;
+        g.poly([px - 2, py + 1, px + 2, py - 1, tx, ty]).fill(T.cane);
+        g.circle(tx, ty, 0.9).fill({ color: T.tip, alpha: 0.75 });
+        // Now and then a small dark leaf.
+        if (hash01(id, c * 23 + k) < 0.12) g.ellipse(px + dir * 5, py + 3, 5, 2.4).fill(0x14100c);
       }
     }
   }
