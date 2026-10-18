@@ -15,7 +15,7 @@ import { destroyTree } from '../../lifecycle';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { bakeLayer, coverRect, LayerView, softTexture } from '../lib/bg-bake';
 import { TO_LIGHT } from '../lib/bg-shapes';
-import { mix } from '../lib/look';
+import { mix, prng } from '../lib/look';
 import {
   buildLanternFar,
   buildLanternMid,
@@ -138,6 +138,36 @@ export class LanternBackLayer implements EnvModule {
         cool,
       });
     });
+    // The roots: a few thin shafts of moonlight down through cracks in the plate above (and glowworm beads far
+    // off in the dark), the only cold light besides hers.
+    if (band === 'roots') {
+      const r = prng(seed * 13 + 1);
+      const n = Math.max(2, Math.round(farRect.w / 1300));
+      for (let k = 0; k < n; k++) {
+        const s = new Sprite(tex);
+        s.anchor.set(0.5, 0);
+        const x = farRect.x + ((k + 0.3 + 0.4 * r()) * farRect.w) / n;
+        s.position.set(x, farRect.y + 40);
+        s.setSize(70 + 50 * r(), farRect.h * 0.9);
+        s.rotation = 0.12 + 0.1 * r();
+        s.tint = 0x8fb4dc;
+        s.blendMode = 'add';
+        s.alpha = 0.1;
+        poolFar.addChild(s);
+        this.cracks.push({ c: { x, y: farRect.y, len: farRect.h, a: 0 }, s, phase: x * 0.01 });
+      }
+      for (let k = 0; k < Math.round(midRect.w / 90); k++) {
+        const s = new Sprite(tex);
+        s.anchor.set(0.5);
+        s.position.set(midRect.x + r() * midRect.w, midRect.y + r() * midRect.h * 0.7);
+        const sz = 6 + 8 * r();
+        s.setSize(sz, sz);
+        s.tint = 0x9ff3ff;
+        s.blendMode = 'add';
+        s.alpha = 0.25 + 0.3 * r();
+        poolMid.addChild(s);
+      }
+    }
     for (const c of fb.cracks) {
       const s = new Sprite(tex);
       s.anchor.set(0.5);

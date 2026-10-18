@@ -50,7 +50,7 @@ export const KIT = {
     stalk: 0xb8ae98,
   },
   moon: { beam: 0xb8d0f0, pool: 0xdce8ff, mote: 0xe8f0ff },
-  moss: { scar: 0x8aa8a0, lit: 0xcdeee6, body: 0x4f7a72, glow: 0xa8e0d8 },
+  moss: { scar: 0x8aa8a0, lit: 0xa8d8cc, body: 0x24403c, glow: 0x88c8c0 },
   cap: { top: 0x6a4a6a, topLit: 0xb08ab0, gill: 0x2a1a2a, stalk: 0x8a7a70 },
   /** Seconds a gate takes to fall away, a cover to thin, a cut's shake. */
   gateFall: 0.8,
@@ -435,14 +435,12 @@ export class Kit {
   private heartwood(g: Graphics, x: number, y: number, w: number, h: number, id: string): void {
     const H = KIT.heart;
     g.poly(ragged(x, y, w, h, id, 2)).fill(H.body);
-    // Close rings: arcs of a centre below the panel (dense, old wood).
-    const cx = x + w * 0.5;
-    const cy = y + h * 1.3;
-    for (let r = 14; r < h * 1.6; r += 6) {
-      g.moveTo(cx - r * 1.4, cy);
-      g.ellipse(cx, cy, r * 1.4, r);
+    // Close rings seen side on: tight curved grain lines across the panel (dense, old wood).
+    for (let yy = y + 5; yy < y + h - 3; yy += 5 + hash01(id, Math.round(yy)) * 3) {
+      const bow = (hash01(id, Math.round(yy) + 7) - 0.5) * 8;
+      g.moveTo(x + 2, yy).quadraticCurveTo(x + w / 2, yy + bow, x + w - 2, yy + bow * 0.3);
     }
-    g.stroke({ color: H.ring, width: 1.6, alpha: 0.6 });
+    g.stroke({ color: H.ring, width: 1.4, alpha: 0.6 });
     // A dull sheen down its upper face, like polished wood.
     g.rect(x + w * 0.62, y + 6, w * 0.12, h - 12).fill({ color: H.sheen, alpha: 0.18 });
     // Fresh ram scars at beetle height (24-60 px up its face) and splinters at its foot.
@@ -591,8 +589,21 @@ export class Kit {
     }
     if (k < 0.02) return;
     // Lit: a soft lichen shelf, its lip silver, a fringe hanging under it.
-    g.poly(ragged(x, y, w, Math.max(10, h), id, 3)).fill({ color: M.body, alpha: 0.9 * k });
-    g.poly(ragged(x - 1, y - 2, w + 2, 5, `${id}l`, 1.5)).fill({ color: M.lit, alpha: k });
+    g.poly(ragged(x, y, w, Math.max(10, h), id, 3)).fill({ color: M.body, alpha: 0.92 * k });
+    // Lichen rosettes on its face, a few paler.
+    for (let s2 = 0; s2 < Math.round(w / 14); s2++) {
+      const r = hash01(id, s2 + 140);
+      g.ellipse(
+        x + 4 + r * (w - 8),
+        y + 4 + hash01(id, s2 + 141) * Math.max(4, h - 6),
+        3 + r * 4,
+        2 + r * 2,
+      ).fill({
+        color: r < 0.4 ? M.lit : mix(M.body, M.lit, 0.45),
+        alpha: 0.5 * k,
+      });
+    }
+    g.poly(ragged(x - 1, y - 2, w + 2, 4, `${id}l`, 1.5)).fill({ color: M.lit, alpha: 0.9 * k });
     for (let s = 0; s < Math.round(w / 7); s++) {
       const r = hash01(id, s + 90);
       const fx = x + 3 + r * (w - 6);
@@ -653,28 +664,51 @@ export class Kit {
     clock: number,
   ): void {
     const C = KIT.cover;
-    // A dense mass of roots: soft-edged blobs filled near-black, root cords across, a faint edge.
-    g.poly(ragged(x - 20, y - 20, w + 40, h + 40, id, 26)).fill({ color: C.body, alpha: 0.96 * k });
-    for (let c = 0; c < Math.round((w + h) / 40); c++) {
+    // A curtain of roots in front of the hidden space: a dark mass, its lower edge breaking into hanging strands
+    // that sway a little, a few lit fibres on the edge (it is a thing, not a hole in the picture).
+    g.poly(ragged(x - 16, y - 16, w + 32, h + 8, id, 18)).fill({ color: C.body, alpha: 0.97 * k });
+    const n = Math.max(8, Math.round(w / 9));
+    for (let c = 0; c < n; c++) {
       const r = hash01(id, c);
+      const sx = x - 10 + (c / (n - 1)) * (w + 20);
+      const len = 30 + 90 * hash01(id, c + 40);
+      const sway = Math.sin(clock * 0.8 + c * 0.7) * 3;
+      const wd = 3 + 6 * hash01(id, c + 80);
+      const by = y + h - 10;
+      g.poly([
+        sx - wd,
+        by,
+        sx + wd,
+        by,
+        sx + sway + wd * 0.2,
+        by + len,
+        sx + sway - wd * 0.3,
+        by + len * 0.9,
+      ]).fill({
+        color: r < 0.3 ? C.root : C.body,
+        alpha: 0.97 * k,
+      });
+    }
+    // Root cords across the mass, and its lit fringe.
+    for (let c = 0; c < Math.round((w + h) / 60); c++) {
+      const r = hash01(id, c + 200);
       const sx = x + r * w;
-      const sy = y - 10;
-      g.moveTo(sx, sy).bezierCurveTo(
-        sx + (r - 0.5) * 80,
-        y + h * 0.3,
-        sx - (r - 0.5) * 60,
+      g.moveTo(sx, y - 10).bezierCurveTo(
+        sx + (r - 0.5) * 70,
+        y + h * 0.35,
+        sx - (r - 0.5) * 50,
         y + h * 0.7,
-        sx + (r - 0.5) * 40,
-        y + h + 10,
+        sx + (r - 0.5) * 30,
+        y + h,
       );
     }
-    g.stroke({ color: C.root, width: 7, alpha: k, cap: 'round' });
-    g.poly(ragged(x - 20, y - 20, w + 40, h + 40, id, 26)).stroke({
-      color: C.edge,
-      width: 2,
-      alpha: 0.4 * k,
-    });
-    void clock;
+    g.stroke({ color: C.root, width: 5, alpha: k, cap: 'round' });
+    for (let c = 0; c < Math.round(w / 30); c++) {
+      const sx = x + hash01(id, c + 300) * w;
+      const by = y + h - 4;
+      g.moveTo(sx, by).lineTo(sx + Math.sin(clock + c) * 2, by + 20 + 30 * hash01(id, c + 310));
+    }
+    g.stroke({ color: C.edge, width: 1.2, alpha: 0.5 * k });
   }
 }
 

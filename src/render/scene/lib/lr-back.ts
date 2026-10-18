@@ -54,9 +54,9 @@ const C = {
     moon: 0x9fb8d8,
   },
   roots: {
-    wall: 0x05080b,
-    wallDeep: 0x020305,
-    fibre: [0x0a0f13, 0x0d1419, 0x081014, 0x101a20] as readonly number[],
+    wall: 0x081018,
+    wallDeep: 0x03060a,
+    fibre: [0x0e161d, 0x121c24, 0x0c141b, 0x16222c] as readonly number[],
     split: 0x010203,
     column: 0x070b0e,
     columnLit: 0x1a2a34,
@@ -118,8 +118,8 @@ export function lanternFog(band: Band, layer: 'far' | 'mid', rect: LayerRect): F
   const warm = band !== 'roots';
   const far = layer === 'far';
   return {
-    color: warm ? (far ? 0x3a2414 : 0x2a1a10) : far ? 0x14222c : 0x0e1820,
-    warm: warm ? 0x4a2c16 : 0x16242e,
+    color: warm ? (far ? 0x3a2414 : 0x2a1a10) : far ? 0x1c3242 : 0x122230,
+    warm: warm ? 0x4a2c16 : 0x1e3444,
     yTop: rect.y + rect.h * 0.35,
     yFull: rect.y + rect.h * 0.95,
     alphaTop: 0.08,

@@ -294,11 +294,11 @@ const HALL_GRADE: ZoneGrade = {
 };
 const ROOTS_GRADE: ZoneGrade = {
   ...ZONE_GRADE,
-  exposure: [1.16, 1.16, 1.16],
+  exposure: [1.42, 1.42, 1.42],
   contrast: [0.36, 0.36, 0.36],
   pivot: [0.38, 0.38, 0.38],
   shadowTint: [0x061626, 0x061626, 0x061626],
-  shadowLift: [0.18, 0.18, 0.18],
+  shadowLift: [0.22, 0.22, 0.22],
   highlightTint: [0xe0f4ff, 0xe0f4ff, 0xe0f4ff],
   highlightWarmth: [0.25, 0.25, 0.25],
   saturation: [1.06, 1.06, 1.06],

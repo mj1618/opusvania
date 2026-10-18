@@ -16,8 +16,9 @@
 import { Container, Graphics } from 'pixi.js';
 import type { EnvModule, SceneContext, SceneFrame } from '../scene/index';
 import { lanternTops } from '../scene/lib/lr-terrain';
-import { LOOK } from '../scene/lib/room-look';
+import { isInterior, LOOK } from '../scene/lib/room-look';
 import { Creatures } from './creatures';
+import { drawMotes, InteriorDepth } from './fore';
 import { Fx } from './fx';
 import { GlowPool } from './glow';
 import { Kit } from './kit';
@@ -30,6 +31,7 @@ export class LanternPieces implements EnvModule {
   private readonly creatures = new Creatures();
   private fx!: Fx;
   private water: RootWater | null = null;
+  private depth: InteriorDepth | null = null;
   private readonly back = new Graphics();
   private readonly front = new Graphics();
   private readonly glowBack = new GlowPool('lr-glow-back');
@@ -40,6 +42,8 @@ export class LanternPieces implements EnvModule {
   init(ctx: SceneContext): void {
     this.lamps = new Lamps(ctx.scene, ctx.lights);
     this.fx = new Fx(ctx.lights);
+    if (isInterior() && LOOK.band)
+      this.depth = new InteriorDepth(ctx.renderer, ctx.layers, LOOK.band, ctx.scene.width, LOOK.seed);
     if (LOOK.band === 'roots') {
       const w = new RootWater(ctx.scene, lanternTops(ctx.scene));
       if (w.any) {
@@ -79,6 +83,10 @@ export class LanternPieces implements EnvModule {
     this.creatures.draw(dt, clock, sim, camera, this.back, this.front, this.glowMid);
     this.fx.draw(dt, clock, sim, this.front, this.glowFront);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
+    if (this.depth && LOOK.band) {
+      this.depth.update(camera, sim.player);
+      drawMotes(clock, sim, camera, LOOK.band, this.glowFront);
+    }
     this.glowBack.end();
     this.glowMid.end();
     this.glowFront.end();
@@ -87,5 +95,6 @@ export class LanternPieces implements EnvModule {
   destroy(): void {
     this.lamps?.destroy();
     this.fx?.destroy();
+    this.depth?.destroy();
   }
 }

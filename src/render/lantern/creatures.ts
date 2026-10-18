@@ -76,43 +76,40 @@ function spider(
   const alpha = 1 - dark * 0.8;
   const body = mix(SPIDER.body, SPIDER.open, pose.flip * 0.55 + pale);
   const leg = mix(SPIDER.leg, SPIDER.open, pose.flip * 0.35 + pale * 0.8);
-  // Legs: four a side, from the cephalothorax, each a knee and a foot.
+  // Legs: four a side, radiating from the cephalothorax like a star (front pair toward the head, back pair toward
+  // the abdomen), each femur out from the body to a high knee, the tibia bending back in toward the head end.
   const cy = s * 0.95;
+  const legs: Array<[number, number, number, number, number, number]> = [];
   for (let side = -1; side <= 1; side += 2) {
     for (let i = 0; i < 4; i++) {
-      const base = at(side * s * 0.25, cy - s * 0.25 + i * s * 0.17);
-      const fan = (i - 1.5) * 0.42;
-      const step = pose.walk ? Math.sin(pose.walk + i * 1.7 + (side > 0 ? 0 : Math.PI)) * 0.25 : 0;
+      const step = pose.walk ? Math.sin(pose.walk + i * 1.7 + (side > 0 ? 0 : Math.PI)) * 0.22 : 0;
       const curl = pose.flip;
-      // Gathered: knees up over the body, feet tucked in; splayed: reaching out and down.
-      const reach = s * (1.25 + 0.9 * pose.spread) * (1 - 0.35 * curl);
-      const ka = side * (1.1 + 0.4 * pose.spread) + fan * 0.6 + step;
-      const knee = at(
-        side * reach * Math.abs(Math.sin(ka)) * 0.9,
-        cy + reach * -Math.cos(ka) * 0.8 - s * 0.6 * (1 - pose.spread) - curl * s * 0.8,
-      );
-      const foot = at(
-        side * reach * (0.7 + 0.6 * pose.spread) * (1 - 0.5 * curl),
-        cy + reach * (0.35 + 0.4 * pose.spread + fan * 0.5) * (1 - 2 * curl) + step * s,
-      );
-      g.moveTo(base[0], base[1]).lineTo(knee[0], knee[1]).lineTo(foot[0], foot[1]);
+      // Angle from the head direction (+v) round toward this side: 0.45 rad for the front pair, 2.5 for the back.
+      const theta = 0.45 + (i / 3) * 2.05 + step - (1 - pose.spread) * 0.15 * (i < 2 ? -1 : 1);
+      const L1 = s * (1.05 + 0.55 * pose.spread) * (1 - 0.4 * curl) * (i === 0 || i === 3 ? 1.12 : 1);
+      const L2 = s * (1.15 + 0.6 * pose.spread) * (1 - 0.45 * curl) * (i === 0 ? 1.15 : 1);
+      const bend = (0.95 - 0.55 * pose.spread + 0.9 * curl) * side;
+      const bu = side * s * 0.28;
+      const bv = cy - s * 0.12 + (i - 1.5) * s * 0.13;
+      const ku = bu + side * Math.sin(theta) * L1;
+      const kv = bv + Math.cos(theta) * L1;
+      const fu = ku + side * Math.sin(theta - bend * side) * L2 * 0.95;
+      const fv = kv + Math.cos(theta - bend * side) * L2;
+      const B = at(bu, bv);
+      const K = at(ku, kv);
+      const F = at(fu, fv);
+      legs.push([B[0], B[1], K[0], K[1], F[0], F[1]]);
     }
   }
-  g.stroke({ color: leg, width: Math.max(1.2, s * 0.13), alpha, join: 'round', cap: 'round' });
-  // The light catching the upper leg segments (the lamp's glint on them, even in the dark).
-  for (let side = -1; side <= 1; side += 2) {
-    for (let i = 0; i < 4; i += 2) {
-      const base = at(side * s * 0.25, cy - s * 0.25 + i * s * 0.17);
-      const reach = s * (1.25 + 0.9 * pose.spread);
-      const ka = side * (1.1 + 0.4 * pose.spread);
-      const knee = at(
-        side * reach * Math.abs(Math.sin(ka)) * 0.9,
-        cy + reach * -Math.cos(ka) * 0.8 - s * 0.6 * (1 - pose.spread),
-      );
-      g.moveTo(base[0], base[1]).lineTo(knee[0], knee[1]);
-    }
-  }
-  g.stroke({ color: SPIDER.legLit, width: Math.max(0.8, s * 0.05), alpha: 0.6 * (1 - dark * 0.6) });
+  // Femurs thick, tibiae fine: a spider's legs taper to the tips.
+  for (const [bx, by, kx, ky] of legs) g.moveTo(bx, by).lineTo(kx, ky);
+  g.stroke({ color: leg, width: Math.max(1.4, s * 0.15), alpha, join: 'round', cap: 'round' });
+  for (const [, , kx, ky, fx, fy] of legs) g.moveTo(kx, ky).lineTo(fx, fy);
+  g.stroke({ color: leg, width: Math.max(1, s * 0.08), alpha, join: 'round', cap: 'round' });
+  // The light catching each femur's upper edge (the lamp's glint on them, even in the dark), and the knees.
+  for (const [bx, by, kx, ky] of legs) g.moveTo(bx, by - 1).lineTo(kx, ky - 1);
+  g.stroke({ color: SPIDER.legLit, width: Math.max(0.8, s * 0.045), alpha: 0.6 * (1 - dark * 0.5) });
+  for (const [, , kx, ky] of legs) g.circle(kx, ky, Math.max(1, s * 0.07)).fill({ color: leg, alpha });
   // Abdomen (up) and cephalothorax (down).
   const ab = at(0, -s * 0.15);
   g.ellipse(ab[0], ab[1], s, s * 1.12).fill({ color: body, alpha });
@@ -137,9 +134,13 @@ function spider(
   g.ellipse(ce[0], ce[1], s * 0.48, s * 0.5).fill({ color: mix(body, 0x000000, 0.15), alpha });
   // Eyes: a little cluster at the head end; they kindle with the tell (the hunt colour) and always glint.
   const eyeC = pose.tell > 0 ? mix(SPIDER.eye, SPIDER.hunt, Math.min(1, pose.tell * 1.5)) : SPIDER.eye;
-  for (let k = 0; k < 4; k++) {
-    const e = at((k - 1.5) * s * 0.16, cy + s * 0.32 + (k === 0 || k === 3 ? -s * 0.06 : 0));
-    g.circle(e[0], e[1], Math.max(1, s * 0.07)).fill({ color: eyeC, alpha: 0.95 });
+  // Two rows of eyes, the middle pair largest (an orb-weaver's), each a small wet glint.
+  for (let k = 0; k < 8; k++) {
+    const row = k < 4 ? 0 : 1;
+    const c = (k % 4) - 1.5;
+    const big = Math.abs(c) < 1 ? 1 : 0.7;
+    const e = at(c * s * 0.14 * (row ? 0.8 : 1), cy + s * (0.24 + row * 0.13) - Math.abs(c) * s * 0.03);
+    g.circle(e[0], e[1], Math.max(0.8, s * 0.055 * big)).fill({ color: eyeC, alpha: 0.6 + 0.35 * big });
   }
   const eyes = at(0, cy + s * 0.3);
   const glint = 0.12 + 0.5 * pose.tell + 0.45 * dark + 0.06 * Math.sin(clock * 3 + seed);

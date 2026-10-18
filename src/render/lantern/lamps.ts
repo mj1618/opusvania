@@ -655,10 +655,10 @@ export class Lamps {
           .circle(f.x, f.y, 24 + 210 * e)
           .stroke({ color: LR.lamp.paperHot, width: 6 * (1 - u) + 1, alpha: 0.8 * (1 - u) });
       } else if (f.kind === 'kindle') {
-        glow.add(f.x, f.y, 60 + 380 * e, LR.wick.halo, 0.7 * (1 - u));
-        front
-          .circle(f.x, f.y, 20 + 160 * e)
-          .stroke({ color: 0xeaf4ff, width: 3 * (1 - u) + 1, alpha: 0.85 * (1 - u) });
+        // A silver bloom: a soft swell of light out of the bud, a faint ring running out ahead of it.
+        glow.add(f.x, f.y, 40 + 260 * e, LR.wick.halo, 0.45 * (1 - u) * (1 - u));
+        glow.add(f.x, f.y, 30, 0xffffff, 0.6 * (1 - u));
+        front.circle(f.x, f.y, 20 + 200 * e).stroke({ color: 0xeaf4ff, width: 1.2, alpha: 0.35 * (1 - u) });
       } else if (f.kind === 'fan') {
         glow.add(f.x, f.y, 80 + 140 * e, LR.wick.halo, 0.55 * (1 - u));
       } else if (f.kind === 'refuse') {
