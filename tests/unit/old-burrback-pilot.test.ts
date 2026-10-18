@@ -191,7 +191,7 @@ function pilot(react: number, slop: number, seed: number, maxFrames = 60 * 240):
         run.hits++;
         if (e.mode === 'alert' || e.mode === 'walk') learned = true;
         HURT_FROM[modeBefore] = (HURT_FROM[modeBefore] ?? 0) + 1;
-        const k = `${e.mode}${e.feints ? `/f${e.feints}` : ''}`;
+        const k = `p${e.phase}:${modeBefore}`;
         HURT_BY[k] = (HURT_BY[k] ?? 0) + 1;
       }
       if (ev.type === 'fade') run.fades++;

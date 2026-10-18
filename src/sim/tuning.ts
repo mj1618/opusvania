@@ -762,7 +762,7 @@ export const defaultTuning = withVariants({
     recurlFrames: 24,
     /** Its roll hit her: it stops, curled (harmless), this long before it rolls on. */
     rollRestFrames: 90,
-    /** Curled, the ball is this high at its feet (its touch; render draws it so): a hop of hers clears it. */
+    /** Curled, the ball is a circle this wide at its feet's middle (its touch; render draws it so): she jumps it. */
     rollTouchPx: 64,
     /** After this many wall bounces in one roll it rolls itself dizzy: open briefly (no standoff in phase 2). */
     rollTireBounces: 6,
@@ -1489,18 +1489,19 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
     oldBurrback: {
       ...(base.burrback as T['burrback']),
       // Feel review r2: twice the size (it was shorter than she is), its dome and ram to match.
-      width: 160,
-      height: 96,
+      // (Round 6, the den at 1.45 zoom: 1.6x (was 160 x 96) so it reads 2.5x her height; its reach to match.)
+      width: 256,
+      height: 154,
       hp: 20,
       speed: 2.2,
       noticePx: 2400,
       dozePx: 0,
-      strikePx: 230,
-      provokedPx: 320,
+      strikePx: 370,
+      provokedPx: 510,
       // The tell and the ram (first-timer r1, feel r2, human-like r1): a 28 f tell, then 300 px at 16 px/f; a
       // jump started in the tell is passed under (`ramUnderJump`), one started up to ~10 f into the ram clears it.
       windupFrames: 28,
-      chargePx: 300,
+      chargePx: 420,
       chargeSpeed: 16,
       // (First-timer r6: "only the flipped belly takes damage" read late: the windows after a miss are longer.)
       recoverFrames: 100,
@@ -1516,11 +1517,11 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       openWinded: true,
       huntSpeed: 4.2,
       // (It stops this far off and braces from there: a ram from point blank was unanswerable.)
-      huntStopPx: 180,
+      huntStopPx: 290,
       openHits: 3,
       touchRecoverFrames: 24,
       risePush: 7,
-      strikeMinPx: 140,
+      strikeMinPx: 220,
       // (Getting up is her cue to step out: long enough to see.)
       riseFrames: 30,
       domeContact: true,
@@ -1548,6 +1549,9 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // (Round 5: the three-phase boss under the oak. Round 6, video r4 "fights 60-120 s": 20 hp: phase 1 to 12,
       // phase 2 to 5, phase 3 the last 5: a taproot window of 2 cuts, then the last lie.)
       phased: true,
+      // (Curled: a ball 120 across.)
+      rollTouchPx: 120,
+      underExtraPx: 96,
       pogoShell: true,
       asleep: true,
       wakePx: 1400,

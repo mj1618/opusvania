@@ -392,7 +392,14 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
 /** The brace begins (`windup`, `enemyWindup`): facing as it is. */
 function startBrace(e: EnemyState, info: StepInfo, B: Row): void {
   e.chargeLeft = frames(e.phase === 3 ? B.p3ChargePx : B.chargePx, 1);
-  const n = tellFrames(e, B);
+  let n = tellFrames(e, B);
+  // (Round 6: braced closer than `strikeMinPx` (no room behind it to back off), the tell is longer by what the
+  // ram would have taken to cover the difference: never less time to answer than from `strikeMinPx`.)
+  if (B.strikeMinPx > 0) {
+    const p = info.state.player;
+    const gap = Math.abs(p.x + p.w / 2 - (e.x + e.w / 2)) - (p.w + e.w) / 2;
+    if (gap < B.strikeMinPx) n += frames((B.strikeMinPx - Math.max(0, gap)) / Math.max(1, B.chargeSpeed));
+  }
   // (Curled, it uncurls into the brace.)
   e.tuck = 0;
   // (A fresh exchange: the old burrback's feint comes first, one pogo a brace, its shell shut.)
@@ -696,9 +703,10 @@ function roll(e: EnemyState, info: StepInfo, B: Row): boolean {
       return false;
     }
   }
-  // (Curled, it is a ball `rollTouchPx` high at its feet: a hop clears it.)
+  // (Curled, it is a ball `rollTouchPx` across at its feet's middle: a jump clears it.)
   const top = e.y + e.h - B.rollTouchPx;
-  const over = p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && top < p.y + p.h;
+  const bx = e.x + e.w / 2 - B.rollTouchPx / 2;
+  const over = p.x < bx + B.rollTouchPx && bx < p.x + p.w && p.y < e.y + e.h && top < p.y + p.h;
   if (over && p.thrown && p.lureThrow > 0) {
     unroll(e, info, 'thrown');
     p.vy = -info.t.attack.pogoSpeed;
@@ -1639,8 +1647,15 @@ export const burrback: KindRules = {
     if (B.bodyHarmless && (e.mode === 'charge' || e.mode === 'roll')) {
       if ((p.x + p.w / 2 - (e.x + e.w / 2)) * e.facing < 0) return false;
     }
-    // (Rolling: the ball, `rollTouchPx` high.)
-    if (e.mode === 'roll') return p.y + p.h > e.y + e.h - B.rollTouchPx;
+    // (Rolling: the ball, a circle `rollTouchPx` across at its feet's middle.)
+    if (e.mode === 'roll') {
+      const r = B.rollTouchPx / 2;
+      const cx = e.x + e.w / 2;
+      const cy = e.y + e.h - r;
+      const nx = Math.max(p.x, Math.min(p.x + p.w, cx)) - cx;
+      const ny = Math.max(p.y, Math.min(p.y + p.h, cy)) - cy;
+      return nx * nx + ny * ny < r * r;
+    }
     if (!B.domeContact) return true;
     const H = e.h * B.domeHeight;
     const sy = H * B.domeShoulder;

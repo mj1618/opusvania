@@ -228,14 +228,20 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
     on the floor as a front passes, a pip (`waveHit`: the framework hurts her as a touch; jump it). In P1 and P3 it
     rears and slams every `slamEveryRams` 4 rams, as well as against camping. Pilots and bots now jump it (the pilot
     from the rear's end; `fight.ts` `waveComing`).
-  - Size stays 160 x 96 in the sim: the jump over a ram, the 88 px under the taproot and the 192 px ledges are built
-    on it. "≥ 2.5x her height on screen" is the camera's zoom.
+  - **Scaled 1.6x** (render's den zoom 1.45 still showed it her height): 256 x 154, `strikePx` 370, `provokedPx` 510,
+    `strikeMinPx` 220, `huntStopPx` 290, ram 420 px (480 caught one who jumps away: 420 is the longest that still
+    lets a jump away clear it), `underExtraPx` 96. Her full jump (apex 276, 33 f over 154 px) still clears it; it
+    cannot pass under the taproot (88 px clear); it passes under the den's trunk columns (240 clear).
+  - A brace closer than `strikeMinPx` (no room to back off: a wall, the taproot) has a longer tell, by what the ram
+    would take to cover the difference (point-blank braces hit the slow pilot 200 times).
+  - Curled, the ball is a circle `rollTouchPx` 120 across at its feet's middle (touch and landing pogo); render
+    draws it so.
   - A roll that starts against a wall rolls out the other way; the roll lands its own pogos (not the shared stomp).
   - **Gotcha fixed**: kinds scanned `info.events` whole; tests and pilots pass one growing array, so an old event
     (an `enemyBlock` from minutes ago) unrolled every roll at once. Scan from `info.first` (this step's first event).
-  - Numbers: slow pilot (den replica) 20/25-frame hands win in 1-3 tries, 34-105 s; 30-frame hands half lose in 4
-    min. `npm run humanplay -- den` (6 seeds a skill): all 18 down; casual 1-4 fades (6-22 hits, 36-82 s), average
-    0-5, skilled 0-3 (33-89 s).
+  - Numbers (scaled): slow pilot (den replica) 22 of 24 at the first try, all win, 40-107 s, 0-7 hits.
+    `npm run humanplay -- den` (6 seeds a skill): all 18 down; casual 0-3 fades, 45-128 s; average 0-2, 39-99 s;
+    skilled 0-2, 44-71 s.
 - **First-timer r6**: windows after a miss are 100 f (was 70); its ram and its ball hurt only from their front
   half (behind it as it goes she is let be). A pogo on its brace and a throw-cut already land (chip / flip). The
   crack's blade of light is no mechanic: staging should land it on the taproot (phase 3's target), out of the

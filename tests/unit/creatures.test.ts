@@ -245,7 +245,7 @@ describe('the old burrback', () => {
     // before the ram and must be jumped again). Later rams: from frame 0.
     for (const later of [false, true]) {
       const tell = later ? O.windupFrames : Math.round(O.windupFrames * O.firstTellMult);
-      for (const gap of [140, 180, 230])
+      for (const gap of [O.strikeMinPx, O.strikeMinPx + 40, O.strikeMinPx + 90])
         for (let off = later ? 0 : 12; off <= tell + 4; off += 2)
           // Straight up, over it, and away from it.
           for (const jump of ['J24', 'R+J24', 'L+J24']) {
@@ -258,7 +258,7 @@ describe('the old burrback', () => {
             for (let i = 0; i < 200 && !types(e2).includes('enemyWindup'); i++) e2 = c.run('.1');
             const after = c.run(`${off > 0 ? `.${off} ` : ''}${jump} .80`);
             expect(types(after)).toContain('enemyCharge');
-            expect(types(after)).not.toContain('hurt');
+            expect(types(after), `later ${later} gap ${gap} off ${off} ${jump}`).not.toContain('hurt');
           }
     }
   });
@@ -388,7 +388,7 @@ describe('the old burrback', () => {
     const s = newSim(pit());
     const o = enemy(s, 'o');
     o.mode = 'walk';
-    s.place(o.x - 120, FLOOR);
+    s.place(o.x - O.strikeMinPx - 40, FLOOR);
     let ev: SimEvent[] = [];
     for (let i = 0; i < 60 && !types(ev).includes('enemyWindup'); i++) ev = s.run('.1');
     expect(o.braced).toBe(true);
