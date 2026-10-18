@@ -19,8 +19,8 @@ import type { GlowPool } from './glow';
 
 export const FORE = {
   /** World px between masses (at the layer's own scale), their size range, blur strength. */
-  gap: 760,
-  size: [200, 400] as readonly number[],
+  gap: 1100,
+  size: [150, 280] as readonly number[],
   blur: 6,
   /** Near-black tones per band. */
   tone: { hall: 0x0a0605, roots: 0x020407, cache: 0x080504, night: 0x04070a } as Record<LanternBand, number>,
@@ -156,10 +156,12 @@ export class InteriorDepth {
       const nearHer =
         Math.max(0, 1 - Math.abs(p.x - hx) / 520) *
         Math.max(0, 1 - Math.abs((p.top ? vis.y : vis.y + vis.h) - hy) / 460);
-      const out = Math.max(Math.max(0, Math.min(1, (0.75 - d) / 0.35)), Math.min(1, nearHer * 2));
+      // (Only the outer quarter of each side keeps them: in the middle half they read as smudges on the room.)
+      const out = Math.max(Math.max(0, Math.min(1, (0.8 - d) / 0.2)), Math.min(1, nearHer * 2));
       p.s.visible = d < 1.3;
       if (!p.s.visible) continue;
-      const pull = out * p.reach * 1.4;
+      // (Out all the way: its whole height past the edge, so nothing of it is left in the frame.)
+      const pull = out * Math.abs(p.s.height);
       p.s.position.set(p.x, p.top ? vis.y - pull : vis.y + vis.h + pull);
     }
   }

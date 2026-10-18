@@ -373,7 +373,7 @@ export function buildLanternFar(
         px += Math.cos(a) * 14 + rr(r, -5, 5);
         py += Math.sin(a) * 14;
       }
-      g.poly([...pts, ...back]).fill(col.moon);
+      g.poly([...pts, ...back]).fill({ color: col.moon, alpha: 0.45 });
       L.reset(cx, cy + len / 2, 60, len * 0.6, 0.9);
       L.lit(cx, cy + len / 2, 70, len * 0.55, 0.6);
       cracks.push({ x: cx, y: cy, len, a });
