@@ -159,3 +159,7 @@ Contract with the builders (room data, render only; none placed yet):
   down). At 1.45 the beetle is still about her own height on screen: ≥ 2.5x needs the creature scaled.
 - **`stage.leaks [{x, y, w, h, dir?, up?}]`**: thin moonlight beams out of a crack (up through a floor panel with
   `up`); **`stage.strays [{x, y, r, count?}]`**: moths wheeling round a spot. For the builders' signposts.
+- **Round 6c** (the boss 1.6x, b53ae42): the slam's wave fronts run at the sim's `slamWaveSpeed` (12 px/f) to its
+  reach, a red crest with a bright edge and dust behind (it costs a pip on the floor); the ball is drawn at
+  `rollTouchPx` (120 now); the crack's blade of light lands on the taproot (the spawn's `taproot` span), out of the
+  ball's path.

@@ -113,8 +113,8 @@ interface Shard {
   life: number;
 }
 
-/** The slam's floor warning (px each way at most) and its shockwave (px/s, its life). */
-export const SLAM_FX = { warnPx: 900, wave: 2200, life: 0.6 };
+/** The slam's floor warning (px each way at most); its wave's fade at the end (s) and its crest's height (px). */
+export const SLAM_FX = { warnPx: 900, fade: 0.3, crest: 34 };
 /** Small creatures at a wide frame: drawn x (`zoomAt` / zoom), up to `maxScale`; the pale rim under them. */
 const SMALL = { zoomAt: 1.1, maxScale: 2.2, rim: 0.18 };
 /** A carriers' trail: px between scent dots, their radius, opacity. */
@@ -354,7 +354,8 @@ export class CreatureView {
             y: e.y,
             r: e.px,
             t: 0,
-            life: e.big ? SLAM_FX.life * 1.4 : SLAM_FX.life,
+            // (Its fronts run at the sim's own speed, so what is drawn is what costs a pip.)
+            life: e.px / (tuning.oldBurrback.slamWaveSpeed * 60) + SLAM_FX.fade,
           });
           this.bursts.push({ kind: 'ring', x: e.x, y: e.y - 20, r: e.big ? 60 : 40, t: 0, life: 0.4 });
           break;
@@ -1283,17 +1284,30 @@ export class CreatureView {
       if (u < 0) continue;
       const ease = 1 - (1 - u) * (1 - u);
       if (b.kind === 'wave') {
-        // The slam's shockwave: two fronts running out along the floor to its reach, a ridge of dust on each.
-        const d = Math.min(b.r, SLAM_FX.wave * b.t);
+        // The slam's wave (it costs a pip on the floor; a jump clears it): two fronts running out along the floor at
+        // the sim's speed to its reach, each a bright crest over a red ridge, dust kicked up behind; fading at the end.
+        const speed = tuning.oldBurrback.slamWaveSpeed * 60;
+        const d = Math.min(b.r, speed * b.t);
+        const end = Math.max(0, b.t - b.r / speed);
+        const a = 1 - Math.min(1, end / SLAM_FX.fade);
         for (const sd of [-1, 1]) {
           const fx = b.x + sd * d;
-          g.moveTo(fx, b.y)
-            .lineTo(fx - sd * 30, b.y - 18 * (1 - u))
-            .lineTo(fx - sd * 70, b.y)
-            .stroke({ color: CREATURE.flash, width: 3, alpha: 0.8 * (1 - u) });
+          const H = SLAM_FX.crest;
+          g.poly([fx + sd * 6, b.y, fx - sd * 14, b.y - H, fx - sd * 60, b.y]).fill({
+            color: CREATURE.hunt,
+            alpha: 0.75 * a,
+          });
+          g.moveTo(fx + sd * 6, b.y)
+            .lineTo(fx - sd * 14, b.y - H)
+            .stroke({ color: CREATURE.flash, width: 3, alpha: 0.95 * a });
+          for (let k = 1; k <= 3; k++)
+            g.circle(fx - sd * (30 + 22 * k), b.y - 6 - 5 * k, 4 + 2 * k).fill({
+              color: 0x8a93a8,
+              alpha: 0.35 * a,
+            });
           g.moveTo(b.x, b.y - 1)
             .lineTo(fx, b.y - 1)
-            .stroke({ color: CREATURE.hunt, width: 2, alpha: 0.35 * (1 - u) });
+            .stroke({ color: CREATURE.hunt, width: 2, alpha: 0.3 * a });
         }
       } else if (b.kind === 'sweep') {
         // The heavy cut's sweep: a thick crescent about her, along the cut (`dir` = its angle), thinning out.

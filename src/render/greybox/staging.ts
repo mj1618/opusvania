@@ -914,14 +914,22 @@ export class StagingView {
         // One blade of moonlight through a crack in it, down to the den's floor: faint (first-timer r6 read the crack and
         // its beam as a target to reach; it is only the first light).
         const k = Math.min(1, this.denCrackT / T.crackIn);
-        const cx = col.x;
+        // It lands on the taproot (phase 3's target, out of the ball's path): from the plug's edge nearest it.
+        const tap = (sim.scene.enemies ?? []).find((sp) => sp.kind === 'oldBurrback' && sp.taproot)?.taproot;
+        const lx = tap ? (tap[0] + tap[1]) / 2 : col.x;
+        const cx = Math.min(P.x + P.w - 24, Math.max(P.x + 24, lx));
         back
           .moveTo(cx - 3, P.y)
           .lineTo(cx + 9, P.y + P.h)
           .stroke({ color: C_DEN.light, width: 1.5, alpha: 0.4 * k });
         back
-          .poly([cx - 4, P.y + P.h, cx + 10, P.y + P.h, cx + 26, col.foot, cx - 20, col.foot])
+          .poly([cx - 4, P.y + P.h, cx + 10, P.y + P.h, lx + 22, col.foot, lx - 22, col.foot])
           .fill({ color: C_DEN.light, alpha: T.bladeAlpha * k });
+        if (tap)
+          back.rect(tap[0], P.y + P.h, tap[1] - tap[0], col.foot - P.y - P.h).fill({
+            color: C_DEN.light,
+            alpha: T.bladeAlpha * 0.6 * k,
+          });
       }
     } else {
       const t = this.denFallT;
