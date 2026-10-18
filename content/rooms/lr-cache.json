@@ -37,8 +37,48 @@
     },
     {
       "tag": "floating",
-      "x": 860,
-      "y": 340,
+      "x": 500,
+      "y": 1060,
+      "w": 120,
+      "h": 24,
+      "kick": false
+    },
+    {
+      "tag": "floating",
+      "x": 640,
+      "y": 700,
+      "w": 120,
+      "h": 24,
+      "kick": false
+    },
+    {
+      "tag": "floating",
+      "x": 900,
+      "y": 560,
+      "w": 120,
+      "h": 24,
+      "kick": false
+    },
+    {
+      "tag": "floating",
+      "x": 1160,
+      "y": 700,
+      "w": 120,
+      "h": 24,
+      "kick": false
+    },
+    {
+      "tag": "floating",
+      "x": 1300,
+      "y": 1060,
+      "w": 120,
+      "h": 24,
+      "kick": false
+    },
+    {
+      "tag": "floating",
+      "x": 1120,
+      "y": 400,
       "w": 200,
       "h": 30,
       "kick": false
@@ -237,16 +277,16 @@
       },
       {
         "id": "cache-shelf",
-        "x": 960,
-        "y": 340
+        "x": 1220,
+        "y": 400
       }
     ]
   },
   "hollows": [
     {
       "id": "bright",
-      "x": 870,
-      "y": 240,
+      "x": 1130,
+      "y": 300,
       "w": 180,
       "h": 100,
       "upgrade": "brightKindle"
@@ -288,7 +328,7 @@
       {
         "name": "cache",
         "x": 960,
-        "y": 900
+        "y": 860
       }
     ]
   }

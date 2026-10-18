@@ -26,6 +26,7 @@ import { withShortcuts } from '../../src/sim/world';
 import { ARRIVALS, BASE_KIT, EDGES, LOCKS, type Lock, type LrEdge } from '../levels/lanternroot-graph';
 import { DRIVERS } from './drivers';
 import {
+  airKindleMacros,
   baseMacros,
   cutMacros,
   explore,
@@ -61,6 +62,7 @@ export function macro(name: string): Macro {
       ...cutMacros(),
       ...flingMacros(),
       kindleMacro(),
+      ...airKindleMacros(),
     ])
       REGISTRY.set(m.name, m);
   }
@@ -135,6 +137,8 @@ export interface Proof {
   edge: string;
   ok: boolean;
   macros?: string[];
+  /** A driver's whole input, run-length (its proof replays it from the driver's start). */
+  tape?: number[];
   frames?: number;
   why?: string;
 }
@@ -157,7 +161,13 @@ export function proveEdge(e: LrEdge, back = false): Proof {
     const d = DRIVERS[e.proof.slice(7)];
     if (!d) return { edge: id, ok: false, why: `no driver ${e.proof}` };
     const r = d();
-    return { edge: id, ok: r.ok, frames: r.frames, ...(r.ok ? {} : { why: r.why }) };
+    return {
+      edge: id,
+      ok: r.ok,
+      frames: r.frames,
+      ...(r.tape ? { tape: r.tape } : {}),
+      ...(r.ok ? {} : { why: r.why }),
+    };
   }
   const { state, room, t } = setup({
     room: e.room,
@@ -176,6 +186,7 @@ export function proveEdge(e: LrEdge, back = false): Proof {
     maxNodes: e.budget ?? 2500,
     order: e.byTime ? 'time' : 'moves',
     goal: exit ? undefined : (s) => meets(room, to, s),
+    ...(exit ? { goalExit: exit } : {}),
   });
   if (exit) {
     const x = res.exits.get(exit);
@@ -322,16 +333,19 @@ export function progress(
   return { places, abilities: order, flags, upgrades, firstWith };
 }
 
-/** Every place of the level, and every find (as `room:find:id`). */
+/** Every place the graph names and every find of the level's rooms (as `room:find:id`): all must be reached. */
 export function allTargets(): string[] {
-  const out: string[] = [];
+  const out = new Set<string>();
+  for (const e of EDGES) {
+    if (!e.from.includes(':')) out.add(`${e.room}:${e.from}`);
+    if (!e.to.startsWith('flag:') && !e.to.startsWith('exit:')) out.add(`${e.room}:${e.to}`);
+  }
   for (const id of ['lr-night', 'lr-hall', 'lr-roots', 'lr-cache']) {
     const r = getRoom(id);
-    for (const p of r.marks?.places ?? []) out.push(`${id}:${p.id}`);
     for (const f of [...(r.hollows ?? []), ...(r.glades ?? []), ...(r.signs ?? []), ...(r.mothStones ?? [])])
-      out.push(`${id}:find:${f.id}`);
+      out.add(`${id}:find:${f.id}`);
   }
-  return out;
+  return [...out];
 }
 
 /** From every place reached, with every lamp spent, a moon patch (`find:<patch>`) is reachable. */
@@ -374,7 +388,10 @@ export function huntLock(
   const starts = k.from.map(
     (at) => setup({ room: k.room, at, kit: k.kit, flags: k.flags ?? [], lamps: lampsOf(k.room) }).state,
   );
-  const room = getRoom(k.room);
+  const base = getRoom(k.room);
+  const room = k.strip
+    ? ({ ...base, glades: (base.glades ?? []).filter((g) => !k.strip?.includes(g.id)) } as Room)
+    : base;
   const t = cloneTuning(defaultTuning);
   const exit = k.goal.startsWith('exit:') ? k.goal.slice(5) : null;
   const res = explore({
@@ -385,6 +402,7 @@ export function huntLock(
     maxNodes: budget,
     order: k.byTime ? 'time' : 'moves',
     goal: exit ? undefined : (s) => meets(room, k.goal, s),
+    ...(exit ? { goalExit: exit } : {}),
   });
   if (exit) {
     const x = res.exits.get(exit);
@@ -415,10 +433,12 @@ export function readTapes(): Record<string, string[]> {
 if (process.argv[1]?.endsWith('proto-1.ts')) {
   const write = process.argv.includes('--write');
   const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+  const lockOnly = process.argv.find((a) => a.startsWith('--lock='))?.slice(7);
   const tapes = readTapes();
   const out: Record<string, string[]> = { ...tapes };
   let bad = 0;
-  for (const e of EDGES) {
+  const edges = !lockOnly || process.argv.includes('--edges');
+  for (const e of edges ? EDGES : []) {
     for (const back of e.both ? [false, true] : [false]) {
       const id = back ? `${e.room}:${e.to}->${e.from}` : edgeId(e);
       if (only && !id.includes(only)) continue;
@@ -426,6 +446,8 @@ if (process.argv[1]?.endsWith('proto-1.ts')) {
       const r = proveEdge(e, back);
       const ms = Math.round(performance.now() - t0);
       if (r.ok && r.macros) out[id] = r.macros;
+      // (A driver's run: its whole input, run-length, under `driver:<name>`.)
+      if (r.ok && r.tape) out[e.proof] = [r.tape.join(',')];
       if (!r.ok) bad++;
       console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${id} ${r.frames ?? ''}f ${ms}ms ${r.why ?? ''}`);
     }
@@ -437,15 +459,16 @@ if (process.argv[1]?.endsWith('proto-1.ts')) {
   );
   console.log(`softlocks: ${softlocks().join(', ') || 'none'}`);
   console.log(`fuel: ${fuelProblems().join(', ') || 'every kindle has renewable fuel'}`);
-  if (process.argv.includes('--locks'))
+  if (process.argv.includes('--locks') || lockOnly)
     for (const k of LOCKS) {
+      if (lockOnly && k.id !== lockOnly) continue;
       const t0 = performance.now();
       const r = huntLock(k);
       console.log(
         `lock ${r.held ? 'held' : 'SKIP'} ${k.id} (${r.nodes} nodes, ${Math.round(performance.now() - t0)}ms) ${r.found ?? ''}`,
       );
     }
-  if (write) {
+  if (write && edges) {
     writeFileSync(TAPES_FILE, `${JSON.stringify(out, null, 2)}\n`);
     console.log(`wrote ${TAPES_FILE}`);
   }

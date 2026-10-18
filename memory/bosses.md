@@ -78,3 +78,17 @@ Shifts (nothing attacks): p1end 130 f (spokes fall, it climbs), p2end 100 f (it 
 - First-timer numbers are a bot's guess: needs the first-timer agent and Matt.
 - The lab's door is east (wood-grove's is west): P2's first drop is on the far side from a west entry too.
 - No audio cues for the tells (sound is muted until Matt approves anyway).
+
+## The Gloamweaver (Lanternroot's mini-boss, 2026-10-18; src/sim/boss/gloam.ts, tuning.gloam)
+On the same framework (lock, phase table, cues, retry, defeat): boss `kind: 'gloamweaver'`, creature kind
+`gloamweaver`, `heart` = the Gloam lamp (a `great` lure the boss runs on the `gloam` row: no pull, no fling, shielded),
+no rings; `hub`, `orbR`, `wicks` (the arena's four moonwicks), `high` (the pair over the hub). The web (`orb`) has
+`grab: false`: it holds nothing. Spiderlings are the room's danglers with `fight` + `respawn` 240.
+| phase | what | how it is won |
+|---|---|---|
+| P1 find it | hunts round its orb (r 520 x `orbShare`) toward the sector over her at `huntSpeed` 3, never into silver light; every cut glances | kindle a wick within `exposePx` 420 of it (or with it cornered): it falls, lies open `openFrames` 150 (at most `exposeCuts` 4 a window), climbs back; `p1Hp` 8 (a retry 4) |
+| P2 the drops | the Weaver's P2 (tell 45, drop 18, swing 60, winded 90; a cut thread: stunned 120), thread `threadPx` 920 from the canopy at 300 | its swing stops (winded) at the edge of silver light; `p2Hp` 6 |
+| P3 the Gloam lamp | it wraps the lamp at the hub | the high pair burning at once floods the moon-hole (`bossCue p3:moonhole`), or `throwsToFall` 2 throw-cuts (`bossCue p3:throwCut`) knock it off; on the floor `p3Hp` 3 cuts, the lamp dies with it |
+Defeat: `gloam-down` (the east door's gate, the Gust glade's `when`), the lamp out (60 moths). A fade re-forms her at
+the hall's patch over the seal (glow rooms keep the saved patch anywhere). The winning bot (tools/solve/drivers.ts
+`gloam`, the solver's proof) wins in ~66 s with every creature in, its glow earned in the fight.

@@ -35,12 +35,48 @@ export interface DriverResult {
   ok: boolean;
   frames: number;
   why?: string;
+  /** Every input it gave, run-length (`[mask, count, ...]`): replayed from the same setup it is the same run. */
+  tape?: number[];
 }
+
+/** The setups the drivers start from (a stored tape replays from the same one). */
+export const DRIVER_SETUPS: Record<
+  string,
+  { room: string; at: string; kit: string[]; flags?: string[]; creatures: boolean }
+> = {
+  vault: {
+    room: 'lr-hall',
+    at: 'gallery-w',
+    kit: ['glide', 'wallJump', 'doubleJump', 'kindle', 'gust'],
+    creatures: false,
+  },
+  answer: {
+    room: 'lr-night',
+    at: 'cap-side',
+    kit: ['glide', 'wallJump', 'doubleJump', 'kindle', 'gust'],
+    creatures: true,
+  },
+  ram: {
+    room: 'lr-roots',
+    at: 'heartwood-top',
+    kit: ['glide', 'wallJump', 'doubleJump', 'kindle'],
+    flags: ['gloam-down'],
+    creatures: true,
+  },
+  gloam: {
+    room: 'lr-roots',
+    at: 'arena',
+    kit: ['glide', 'wallJump', 'doubleJump', 'kindle'],
+    creatures: true,
+  },
+};
 
 /** A run being driven: its state, room, tuning and the events of every step. */
 class Run {
   frames = 0;
   events: SimEvent[] = [];
+  /** The inputs given, run-length. */
+  tape: number[] = [];
   constructor(
     public s: GameState,
     readonly room: Room,
@@ -53,6 +89,9 @@ class Run {
     for (let i = 0; i < n; i++) {
       step(this.s, mask, this.t, this.room, this.events, PROTO_WORLD);
       this.frames++;
+      const k = this.tape.length;
+      if (k >= 2 && this.tape[k - 2] === mask) this.tape[k - 1] = (this.tape[k - 1] as number) + 1;
+      else this.tape.push(mask, 1);
     }
     return this.events.slice(from);
   }
@@ -72,7 +111,7 @@ class Run {
    */
   leg(
     to: string | ((s: GameState) => boolean),
-    opts: { creatures?: boolean; budget?: number } = {},
+    opts: { creatures?: boolean; budget?: number; kindle?: boolean } = {},
   ): boolean {
     const goal = typeof to === 'string' ? (s: GameState) => meets(this.room, to, s) : to;
     if (goal(this.s)) return true;
@@ -83,6 +122,8 @@ class Run {
       world: PROTO_WORLD,
       creatures: opts.creatures ?? true,
       keepLamps: false,
+      glow: null,
+      kindle: opts.kindle ?? false,
       maxNodes: opts.budget ?? 1500,
       order: 'time',
       goal,
@@ -90,8 +131,11 @@ class Run {
     for (const n of res.nodes.values()) {
       if (!goal(n.state)) continue;
       for (const m of pathTo(res, n).tape) this.run(m);
+      if (process.env.LR_DEBUG && !goal(this.s))
+        console.log('leg diverged:', pathTo(res, n).macros.join(' > '), feet(n.state), this.feet());
       return goal(this.s);
     }
+    if (process.env.LR_DEBUG) console.log('leg: no line', res.nodes.size, res.truncated);
     return false;
   }
 
@@ -108,6 +152,16 @@ class Run {
   }
 }
 
+/** A driver's start (its setup; the creatures left out where it says). */
+export function driverStart(name: string): { state: GameState; room: Room; t: Tuning } {
+  const d = DRIVER_SETUPS[name];
+  if (!d) throw new Error(`no driver ${name}`);
+  const { state, room, t } = setup({ room: d.room, at: d.at, kit: d.kit, flags: d.flags ?? [], lamps: [] });
+  if (d.creatures) return { state, room, t };
+  state.enemies = state.enemies.map((e) => ({ ...e, gone: true }));
+  return { state, room: { ...room, enemies: [] } as Room, t };
+}
+
 /** Taps Lamp (a kindle in reach, or a gust that way with nothing in reach): 2 frames held, then let go. */
 function tapLamp(r: Run, aim = 0): void {
   r.run(aim | B, 2);
@@ -116,18 +170,12 @@ function tapLamp(r: Run, aim = 0): void {
 
 /** Puzzle 5, the vault. */
 function vault(): DriverResult {
-  const { state, room, t } = setup({
-    room: 'lr-hall',
-    at: 'gallery-w',
-    kit: ['glide', 'wallJump', 'doubleJump', 'kindle', 'gust'],
-  });
+  // (The proof is the route and the clocks: the gallery's creatures are left out, the hawker's shy rule is in
+  // tests/unit/proto-1-puzzles.test.ts. Three kindles are 18 glow: she comes with a full meter.)
+  const { state, room, t } = driverStart('vault');
   const r = new Run(state, room, t);
-  const fuel = () => {
-    r.s.player.glow = Math.round(t.glow.max);
-  };
   if (!r.leg('vault-s1', { creatures: false, budget: 2500 }))
     return { ok: false, frames: r.frames, why: 'S1 not reached' };
-  fuel();
   // Kindle M-g1 where it stands.
   r.until(
     () => (r.feet().x < 3980 ? R : L),
@@ -138,36 +186,57 @@ function vault(): DriverResult {
   if (!r.burning('m-g1')) return { ok: false, frames: r.frames, why: 'M-g1 not kindled' };
   const t1 = r.frames;
   // Round W1 to S2.
-  if (!r.leg('vault-s2', { creatures: false, budget: 2500 }))
+  if (!r.leg('vault-s2', { creatures: false, budget: 8000 }))
     return { ok: false, frames: r.frames, why: 'S2 not reached' };
   const gone1 = !r.burning('m-g1');
   // Fan M-g1 back through the window (she faces west on S2's west end), then kindle M-g2.
-  r.until(L, () => r.feet().x <= 4270, 60);
+  r.until(L, () => r.feet().x <= 4325, 60);
   r.run(0, 2);
   tapLamp(r, L);
-  fuel();
   r.until(
-    () => (r.feet().x < 4330 ? R : L),
+    () => (r.feet().x < 4460 ? R : L),
     () => kindleTarget(r.s, room, t) >= 0,
     60,
   );
   tapLamp(r);
   if (!r.burning('m-g2'))
     return { ok: false, frames: r.frames, why: `M-g2 not kindled (M-g1 out on arrival: ${gone1})` };
-  // Round W2 to S3; fan M-g2 back through its window; kindle M-g3.
-  if (!r.leg('vault-s3', { creatures: false, budget: 2500 }))
-    return { ok: false, frames: r.frames, why: 'S3 not reached' };
-  r.until(L, () => r.feet().x <= 4630, 60);
-  r.run(0, 2);
-  tapLamp(r, L);
-  fuel();
+  // Round W2 to S3 (M-g1, fanned, and M-g2 still burn); kindle M-g3.
   r.until(
-    () => (r.feet().x < 4680 ? R : L),
+    () => (r.feet().x < 4460 ? R : L),
+    () => Math.abs(r.feet().x - 4460) < 6,
+    40,
+  );
+  r.run(0, 2);
+  if (process.env.LR_DEBUG)
+    console.log(
+      'before leg2',
+      r.feet(),
+      r.s.player.grounded,
+      r.s.lures.hp.join(''),
+      r.s.lures.burn.join(','),
+      r.frames - t1,
+    );
+  if (!r.leg('vault-s3', { creatures: false, budget: 6000 }))
+    return { ok: false, frames: r.frames, why: 'S3 not reached' };
+  r.until(
+    () => (r.feet().x < 4760 ? R : L),
     () => kindleTarget(r.s, room, t) >= 0,
     60,
   );
+  const ev3 = r.events.length;
   tapLamp(r);
   r.run(0, 4);
+  if (process.env.LR_DEBUG)
+    console.log(
+      'g3 tap',
+      r.feet(),
+      r.s.player.glow,
+      r.events
+        .slice(ev3)
+        .map((e) => e.type)
+        .join(','),
+    );
   if (!r.s.save.flags.includes('vault-open'))
     return {
       ok: false,
@@ -177,13 +246,12 @@ function vault(): DriverResult {
   // Into the vault: the vessel.
   if (!r.leg('find:vessel', { creatures: false }))
     return { ok: false, frames: r.frames, why: 'the vessel not reached' };
-  return { ok: true, frames: r.frames };
+  return { ok: true, frames: r.frames, tape: r.tape };
 }
 
 /** The Answer on the cap. */
 function answer(): DriverResult {
-  const kit = ['glide', 'wallJump', 'doubleJump', 'kindle', 'gust'];
-  const { state, room, t } = setup({ room: 'lr-night', at: 'cap-side', kit, lamps: [] });
+  const { state, room, t } = driverStart('answer');
   const r = new Run(state, room, t);
   // Under the bramble crown: a gust up puts both of its lamps out.
   if (!r.leg((s) => Math.abs(feet(s).x - 3030) < 30 && s.player.grounded, { creatures: false }))
@@ -206,18 +274,13 @@ function answer(): DriverResult {
   }
   r.run(0, 30);
   return r.s.save.flags.includes('answer')
-    ? { ok: true, frames: r.frames }
+    ? { ok: true, frames: r.frames, tape: r.tape }
     : { ok: false, frames: r.frames, why: 'the cap did not answer' };
 }
 
 /** Puzzle 4, the ram. */
 function ram(): DriverResult {
-  const { state, room, t } = setup({
-    room: 'lr-roots',
-    at: 'heartwood-top',
-    kit: ['glide', 'wallJump', 'doubleJump', 'kindle'],
-    flags: ['gloam-down'],
-  });
+  const { state, room, t } = driverStart('ram');
   const r = new Run(state, room, t);
   const hi = (room.bark ?? []).findIndex((b) => b.id === 'heartwood');
   // She stands on the shelf by its west lip; the beetle braces at her and rams the face.
@@ -233,20 +296,15 @@ function ram(): DriverResult {
     return { ok: false, frames: r.frames, why: 'broken, not by the ram' };
   if (!r.leg('find:h3', { creatures: true, budget: 2000 }))
     return { ok: false, frames: r.frames, why: 'H3 not reached' };
-  return { ok: true, frames: r.frames };
+  return { ok: true, frames: r.frames, tape: r.tape };
 }
 
 /** The Gloamweaver, start to finish, with every creature in. */
 function gloam(): DriverResult {
-  const kit = ['glide', 'wallJump', 'doubleJump', 'kindle'];
-  const { state, room, t } = setup({ room: 'lr-roots', at: 'arena', kit });
+  const { state, room, t } = driverStart('gloam');
   const r = new Run(state, room, t);
   const spider = () => r.s.enemies.find((e) => e.id === 'gloamweaver');
   const boss = () => r.s.boss;
-  const fuel = () => {
-    r.s.player.glow = Math.max(r.s.player.glow, Math.round(t.glow.kindleCost));
-  };
-  void fuel;
   if (!r.until(0, () => boss()?.stage === 'fight', 240))
     return { ok: false, frames: r.frames, why: 'no lock' };
   // P1: at a low wick, wait for it to come round, kindle, cut it where it falls.
@@ -255,7 +313,7 @@ function gloam(): DriverResult {
     ['arena-w4', 'm-w4', 3620, 1010],
     ['arena-w1', 'm-w1', 2140, 1010],
   ] as const) {
-    if (boss()?.phase !== 1) break;
+    if (boss()?.phase !== 1 || boss()?.stage !== 'fight') break;
     if (!r.leg(place)) return { ok: false, frames: r.frames, why: `P1: ${place} not reached` };
     const near = () => {
       const e = spider();
@@ -264,13 +322,48 @@ function gloam(): DriverResult {
       const dy = e.y + e.h / 2 - wy;
       return dx * dx + dy * dy < 360 * 360;
     };
-    if (!r.until(0, () => near() && !r.burning(wick), 2400))
+    if (
+      !r.until(
+        (k) => {
+          if (process.env.LR_DEBUG && k % 200 === 0)
+            console.log(
+              '  wait',
+              k,
+              r.feet(),
+              spider()?.mode,
+              spider()?.x,
+              spider()?.y,
+              r.s.player.hp,
+              boss()?.phase,
+            );
+          return guardInput(r, wx, k, wy + 50);
+        },
+        () => near() && !r.burning(wick) && kindleTarget(r.s, room, t) >= 0,
+        2400,
+      )
+    )
       return { ok: false, frames: r.frames, why: 'P1: it never came' };
-    r.s.player.glow = Math.max(r.s.player.glow, 6);
+    if (r.s.player.glow < t.glow.kindleCost)
+      return { ok: false, frames: r.frames, why: 'P1: no glow to kindle' };
+    const ev0 = r.events.length;
     tapLamp(r);
+    if (process.env.LR_DEBUG)
+      console.log(
+        'P1 tap',
+        r.feet(),
+        spider()?.mode,
+        spider()?.x,
+        spider()?.y,
+        r.events
+          .slice(ev0)
+          .map((e) => e.type)
+          .join(','),
+      );
     if (!r.until(0, () => spider()?.mode === 'recover', 120))
       return { ok: false, frames: r.frames, why: 'P1: not exposed' };
-    if (!cutWhileOpen(r, spider)) return { ok: false, frames: r.frames, why: 'P1: could not cut it' };
+    const cut = cutWhileOpen(r, spider);
+    if (process.env.LR_DEBUG) console.log('P1 cuts', cut, spider()?.hp, spider()?.mode, r.feet());
+    if (!cut) return { ok: false, frames: r.frames, why: 'P1: could not cut it' };
   }
   if (!r.until(0, () => boss()?.phase === 2 && boss()?.stage === 'fight', 400))
     return { ok: false, frames: r.frames, why: `P2 never began (phase ${boss()?.phase})` };
@@ -285,11 +378,9 @@ function gloam(): DriverResult {
   if (!r.until(0, () => boss()?.phase === 3 && boss()?.stage === 'fight', 600))
     return { ok: false, frames: r.frames, why: `P3 never began (phase ${boss()?.phase})` };
   // P3: the west low wick's moss to the west high wick, a fling past the hub to the east one; both lit: it falls.
-  r.s.player.glow = Math.max(r.s.player.glow, 12);
   if (!r.leg('arena-w1')) return { ok: false, frames: r.frames, why: 'P3: W1 not reached' };
   tapLamp(r);
   if (!r.leg('arena-w2')) return { ok: false, frames: r.frames, why: 'P3: W2 not reached' };
-  r.s.player.glow = Math.max(r.s.player.glow, 12);
   tapLamp(r);
   if (!r.leg('arena-w3', { budget: 2500 })) return { ok: false, frames: r.frames, why: 'P3: W3 not reached' };
   tapLamp(r);
@@ -298,8 +389,38 @@ function gloam(): DriverResult {
   cutWhileOpen(r, spider);
   r.run(0, 300);
   return r.s.save.flags.includes('gloam-down')
-    ? { ok: true, frames: r.frames }
+    ? { ok: true, frames: r.frames, tape: r.tape }
     : { ok: false, frames: r.frames, why: `not beaten (phase ${boss()?.phase}, hp ${spider()?.hp})` };
+}
+
+/**
+ * One frame of a careful wait at `home` (feet x) among spiderlings: away from one that tells or drops near her,
+ * a cut at one that hangs open in reach, back home otherwise.
+ */
+function guardInput(r: Run, home: number, k: number, homeY = 0): number {
+  const p = r.s.player;
+  const f = r.feet();
+  for (const e of r.s.enemies) {
+    if (e.kind !== 'dangler' || e.gone || e.mode === 'dead') continue;
+    const ex = e.x + e.w / 2;
+    const dx = ex - f.x;
+    if ((e.mode === 'windup' || e.mode === 'drop' || e.mode === 'swing') && Math.abs(dx) < 260)
+      return dx > 0 ? L : R;
+    if (
+      (e.mode === 'stall' || e.mode === 'recover' || e.mode === 'fall') &&
+      Math.abs(dx) < 90 &&
+      e.y < p.y + p.h
+    ) {
+      p.facing = dx >= 0 ? 1 : -1;
+      const above = e.y + e.h < p.y + 10;
+      return k % 20 < 2 ? A | (above ? U : 0) : above ? U : 0;
+    }
+  }
+  if (!p.grounded) return k % 40 < 30 && homeY > 0 && f.y > homeY ? J | (f.x < home ? R : L) : 0;
+  // (Off her ledge: back up onto it.)
+  if (homeY > 0 && f.y > homeY + 8 && Math.abs(f.x - home) < 120)
+    return k % 40 < 30 ? J | (f.x < home ? R : L) : 0;
+  return Math.abs(f.x - home) > 10 ? (f.x < home ? R : L) : 0;
 }
 
 /** Walks to the open creature and cuts it while it stays open. */

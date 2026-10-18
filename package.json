@@ -22,7 +22,8 @@
     "firsttimer": "tsx tools/playtest/firsttimer.ts",
     "humanplay": "tsx tools/playtest/humanrun.ts",
     "look:stats": "tsx tools/look-stats.ts",
-    "leak": "tsx tools/leak.ts"
+    "leak": "tsx tools/leak.ts",
+    "solve": "tsx tools/solve/proto-1.ts"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",

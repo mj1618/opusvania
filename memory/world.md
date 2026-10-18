@@ -96,3 +96,9 @@ the visited placed rooms' rects (scaled to fit, <= 1/8): room boxes with ids, so
 (amber), moon patches seen (ringed: her save patch), lures seen (warm dot burning / grey ring out), glades not taken
 (white diamond), exits seen and not crossed (green; arrival-only openings never), her (pulsing). "Seen" is sim-side
 and saved: within `map.seeX` 1000 x `seeY` 600 of her, every `map.seeEvery` 10 frames.
+
+## Other worlds: prototype levels (2026-10-18)
+`content/worlds/<id>.json` (same schema as world.json) are their own worlds: `WORLD_FILES` / `WORLDS` / `getWorld`
+(src/scene/index.ts, world.ts), each checked on its own (`validateWorld(world)`, areas from its file). Their rooms are
+in `ROOMS` (FILES) but not in `ROOM_IDS`. Boot `?world=<id>` (its start, its own save slot `lampfall.save.<id>`), or
+`?room=<id>` of such a room (the world it belongs to: `worldIdOf`). Lanternroot is `proto-1`: memory/lanternroot.md.

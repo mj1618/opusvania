@@ -41,6 +41,8 @@ export interface Macro {
   /** Frames after which it gives up. */
   max: number;
   prog: Program;
+  /** It runs its whole program even standing still (a gust waits for its puff). */
+  wait?: boolean;
 }
 
 export interface ExploreNode {
@@ -75,8 +77,11 @@ export interface ExploreOpts {
   maxNodes?: number;
   /** Leave creatures out (default false: movement only, the usual skip hunt). */
   creatures?: boolean;
-  /** Glow she has at the start of every macro (kindles are fuelled by the solver's own count; default the max). */
-  glow?: number;
+  /**
+   * Glow she has at the start of every macro (kindles are fuelled by the solver's own count; default the max).
+   * `null`: her glow as it is (a driver's leg, replayed for real afterwards).
+   */
+  glow?: number | null;
   /** Stop as soon as a node satisfies this (an edge proof). */
   goal?: (s: GameState) => boolean;
   /** Fling chains and aims to try (default all eight aims, chains with the same aim and with Up). */
@@ -96,6 +101,10 @@ export interface ExploreOpts {
    * reached at the earliest time any found line gets there, so a clock (a moonwick's burn) is judged fairly.
    */
   order?: 'moves' | 'time';
+  /** Kindles in the search (default true; a driver's leg that must not spend glow on the way says false). */
+  kindle?: boolean;
+  /** Stop as soon as she leaves by this exit (an edge proof to an exit). */
+  goalExit?: string;
 }
 
 /** Her feet. */
@@ -115,7 +124,7 @@ function lightKey(s: GameState, scene: Scene): string {
   k += '|';
   for (const m of s.light.moss) k += m ? '1' : '0';
   k += '|';
-  for (const b of s.kit.bark) k += String(Math.min(9, b));
+  for (const b of s.kit.bark) k += b > 0 ? '1' : '0';
   return `${k}|${s.save.flags.length}|${s.save.opened.length}`;
 }
 
@@ -243,6 +252,7 @@ export function baseMacros(): Macro[] {
 /** The air hop (a gust down at the apex), then the wings; and gusts tapped standing, each way. Only with Gust owned. */
 export function gustMacros(): Macro[] {
   const out: Macro[] = [];
+  // (Then she waits for the puff to fly its length.)
   for (const [n, aim] of [
     ['R', R],
     ['L', L],
@@ -250,7 +260,7 @@ export function gustMacros(): Macro[] {
     ['UR', U | R],
     ['UL', U | L],
   ] as const)
-    out.push({ name: `gust${n}`, max: 40, prog: (_s, k) => (k < 2 ? aim | B : k < 4 ? 0 : -1) });
+    out.push({ name: `gust${n}`, max: 50, wait: true, prog: (_s, k) => (k < 2 ? aim | B : k < 36 ? 0 : -1) });
   for (const d of [-1, 1]) {
     const h = dirBit(d);
     const tag = d > 0 ? 'R' : 'L';
@@ -282,6 +292,7 @@ export function cutMacros(): Macro[] {
     out.push({
       name: `cut${n}`,
       max: 90,
+      wait: true,
       prog: (_s, k) => (k < 2 ? h : k < 70 ? (k % 20 < 2 ? A : 0) : -1),
     });
     out.push({
@@ -290,7 +301,9 @@ export function cutMacros(): Macro[] {
       prog: air((_s, k) => (k < 2 ? h : 0) | (k < 24 ? J : 0) | (k >= 18 && k % 20 < 2 ? A : 0)),
     });
   }
-  out.push({ name: 'cutU', max: 90, prog: (_s, k) => (k < 70 ? U | (k % 20 < 2 ? A : 0) : -1) });
+  out.push({ name: 'cutU', max: 90, wait: true, prog: (_s, k) => (k < 70 ? U | (k % 20 < 2 ? A : 0) : -1) });
+  // (Standing down cuts: a floor panel under her feet.)
+  out.push({ name: 'cutD', max: 90, wait: true, prog: (_s, k) => (k < 70 ? D | (k % 20 < 2 ? A : 0) : -1) });
   out.push({
     name: 'jcutU',
     max: 200,
@@ -354,13 +367,17 @@ export function flingMacros(): Macro[] {
   for (const [an, approach] of approaches)
     for (const [aimName, aim] of AIMS)
       for (const glide of [false, true])
-        for (const chain of ['same', 'up'] as const) {
+        for (const chain of ['same', 'up', 'ul', 'ur'] as const) {
+          // (A chain goes on with the same aim, or turns up; a straight-up chain may turn up-left or up-right.)
           if (chain === 'up' && aimName === 'U') continue;
+          if ((chain === 'ul' || chain === 'ur') && aimName !== 'U') continue;
           const horiz = aim & (L | R);
+          const chainAim = chain === 'up' ? U | horiz : chain === 'ul' ? U | L : chain === 'ur' ? U | R : aim;
+          const tag = chain === 'same' ? '' : chain === 'up' ? '-cu' : `-c${chain === 'ul' ? 'l' : 'r'}`;
           out.push({
-            name: `fling-${an}-${aimName}${glide ? '-g' : ''}${chain === 'up' ? '-cu' : ''}`,
+            name: `fling-${an}-${aimName}${glide ? '-g' : ''}${tag}`,
             max: 420,
-            prog: makeFling(approach, aim, horiz, glide, chain === 'up' ? U | horiz : aim),
+            prog: makeFling(approach, aim, horiz, glide, chainAim),
           });
         }
   return out;
@@ -413,7 +430,8 @@ function makeFling(
       flings++;
       return chainAim | B;
     }
-    let m = horiz;
+    // (After a chain link, the horizontal of the aim she last flew.)
+    let m = flings > 1 ? chainAim & (L | R) : horiz;
     if (glide && k - t0 > 22) {
       // A double jump as the launch fades, then the wings.
       if (!dj && p.dj > 0 && p.vy > 0) {
@@ -437,6 +455,35 @@ function reachFlame(s: GameState): boolean {
 /** A kindle: Lamp pressed standing by a cold moonwick (owned Kindle, glow topped up by the explorer). */
 export function kindleMacro(): Macro {
   return { name: 'kindle', max: 60, prog: (_s, k) => (k === 0 ? B : 0) };
+}
+
+/** Kindles in the air: a jump (that way, or up, or with the double jump) and Lamp the first frame a cold bud is in reach. */
+export function airKindleMacros(): Macro[] {
+  const out: Macro[] = [];
+  for (const [n, h, dj] of [
+    ['U', 0, false],
+    ['R', R, false],
+    ['L', L, false],
+    ['dU', 0, true],
+    ['dR', R, true],
+    ['dL', L, true],
+  ] as const) {
+    let done = false;
+    out.push({
+      name: `jkindle${n}`,
+      max: 240,
+      prog: air((s, k) => {
+        if (k === 0) done = false;
+        const jump = dj ? (k < 22 ? J : k < 24 ? 0 : k < 44 ? J : 0) : k < 24 ? J : 0;
+        if (!done && k > 2 && SCENE && TUNE && kindleTarget(s, withShortcuts(SCENE, s.save), TUNE) >= 0) {
+          done = true;
+          return h | B;
+        }
+        return h | jump;
+      }),
+    });
+  }
+  return out;
 }
 
 /** The fling approaches worth trying from here: each must be able to carry her within reach of a burning flame. */
@@ -467,6 +514,18 @@ function approachesFor(s: GameState, scene: Scene): Set<string> {
     }
   }
   return out;
+}
+
+/** A cold moonwick within `px` of her feet (worth a kindle in the air)? */
+function coldNear(s: GameState, scene: Scene, px: number): boolean {
+  const list = scene.lures ?? [];
+  const f = feet(s);
+  for (let i = 0; i < list.length; i++) {
+    const l = list[i];
+    if (l?.kind !== 'moonwick' || (s.lures.hp[i] ?? 0) > 0) continue;
+    if ((l.x - f.x) * (l.x - f.x) + (l.y - f.y) * (l.y - f.y) < px * px) return true;
+  }
+  return false;
 }
 
 /** Is there a burning flame within `px` of her (worth trying the flings)? */
@@ -532,7 +591,8 @@ export function play(
     prev = m;
     const bad = judge(s, events, hp0);
     if (bad) return { state: s, tape, outcome: bad.outcome, exit: bad.exit, steps: k };
-    if (k > 8 && settled(s) && !(m & (J | B))) return { state: s, tape, outcome: 'stand', steps: k };
+    if (!macro.wait && k > 8 && settled(s) && !(m & (J | B)))
+      return { state: s, tape, outcome: 'stand', steps: k };
   }
   return { state: s, tape, outcome: settled(s) ? 'stand' : 'timeout', steps: macro.max };
 }
@@ -571,6 +631,7 @@ export function explore(o: ExploreOpts): ExploreResult {
   const pogos = o.pogo === false ? [] : [...pogoMacros(), ...cutMacros()];
   const gust = gustMacros();
   const kindle = kindleMacro();
+  const airKindle = airKindleMacros();
   let steps = 0;
   for (const s0 of o.start) {
     const s = cloneState(s0);
@@ -589,7 +650,7 @@ export function explore(o: ExploreOpts): ExploreResult {
       queue.push(n);
     }
   }
-  const glow = o.glow ?? Math.round(t.glow.max);
+  const glow = o.glow === null ? null : (o.glow ?? Math.round(t.glow.max));
   let truncated = false;
   const byTime = o.order === 'time';
   const done = new Set<string>();
@@ -609,24 +670,29 @@ export function explore(o: ExploreOpts): ExploreResult {
     const owns = (a: string) => (s.save.abilities as readonly string[]).includes(a);
     const list: Macro[] = [...base, ...pogos];
     const S = withShortcuts(scene, s.save);
-    if (owns('gust') && scene.glow) list.push(...gust);
-    if (owns('kindle') && scene.glow && kindleTarget(s, S, t) >= 0) list.push(kindle);
+    // (A tap of Lamp by a cold moonwick is a kindle, not a gust: only the kindle macro may spend her glow.)
+    if (owns('gust') && scene.glow)
+      list.push(...(kindleTarget(s, S, t) >= 0 ? gust.filter((g) => g.name.startsWith('gusthop')) : gust));
+    if (o.kindle !== false && owns('kindle') && scene.glow) {
+      if (kindleTarget(s, S, t) >= 0) list.push(kindle);
+      else if (coldNear(s, S, 600)) list.push(...airKindle);
+    }
     if (flings.length && flameNear(s, S, 640)) {
       // (Chains only where a second flame is near: the same aim alone otherwise. And only the approaches that can
       // bring a flame into reach: one that way or above, within a jump's, or a double jump's, rise.)
       const many = flamesNear(s, S, 1000) > 1;
       const ok = approachesFor(s, S);
-      list.push(
-        ...flings.filter((f) => (many || !f.name.endsWith('-cu')) && ok.has(f.name.split('-')[1] ?? '')),
-      );
+      const chained = (n: string) => /-c[ulr]$/.test(n);
+      list.push(...flings.filter((f) => (many || !chained(f.name)) && ok.has(f.name.split('-')[1] ?? '')));
     }
     const keep = o.keepLamps ?? true;
     for (const m of list) {
-      const r = play(s, m, scene, t, scene.glow ? glow : null, o.world);
+      const r = play(s, m, scene, t, scene.glow && glow !== null ? glow : null, o.world);
       steps += r.steps;
       if (keep) relight(r.state, s, scene);
       if (r.outcome === 'exit' && r.exit) {
         if (!exits.has(r.exit)) exits.set(r.exit, { from: n, macro: m.name, tape: r.tape });
+        if (r.exit === o.goalExit) return { nodes, exits, truncated, steps };
         continue;
       }
       if (r.outcome !== 'stand') continue;

@@ -115,7 +115,7 @@ function night(): RoomBuilder {
   // The snapped stub, its thorn faces, the bramble crown on its west shoulder (L-b1a / L-b1b: gust only), the hawker.
   r.solid(3160, 260, 100, 500, 'branch', false);
   r.add('thorns', { id: 't-stub-e', x: 3260, y: 320, w: 30, h: 420 });
-  r.add('thorns', { id: 't-bramble', x: 2900, y: 360, w: 260, h: 400 });
+  r.add('thorns', { id: 't-bramble', x: 2860, y: 360, w: 300, h: 420 });
   r.lamp('l-b1a', 3030, 500, { sets: 'bramble-a-out' });
   r.lamp('l-b1b', 3030, 630, { sets: 'bramble-b-out' });
   r.enemy({ id: 'h-b1', kind: 'hawker', x: 3100, y: 200, facing: 1, guards: 'l-b1a', radius: 160 });
@@ -206,8 +206,9 @@ function hall(): RoomBuilder {
 
   // --- A2 the Split (0..1920). Moonlight down the split into amber; the first lamps; the moth-stone shelf.
   // The split's two columns (their inner faces take kicks) and the fungus bracket under them: the way back up.
-  r.solid(1024, 160, 64, 700, 'root', 'east');
-  r.solid(1344, 160, 64, 700, 'root', 'west');
+  // (Faces that take a climb reach down to where she stands: a face that ends over her head is never met.)
+  r.solid(1024, 160, 64, 840, 'root', 'east');
+  r.solid(1344, 160, 64, 840, 'root', 'west');
   r.oneWay(1100, 1080, 230, 'ledge');
   r.pod('pod-a2a', 1260, 1080);
   // Over the pit: a two-lamp chain.
@@ -246,7 +247,7 @@ function hall(): RoomBuilder {
   r.solid(3260, 700, 160, 30, 'floating', false);
   r.solid(3520, 700, 200, 40, 'floating', false);
   r.moonwick('m-s2', 3600, 650);
-  r.enemy({ id: 'd-b2', kind: 'dangler', x: 3610, y: 110, facing: -1, drop: 520 });
+  r.enemy({ id: 'd-b2', kind: 'dangler', x: 3610, y: 110, facing: -1, drop: 600, senses: 'always' });
   r.add('gates', { id: 'seal', x: 2944, y: FLOOR, w: 256, h: 40, flag: 'seal-open', kick: false });
   r.add('wickSets', { id: 'seal-set', wicks: ['m-s1', 'm-s2'], sets: 'seal-open' });
   // The patch in its quiet alcove, east of the seal, under the loft.
@@ -288,16 +289,18 @@ function hall(): RoomBuilder {
   // The shaft: a 700 px pit of thorns between two lips; the gate at its foot opens on the set (or from below).
   const LIPW = 4250;
   r.solid(LIPW, 1480, 166, 56, 'root', false);
-  r.solid(4416, 1440, 64, 96, 'root', 'west');
-  r.solid(4736, 1440, 64, 96, 'root', 'east');
+  r.solid(4416, 1440, 64, 96, 'root', 'east');
+  r.solid(4736, 1440, 64, 96, 'root', 'west');
   r.solid(4800, 1480, 150, 56, 'root', false);
   r.add('thorns', { id: 't-shaft-w', x: LIPW, y: 1440, w: 166, h: 40 });
   r.add('thorns', { id: 't-shaft-e', x: 4800, y: 1440, w: 150, h: 40 });
   r.add('gates', { id: 'shaft', x: 4480, y: 1480, w: 256, h: 56, flag: 'shaft-open', kick: false });
+  // (Open, a root mesh across its mouth: up from the cistern she passes it and lands on it; down is Down + jump.)
+  r.oneWay(4480, 1500, 256, 'root');
   r.moonwick('m-c1', 4130, 1240);
   r.moonwick('m-c2', 5030, 1240);
   r.add('wickSets', { id: 'shaft-set', wicks: ['m-c1', 'm-c2'], sets: 'shaft-open' });
-  r.enemy({ id: 'h-c2', kind: 'hawker', x: 4600, y: 900, facing: -1, senses: 'always', radius: 200 });
+  r.enemy({ id: 'h-c2', kind: 'hawker', x: 4400, y: 860, facing: -1, senses: 'always', radius: 120 });
   // Moss down into the shaft (lit for good once the set has burned): the stair to the gate.
   for (const [i, [x, y]] of (
     [
@@ -308,8 +311,8 @@ function hall(): RoomBuilder {
     r.add('moonmoss', { id: `moss-shaft${i + 1}`, x, y, w: 100, h: 20 });
   r.pod('pod-c2a', 3990, FLOOR);
   // The chimney: two columns up to the vault's hole; the silk curtain over it, held by the grille lamp.
-  r.solid(4992, 160, 64, 760, 'root', 'east');
-  r.solid(5312, 160, 64, 760, 'root', 'west');
+  r.solid(4992, 160, 64, 860, 'root', 'east');
+  r.solid(5312, 160, 64, 860, 'root', 'west');
   r.oneWay(5070, 1100, 220, 'ledge');
   r.add('gates', { id: 'curtain', x: 5056, y: 100, w: 256, h: 60, flag: 'curtain-open', kick: false });
   // The grille lamp in its thorn crown (220 deep every way: no blade, no fling); its light holds the curtain.
@@ -319,22 +322,26 @@ function hall(): RoomBuilder {
   // window (a gust passes it, she cannot), each burning only `burn` (5 s): the route round outruns a wick, so
   // the one behind her is fanned through the window. Its silk drops on the set: the glow vessel.
   r.solid(3860, 640, 240, 30, 'floating', false); // S1
+  r.solid(3880, 980, 100, 30, 'floating', false); // a root step up to it from the gallery floor
   r.moonwick('m-g1', 3980, 590, { burn: 300 });
-  r.solid(4180, 100, 40, 440, 'root', false); // W1, its window 540..604
-  r.solid(4180, 604, 40, 96, 'root', 'east');
-  r.solid(4240, 1000, 100, 30, 'floating', false); // L0: the way up under W1
-  r.solid(4240, 640, 180, 30, 'floating', false); // S2
-  r.moonwick('m-g2', 4330, 590, { burn: 300 });
-  r.solid(4440, 100, 40, 236, 'root', false); // W2, its window 336..400, hung from the vault
-  r.solid(4440, 400, 40, 160, 'root', 'east');
-  r.solid(4600, 400, 380, 30, 'floating', false); // S3 and the vault's floor
-  r.moonwick('m-g3', 4680, 350, { burn: 300 });
+  r.solid(4180, 100, 40, 468, 'root', false); // W1, its window 568..632 (a gust at her height passes it, she cannot)
+  r.solid(4180, 632, 40, 358, 'root', 'east');
+  r.solid(4220, 1000, 80, 30, 'floating', false); // L0: the way up W1's east face
+  r.solid(4300, 640, 200, 30, 'floating', false); // S2 (the gust spot at its west end, out of M-g2's reach)
+  r.moonwick('m-g2', 4460, 590, { burn: 300 });
+  r.solid(4560, 100, 40, 468, 'root', false); // W2, its window 568..632 too
+  r.solid(4560, 632, 40, 368, 'root', 'east');
+  r.solid(4600, 1260, 100, 30, 'floating', false); // L1: under W2, then a stair of root steps up to S3
+  r.solid(4760, 1030, 100, 30, 'floating', false); // L2
+  r.solid(4620, 820, 80, 30, 'floating', false); // L3
+  r.solid(4720, 640, 260, 30, 'floating', false); // S3 and the vault's floor
+  r.moonwick('m-g3', 4790, 590, { burn: 300 });
   r.add('wickSets', { id: 'vault-set', wicks: ['m-g1', 'm-g2', 'm-g3'], sets: 'vault-open' });
-  r.solid(4800, 280, 180, 20, 'trunk', false); // its roof
-  r.solid(4960, 300, 20, 100, 'trunk', false); // its east wall
-  r.add('gates', { id: 'vault', x: 4800, y: 300, w: 20, h: 100, flag: 'vault-open', kick: false });
-  r.add('hollows', { id: 'vessel', x: 4830, y: 310, w: 120, h: 90, upgrade: 'glowVessel' });
-  r.mark('covers', { id: 'cover-vault', x: 4800, y: 280, w: 180, h: 120, opens: 'lr-hall:vault-open' });
+  r.solid(4860, 520, 120, 20, 'trunk', false); // its roof
+  r.solid(4960, 540, 20, 100, 'trunk', false); // its east wall
+  r.add('gates', { id: 'vault', x: 4860, y: 540, w: 20, h: 100, flag: 'vault-open', kick: false });
+  r.add('hollows', { id: 'vessel', x: 4885, y: 550, w: 70, h: 90, upgrade: 'glowVessel' });
+  r.mark('covers', { id: 'cover-vault', x: 4860, y: 520, w: 120, h: 120, opens: 'lr-hall:vault-open' });
   r.mark('moonholes', { x: 5184, y: 0 });
   // A warm-lamp chain to an alcove's bark wall high in the west: a glint hoard behind it.
   r.lamp('l-c2a', 4040, 1060);
@@ -348,10 +355,10 @@ function hall(): RoomBuilder {
   // The gallery floor: a juvenile pair; a dangler under the vault ledge; pods; glints.
   r.enemy({ id: 'j-c2a', kind: 'juvenileBurrback', x: 5300, y: FLOOR, facing: -1, senses: 'always' });
   r.enemy({ id: 'j-c2b', kind: 'juvenileBurrback', x: 5560, y: FLOOR, facing: 1, senses: 'always' });
-  r.enemy({ id: 'd-c2', kind: 'dangler', x: 4700, y: 432, facing: -1, drop: 700 });
+  r.enemy({ id: 'd-c2', kind: 'dangler', x: 3960, y: 672, facing: -1, drop: 560 });
   r.pod('pod-c2b', 5150, FLOOR);
-  r.pod('pod-c2c', 4280, 1000);
-  r.pod('pod-c2d', 4900, 400, 900);
+  r.pod('pod-c2c', 3930, 980);
+  r.pod('pod-c2d', 4380, 640, 900);
   r.arc('g-c2-', 5100, 5700, 1240, 140, 10);
   chambers(r, ['a2', 'b2', 'c2']);
   place(r, 'split-foot', 1216, FLOOR);
@@ -365,8 +372,8 @@ function hall(): RoomBuilder {
   place(r, 'shaft-gate', 4608, 1480);
   place(r, 'alcove', 3960, 380);
   place(r, 'vault-s1', 3980, 640);
-  place(r, 'vault-s2', 4330, 640);
-  place(r, 'vault-s3', 4680, 400);
+  place(r, 'vault-s2', 4460, 640);
+  place(r, 'vault-s3', 4760, 640);
   return r;
 }
 
@@ -501,8 +508,8 @@ function roots(): RoomBuilder {
   r.solid(4300, 1340, 900, H - 1340, 'pool', false);
   r.solid(5200, BF, 560, H - BF, 'ground', false);
   // The root column up to the shaft: kick faces both sides.
-  r.solid(4400, 240, 80, 860, 'root', 'east');
-  r.solid(4736, 240, 80, 860, 'root', 'west');
+  r.solid(4400, 240, 80, 1010, 'root', 'east');
+  r.solid(4736, 240, 80, 1010, 'root', 'west');
   r.add('triggers', { id: 'shaft-up', x: 4480, y: 0, w: 256, h: 120, sets: 'shaft-open' });
   r.enemy({ id: 'd-c3a', kind: 'dangler', x: 4300, y: 260, facing: 1, senses: 'always', drop: 1000 });
   r.enemy({ id: 'd-c3b', kind: 'dangler', x: 5000, y: 260, facing: -1, senses: 'always', drop: 1000 });
@@ -563,13 +570,22 @@ function cache(): RoomBuilder {
     [960, 1120],
   ];
   for (const [i, [x, y]] of ring.entries()) r.moonwick(`m-ring${i + 1}`, x, y);
+  // Glass shelves under the ring's buds (the firefly's): a stand for every kindle, the flights between them free.
+  for (const [x, y] of [
+    [500, 1060],
+    [640, 700],
+    [900, 560],
+    [1160, 700],
+    [1300, 1060],
+  ] as const)
+    r.solid(x, y, 120, 24, 'floating', false);
   r.add('wickSets', { id: 'ring', wicks: ring.map((_, i) => `m-ring${i + 1}`), sets: 'cache-ring' });
   r.lure({ id: 'firefly-lamp', kind: 'lantern', x: 960, y: 820, moths: 80 });
   r.mark('landmarks', { id: 'firefly-lamp', kind: 'centrepiece', x: 960, y: 820, w: 160, h: 200 });
   r.mark('moonholes', { x: 960, y: 200 });
   // The top shelf: Bright Kindle.
-  r.solid(860, 340, 200, 30, 'floating', false);
-  r.add('hollows', { id: 'bright', x: 870, y: 240, w: 180, h: 100, upgrade: 'brightKindle' });
+  r.solid(1120, 400, 200, 30, 'floating', false);
+  r.add('hollows', { id: 'bright', x: 1130, y: 300, w: 180, h: 100, upgrade: 'brightKindle' });
   r.pod('pod-k1', 400, 1300);
   r.pod('pod-k2', 1500, 1300);
   r.pod('pod-k3', 1700, 1300);
@@ -577,7 +593,7 @@ function cache(): RoomBuilder {
   r.set('camera', { zones: [{ id: 'cache', x: 0, y: 0, w: 1920, h: 1536, lock: true, frames: 20 }] });
   r.mark('chambers', { id: 'cache', x: 0, y: 0, w: 1920, h: 1536 });
   place(r, 'cache-floor', 240, 1300);
-  place(r, 'cache-shelf', 960, 340);
+  place(r, 'cache-shelf', 1220, 400);
   return r;
 }
 
@@ -620,12 +636,15 @@ function routes(r: RoomBuilder): void {
   }
 }
 
+/** Where each chamber's wide shot centres (her play, not the sky). */
+const SHOT_Y: Record<string, number> = { a1: 1060, b1: 680, c1: 480, cache: 860 };
+
 for (const r of [night(), hall(), roots(), cache()]) {
   routes(r);
   r.set('shots', {
     wide: (
       (r.data as { marks?: { chambers?: Array<{ id: string; x: number; w: number }> } }).marks?.chambers ?? []
-    ).map((c) => ({ name: c.id, x: c.x + c.w / 2, y: 900 })),
+    ).map((c) => ({ name: c.id, x: c.x + c.w / 2, y: SHOT_Y[c.id] ?? 1000 })),
   });
   r.write(OUT);
 }

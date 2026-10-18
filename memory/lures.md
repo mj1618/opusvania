@@ -75,3 +75,28 @@ dead still while aiming (Ori drifts a little).
 ## Render
 Render's fling (7d8800c): aim arrow, the arc, the dimmed world, the launch, the ember. The greybox lures.ts
 still draws the old caught UI from fields that are now always -1 / 0 (`player.lure`, beat fields, `lures.beats`).
+
+## Moonwicks, moonmoss, Gust, lamp-held gates (Lanternroot, 2026-10-18; src/sim/light.ts, memory/glow.md)
+- **A moonwick** (`lures[].kind: 'moonwick'`, row `kinds.moonwick`: no pull, no moths, `fling` 110 = the fling's and
+  the kindle's reach, `radius` 420 = its silver light): cold (`hp` 0) until kindled (Kindle owned, glow: `lureKindle`),
+  then it burns `moonwick.burn` 720 frames (its own `burn` if set: the vault's 300), the last `gutter` 120 a flicker
+  (`lureGutter`), then `lureCold`. `lures.burn[i]` = frames left (-1 = for good). **`keep`**: kindled once, it burns
+  for good (`save.opened` `room:id`). **`wickSets`** `[{id, wicks, sets}]`: every wick burning on one frame saves the
+  flag and keeps them all (`wickSet`). A burning one is a fling anchor that **never embers** (`flingLaunch` returns
+  before the ember); the blade passes through it (`slashLures` skips it); `litAt` ignores it (silver light is no
+  lamp light: creatures never see her by it).
+- **Silver light** (`player.moonlit` 0..1, set in `updateEnemies` next to `lit`; `moonlitAt`): a hawker (its tell,
+  its rhythm's pass) or a dangler (its drop) never starts a strike at her while she, or the strike's point, is in it
+  (`shyOf` in enemies/senses.ts: `enemyShy` once per hold, `EnemyState.shy`). A strike under way finishes.
+- **Moonmoss** (`scene.moonmoss [{id, x, y, w, h, oneWay?}]`): solid (kit `moss`: never safe ground) or a one-way only
+  while its centre is in a burning moonwick's light; one that would appear inside her waits until she is clear
+  (`mossOn` / `mossOff`; `light.moss[i]`; `withMoss` adds them to the step's scene, cached by the set that is on).
+- **Gust** (ability `gust`; `tuning.gust`): a tap of Lamp with nothing in reach: a 64 px puff from her centre along
+  the held 8-way aim (facing if none), 16 px/f for 30 f, stopped by solids (thorns are not solids), cooldown 30. It
+  snuffs warm lamps that are not great (`lureSnuff {gust: true}`), fans a burning moonwick (`lureFan`: its burn starts
+  over), knocks a hawker out of its tell / dive into a 60 f stall, sends a telling dangler back up, shoves beetles 12
+  px/f (no harm). Down + tap in the air: the hop (`hopVy` -9, once an airtime, back on landing or a pogo).
+  `light.gust` while it flies; `gust`, `gustHit {target, how}`, `gustEnd`.
+- **Lamp-held gates**: `lures[].sets: flag`: the flag is set when that lamp goes out, however (the grille lamp's
+  `curtain-open`, the bramble pair's `bramble-a-out` / `-b-out`). `lures[].moths` overrides the row's moths (the
+  cache's firefly-lamp: 80).

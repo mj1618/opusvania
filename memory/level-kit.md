@@ -114,3 +114,17 @@ pivot. Labels with G. **Painted rooms draw none of the kit yet.** Room-fade dips
 ## Not done / gaps
 - A zoom < 1 in a PAINTED room shows past the bakes' coverage (they cover the cap view at zoom 1); greybox only.
 - Hurt audio / character art for thorns use the generic `hurt`; no kit sounds yet.
+
+## Lanternroot's pieces (2026-10-18; src/sim/light.ts, memory/glow.md, memory/lanternroot.md)
+| field | shape | what |
+|---|---|---|
+| `glow` | `true` | the light economy, Mend, kindle and Gust on the Lamp button; glints saved as taken; a fade drops her glow; the saved patch re-forms her anywhere in the world (HK's bench) |
+| `bark[].heartwood` | bool | not rotten: every cut clangs (`kitClang` kind `heartwood`; a pogo still bounces); a burrback's ram into its face breaks it (`barkBreak {by: 'ram'}`, read off `enemyRecover {cause: 'wall'}` with the face at its front). For the step-ram the beetle needs a `radius` whose range ends at the face, and nothing solid right over its ram's line (a roof 1 px ahead pulls it up as at a doorway: the shelf she stands on starts 20 px past the face) |
+| `bells` | `[{id, x, y, rhythm, sets, dark?}]` | a bell-cap: a slash target (72 box; a pogo bounces); in the dark (no warm lamp within `bells.darkPx` 1200) each strike counts, the gaps read `.` (<= 24 f) / `-` (36..90 f); the whole `rhythm` saves `sets` (`bellHit {n, of, gap, beat}`, `bellDull`, `bellAnswer`); `light.bells[i].n` = gills lit |
+| `moonmoss`, `wickSets` | | lures.md "Moonwicks" |
+| `pods[].regrow` | frames | a burst pod's bud grows back (`podRegrow`) once its glints are paid |
+| `enemies[].respawn` / `fight` | frames / bool | dead, it is back at its spawn that long after (`enemyRespawn`); `fight`: only there while the room's boss fight is on (the spiderlings) |
+| `hollows[].upgrade: 'moonDrop'` | | one more light for good (flag `moonDrop:<room>:<id>`, counted by `withUpgrades`); `glowVessel` (meter 24), `brightKindle` (kindle 3) are ordinary upgrades |
+| `camera.zones[].frames` | 1..120 | the slide into the zone (Lanternroot's chambers: 20). **Not read by the camera yet** (src/render/camera/zones.ts eases every zone in `cameraTuning.zones.frames` 30): render's to wire |
+| `routes[].light / lamps / upgrades / sets` | | the solver's claims: wicks a way kindles, warm lamps it flings off, upgrades it needs, flags passing it sets (the world check counts `sets`) |
+| `marks.covers / calm / landmarks / moonholes / places / chambers` | | render and the solver: memory/lanternroot.md |

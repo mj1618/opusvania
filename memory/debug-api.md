@@ -118,3 +118,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `playwright-cli` takes about a second a call: nothing can react to a 26-frame tell through it. For a live
   fight, one `eval` of an async function that watches `state()` per animation frame and dispatches real
   `KeyboardEvent`s (`code: 'ArrowRight' | 'KeyZ' | 'KeyC'`) on `window`.
+
+## Lanternroot (2026-10-18)
+`__game.glow(n?)` -> `{glow, max}`: her glow (memory/glow.md), set when `n` is given. `__game.goto/room/load` take any
+room of `ROOMS` (the proto world's too). The tuning panel lists the rooms of the world being played (a list without
+the room in play snapped it, and so `setTuning`, back to its first room).

@@ -276,10 +276,19 @@ export interface Lock {
   goal: string;
   budget?: number;
   byTime?: boolean;
+  /** Glades taken out of the room for the hunt (the tool itself, when it lies on the way). */
+  strip?: string[];
 }
 
 export const LOCKS: Lock[] = [
-  { id: 'pit-without-kindle', room: 'lr-roots', from: ['pit'], kit: BASE, goal: 'exit:stair' },
+  {
+    id: 'pit-without-kindle',
+    room: 'lr-roots',
+    from: ['pit'],
+    kit: BASE,
+    goal: 'exit:stair',
+    strip: ['kindle'],
+  },
   { id: 'nest-without-kindle', room: 'lr-night', from: ['ridge', 'crown'], kit: BASE, goal: 'nest' },
   { id: 'loft-without-kindle', room: 'lr-hall', from: ['hub', 's2-shelf'], kit: BASE, goal: 'find:h2' },
   {
