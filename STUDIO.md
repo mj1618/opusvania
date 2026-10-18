@@ -62,6 +62,19 @@ checkbox design: one-off elements added to hit counts. So:
   needs a large rework: rooms, mechanics, creatures, kit pieces or whole systems. Agents tend to patch instead of
   rework. Here, reworking is expected whenever new understanding shows the existing design is wrong.
 
+## Matt judges fun; AI testers catch bugs (Matt's play, 2026-10-18)
+After six AI review rounds, Matt played area 1 and found it bland, obvious, monotone and not fun. The lamp catch was
+"super annoying" and the attack unsatisfying, though movement felt good. We had been tuning to proxies that agents can
+measure. Worse, because first-timer agents got stuck, we kept adding signposting, and that made the game hand-holdy for
+a person. So:
+- **Agents and bots are for bugs and regressions:** softlocks, skips, crashes, broken routes. They don't judge fun,
+  difficulty or how much signposting a person needs. Never add hints because an agent got stuck.
+- **Feel first, in a toy room, with Matt.** A new verb, attack or creature is built in a lab room, and Matt plays it
+  before any room is built around it. Loops are short.
+- **The player keeps control.** No mechanic that takes the controls away to make its point. Held beats are rare.
+- **Discovery and challenge over guidance.** A web with secrets and optional hard parts, contrast between quiet and
+  intense, and trust in the player.
+
 ## Playtesting without Matt
 - **Persona bots** (`npm run playtest`): naive, explorer, speedrunner and cautious. Each run records telemetry: time per room,
   deaths, the trace, time lost, hits per encounter, lamps and moths found.
