@@ -471,6 +471,21 @@ describe('the crown: the root, the crown wick, P5, the finale', () => {
     expect(has(ev, 'enemyDisperse', 'hawk-crown')).toBe(true);
   });
 
+  it('Tatter sits on the rim 100+ px west of where the finale stops her (render’s close-up frames the two apart)', () => {
+    const s = play({ glimpse: false });
+    s.g.state.save.flags.push('wood-root-ladder');
+    s.g.teleport(3200, RIM);
+    for (let f = 0; f < 400 && !s.g.state.save.flags.includes('wood-crown'); f++) s.run(R);
+    s.run(R, 60);
+    const sit = (OAK.marks?.stage?.tatters ?? [])
+      .find((t) => t.when === 'wood-root-ladder')
+      ?.climb?.path?.at(-1);
+    expect(sit?.[1]).toBe(RIM);
+    expect(s.feet().x - (sit?.[0] ?? 0)).toBeGreaterThanOrEqual(100);
+    const on = (OAK.marks?.stage?.tatters ?? []).find((t) => t.when === 'wood-crown-gone')?.climb?.path?.[0];
+    expect(on).toEqual(sit);
+  });
+
   it('the finale holds her for the whole cloud (540 f), then east to area 2; no way to the exit but through it', () => {
     const crown = (OAK.triggers ?? []).find((t) => t.id === 'crown');
     // The rim's full height: no jump carries her over it to the exit.

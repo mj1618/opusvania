@@ -769,17 +769,17 @@
           "when": "wood-root-ladder",
           "tryOn": "wood-crown",
           "climb": {
-            "path": [[2896, 3840], [2896, 576], [3480, 576]]
+            "path": [[2896, 3840], [2896, 576], [3240, 576]]
           },
           "until": "wood-crown-gone"
         },
         {
-          "x": 3480,
+          "x": 3240,
           "y": 576,
           "facing": 1,
           "when": "wood-crown-gone",
           "climb": {
-            "path": [[3480, 576], [3836, 576]],
+            "path": [[3240, 576], [3836, 576]],
             "lead": 240,
             "vanish": true
           }
