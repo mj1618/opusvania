@@ -114,7 +114,8 @@ export class Game {
   }
 
   queueInput(frames: InputFrame[]): void {
-    this.scripted.push(...frames);
+    // A loop, not push(...frames): a long replay (a 36-minute run is ~130k frames) overflows the call stack.
+    for (const f of frames) this.scripted.push(f);
   }
 
   get queuedInput(): number {
