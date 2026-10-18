@@ -119,12 +119,28 @@ const DIGITS = 4;
 const RES = 3;
 
 /** "A moment" in a held beat: the crescent's radius and inset (px), opacity, breath (rad/s); the edge bands. */
+/** The fling's slowed aim: seconds in / out, the dim's colour and opacity, the edge bands, the clear holes. */
+export const FLING_SLOW = {
+  in: 0.08,
+  out: 0.2,
+  color: 0x0a0d14,
+  alpha: 0.28,
+  bands: 5,
+  edge: 160,
+  edgeAlpha: 0.3,
+  /** px round her and the flame left undimmed (world px, times the zoom). */
+  hole: 150,
+};
+
 export const MOMENT = { r: 16, inset: 64, alpha: 0.55, rate: 1.6, bands: 6, edge: 90, edgeAlpha: 0.35 };
 
 export class Hud {
   readonly layer = new Container({ label: 'hud' });
   /** "A moment" (first-timer r6: a held pan read as a freeze): a small breathing crescent in the corner and a soft edge. */
   private readonly moment = new Graphics({ label: 'hud-moment' });
+  /** The fling's slowed aim: the world dims a little while she aims off a flame (`player.fling`), eased. */
+  private readonly slow = new Graphics({ label: 'hud-fling-slow' });
+  private slowA = 0;
   private readonly group = new Container();
   private readonly icon = new GlintBatch(72);
   private readonly pips = new LanternPips();
@@ -200,6 +216,7 @@ export class Hud {
     }
     this.shake.addChild(this.health.root, this.group, this.pips.root, this.icon.mesh);
     this.layer.addChild(
+      this.slow,
       this.moment,
       this.prompts.root,
       this.shake,
@@ -491,6 +508,29 @@ export class Hud {
       (3 - 2 * held);
     this.prompts.root.alpha = held;
     this.drawMoment(clock, view, STAGE_HOLD.held);
+    // The fling's aim: the moment slows, so the world dims a touch and its edges darken (she and the flame stay
+    // the brightest things: the dim is under the HUD, over the world).
+    const aiming = ((sim.player as unknown as { fling?: number }).fling ?? -1) >= 0;
+    const F = FLING_SLOW;
+    this.slowA = aiming ? Math.min(1, this.slowA + dt / F.in) : Math.max(0, this.slowA - dt / F.out);
+    const sg = this.slow.clear();
+    if (this.slowA > 0) {
+      // (Holes round her and the flame she aims off, so they stay the brightest things in the frame.)
+      sg.rect(view.left, view.top, view.w, view.h).fill({ color: F.color, alpha: F.alpha * this.slowA });
+      const z = cam?.zoom ?? 1;
+      if (hudLink.on) sg.circle(hudLink.x, hudLink.y, F.hole * z).cut();
+      const li = (sim.player as unknown as { fling?: number }).fling ?? -1;
+      const l = li >= 0 ? sim.scene.lures?.[li] : undefined;
+      if (l && cam) sg.circle(960 + (l.x - cam.x) * z, 540 + (l.y - cam.y) * z, F.hole * z).cut();
+      for (let i = 1; i <= F.bands; i++) {
+        const d = (i * F.edge) / F.bands;
+        sg.rect(view.left, view.top, view.w, view.h).stroke({
+          color: 0x000000,
+          width: d,
+          alpha: (F.edgeAlpha / F.bands) * this.slowA,
+        });
+      }
+    }
     this.shake.visible = this.live > 0.003;
     this.summary.update(dt, clock, sim);
     this.prompts.update(dt, clock, sim);
