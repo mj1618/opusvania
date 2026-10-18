@@ -1,11 +1,14 @@
 /**
- * The mixing graph: five buses (world, hush, hero, lantern, creatures), one shared room reverb and a far,
+ * The mixing graph: five buses (world, hero, combat, lantern, creatures), one shared room reverb and a far,
  * darker one as sends, a roll-off above 9 kHz on everything but the glass, the master gain and a
  * gentle limiter that should never touch a normal mix (it is there for pile-ups).
  *
- *   voice -> bus.in -> roll-off -> bus.vol -> sum -> fader -> master -> limiter -> trim -> out
- *        \-> roomIn ------------------> the convolver -^
+ *   voice -> bus.in -> roll-off -> bus.vol -> muffle -> sum -> fader -> master -> limiter -> trim -> out
+ *        \-> roomIn ------------------> the convolver ------^
  *        \-> farIn  -> dull, delayed, fed back -^
+ *
+ * `duck` (the world bed's own gain) lowers the bed in held moments; `muffle` (a low-pass over everything
+ * but the lamps: her hurt, the fling's hold) closes it. Both are layer targets (router.ts `layers`).
  */
 import type { Baked } from './bake';
 import { dbToGain } from './dsp';
@@ -13,7 +16,7 @@ import { AUDIO, type BusId } from './tuning';
 
 export interface Bus {
   in: GainNode;
-  /** The bus's own low-pass (the hush's is the soil; the others the roll-off). */
+  /** The bus's own low-pass (the roll-off). */
   filter: BiquadFilterNode;
   vol: GainNode;
   /** This bus's sends into the room and far reverbs (so muting a bus mutes its reverb too). */
@@ -32,7 +35,10 @@ export class AudioGraph {
   readonly master: GainNode;
   /** The whole mix faded in and out (start, mute): separate from the master level. */
   readonly fader: GainNode;
-  /** Muting a bus for an A/B (offline: the take without the Hush). */
+  /** The world bed's duck (linear gain) and the low-pass over all but the lamps. */
+  readonly duck: GainNode;
+  readonly muffle: BiquadFilterNode;
+  /** Muting a bus for an A/B (offline: the take without the bed). */
   readonly off = new Set<BusId>();
 
   constructor(
@@ -46,8 +52,11 @@ export class AudioGraph {
     const trim = new GainNode(ctx, { gain: dbToGain(-MAKEUP_DB) });
     this.fader = new GainNode(ctx, { gain: 0 });
     sum.connect(this.fader).connect(this.master).connect(limiter).connect(trim).connect(out);
+    this.muffle = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0 });
+    this.muffle.connect(sum);
+    this.duck = new GainNode(ctx);
 
-    const bus = (id: BusId, hz: number): Bus => {
+    const bus = (id: BusId, hz: number, to: AudioNode): Bus => {
       const b: Bus = {
         in: new GainNode(ctx),
         filter: new BiquadFilterNode(ctx, { type: 'lowpass', frequency: hz, Q: 0.5 }),
@@ -55,17 +64,18 @@ export class AudioGraph {
         room: new GainNode(ctx),
         far: new GainNode(ctx),
       };
-      b.in.connect(b.filter).connect(b.vol).connect(sum);
+      b.in.connect(b.filter).connect(b.vol).connect(to);
       return b;
     };
     this.buses = {
-      world: bus('world', AUDIO.rolloff),
-      hush: bus('hush', AUDIO.hush.soilHz),
-      hero: bus('hero', AUDIO.rolloff),
-      // Glass may ring above the roll-off.
-      lantern: bus('lantern', 15000),
-      creatures: bus('creatures', AUDIO.rolloff),
+      world: bus('world', AUDIO.rolloff, this.duck),
+      hero: bus('hero', AUDIO.rolloff, this.muffle),
+      combat: bus('combat', AUDIO.rolloff, this.muffle),
+      // Glass may ring above the roll-off; the lamps are never muffled (caught, the hum dominates).
+      lantern: bus('lantern', 15000, sum),
+      creatures: bus('creatures', AUDIO.rolloff, this.muffle),
     };
+    this.duck.connect(this.muffle);
 
     // One shared convolver (it is most of the render's cost). The far send reaches it duller, later and
     // fed back on itself a little (a longer, darker tail): farther sounds duller, wetter, wider.

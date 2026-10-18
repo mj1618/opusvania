@@ -17,7 +17,7 @@ export interface RenderOptions {
   /** Extra seconds after the last frame (tails). */
   tail?: number;
   sampleRate?: number;
-  /** Buses left out (the A/B take without the Hush: ['hush']). */
+  /** Buses left out (the A/B take without the bed: ['world']). */
   mute?: BusId[];
 }
 

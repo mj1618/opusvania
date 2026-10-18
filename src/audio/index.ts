@@ -135,7 +135,7 @@ export class AudioDirector {
     const g = this.game;
     // She may be in another room now (memory/world.md): materials and the pool are the room's.
     this.conductor.ctx.scene = g.scene;
-    const snap = snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
+    const snap = snapOf(g.state, g.scene, g.tuning);
     // A restart begins the frame count again.
     if (snap.frame === 0) this.conductor.reset();
     this.conductor.step(events, snap, this.cam, this.when(), this.audible);
@@ -175,7 +175,7 @@ export class AudioDirector {
 
   private snap(): AudioSnap {
     const g = this.game;
-    return snapOf(g.state, g.scene, g.tuning.goal.channelFrames, g.tuning.giving.giftCalmFrames);
+    return snapOf(g.state, g.scene, g.tuning);
   }
 
   /** Records every step and frame from now (for an offline clip); false stops and drops it. */

@@ -3,22 +3,24 @@
  * and layer targets (the continuous voices). No AudioContext here, so Vitest runs it over real sim
  * tapes, and one tape always routes to the same cues.
  *
- * - `route(event)`: one-shots a sim event asks for. Most events make no sound.
- * - `ambient(snap)`: one-shots the world makes on its own this frame (drips, the far voice, the
- *   Hush's knock, claws on a wall slide). Dice are keyed by frame, never drawn from a stream.
+ * - `route(event)`: one-shots a sim event asks for. Most events make no sound. Play (her moves, the
+ *   blade, the lamps, the creatures' tells) is in route-play.ts.
+ * - `ambient(snap)`: one-shots the world makes on its own this frame (drips, the far voice, claws on a
+ *   wall slide, ants). Dice are keyed by frame, never drawn from a stream.
  * - `layers(snap, cam, clock)`: where every continuous voice should be now (state-driven, so
  *   unmuting mid-play or after a teleport is right at once).
  */
 
 import { zoneWeights } from '../render/scene/lib/fx-zones';
 import { wind } from '../render/scene/lib/look';
-import type { SimEvent } from '../sim/events';
+import { flameAt, lureRowNow } from '../sim/lures';
 import type { Scene, SceneTag } from '../sim/scene';
 import type { GameState, PlayerState } from '../sim/state';
+import type { Tuning } from '../sim/tuning';
 import { SOUNDS, type SoundId } from './bake';
-import { hushPhase, isKnock, PULSE_FRAMES } from './clock';
 import { dbToGain, hash01, salt } from './dsp';
-import { AUDIO, type BusId, HUSH, PITCH } from './tuning';
+import { type PlayEvent, routePlay } from './route-play';
+import { AUDIO, type BusId, bedOf, LAMP_BEAT, LAMP_HZ, PITCH } from './tuning';
 
 /** The camera as audio hears it: the listener sits at the view centre. */
 export interface AudioCam {
@@ -30,6 +32,10 @@ export interface AudioCam {
 /** The little of a sim state the sound needs, as plain JSON (it is what a tape records). */
 export interface AudioSnap {
   frame: number;
+  /** The room (scene id): its bed (tuning.ts `BEDS`). */
+  room?: string;
+  /** A story beat holds her (`kit.story`): the bed ducks. */
+  hold?: boolean;
   hero: Pick<
     PlayerState,
     | 'vx'
@@ -48,7 +54,17 @@ export interface AudioSnap {
     /** Feet centre. */
     x: number;
     y: number;
+    /** Hitstop, the hurt's stagger, the fling she is aiming (-1 none) and for how long (0..1 of its cap). */
+    hitstop?: number;
+    stagger?: number;
+    fling?: number;
+    aim?: number;
   };
+  /**
+   * Burning lamps (`scene.lures` with cuts left): flame centre, kind, how far it is heard (px), and `i`, its
+   * index. Embers (a flame she flung from, smouldering) are not burning.
+   */
+  lures?: Array<{ i: number; x: number; y: number; kind: string; reach: number }>;
   /** Lanterns then lamps: foot position, lit, channel progress 0..1. */
   lights: Array<{ x: number; y: number; lit: boolean; progress: number; lamp: boolean }>;
   /** The light she carries: glints in hand and her seen level 0-4 (memory/giving.md). */
@@ -65,12 +81,14 @@ export interface AudioSnap {
     aware?: number;
     dozing?: boolean;
     down?: boolean;
+    /** What it is doing (`EnemyState.mode`): ants skitter only while they walk. */
+    mode?: string;
   }>;
 }
 
-export function snapOf(state: GameState, scene: Scene, channelFrames: number, giftFrames = 600): AudioSnap {
+export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
   const p = state.player;
-  const of = Math.max(1, channelFrames);
+  const of = Math.max(1, t.goal.channelFrames);
   const lights: AudioSnap['lights'] = [];
   for (const lamp of [false, true]) {
     const list = (lamp ? scene.lamps : scene.lanterns) ?? [];
@@ -80,8 +98,21 @@ export function snapOf(state: GameState, scene: Scene, channelFrames: number, gi
       lights.push({ x: l.x, y: l.y, lit: !!s?.lit, progress: Math.min(1, (s?.channel ?? 0) / of), lamp });
     });
   }
+  const lures: NonNullable<AudioSnap['lures']> = [];
+  (scene.lures ?? []).forEach((l, i) => {
+    if ((state.lures.hp[i] ?? 0) <= 0) return;
+    const f = flameAt(state.lures, i, l, state.frame, t);
+    const row = lureRowNow(state.lures, i, l, t);
+    lures.push({ i, x: f.x, y: f.y, kind: l.kind, reach: row.radius * AUDIO.lamp.reachScale });
+  });
+  // (The fling's fields are read loosely: the sound builds against a sim with or without them.)
+  const fl = p as PlayerState & { fling?: number; flingFrames?: number };
+  const fling = fl.fling ?? -1;
+  const cap = (t.lures as { flingFrames?: number }).flingFrames ?? 36;
   return {
     frame: state.frame,
+    room: scene.id,
+    hold: (state.kit?.story ?? 0) > 0,
     hero: {
       x: p.x + p.w / 2,
       y: p.y + p.h,
@@ -97,8 +128,13 @@ export function snapOf(state: GameState, scene: Scene, channelFrames: number, gi
       faded: p.faded,
       kindling: p.kindling,
       kindlingLamp: p.kindlingLamp,
+      hitstop: p.hitstop,
+      stagger: p.stagger,
+      fling,
+      aim: fling >= 0 ? Math.min(1, (fl.flingFrames ?? 0) / Math.max(1, cap)) : 0,
     },
     lights,
+    lures,
     wallet: state.pickups.count,
     seenLevel: p.seenLevel ?? 0,
     creatures: state.enemies
@@ -108,10 +144,11 @@ export function snapOf(state: GameState, scene: Scene, channelFrames: number, gi
         x: e.x + e.w / 2,
         y: e.y + e.h / 2,
         gift: e.gift ?? 0,
-        of: giftFrames,
+        of: t.giving.giftCalmFrames,
         aware: e.aware ?? 0,
         dozing: !!e.dozing,
         down: e.mode === 'dead' || e.mode === 'hurt' || e.hp <= 0,
+        mode: e.mode,
       })),
   };
 }
@@ -147,6 +184,8 @@ export interface Cue {
 export interface RouteContext {
   scene: Scene;
   seed: number;
+  /** The step's events (set by the conductor): sounds of many at once can share (three flames out on one landing). */
+  events?: readonly PlayEvent[];
 }
 
 export type Material = 'moss' | 'wood' | 'water';
@@ -164,9 +203,9 @@ export function materialAt(scene: Scene, x: number, y: number): Material {
   return 'moss';
 }
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const amp = (k: number) => 20 * Math.log10(Math.max(1e-4, k));
+export const amp = (k: number) => 20 * Math.log10(Math.max(1e-4, k));
 
 /** A variant and a few cents of detune, seeded by frame, event index and sound (no repeats per tape). */
 function pick(sound: SoundId, count: number, ctx: RouteContext, frame: number, i: number) {
@@ -178,7 +217,7 @@ function pick(sound: SoundId, count: number, ctx: RouteContext, frame: number, i
   };
 }
 
-function cue(
+export function cue(
   sound: SoundId,
   bus: BusId,
   ctx: RouteContext,
@@ -204,49 +243,17 @@ function cue(
 
 /**
  * The one-shots a sim event asks for (`i` = its index in the step, for the dice). Most events
- * make no sound: footsteps on moss, turns, skids, apexes, slashes, glints (later milestones).
+ * make no sound: turns, skids, apexes. Play (her moves, the blade, the lamps, the creatures) is
+ * route-play.ts; the grove's lanterns and giving are here.
  */
-export function route(e: SimEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
-  const H = AUDIO.hero;
+export function route(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  const play = routePlay(e, i, snap, ctx);
+  if (play) return play;
+  // The test grove's giving (a carried chord catching, offers, gifts) sounds only where creatures see by it.
+  if ((ctx.scene.senses ?? 'wallet') !== 'wallet') return [];
   const L = AUDIO.lantern;
   const f = snap.frame;
-  const hero = (sound: SoundId, db: number, over: Partial<Cue> = {}) =>
-    cue(sound, 'hero', ctx, f, i, { x: e.x, y: e.y, db, place: 'hero', priority: 3, ...over });
   switch (e.type) {
-    case 'jump': {
-      if (e.kind !== 'double') return [hero('wing', H.wingDb - (e.kind === 'wall' ? 1 : 0))];
-      // The somersault: two beats and a whoosh that crosses her as she turns.
-      const dir = e.dir || snap.hero.facing || 1;
-      return [
-        hero('wing', H.wingDb - 1),
-        hero('wing', H.wingDb - 3, { delay: H.flutterS, cents: -60 }),
-        hero('whoosh', H.whooshDb, { place: 'hero', pan: -0.35 * dir, panTo: 0.35 * dir }),
-      ];
-    }
-    case 'glideStart': {
-      // A soft deep whumpf out of a long fall, nothing after an apex.
-      const k = clamp01((e.vy - H.catchVy[0]) / (H.catchVy[1] - H.catchVy[0]));
-      if (k <= 0) return [];
-      return [hero('catch', H.catchDb + amp(0.2 + 0.8 * k), { cents: -180 * k })];
-    }
-    case 'dashStart':
-      // The wind-up frames are silent (the hold is the sound); the gust comes as she moves.
-      return [hero('dash', H.dashDb, { delay: Math.max(1, snap.hero.freeze) / 60 })];
-    case 'land': {
-      const mat = materialAt(ctx.scene, e.x, e.y);
-      const k = clamp01((e.vy - H.dustVy[0]) / (H.dustVy[1] - H.dustVy[0]));
-      const out: Cue[] = [];
-      if (mat === 'water') out.push(hero('splash', H.dustDb + amp(0.4 + 0.6 * k)));
-      else out.push(hero('dust', H.dustDb + amp(0.25 + 0.75 * k)));
-      if (e.hard && mat !== 'water')
-        out.push(hero(mat === 'wood' ? 'thumpWood' : 'thump', H.thumpDb, { priority: 4 }));
-      return out;
-    }
-    case 'step':
-      // Silent on moss; the faintest tick on wood.
-      return materialAt(ctx.scene, e.x, e.y) === 'wood' ? [hero('tick', H.tickDb, { priority: 0 })] : [];
-    case 'wallSlideStart':
-      return [hero('scrape', H.scrapeDb, { x: e.x + e.dir * 12 })];
     case 'lanternNotice':
     case 'lampNotice':
     case 'lanternRefuse':
@@ -305,7 +312,7 @@ function restNotes(cost: number, i: number, snap: AudioSnap, ctx: RouteContext):
  * creature with a mouth, a bowl partial for a lantern, a deeper bowl for the heart). Creatures that notice
  * her draw a breath in; a lampwing's hum swells toward her light.
  */
-function routeGiving(e: SimEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
+function routeGiving(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
   const G = AUDIO.giving;
   const f = snap.frame;
   const h = snap.hero;
@@ -416,17 +423,13 @@ export function calmBreath(elapsed: number, of: number): boolean {
   return elapsed > 0 && Math.floor(phase(elapsed / 60)) > Math.floor(phase((elapsed - 1) / 60));
 }
 
-/** Frames of the far voice's calls, up to and including `frame` (seeded; never on the knock). */
+/** Frames of the far voice's calls, up to and including `frame` (seeded, irregular: the forest never repeats). */
 export function voiceFrame(seed: number, frame: number): boolean {
   const F = AUDIO.forest;
   const s = salt('voice');
   let t = Math.round((8 + hash01(seed, s, -1) * 12) * 60);
   for (let k = 0; t <= frame; k++) {
-    // Never on the Hush's beat: slide a call that would land near a knock clear of it.
-    const near = t % PULSE_FRAMES;
-    const clear = Math.round(F.voiceClearS * 60);
-    const at = near < clear ? t + clear : near > PULSE_FRAMES - clear ? t + 2 * clear : t;
-    if (at === frame) return true;
+    if (t === frame) return true;
     t += Math.round(lerp(F.voiceGapS[0], F.voiceGapS[1], hash01(seed, s, k)) * 60);
   }
   return false;
@@ -438,8 +441,9 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
   const f = snap.frame;
   const out: Cue[] = [];
   const seed = ctx.seed;
+  const bed = bedOf(snap.room ?? ctx.scene.id);
   // Drips: rare, at canopy positions across the view, duller and wetter the farther back.
-  if (hash01(seed, f, salt('drip')) < 1 / (F.dripMeanS * 60)) {
+  if (bed.drips > 0 && hash01(seed, f, salt('drip')) < bed.drips / (F.dripMeanS * 60)) {
     const u = hash01(seed, f, salt('drip'), 1);
     const depth = hash01(seed, f, salt('drip'), 2) ** 0.7;
     const x = cam.x + (hash01(seed, f, salt('drip'), 3) - 0.5) * 2 * F.dripSpanPx;
@@ -464,8 +468,8 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
       }),
     );
   }
-  // The far voice: the forest's own mind, never on a beat.
-  if (voiceFrame(seed, f)) {
+  // The far voice: the forest's own mind, where the room is open enough to hear it.
+  if (bed.voice && voiceFrame(seed, f)) {
     const side = hash01(seed, f, salt('voice'), 1) < 0.5 ? -1 : 1;
     out.push(
       cue('voice', 'world', ctx, f, 101, {
@@ -475,21 +479,6 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
         place: 'fixed',
         pan: side * (0.35 + 0.3 * hash01(seed, f, salt('voice'), 3)),
         far: 1,
-        priority: 2,
-      }),
-    );
-  }
-  // The Hush's knock at the top of each swell: left, then right.
-  if (isKnock(f)) {
-    const beat = hushPhase(f).beat;
-    out.push(
-      cue('knock', 'hush', ctx, f, 102, {
-        x: cam.x,
-        y: cam.y + 400,
-        db: AUDIO.hush.knockDb,
-        place: 'fixed',
-        pan: beat % 2 === 1 ? -0.22 : 0.22,
-        far: 0.35,
         priority: 2,
       }),
     );
@@ -510,7 +499,7 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
       }),
     );
   });
-  // Calmed burrbacks breathe slower and slower, into the Hush's rhythm, fading as the calm runs out.
+  // Calmed burrbacks breathe slower and slower, fading as the calm runs out.
   (snap.creatures ?? []).forEach((c, k) => {
     if (c.kind !== 'burrback' || c.gift <= 0) return;
     if (!calmBreath(c.of - c.gift, c.of)) return;
@@ -520,6 +509,21 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
         y: c.y,
         db: AUDIO.giving.calmDb + amp(Math.max(0.08, c.gift / c.of)),
         priority: 1,
+      }),
+    );
+  });
+  // Ants (carriers): a tiny skitter now and then while they walk near her.
+  const C = AUDIO.creatures;
+  (snap.creatures ?? []).forEach((c, k) => {
+    if (c.kind !== 'carrier' || c.down || c.mode === 'under' || c.mode === 'sleep') return;
+    const near = 1 - Math.hypot(c.x - snap.hero.x, c.y - (snap.hero.y - 30)) / C.skitterPx;
+    if (near <= 0 || hash01(seed, f, k, salt('skitter')) >= C.skitterRate / 60) return;
+    out.push(
+      cue('skitter', 'creatures', ctx, f, 140 + k, {
+        x: c.x,
+        y: c.y,
+        db: C.skitterDb + amp(0.3 + 0.7 * near),
+        priority: 0,
       }),
     );
   });
@@ -553,11 +557,6 @@ export interface Layers {
   hissL: number;
   hissR: number;
   hissHz: number;
-  breath: number;
-  f1: number;
-  f2: number;
-  pulse: number;
-  soilHz: number;
   air: number;
   airHz: number;
   airPan: number;
@@ -574,6 +573,21 @@ export interface Layers {
   /** The chord of the light she carries: a gain per tone (A4, E5, B5, D5), and where she is. */
   chord: [number, number, number, number];
   chordPan: number;
+  /**
+   * The nearest burning lamp's hum (voices/lamp.ts): gain, pitch and its beat partner (Hz), its low-pass
+   * (opening as she nears), pan; the swarm's flutter on it; the fling's held swell (gain, band Hz).
+   */
+  lamp: number;
+  lampHz: number;
+  lampBeat: number;
+  lampLp: number;
+  lampPan: number;
+  flutter: number;
+  aim: number;
+  aimHz: number;
+  /** The world bed's gain (1 = as is; lower in held moments) and the low-pass over all but the lamps (Hz). */
+  duck: number;
+  muffleHz: number;
 }
 
 /** Screen pan of world x: -1..1 at the view's edges. */
@@ -591,45 +605,31 @@ function drift(seed: number, clock: number): number {
   return 1 + W.driftDepth * (v / W.driftS.length);
 }
 
+/** A lamp kind's hum row (the ring and great lamps share the great's). */
+const lampKey = (kind: string): keyof typeof LAMP_HZ =>
+  kind === 'wick' ? 'wick' : kind === 'lantern' ? 'lantern' : 'great';
+
 export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: RouteContext): Layers {
   const W = AUDIO.wind;
-  const M = AUDIO.hush;
   const H = AUDIO.hero;
   const L = AUDIO.lantern;
   const F = AUDIO.forest;
+  const A = AUDIO.lamp;
   const h = snap.hero;
-  const zw = zoneWeights(cam.x);
-  const mp = hushPhase(snap.frame);
+  const bed = bedOf(snap.room ?? ctx.scene.id);
+  const zw = bed.zones ? zoneWeights(cam.x) : ([0, 0, 0] as [number, number, number]);
 
-  // A lit lantern near her muffles the Hush: safety is audible.
-  let safe = 0;
-  for (const l of snap.lights) {
-    if (!l.lit || l.lamp) continue;
-    const d = Math.hypot(l.x - h.x, l.y - h.y);
-    safe = Math.max(safe, clamp01((M.safePx - d) / (M.safePx * (2 / 3))));
-  }
-  // Where root has reached, the world breathes with the Hush (gone near a lit lantern).
-  const breathe = 1 + M.worldDepth * (mp.air - 0.5) * 2 * (1 - safe);
-
-  // Wind: the same travelling wave that sways the grass, sampled across the view.
+  // Wind: the same travelling wave that sways the grass, sampled across the view; the room sets its levels.
   const span = W.spanPx / Math.max(0.25, cam.zoom);
   const gust = 0.5 + 0.5 * Math.sin(clock * 0.23 - cam.x * 0.0005);
   const dr = drift(ctx.seed, clock);
   const sway = (x: number) => clamp01((0.3 * gust + 0.7 * Math.abs(wind(x, clock))) * dr);
-  const db = (r: readonly number[], k: number) => dbToGain(lerp(r[0] ?? -60, r[1] ?? -60, clamp01(k)));
-  const roar = db(W.roarDb, gust * dr) * breathe;
-  const hissL = db(W.hissDb, sway(cam.x - span));
-  const hissR = db(W.hissDb, sway(cam.x + span));
-  const hissHz = W.hissHz[0] * zw[0] + W.hissHz[1] * zw[1] + W.hissHz[2] * zw[2];
-
-  // The Hush, under the soil: breath (oo <-> aa) and the beating pulse.
-  const air = lerp(mp.air, 0.35, safe);
-  const breath = dbToGain(M.breathDb) * (0.06 + 0.94 * air) * (1 - 0.5 * safe);
-  const pulse = dbToGain(M.pulseDb) * (0.03 + 0.97 * mp.swell) * (1 - 0.4 * safe);
-  const vowel = lerp(mp.vowel, 0, safe);
-  const f1 = lerp(HUSH.oo[0], HUSH.aa[0], vowel);
-  const f2 = lerp(HUSH.oo[1], HUSH.aa[1], vowel);
-  const soilHz = lerp(M.soilHz, M.safeHz, safe);
+  const db = (r: readonly number[], k: number, off: number) =>
+    dbToGain(lerp(r[0] ?? -60, r[1] ?? -60, clamp01(k)) + off);
+  const roar = db(W.roarDb, gust * dr, bed.wind);
+  const hissL = db(W.hissDb, sway(cam.x - span), bed.leaves);
+  const hissR = db(W.hissDb, sway(cam.x + span), bed.leaves);
+  const hissHz = bed.zones ? W.hissHz[0] * zw[0] + W.hissHz[1] * zw[1] + W.hissHz[2] * zw[2] : bed.hissHz;
 
   // Her airflow while the wings are open.
   const speed = clamp01(Math.abs(h.vx) / 10.56);
@@ -638,7 +638,7 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
   const airHz = 480 + 420 * speed;
   const airPan = panOf(h.x, cam) * H.panWidth;
 
-  // The bowl she is kindling: a rubbed rim swelling with the channel.
+  // The bowl she is kindling (the test grove's lanterns): a rubbed rim swelling with the channel.
   let rub = 0;
   let rubHz: number = PITCH.D3;
   let rubPan = 0;
@@ -650,7 +650,7 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     rubHz = kl.lamp ? PITCH.D4 : PITCH.D3;
     rubPan = panOf(kl.x, cam) * 0.6;
   }
-  // A lit light near her hums, faint and steady.
+  // A lit lantern near her hums, faint and steady.
   let hum = 0;
   let humHz: number = PITCH.D3;
   let humPan = 0;
@@ -665,7 +665,7 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     }
   }
 
-  // The pool laps, the root steam breathes under the light well, the violet air is glassy.
+  // The pool laps; in the grove the root steam breathes under the light well and the violet air is glassy.
   const pool = poolOf(ctx.scene);
   let poolG = 0;
   let poolPan = 0;
@@ -675,15 +675,39 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     poolG = dbToGain(F.poolDb) * clamp01(1 - d / F.poolPx) ** 2 * lap;
     poolPan = panOf(pool.x, cam) * 0.7;
   }
-  const steam = dbToGain(F.steamDb) * zw[1] * breathe;
+  const steam = dbToGain(F.steamDb) * zw[1];
   const glass = dbToGain(F.glassDb) * zw[2] * (0.4 + 0.6 * gust);
 
-  // What she carries makes a tone: one more chord tone per seen level, louder as it grows; none empty-handed.
+  // What she carries makes a tone (the test grove's giving): one more chord tone per seen level.
   const level = h.faded ? 0 : Math.max(0, Math.min(4, snap.seenLevel ?? 0));
   const G = AUDIO.giving;
   const total = level > 0 ? dbToGain(lerp(G.chordDb[0], G.chordDb[1], (level - 1) / 3)) : 0;
   const each = level > 0 ? total / Math.sqrt(level) : 0;
   const chord = [0, 1, 2, 3].map((k) => (k < level ? each : 0)) as Layers['chord'];
+
+  // The lamps: the nearest burning flame hums, steady and a little sharp of the forest; nearer, louder
+  // and brighter, and the world's own sounds draw back a little (being drawn in).
+  const bx = h.x;
+  const by = h.y - 40;
+  let near = 0;
+  let lamp: NonNullable<AudioSnap['lures']>[number] | undefined;
+  for (const l of snap.lures ?? []) {
+    const k = clamp01(1 - Math.hypot(l.x - bx, l.y - by) / Math.max(1, l.reach));
+    if (k > near || (h.fling ?? -1) === l.i) {
+      near = (h.fling ?? -1) === l.i ? 1 : k;
+      lamp = l;
+      if ((h.fling ?? -1) === l.i) break;
+    }
+  }
+  const key = lampKey(lamp?.kind ?? 'wick');
+  const aiming = (h.fling ?? -1) >= 0;
+  const aimK = aiming ? 0.35 + 0.65 * (h.aim ?? 0) : 0;
+  const lampG = lamp ? dbToGain(A.humDb) * near ** 2 * (aiming ? 1.4 : 1) : 0;
+
+  // Held moments: the fling's slowed aim, a story hold, a fade. And her hurt muffles all but the lamps.
+  const held = Math.max(aiming ? 1 : 0, snap.hold ? 0.7 : 0, h.faded ? 0.5 : 0, 0.35 * near ** 2);
+  const hurt = (h.stagger ?? 0) > 0 && !h.faded;
+  const muffleHz = hurt ? AUDIO.combat.muffleHz : aiming ? 1400 + 2600 * (1 - aimK) : 20000;
 
   return {
     chord,
@@ -692,11 +716,6 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     hissL,
     hissR,
     hissHz,
-    breath,
-    f1,
-    f2,
-    pulse,
-    soilHz,
     air: flight,
     airHz,
     airPan,
@@ -710,5 +729,15 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     poolPan,
     steam,
     glass,
+    lamp: lampG,
+    lampHz: LAMP_HZ[key],
+    lampBeat: LAMP_BEAT[key],
+    lampLp: lerp(A.humLp[0], A.humLp[1], near ** 1.5),
+    lampPan: lamp ? panOf(lamp.x, cam) * 0.7 : 0,
+    flutter: lamp ? dbToGain(A.flutterDb) * near : 0,
+    aim: aiming ? dbToGain(A.aimDb) * aimK : 0,
+    aimHz: LAMP_HZ[key] * (0.5 + 1.5 * (h.aim ?? 0)),
+    duck: dbToGain(AUDIO.duckDb * clamp01(held)),
+    muffleHz,
   };
 }

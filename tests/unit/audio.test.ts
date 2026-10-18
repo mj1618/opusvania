@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { bakeSound, SOUNDS, type SoundId } from '../../src/audio/bake';
-import { BREATH_FRAMES, hushPhase, isKnock, PULSE_FRAMES } from '../../src/audio/clock';
 import { Conductor } from '../../src/audio/conductor';
 import { biquad, peak, rms } from '../../src/audio/dsp';
 import {
@@ -24,8 +23,8 @@ import { carrying, flatScene, newSim, type Sim } from './helpers';
 
 /**
  * The sound as data: the router's mapping over real sim tapes (what makes a sound and what must
- * not), its determinism, the Hush's clock, and the baked one-shots (clean edges, no hiss above
- * 9 kHz, the same samples from the same seed). No AudioContext anywhere: memory/audio.md.
+ * not), its determinism, and the baked one-shots (clean edges, no hiss above 9 kHz, the same samples
+ * from the same seed). No AudioContext anywhere: memory/audio.md.
  */
 const CTX = { scene: GROVE, seed: 1 };
 const CAM: AudioCam = { x: 1120, y: 1000, zoom: 1 };
@@ -41,7 +40,7 @@ function tape(s: Sim, script: string): Frame[] {
   for (const input of parseInputScript(script)) {
     const events: SimEvent[] = [];
     step(s.state, input, s.tuning, s.scene, events);
-    out.push({ events, snap: snapOf(s.state, s.scene, s.tuning.goal.channelFrames) });
+    out.push({ events, snap: snapOf(s.state, s.scene, s.tuning) });
   }
   return out;
 }
@@ -53,29 +52,18 @@ function routed(frames: Frame[]): Cue[] {
 
 const sounds = (cues: Cue[]) => cues.map((c) => c.sound);
 
-describe('the Hush clock', () => {
-  it('beats every 4.2 s and breathes every 18 s, swelling at the knock', () => {
-    expect(PULSE_FRAMES).toBe(252);
-    expect(BREATH_FRAMES).toBe(1080);
-    expect(hushPhase(252).swell).toBeCloseTo(1, 6);
-    expect(hushPhase(126).swell).toBeCloseTo(0, 6);
-    expect(isKnock(252) && isKnock(504) && !isKnock(253) && !isKnock(0)).toBe(true);
-    expect(hushPhase(270).air).toBeCloseTo(1, 3);
-    expect(hushPhase(0).vowel).toBe(0);
-    expect(hushPhase(540).vowel).toBeCloseTo(1, 6);
-  });
-});
-
 describe('the router over real tapes', () => {
-  it('a ground jump is one wingbeat; footsteps on moss are silent; nothing is pitched', () => {
+  it('a ground jump is one wingbeat; footsteps on earth are soft pads; nothing is pitched', () => {
     const s = newSim(flatScene());
     const f = tape(s, '.10 R40 R+J20 R30 .30');
     const cues = routed(f);
-    expect(f.some((x) => x.events.some((e) => e.type === 'step'))).toBe(true);
+    const steps = f.flatMap((x) => x.events).filter((e) => e.type === 'step').length;
+    expect(steps).toBeGreaterThan(0);
     expect(sounds(cues).filter((c) => c === 'wing')).toHaveLength(1);
+    expect(sounds(cues).filter((c) => c === 'pad')).toHaveLength(steps);
     expect(sounds(cues)).not.toContain('tick');
     // Her movement sounds are all air, felt and dust.
-    for (const c of cues) expect(['wing', 'dust']).toContain(c.sound);
+    for (const c of cues) expect(['wing', 'dust', 'pad']).toContain(c.sound);
     expect(cues.every((c) => c.bus === 'hero')).toBe(true);
   });
 
@@ -104,14 +92,18 @@ describe('the router over real tapes', () => {
     expect(d?.delay).toBeGreaterThan(0);
   });
 
-  it('slashes, glints and turns make no sound yet', () => {
+  it('glints and turns make no sound; each slash is a swish on the combat bus', () => {
     const f = tape(newSim(), '.10 A1 .20 A1 .20 R60 L5 .20');
     const types = new Set(f.flatMap((x) => x.events.map((e) => e.type)));
     expect(types.has('slash') && types.has('pickup') && types.has('turn')).toBe(true);
-    // (The lantern noticing her as she passes is the only sound here.)
-    expect(sounds(routed(f)).every((x) => ['wing', 'dust', 'splash', 'lanternNotice'].includes(x))).toBe(
-      true,
-    );
+    const cues = routed(f);
+    expect(sounds(cues).filter((c) => c.startsWith('slash'))).toHaveLength(2);
+    expect(cues.filter((c) => c.sound.startsWith('slash')).every((c) => c.bus === 'combat')).toBe(true);
+    expect(
+      sounds(cues).every((x) =>
+        ['wing', 'dust', 'pad', 'tick', 'splash', 'lanternNotice', 'slash1', 'slash2'].includes(x),
+      ),
+    ).toBe(true);
   });
 
   it('the stone lantern: notice, refuse, the rubbed channel, then the kindle', () => {
@@ -153,28 +145,22 @@ describe('the router over real tapes', () => {
 describe('the world by itself', () => {
   const frames = 60 * 120;
   const snapAt = (frame: number, base: AudioSnap): AudioSnap => ({ ...base, frame });
-  const base = snapOf(newSim().state, GROVE, 30);
+  const g = newSim();
+  const base = snapOf(g.state, GROVE, g.tuning);
   const all = Array.from({ length: frames }, (_, f) => ambient(snapAt(f, base), CAM, CTX)).flat();
 
-  it('drips are rare and irregular, the knock is exact, the far voice is never on the beat', () => {
+  it('drips are rare and irregular; the far voice calls now and then', () => {
     const drips = all.filter((c) => ['leaf', 'bark', 'plink'].includes(c.sound));
     expect(drips.length).toBeGreaterThan(120 / AUDIO.forest.dripMeanS / 2);
     expect(drips.length).toBeLessThan((120 / AUDIO.forest.dripMeanS) * 2);
     const gaps = drips.slice(1).map((c, i) => c.frame - (drips[i]?.frame ?? 0));
     expect(new Set(gaps).size).toBeGreaterThan(gaps.length / 2);
-    const knocks = all.filter((c) => c.sound === 'knock');
-    expect(knocks).toHaveLength(Math.floor((frames - 1) / PULSE_FRAMES));
-    expect(knocks[0]?.pan).toBe(-(knocks[1]?.pan ?? 0));
     const calls = all.filter((c) => c.sound === 'voice');
     expect(calls.length).toBeGreaterThanOrEqual(2);
-    for (const c of calls) {
-      const off = c.frame % PULSE_FRAMES;
-      expect(Math.min(off, PULSE_FRAMES - off)).toBeGreaterThanOrEqual(AUDIO.forest.voiceClearS * 60 - 1);
-      expect(voiceFrame(1, c.frame)).toBe(true);
-    }
+    for (const c of calls) expect(voiceFrame(1, c.frame)).toBe(true);
   });
 
-  it('a wave crossing the view is heard crossing; a lit lantern muffles the Hush', () => {
+  it('a wave crossing the view is heard crossing; a lit lantern hums near her', () => {
     const hiss = Array.from({ length: 400 }, (_, k) => layers(base, CAM, k / 20, CTX));
     const diff = hiss.filter((l) => Math.abs(l.hissL - l.hissR) > 0.1 * Math.max(l.hissL, l.hissR));
     expect(diff.length).toBeGreaterThan(100);
@@ -183,11 +169,8 @@ describe('the world by itself', () => {
     if (!lantern) throw new Error('no lantern');
     near.hero = { ...near.hero, x: lantern.x, y: lantern.y };
     const dark = { ...near, lights: base.lights };
-    const safe = layers(near, CAM, 3, CTX);
-    const open = layers(dark, CAM, 3, CTX);
-    expect(safe.soilHz).toBeLessThan(open.soilHz);
-    expect(safe.pulse).toBeLessThan(open.pulse);
-    expect(safe.hum).toBeGreaterThan(0);
+    expect(layers(near, CAM, 3, CTX).hum).toBeGreaterThan(0);
+    expect(layers(dark, CAM, 3, CTX).hum).toBe(0);
   });
 
   it('wingbeats are never closer than 80 ms', () => {
