@@ -20,6 +20,20 @@ why.
   bring an earned window and 2× size for the old burrback, a hawker that strikes, burrback stomps, deaths that cost a
   walk, and held story beats. This design assumes them.
 
+## v3 proposal (2026-10-18): after Matt's own play
+
+Matt played area 1 and found it "do this, do this, do this", bland, obvious and monotone, with the lamp catch
+annoying. **`wood-area1-v3.md` is the redesign:**
+- a web around the oak;
+- real secrets;
+- two hard optional challenges;
+- the fling as the core verb;
+- real highs and lows;
+- the signposting stripped.
+
+It supersedes this doc for area 1 once Matt has played the fling and attack toy room. Until then this doc describes
+the build.
+
 ## Round 5 revisions: the depth pass (2026-10-18, `reviews/area1-plan-r5.md`)
 
 After rounds 3–4 the area reads as one journey (video r3, first-timer r5) and lacks depth. These win over everything
