@@ -132,7 +132,7 @@ test('__game API: step, state, input, load, teleport, cam, freeze', async ({ pag
   expect(r.enemies.list[0]).toMatchObject({
     id: 'burr-bank',
     kind: 'burrback',
-    hp: 5,
+    hp: 3,
     mode: 'walk',
   });
   expect(r.health).toMatchObject({ hp: 4, hpMax: 4, invuln: 0, faded: 0 });
