@@ -57,7 +57,7 @@ interface Particle {
   life: number;
   size: number;
   color: number;
-  kind: 'spark' | 'chip' | 'mote' | 'home' | 'ring' | 'star' | 'line' | 'flash' | 'pour' | 'puff';
+  kind: 'spark' | 'chip' | 'mote' | 'home' | 'ring' | 'star' | 'line' | 'flash' | 'pour' | 'puff' | 'link';
   /** Ring / line: radius / angle; home: delay before it flies. */
   a: number;
   b: number;
@@ -71,6 +71,18 @@ export class Fx {
   /** Her aura, eased toward her glow. */
   private aura = -1;
   private readonly lightId = 'lr-aura';
+  /** Seconds since the moon-hole opened in this fight (-1: shut). */
+  private moonflood = -1;
+
+  /** The arena's moon-hole (the room's `moonholes` mark nearest the boss's hub). */
+  private moonholeOf(sim: SimView): { x: number; y: number } {
+    const holes =
+      (sim.scene.marks as { moonholes?: Array<{ x: number; y: number }> } | undefined)?.moonholes ?? [];
+    const hub = (sim.scene.boss as { hub?: { x: number; y: number } } | undefined)?.hub ?? { x: 0, y: 0 };
+    let best = holes[0] ?? { x: hub.x, y: 0 };
+    for (const h of holes) if (Math.abs(h.x - hub.x) < Math.abs(best.x - hub.x)) best = h;
+    return best;
+  }
 
   constructor(private readonly lights: LightRegistry) {}
 
@@ -85,6 +97,11 @@ export class Fx {
 
   onEvents(events: readonly SimEvent[], sim: SimView): void {
     const p = sim.player;
+    if (
+      events.some((e) => e.type === 'roomEnter') ||
+      events.some((e) => (e as { type: string }).type === 'bossUnlock')
+    )
+      this.moonflood = -1;
     for (const e of events) {
       const ev = e as unknown as Record<string, unknown> & { type: string };
       switch (ev.type) {
@@ -418,6 +435,190 @@ export class Fx {
           });
           break;
         }
+        case 'mendBreak': {
+          // The light she was drawing in scatters back out.
+          for (let k = 0; k < 8; k++) {
+            const a = this.r() * Math.PI * 2;
+            this.add({
+              kind: 'mote',
+              x: p.cx,
+              y: p.cy - 8,
+              vx: Math.cos(a) * 140,
+              vy: Math.sin(a) * 140,
+              life: 0.35,
+              size: 1.6,
+              color: FX.glow,
+              a: 0,
+              b: 0,
+            });
+          }
+          break;
+        }
+        case 'wickSet': {
+          // A set burned whole: a ring out of every wick of it, and a thread of light between them.
+          const ids = (ev.wicks as string[] | undefined) ?? [];
+          const lures = sim.scene.lures ?? [];
+          let px = Number.NaN;
+          let py = Number.NaN;
+          for (const id of ids) {
+            const l = lures.find((q) => q.id === id);
+            if (!l) continue;
+            this.add({
+              kind: 'ring',
+              x: l.x,
+              y: l.y,
+              vx: 0,
+              vy: 0,
+              life: 0.9,
+              size: 160,
+              color: FX.silver,
+              a: 0,
+              b: 0,
+            });
+            this.add({
+              kind: 'flash',
+              x: l.x,
+              y: l.y,
+              vx: 0,
+              vy: 0,
+              life: 0.5,
+              size: 90,
+              color: FX.silver,
+              a: 0,
+              b: 0,
+            });
+            if (!Number.isNaN(px))
+              this.add({
+                kind: 'link',
+                x: px,
+                y: py,
+                vx: l.x,
+                vy: l.y,
+                life: 1.2,
+                size: 2,
+                color: FX.silver,
+                a: 0,
+                b: 0,
+              });
+            px = l.x;
+            py = l.y;
+          }
+          break;
+        }
+        case 'enemyShy': {
+          // Silver light holds it off: a cold glint on it, a small flinch of light.
+          this.add({
+            kind: 'ring',
+            x: ev.x as number,
+            y: ev.y as number,
+            vx: 0,
+            vy: 0,
+            life: 0.4,
+            size: 40,
+            color: FX.silver,
+            a: 0,
+            b: 0,
+          });
+          break;
+        }
+        case 'enemyRespawn': {
+          // A spiderling drops back in on its thread: a puff of silk dust where it appears.
+          for (let k = 0; k < 6; k++) {
+            const a = this.r() * Math.PI * 2;
+            this.add({
+              kind: 'puff',
+              x: ev.x as number,
+              y: ev.y as number,
+              vx: Math.cos(a) * 30,
+              vy: Math.sin(a) * 30,
+              life: 0.6,
+              size: 8,
+              color: 0xc8ccd8,
+              a: 0,
+              b: 0,
+            });
+          }
+          break;
+        }
+        case 'podRegrow': {
+          // A glow pod's bud is back: a small warm-green bloom.
+          this.add({
+            kind: 'flash',
+            x: ev.x as number,
+            y: ev.y as number,
+            vx: 0,
+            vy: 0,
+            life: 0.5,
+            size: 50,
+            color: 0x9fe8c8,
+            a: 0,
+            b: 0,
+          });
+          break;
+        }
+        case 'bossOpen': {
+          this.add({
+            kind: 'ring',
+            x: ev.x as number,
+            y: ev.y as number,
+            vx: 0,
+            vy: 0,
+            life: 0.5,
+            size: 120,
+            color: FX.flash,
+            a: 0,
+            b: 0,
+          });
+          break;
+        }
+        case 'bossCue': {
+          if (ev.set !== 'p3') break;
+          if (ev.cue === 'moonhole') {
+            // The plug falls out of the moon-hole: bark rains down, and the moon floods the arena (kept).
+            this.moonflood = 0;
+            const mh = this.moonholeOf(sim);
+            for (let k = 0; k < 24; k++)
+              this.add({
+                kind: 'chip',
+                x: mh.x + (this.r() - 0.5) * 120,
+                y: mh.y + this.r() * 40,
+                vx: (this.r() - 0.5) * 200,
+                vy: 40 + this.r() * 160,
+                life: 1.6,
+                size: 4 + this.r() * 6,
+                color: this.r() < 0.5 ? FX.chip : FX.wood,
+                a: this.r() * 6,
+                b: 0,
+              });
+          } else {
+            // Thrown off the lamp by a throw-cut: a hard white flash on it.
+            this.add({
+              kind: 'star',
+              x: ev.x as number,
+              y: ev.y as number,
+              vx: 0,
+              vy: 0,
+              life: 0.2,
+              size: 60,
+              color: FX.flash,
+              a: 0,
+              b: 0,
+            });
+            this.add({
+              kind: 'ring',
+              x: ev.x as number,
+              y: ev.y as number,
+              vx: 0,
+              vy: 0,
+              life: 0.45,
+              size: 140,
+              color: FX.flash,
+              a: 0,
+              b: 0,
+            });
+          }
+          break;
+        }
         case 'gustEnd': {
           for (let k = 0; k < 8; k++) {
             const a = this.r() * Math.PI * 2;
@@ -506,6 +707,31 @@ export class Fx {
         l.intensity = A.k * (0.6 + 0.4 * this.aura);
       } else this.lights.set(this.lightId, { x: p.cx, y: p.cy, radius: r, color: A.color, intensity: A.k });
       glow.add(p.cx, p.cy - 6, 40 + 50 * this.aura, A.color, 0.04 + 0.08 * this.aura);
+    }
+    // In silver light (a burning moonwick near): a faint cold halo about her, the light that shields her.
+    const moonlit = (p as unknown as { moonlit?: number }).moonlit ?? 0;
+    if (moonlit > 0) glow.add(p.cx, p.cy - 6, 70, FX.silver, 0.1 * Math.min(1, moonlit));
+    // The moon-hole open (P3's set, and for good once the Gloamweaver is down): a shaft of moonlight to the floor.
+    const spec = sim.scene.boss;
+    if (spec) {
+      const down = sim.save.flags.includes(spec.flag);
+      if (this.moonflood >= 0) this.moonflood += dt;
+      const k = down ? 1 : this.moonflood >= 0 ? Math.min(1, this.moonflood / 1.2) : 0;
+      if (k > 0) {
+        const mh = this.moonholeOf(sim);
+        const floor = (spec as { floor?: number }).floor ?? spec.arena.y + spec.arena.h;
+        const len = floor - mh.y;
+        const breathe = 0.9 + 0.1 * Math.sin(clock * 0.7);
+        glow.add(mh.x, mh.y + len / 2, 130, 0xb8d0f0, 0.22 * k * breathe, len * 0.55);
+        glow.add(mh.x, mh.y + len / 2, 60, 0xdce8ff, 0.18 * k * breathe, len * 0.5);
+        glow.add(mh.x, floor - 6, 220, 0xdce8ff, 0.25 * k, 22);
+        for (let j = 0; j < 14; j++) {
+          const t = (clock * (0.04 + 0.03 * ((j * 7) % 5)) + j / 14) % 1;
+          front
+            .circle(mh.x + Math.sin(j * 2.1 + clock * 0.3) * 90, floor - t * len, 1.4)
+            .fill({ color: 0xe8f0ff, alpha: 0.5 * k * Math.sin(Math.PI * t) });
+        }
+      }
     }
     // Mending: motes of light drawn into her from round about.
     if ((loose.mend ?? 0) > 0) {
@@ -647,6 +873,18 @@ export class Fx {
           if (t >= 1) {
             glow.add(tx, ty, 50, q.color, 0.35);
             q.age = q.life;
+          }
+          break;
+        }
+        case 'link': {
+          const k = Math.sin(Math.PI * u);
+          front
+            .moveTo(q.x, q.y)
+            .lineTo(q.vx, q.vy)
+            .stroke({ color: q.color, width: 1.4, alpha: 0.6 * k });
+          for (let j = 0; j < 4; j++) {
+            const t = (u * 2 + j / 4) % 1;
+            glow.add(q.x + (q.vx - q.x) * t, q.y + (q.vy - q.y) * t, 12, q.color, 0.4 * k);
           }
           break;
         }

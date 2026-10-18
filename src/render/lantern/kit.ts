@@ -342,9 +342,17 @@ export class Kit {
     covers.forEach((c, i) => {
       const p = sim.player;
       const inside = p.cx > c.x && p.cx < c.x + c.w && p.cy > c.y && p.cy < c.y + c.h;
-      const opened = c.opens
-        ? sim.save.opened.includes(c.opens.includes(':') ? c.opens : `${room}:${c.opens}`)
-        : false;
+      // `opens` names what lifts it for good: broken bark / an opened shortcut (`save.opened`), a find taken or a
+      // hollow's upgrade had (`h2`), or a story flag (`vault-open`).
+      const key = c.opens ? (c.opens.includes(':') ? c.opens : `${room}:${c.opens}`) : '';
+      const bare = key.slice(key.indexOf(':') + 1);
+      const hollow = (S.hollows ?? []).find((h) => `${room}:${h.id}` === key);
+      const opened =
+        key !== '' &&
+        (sim.save.opened.includes(key) ||
+          sim.save.taken.includes(key) ||
+          sim.save.flags.includes(bare) ||
+          (hollow !== undefined && sim.save.flags.includes(`upgrade:${hollow.upgrade}`)));
       const want = opened ? 0 : inside ? 0.12 : 1;
       const k0 = this.coverK[i] ?? want;
       const k = k0 + (want - k0) * Math.min(1, dt * KIT.coverEase);

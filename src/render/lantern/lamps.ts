@@ -365,6 +365,20 @@ export class Lamps {
         this.drawWick(i, l, x, y, info, burning, clock, sim, back, glow, cands, cam);
         continue;
       }
+      // The cache's centrepiece: the firefly's own lamp, a jar with a firefly made of glass in it.
+      if (l.id.includes('firefly')) {
+        // Hung on three silk lines from the vault.
+        const tieY = info.tieY ?? y - 900;
+        for (const dx of [-20, 0, 20]) back.moveTo(x + dx * 3, tieY).lineTo(x + dx * 0.4, y - 56);
+        back.stroke({ color: LR.lamp.silk, width: 1.2, alpha: 0.5 });
+        this.drawFirefly(i, x, y, burning, this.embers.has(i), clock, back, glow, mid);
+        if (burning) {
+          cands.push({ i, d: 0, x, y, r: 520, c: LR.lamp.lightColor, k: flick });
+          this.moths(i, x, y, { ...info, size: 70, moths: 24 }, clock, back, front);
+        }
+        if (fling === i) this.aim(x, y, 60, clock, sim, front, glowFront);
+        continue;
+      }
       // The thread it hangs by (a swinging lamp's runs from its pivot).
       const topY = y - s * 0.62;
       const tieX = l.swing ? l.x : x;
@@ -537,6 +551,72 @@ export class Lamps {
       glow.add(x - s * 0.1, y - s * 0.15, s * 0.6, 0xdfeaff, 0.25 * gl + 0.04);
     }
     void l;
+  }
+
+  /**
+   * The firefly-lamp (the cache): a tall jar on a root foot, its glass catching the light; inside, a firefly made of
+   * glass, wings folded, its tail the lamp. Out, the jar dark and the firefly a cold husk: the marsh's reveal, early.
+   */
+  private drawFirefly(
+    i: number,
+    x: number,
+    y: number,
+    burning: boolean,
+    ember: boolean,
+    clock: number,
+    g: Graphics,
+    glow: GlowPool,
+    mid: GlowPool,
+  ): void {
+    const W = 64;
+    const H = 96;
+    const flick = 1 + 0.05 * Math.sin(clock * 5.3 + i) + 0.03 * Math.sin(clock * 11 + i);
+    // The jar: shoulders, a stopper, a pale edge where the glass curves away.
+    const jar: number[] = [];
+    for (let k = 0; k <= 24; k++) {
+      const t = k / 24;
+      const w = W * 0.5 * (t < 0.12 ? 0.55 + 3 * t : 1 - 0.12 * (t - 0.12));
+      jar.push(x + w, y - H * 0.5 + H * t);
+    }
+    for (let k = 24; k >= 0; k--) {
+      const t = k / 24;
+      const w = W * 0.5 * (t < 0.12 ? 0.55 + 3 * t : 1 - 0.12 * (t - 0.12));
+      jar.push(x - w, y - H * 0.5 + H * t);
+    }
+    const lit = burning && !ember;
+    g.poly(jar).fill({ color: lit ? 0x3a2410 : 0x14100c, alpha: 0.55 });
+    // The firefly inside: head, thorax, folded wings, the tail.
+    const fx = x;
+    const fy = y + 4;
+    g.ellipse(fx, fy - 26, 7, 6).fill(0x1a120c);
+    g.ellipse(fx, fy - 14, 9, 10).fill(0x241810);
+    g.poly([fx - 2, fy - 20, fx - 16, fy + 6, fx - 6, fy + 10]).fill({ color: 0x5a4a38, alpha: 0.8 });
+    g.poly([fx + 2, fy - 20, fx + 16, fy + 6, fx + 6, fy + 10]).fill({ color: 0x5a4a38, alpha: 0.8 });
+    g.moveTo(fx - 3, fy - 31).quadraticCurveTo(fx - 10, fy - 44, fx - 16, fy - 42);
+    g.moveTo(fx + 3, fy - 31).quadraticCurveTo(fx + 10, fy - 44, fx + 16, fy - 42);
+    g.stroke({ color: 0x241810, width: 1.4 });
+    const tail = lit ? 0xffd27a : ember ? LR.lamp.ember : 0x3a3024;
+    g.ellipse(fx, fy + 14, 10, 15).fill(tail);
+    if (lit) {
+      g.ellipse(fx, fy + 16, 5 * flick, 8 * flick).fill({ color: LR.lamp.core, alpha: 0.95 });
+      mid.add(fx, fy + 14, 22 * flick, 0xffe0a0, 0.6);
+      glow.add(x, y, 180 * flick, LR.lamp.halo, 0.32);
+    } else if (ember) glow.add(fx, fy + 14, 30, LR.lamp.ember, 0.3);
+    // Glass: the edge and a long highlight, the stopper and its root foot.
+    g.poly(jar).stroke({ color: lit ? 0xffd8a0 : 0x6a6458, width: 1.4, alpha: lit ? 0.55 : 0.35 });
+    g.roundRect(x - W * 0.2, y - H * 0.5 - 8, W * 0.4, 10, 3).fill(0x2a1a10);
+    g.moveTo(x + W * 0.3, y - H * 0.3).quadraticCurveTo(x + W * 0.38, y, x + W * 0.32, y + H * 0.3);
+    g.stroke({ color: 0xffffff, width: 2, alpha: lit ? 0.35 : 0.15 });
+    g.poly([
+      x - W * 0.45,
+      y + H * 0.5,
+      x + W * 0.45,
+      y + H * 0.5,
+      x + W * 0.3,
+      y + H * 0.5 + 16,
+      x - W * 0.3,
+      y + H * 0.5 + 16,
+    ]).fill(0x1a120c);
   }
 
   /** The circling moths of a burning lamp: small wings catching its light, on wandering loops. */

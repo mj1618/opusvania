@@ -22,6 +22,7 @@ type LightLoose = {
 };
 
 const LIGHT = new Set([
+  'bossCue',
   'glowGain',
   'mendStart',
   'mend',
@@ -64,6 +65,15 @@ export function routeLantern(
   const first = (): boolean =>
     (ctx.events ?? []).findIndex((o) => (o as { type: string }).type === e.type) === i;
   switch (e.type) {
+    case 'bossCue': {
+      // The Gloamweaver's P3: the moon-hole opens (a cold bloom, the moss lighting round the hub).
+      const c = ev as { set?: string; cue?: string };
+      if (c.set !== 'p3' || c.cue !== 'moonhole') return null;
+      return [
+        placed('lantern', 'kindle', L.kindleDb + 2, { priority: 7, far: 0.3, cents: -500 }),
+        placed('lantern', 'mossOn', L.mossDb + 4, { delay: 0.3 }, 1),
+      ];
+    }
     case 'glowGain': {
       // A spark (or a few) reaching her: a glass tick climbing the chord with how full she is; full, a bell.
       const max = Math.max(1, e.max ?? 18);

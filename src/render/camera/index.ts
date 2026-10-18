@@ -66,6 +66,8 @@ export interface CameraState {
   ovx: number;
   ovy: number;
   zone: string;
+  /** The slide (frames) of the zone she was last in (a zone's `frames`, else the tuning's). */
+  zoneFrames?: number;
   /** 0..1: how far a fall is leading the view (the zones yield to it). */
   fallK: number;
   /**
@@ -208,8 +210,11 @@ function stepZones(
     cam.ovx = 0;
     cam.ovy = 0;
   } else {
-    [cam.ox, cam.ovx] = smoothDamp(ox, cam.ovx, tx, Z.frames);
-    [cam.oy, cam.ovy] = smoothDamp(oy, cam.ovy, ty, Z.frames * (1 - 0.5 * cam.fallK));
+    // A zone may set its own slide (`frames`: Lanternroot's chambers slide in 20); leaving one for none, its own.
+    if (z) cam.zoneFrames = z.frames ?? Z.frames;
+    const fr = z ? (z.frames ?? Z.frames) : (cam.zoneFrames ?? Z.frames);
+    [cam.ox, cam.ovx] = smoothDamp(ox, cam.ovx, tx, fr);
+    [cam.oy, cam.ovy] = smoothDamp(oy, cam.ovy, ty, fr * (1 - 0.5 * cam.fallK));
     if (Math.abs(cam.ox) < 0.01 && Math.abs(cam.ovx) < 0.01 && tx === 0) cam.ox = cam.ovx = 0;
     if (Math.abs(cam.oy) < 0.01 && Math.abs(cam.ovy) < 0.01 && ty === 0) cam.oy = cam.ovy = 0;
   }
