@@ -44,7 +44,9 @@ describe('screen shake (trauma)', () => {
     expect(traumaFor([hurt(2)])).toBe(B.hurt);
     expect(traumaFor([hurt(0)])).toBe(B.fade);
     expect(traumaFor([snuff])).toBe(B.snuff);
-    expect(traumaFor([impact(1)])).toBe(0);
+    // (Every landed blow is felt a little since Matt's play: the attack read as weightless.)
+    expect(traumaFor([impact(1)])).toBe(B.hit);
+    expect(B.hit).toBeLessThan(B.finisher);
     expect(traumaFor([impact(2)])).toBe(B.finisher);
     expect(B.fade).toBeGreaterThan(B.hurt);
     expect(B.hurt).toBeGreaterThan(B.snuff);

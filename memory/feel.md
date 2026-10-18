@@ -88,6 +88,12 @@ The dangler's tell draws its swing: dashes down the drop, then round the arc tow
 - **"A moment"** in a held beat (HUD `MOMENT`): the frame's edges darken softly and a pale crescent breathes in the
   lower right corner, with the HUD fade, her look and the camera's drift.
 
+## The attack, after Matt's play (2026-10-18)
+Greybox motes.ts: every slash draws a filled crescent (the nail slash's shape: outer edge at its reach, the inner edge
+swelling in at the middle, needle ends), swept out over a third of its 0.13 s, then thinning; every `slashHit` throws
+7 sparks (11 on the finisher) the way the cut went, as streaks, and a bright slash mark across the blow. Every landed
+blow shakes a little (`hit` 0.07; the finisher 0.16). The creatures agent is overhauling the attack itself.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.

@@ -88,7 +88,8 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
         if (e.hard) add += B.hardLand;
         break;
       case 'impact':
-        if (e.power >= 2) add += B.finisher;
+        // Every blow that lands is felt a little (Matt's play: the attack unsatisfying); the finisher more.
+        add += e.power >= 2 ? B.finisher : B.hit;
         break;
       case 'throwCut':
         // A throw-cut swung (plan r5 item 2): the heavy cut's weight lands with it.

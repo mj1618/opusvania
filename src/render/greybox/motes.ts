@@ -18,14 +18,14 @@ import { GB } from './palette';
 
 /** Dust: colour, alpha, gravity (px/s², dust floats: small), drag (1/s). Sparks: colour, life. */
 const DUST = { color: 0xb8c2d6, alpha: 0.55, gravity: -40, drag: 5 };
-const SPARK = { color: 0xfff0c0, life: 0.16, gravity: 900 };
+const SPARK = { color: 0xfff0c0, life: 0.16, gravity: 900, streak: 0.03 };
 /** Landing: puffs at a soft landing and at max fall speed; speed of a fall that counts as max. */
 const LAND = { min: 2, max: 6, vyMax: 21 };
 /** Wall slide: seconds between motes at max slide speed (and at a crawl). */
 const SLIDE = { fast: 0.05, slow: 0.16, vyMax: 9 };
 
 interface Mote {
-  kind: 'dust' | 'spark' | 'ring' | 'tick';
+  kind: 'dust' | 'spark' | 'ring' | 'tick' | 'mark';
   x: number;
   y: number;
   vx: number;
@@ -39,7 +39,13 @@ interface Mote {
  * The swing (first-timer r3: "I pressed attack and saw no slash"): in greybox every slash also draws its
  * sweep round her as a pale arc for `life` s, reaching `reach` of the cut's hit area (a finisher wider).
  */
-const SWING = { life: 0.14, reach: 0.78, color: 0xd8d2f2, alpha: 0.7, width: 7 };
+const SWING = { life: 0.13, reach: 0.95, color: 0xe2ddf4, alpha: 0.85, thick: 0.34, width: 7 };
+
+/**
+ * A blow landing (Matt's play: "the attack is unsatisfying"): sparks thrown the way the cut went, fanned, and a short
+ * bright slash mark across the hit point.
+ */
+const HIT = { sparks: 7, fan: 1.1, speed: 420, life: 0.22, mark: 26, markLife: 0.09 };
 
 export class Motes {
   private readonly list: Mote[] = [];
@@ -123,6 +129,37 @@ export class Motes {
         case 'slash':
           this.swing = { dir: e.dir, facing: e.facing, big: e.finisher, t: 0 };
           break;
+        case 'slashHit': {
+          // Sparks along the cut's way (forward: her facing; up; down), and the slash mark across the blow.
+          const base =
+            e.dir === 'up' ? -Math.PI / 2 : e.dir === 'down' ? Math.PI / 2 : e.facing >= 0 ? 0 : Math.PI;
+          const big = e.power >= 2;
+          for (let i = 0; i < HIT.sparks + (big ? 4 : 0); i++) {
+            const a = base + (this.rnd() - 0.5) * HIT.fan;
+            const sp = HIT.speed * (0.6 + 0.8 * this.rnd()) * (big ? 1.3 : 1);
+            this.list.push({
+              kind: 'spark',
+              x: e.x,
+              y: e.y,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp - 60,
+              r: big ? 3 : 2.5,
+              t: 0,
+              life: HIT.life * (0.7 + 0.6 * this.rnd()),
+            });
+          }
+          this.list.push({
+            kind: 'mark',
+            x: e.x,
+            y: e.y,
+            vx: Math.cos(base + Math.PI / 2),
+            vy: Math.sin(base + Math.PI / 2),
+            r: HIT.mark * (big ? 1.5 : 1),
+            t: 0,
+            life: HIT.markLife,
+          });
+          break;
+        }
         case 'slashTerrain': {
           // Sparks off the face, along its normal, fanned.
           for (let i = 0; i < 6; i++) {
@@ -163,21 +200,25 @@ export class Motes {
           [a0, a1] = f > 0 ? [Math.PI * 1.05, Math.PI * 1.95] : [Math.PI * 1.95, Math.PI * 1.05];
         else if (sw.dir === 'down') [a0, a1] = [Math.PI * 0.15, Math.PI * 0.85];
         else [a0, a1] = f > 0 ? [-Math.PI * 0.45, Math.PI * 0.3] : [Math.PI * 1.45, Math.PI * 0.7];
+        // A filled crescent (the nail slash's shape): the outer edge at its reach, the inner one swelling in toward
+        // her in the middle, both ends needles; it sweeps out over the first third of its life, then thins away.
         const head = Math.min(1, u * 3);
-        const n = 10;
+        const thin = 1 - Math.max(0, (u - 0.35) / 0.65);
+        const n = 16;
         const cx = p.cx;
         const cy = p.cy - 8;
-        g.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
-        for (let k = 1; k <= n; k++) {
+        const pts: number[] = [];
+        for (let k = 0; k <= n; k++) {
           const a = a0 + (a1 - a0) * head * (k / n);
-          g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+          pts.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
         }
-        g.stroke({
-          color: SWING.color,
-          width: SWING.width * (1 - u) + 1,
-          alpha: SWING.alpha * (1 - u),
-          cap: 'round',
-        });
+        for (let k = n; k >= 0; k--) {
+          const s01 = k / n;
+          const a = a0 + (a1 - a0) * head * s01;
+          const ri = r * (1 - SWING.thick * thin * Math.sin(Math.PI * s01) ** 0.8);
+          pts.push(cx + Math.cos(a) * ri, cy + Math.sin(a) * ri);
+        }
+        g.poly(pts).fill({ color: SWING.color, alpha: SWING.alpha * (0.4 + 0.6 * thin) });
       }
     }
     if (p.mode === 'wallSlide' && p.wallDir !== 0 && p.vy > 0.5) {
@@ -213,14 +254,19 @@ export class Motes {
         m.y += m.vy * dt;
         g.circle(m.x, m.y, m.r * (1 + 0.6 * u)).fill({ color: DUST.color, alpha: DUST.alpha * (1 - u) });
       } else if (m.kind === 'spark') {
-        const x0 = m.x;
-        const y0 = m.y;
         m.vy += SPARK.gravity * dt;
         m.x += m.vx * dt;
         m.y += m.vy * dt;
-        g.moveTo(x0, y0)
+        // A streak along its flight (a fixed length of travel, so it reads at any frame rate).
+        g.moveTo(m.x - m.vx * SPARK.streak, m.y - m.vy * SPARK.streak)
           .lineTo(m.x, m.y)
-          .stroke({ color: SPARK.color, width: 2.5, alpha: 1 - u });
+          .stroke({ color: SPARK.color, width: m.r, alpha: 1 - u, cap: 'round' });
+      } else if (m.kind === 'mark') {
+        // The slash mark across a blow: a bright line through the hit point, across the cut, quickly gone.
+        const L = m.r * (1 + 0.4 * u);
+        g.moveTo(m.x - m.vx * L, m.y - m.vy * L)
+          .lineTo(m.x + m.vx * L, m.y + m.vy * L)
+          .stroke({ color: 0xf2eef8, width: 5 * (1 - u) + 1, alpha: 1 - u, cap: 'round' });
       } else if (m.kind === 'tick') {
         g.circle(m.x, m.y, m.r + 14 * u).stroke({ color: GB.flameHot, width: 3, alpha: 1 - u });
       } else {
