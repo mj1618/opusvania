@@ -33,7 +33,8 @@ export function litAt(state: GameState, scene: Scene, t: Tuning, x: number, y: n
   const S = t.senses;
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
-    if (!l || (state.lures.hp[i] ?? 0) <= 0) continue;
+    // (Silver light is not a false light: a moonwick never shows her to a lamp-sighted creature.)
+    if (!l || l.kind === 'moonwick' || (state.lures.hp[i] ?? 0) <= 0) continue;
     const K = lureRowNow(state.lures, i, l, t);
     const reach = K.radius * S.litScale;
     flameAt(state.lures, i, l, state.frame, t, F);
@@ -45,6 +46,48 @@ export function litAt(state: GameState, scene: Scene, t: Tuning, x: number, y: n
     if (k > best) best = k;
   }
   return best;
+}
+
+/**
+ * How much silver light the point (x, y) is in (Lanternroot, 0 .. 1): from the burning moonwicks, each lighting
+ * `moonwick.light` px. Above 0, a hawker or a dangler starts no strike there (src/sim/light.ts `shyAt`).
+ */
+export function moonlitAt(state: GameState, scene: Scene, t: Tuning, x: number, y: number): number {
+  const list = scene.lures;
+  if (!list) return 0;
+  let best = 0;
+  const reach = t.moonwick.light;
+  for (let i = 0; i < list.length; i++) {
+    const l = list[i];
+    if (l?.kind !== 'moonwick' || (state.lures.hp[i] ?? 0) <= 0) continue;
+    flameAt(state.lures, i, l, state.frame, t, F);
+    const dx = x - F.x;
+    const dy = y - F.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= reach * reach) continue;
+    const k = (reach - Math.sqrt(d2)) / Math.max(1, reach);
+    if (k > best) best = k;
+  }
+  return Math.min(1, best);
+}
+
+/**
+ * Silver light makes flyers shy (Lanternroot §3): a hawker or a dangler about to START a strike at her (aimed at
+ * `tx`, `ty`) holds off while she, or that point, is in a burning moonwick's light (a strike already under way
+ * finishes). True = it holds; the first frame of a hold pushes `enemyShy`.
+ */
+export function shyOf(e: EnemyState, info: StepInfo, tx: number, ty: number): boolean {
+  const { state, scene, t } = info;
+  const p = state.player;
+  if (p.moonlit <= 0 && moonlitAt(state, scene, t, tx, ty) <= 0) {
+    e.shy = 0;
+    return false;
+  }
+  if (e.shy === 0) {
+    e.shy = 1;
+    info.events.push({ type: 'enemyShy', id: e.id, kind: e.kind, x: e.x + e.w / 2, y: e.y + e.h / 2 });
+  }
+  return true;
 }
 
 /** Her `lit` now (her body centre), 0 while she is down or faded. */

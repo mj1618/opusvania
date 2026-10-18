@@ -23,7 +23,7 @@ export interface BossDoor extends BossRect {
 export interface BossSpec {
   /** Unique in the room (a route node: `routes` may name it; the world check reaches its flag through it). */
   id: string;
-  kind: 'weaver';
+  kind: 'weaver' | 'gloamweaver';
   /** The name card. */
   name: string;
   /** The fight's rect: the lock closes once her whole box is inside it. */
@@ -53,6 +53,15 @@ export interface BossSpec {
   lowered?: { x: number; y: number };
   /** A lure the firefly relights after the fight (a husk until the boss is beaten). */
   relight?: string;
+  /**
+   * The Gloamweaver (Lanternroot, src/sim/boss/gloam.ts): its orb web's `hub` (where it wraps the Gloam lamp in
+   * P3) and the radius it hunts on (`orbR`); the arena's moonwicks (`wicks`: a kindle within reach of it
+   * exposes it in P1) and the high pair whose light together floods the moon-hole in P3 (`high`).
+   */
+  hub?: { x: number; y: number };
+  orbR?: number;
+  wicks?: string[];
+  high?: string[];
 }
 
 /** Is lure `id` part of this room's boss (its heart, a ring flame)? Those are saved when it is beaten, not when snuffed. */

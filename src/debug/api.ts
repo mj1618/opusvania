@@ -12,7 +12,7 @@ import type { PointLight } from '../render/lights';
 import { POST } from '../render/post/config';
 import type { CameraOverride, RenderStage } from '../render/stage';
 import { clearSave, readSave, type SlotStore } from '../save/storage';
-import { ROOM_IDS } from '../scene/index';
+import { ROOM_IDS, ROOMS } from '../scene/index';
 import type { Room } from '../scene/room';
 import { ABILITIES, type AbilityId, isAbility } from '../sim/abilities';
 import { jumpBoss } from '../sim/boss/index';
@@ -27,7 +27,7 @@ import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
 import type { Tuning } from '../sim/tuning';
-import { isUpgrade, UPGRADE_IDS, upgradeFlag, upgradesOwned } from '../sim/upgrades';
+import { isUpgrade, UPGRADE_IDS, upgradeFlag, upgradesOwned, withUpgrades } from '../sim/upgrades';
 import type { TuningPanel } from './tuning-panel';
 
 /**
@@ -140,6 +140,11 @@ export interface GameDebugApi {
   /** The live tuning object's values. */
   tuning(): Tuning;
   /** Sets one dotted path (`'run.maxSpeed', 12`) or merges a partial. Returns the tuning. */
+  /**
+   * Lanternroot's glow (memory/glow.md): no argument returns `{glow, max}`; a number sets what she carries (clamped
+   * to the meter). Render and sound read `player.glow`.
+   */
+  glow(n?: number): { glow: number; max: number };
   setTuning(pathOrPartial: string | Record<string, Record<string, unknown>>, value?: unknown): Tuning;
   /**
    * Collectibles: the count so far, what the whole scene is worth, and every pickup with its
@@ -636,7 +641,7 @@ export function installDebugApi(deps: {
       game.clearInput();
     },
     load(roomId) {
-      if (roomId !== undefined && !ROOM_IDS.includes(roomId))
+      if (roomId !== undefined && !ROOMS[roomId])
         throw new Error(`Unknown room "${roomId}". Rooms: ${ROOM_IDS.join(', ')}.`);
       game.reset(roomId);
       redraw();
@@ -674,7 +679,7 @@ export function installDebugApi(deps: {
       };
     },
     goto(id, x, y) {
-      if (!ROOM_IDS.includes(id)) throw new Error(`Unknown room "${id}". Rooms: ${ROOM_IDS.join(', ')}.`);
+      if (!ROOMS[id]) throw new Error(`Unknown room "${id}". Rooms: ${ROOM_IDS.join(', ')}.`);
       game.goto(id, x, y);
       redraw();
       return snapshot();
@@ -749,6 +754,15 @@ export function installDebugApi(deps: {
     },
     hash: () => game.hash(),
     tuning: () => JSON.parse(JSON.stringify(game.tuning)) as Tuning,
+    glow(n) {
+      const t = withUpgrades(game.tuning, game.state.save);
+      const max = Math.max(0, Math.round(t.glow.max));
+      if (n !== undefined) {
+        game.state.player.glow = Math.max(0, Math.min(max, Math.round(n)));
+        redraw();
+      }
+      return { glow: game.state.player.glow, max };
+    },
     setTuning(pathOrPartial, value) {
       const root = game.tuning as unknown as Record<string, Record<string, unknown>>;
       if (typeof pathOrPartial === 'string') {

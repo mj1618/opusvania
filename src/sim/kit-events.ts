@@ -38,11 +38,14 @@ export type KitEvent =
       h: number;
       dir: SlashDir;
       floor: boolean;
+      /** Lanternroot: heartwood broken by a burrback's ram (`by: 'ram'`, `dir` = its way), not by her blade. */
+      by?: 'ram';
     }
   | {
       type: 'kitClang';
       id: string;
-      kind: 'seedCase';
+      /** A seed-case, or heartwood bark (Lanternroot: the blade clangs off it). */
+      kind: 'seedCase' | 'heartwood';
       x: number;
       y: number;
       hitX: number;
@@ -80,4 +83,4 @@ export type KitEvent =
   | { type: 'hollowGrant'; id: string; upgrade: string; x: number; y: number };
 
 /** What the kit adds to `slashHit.target.kind`. */
-export type KitTargetKind = 'thorns' | 'seedCase' | 'bark' | 'cap';
+export type KitTargetKind = 'thorns' | 'seedCase' | 'bark' | 'cap' | 'bell';

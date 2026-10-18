@@ -9,11 +9,21 @@ import { GREYBOX } from './render/greybox/index';
 import { MapOverlay } from './render/map/index';
 import { RenderStage } from './render/stage';
 import { clearSave, PROGRESS_EVENTS, pageStore, readSave, writeSave } from './save/storage';
-import { getRoom, ROOM_IDS } from './scene/index';
+import { getRoom, ROOM_IDS, worldIdOf } from './scene/index';
 import type { Room } from './scene/room';
-import { GAME_WORLD, mapWorld, validateWorld } from './scene/world';
+import { getWorld, mapWorld, validateWorld } from './scene/world';
 import { ABILITIES } from './sim/abilities';
 import { tuning } from './sim/tuning';
+
+/** A prototype world's own save slot: the same store with its keys suffixed (`lampfall.save.proto-1`). */
+function slotOf(store: ReturnType<typeof pageStore>, id: string): ReturnType<typeof pageStore> {
+  if (!store) return store;
+  return {
+    getItem: (k: string) => store.getItem(`${k}.${id}`),
+    setItem: (k: string, v: string) => store.setItem(`${k}.${id}`, v),
+    removeItem: (k: string) => store.removeItem(`${k}.${id}`),
+  };
+}
 
 /** Longest render-time step fed to the renderers, so a stall never explodes a spring. */
 const MAX_RENDER_DT = 0.1;
@@ -48,15 +58,19 @@ async function boot(): Promise<void> {
   const seed = Number(params.get('seed') ?? 1) >>> 0;
   const input = new InputSampler();
   const roomParam = params.get('room');
+  // `?world=<id>`: a prototype level's own world (content/worlds/<id>.json; Lanternroot is `proto-1`). A `?room=`
+  // of such a world plays in it (its exits lead on).
+  const worldId = params.get('world') ?? (roomParam ? worldIdOf(roomParam) : 'game');
+  const base = getWorld(worldId);
   const strip = (r: Room): Room =>
     params.has('nopickups')
       ? { ...r, pickups: [], pods: [], enemies: [], lanterns: [], lamps: [], heart: undefined }
       : r;
-  const world = params.has('nopickups') ? mapWorld(GAME_WORLD, strip) : GAME_WORLD;
-  for (const problem of validateWorld(GAME_WORLD)) console.warn(`[world] ${problem}`);
-  // The game (no ?room=) keeps a save; a test boot leaves the slot alone.
+  const world = params.has('nopickups') ? mapWorld(base, strip) : base;
+  for (const problem of validateWorld(base)) console.warn(`[world] ${problem}`);
+  // The game (no ?room=) keeps a save; a test boot leaves the slot alone. A prototype world keeps its own slot.
   const session = roomParam === null;
-  const store = session ? pageStore() : null;
+  const store = session ? (worldId === 'game' ? pageStore() : slotOf(pageStore(), worldId)) : null;
   if (params.has('fresh')) clearSave(store);
   const saved = session ? readSave(store) : null;
   const room = strip(getRoom(roomParam ?? world.start));
@@ -108,7 +122,14 @@ async function boot(): Promise<void> {
   };
   const panel = new TuningPanel(tuning, restart, {
     room: game.scene.id,
-    rooms: ROOM_IDS,
+    // (Every room of the world being played too: a prototype world's rooms are not in world.json, and a list
+    // without the room in play snapped the panel back to its first room on any refresh, `setTuning` included.)
+    rooms: [
+      ...ROOM_IDS,
+      ...Object.values(base.rooms)
+        .filter((r) => r.placed && !ROOM_IDS.includes(r.id))
+        .map((r) => r.id),
+    ],
     // She goes there, the save kept (the renderers rebuild for the room).
     onRoom: (id) => game.goto(id),
   });

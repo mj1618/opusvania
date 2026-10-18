@@ -45,6 +45,10 @@ const base = {
   sets: z.string().min(1).optional(),
   /** Once this story flag is set it leaves for good (round 4: the crown hawker when the finale begins). */
   until: z.string().min(1).optional(),
+  /** Lanternroot: dead, it comes back at its spawn this many frames later (the Gloamweaver's spiderlings). */
+  respawn: int.min(30).max(3600).optional(),
+  /** Lanternroot: there only while the room's boss fight is on. */
+  fight: z.boolean().optional(),
 };
 
 export const ENEMIES = z
@@ -105,6 +109,7 @@ export const ENEMIES = z
           strands: z.array(strand).optional(),
           orb: ORB.optional(),
           anchors: z.array(z.tuple([z.number(), z.number()])).optional(),
+          grab: z.boolean().optional(),
         })
         .strict(),
       z
@@ -116,6 +121,8 @@ export const ENEMIES = z
         .strict(),
       // The Weaver boss (memory/bosses.md): its fight is the room's `boss` block (src/scene/boss.ts).
       z.object({ ...base, kind: z.literal('weaverBoss') }).strict(),
+      // The Gloamweaver (Lanternroot's mini-boss, src/sim/boss/gloam.ts): its fight is the room's `boss` block.
+      z.object({ ...base, kind: z.literal('gloamweaver') }).strict(),
       // The dangler (memory/creatures.md): `x`, `y` = where its thread is tied; `drop` = its longest drop.
       z.object({ ...base, kind: z.literal('dangler'), drop: int.min(80).max(1200).optional() }).strict(),
       // The carriers (ants, src/sim/enemies/carrier.ts): `x`, `y` = the trail's start (feet); `trail` = the rest

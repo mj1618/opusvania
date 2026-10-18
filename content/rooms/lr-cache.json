@@ -1,0 +1,295 @@
+{
+  "id": "lr-cache",
+  "title": "Lanternroot: the firefly's cache",
+  "region": "lanternroot",
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump", "doubleJump"],
+  "glow": true,
+  "senses": "lamp",
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "cache",
+    "seed": 404
+  },
+  "width": 1920,
+  "height": 1536,
+  "spawn": {
+    "x": 240,
+    "y": 1300
+  },
+  "solids": [
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 200,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1300,
+      "w": 1920,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "floating",
+      "x": 860,
+      "y": 340,
+      "w": 200,
+      "h": 30,
+      "kick": false
+    }
+  ],
+  "oneWays": [],
+  "pickups": [
+    {
+      "id": "g-k-1",
+      "kind": "glint",
+      "x": 500,
+      "y": 1240
+    },
+    {
+      "id": "g-k-2",
+      "kind": "glint",
+      "x": 584,
+      "y": 1187
+    },
+    {
+      "id": "g-k-3",
+      "kind": "glint",
+      "x": 667,
+      "y": 1145
+    },
+    {
+      "id": "g-k-4",
+      "kind": "glint",
+      "x": 751,
+      "y": 1113
+    },
+    {
+      "id": "g-k-5",
+      "kind": "glint",
+      "x": 835,
+      "y": 1092
+    },
+    {
+      "id": "g-k-6",
+      "kind": "glint",
+      "x": 918,
+      "y": 1081
+    },
+    {
+      "id": "g-k-7",
+      "kind": "glint",
+      "x": 1002,
+      "y": 1081
+    },
+    {
+      "id": "g-k-8",
+      "kind": "glint",
+      "x": 1085,
+      "y": 1092
+    },
+    {
+      "id": "g-k-9",
+      "kind": "glint",
+      "x": 1169,
+      "y": 1113
+    },
+    {
+      "id": "g-k-10",
+      "kind": "glint",
+      "x": 1253,
+      "y": 1145
+    },
+    {
+      "id": "g-k-11",
+      "kind": "glint",
+      "x": 1336,
+      "y": 1187
+    },
+    {
+      "id": "g-k-12",
+      "kind": "glint",
+      "x": 1420,
+      "y": 1240
+    }
+  ],
+  "pods": [
+    {
+      "id": "pod-k1",
+      "x": 400,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-k2",
+      "x": 1500,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-k3",
+      "x": 1700,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 1200
+    }
+  ],
+  "enemies": [],
+  "lures": [
+    {
+      "id": "m-ring1",
+      "kind": "moonwick",
+      "x": 560,
+      "y": 1000
+    },
+    {
+      "id": "m-ring2",
+      "kind": "moonwick",
+      "x": 700,
+      "y": 640
+    },
+    {
+      "id": "m-ring3",
+      "kind": "moonwick",
+      "x": 960,
+      "y": 500
+    },
+    {
+      "id": "m-ring4",
+      "kind": "moonwick",
+      "x": 1220,
+      "y": 640
+    },
+    {
+      "id": "m-ring5",
+      "kind": "moonwick",
+      "x": 1360,
+      "y": 1000
+    },
+    {
+      "id": "m-ring6",
+      "kind": "moonwick",
+      "x": 960,
+      "y": 1120
+    },
+    {
+      "id": "firefly-lamp",
+      "kind": "lantern",
+      "x": 960,
+      "y": 820,
+      "moths": 80
+    }
+  ],
+  "doors": [
+    {
+      "id": "door",
+      "x": 240,
+      "y": 1300,
+      "to": "lr-night#cache-door"
+    }
+  ],
+  "wickSets": [
+    {
+      "id": "ring",
+      "wicks": ["m-ring1", "m-ring2", "m-ring3", "m-ring4", "m-ring5", "m-ring6"],
+      "sets": "cache-ring"
+    }
+  ],
+  "marks": {
+    "landmarks": [
+      {
+        "id": "firefly-lamp",
+        "kind": "centrepiece",
+        "x": 960,
+        "y": 820,
+        "w": 160,
+        "h": 200
+      }
+    ],
+    "moonholes": [
+      {
+        "x": 960,
+        "y": 200
+      }
+    ],
+    "chambers": [
+      {
+        "id": "cache",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      }
+    ],
+    "places": [
+      {
+        "id": "cache-floor",
+        "x": 240,
+        "y": 1300
+      },
+      {
+        "id": "cache-shelf",
+        "x": 960,
+        "y": 340
+      }
+    ]
+  },
+  "hollows": [
+    {
+      "id": "bright",
+      "x": 870,
+      "y": 240,
+      "w": 180,
+      "h": 100,
+      "upgrade": "brightKindle"
+    }
+  ],
+  "camera": {
+    "zones": [
+      {
+        "id": "cache",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  },
+  "routes": [
+    {
+      "from": "cache-floor",
+      "to": "door",
+      "oneWay": true
+    },
+    {
+      "from": "cache-floor",
+      "to": "bright",
+      "needs": ["kindle"],
+      "light": ["m-ring1", "m-ring2", "m-ring3"]
+    },
+    {
+      "from": "door",
+      "to": "cache-floor",
+      "oneWay": true
+    }
+  ],
+  "shots": {
+    "wide": [
+      {
+        "name": "cache",
+        "x": 960,
+        "y": 900
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "start": "lr-night",
+  "rooms": [
+    { "id": "lr-night", "x": 0, "y": 0 },
+    { "id": "lr-hall", "x": 0, "y": 1536 },
+    { "id": "lr-roots", "x": 0, "y": 3072 },
+    { "id": "lr-cache", "x": 7680, "y": 0 }
+  ],
+  "areas": [{ "id": "lanternroot", "rooms": ["lr-night", "lr-hall", "lr-roots", "lr-cache"] }],
+  "tests": []
+}

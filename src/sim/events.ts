@@ -2,6 +2,7 @@ import type { AbilityId } from './abilities';
 import type { BossEvent } from './boss-events';
 import type { CreatureEvent } from './creature-events';
 import type { KitEvent, KitTargetKind } from './kit-events';
+import type { LightEvent } from './light-events';
 import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
 import type { AttackDir } from './state';
 
@@ -34,6 +35,8 @@ export type SimEvent =
   | CreatureEvent
   /** A boss fight: lock, phases, cues, tells, defeat (src/sim/boss-events.ts, memory/bosses.md). */
   | BossEvent
+  /** Lanternroot's light: glow, mend, moonwicks, moss, gust, bells (src/sim/light-events.ts, memory/glow.md). */
+  | LightEvent
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
   /**
@@ -80,6 +83,8 @@ export type SimEvent =
       /** Put out by a fling off it (not a cut); `side` = the way she left it (-1 / 1). */
       fling?: boolean;
       side?: number;
+      /** Put out by a gust (Lanternroot), from range. */
+      gust?: boolean;
     }
   /**
    * The fling (memory/lures.md). `flingStart`: Lamp pressed near lure `id` (`x`, `y` = its flame): the moment

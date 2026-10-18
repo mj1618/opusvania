@@ -112,7 +112,14 @@ export function createLures(scene: Scene, t: Tuning, snuffed: readonly string[] 
     freed: 0,
     grace: list.map(() => 0),
     ember: list.map(() => 0),
+    // (Moonwicks start cold: src/sim/light.ts `initWicks` lights the ones the save keeps.)
+    burn: list.map(() => 0),
   };
+}
+
+/** A moonwick (Lanternroot): her light's anchor, not a warm lamp (no pull, no moths, never cut out). */
+export function isMoonwick(l: Lure | undefined): boolean {
+  return l?.kind === 'moonwick';
 }
 
 /** Is lure `i` burning and allowed to act on her (not the one she just broke free of)? */
@@ -272,6 +279,8 @@ export function flingLaunch(
   }
   p.flingCd = Math.max(0, Math.round(T.flingCooldown));
   events.push({ type: 'fling', id: l.id, x: f.x, y: f.y, vx, vy, aimX: AIM.x, aimY: AIM.y });
+  // (A burning moonwick is the reusable anchor: it never embers, it burns on behind her.)
+  if (l.kind === 'moonwick') return;
   // Used up: it smoulders behind her (embers) until she lands safe (out for good) or fails (it burns again).
   state.lures.hp[i] = 0;
   state.lures.ember[i] = 1;
@@ -366,6 +375,8 @@ export function slashLures(
     if (hp <= 0 || s.hitBy[i] === seq) continue;
     const l = list[i];
     if (!l) continue;
+    // (A moonwick: the blade passes through it. She cannot snuff her own light.)
+    if (l.kind === 'moonwick') continue;
     // (Guarded by its boss: the blade passes through it, memory/bosses.md.)
     if ((s.live?.shield[i] ?? 0) > 0) continue;
     const f = flameAt(s, i, l, state.frame, t, F);
@@ -415,7 +426,7 @@ export function snuffLure(
   t: Tuning,
   events: SimEvent[],
   side: number,
-  by: SlashDir | 'fling',
+  by: SlashDir | 'fling' | 'gust',
 ): void {
   const l = scene.lures?.[i];
   if (!l) return;
@@ -425,14 +436,15 @@ export function snuffLure(
   s.hp[i] = 0;
   s.out[i] = state.frame + 1;
   s.snuffed++;
-  const moths = Math.max(0, Math.round(lureRowNow(s, i, l, t).moths));
+  const moths = Math.max(0, Math.round(l.moths ?? lureRowNow(s, i, l, t).moths));
   s.freed += moths;
   const key = `${scene.id}:${l.id}`;
   if (!bossOwnsLure(scene.boss, l.id) && !l.relight && !state.save.snuffed.includes(key)) {
     state.save.snuffed.push(key);
     state.save.moths += moths;
   }
-  const heal = Math.max(0, Math.min(p.hpMax - p.hp, Math.round(t.lures.healOnSnuff)));
+  // (In a glow room a lamp out pays glow instead of health: memory/glow.md.)
+  const heal = scene.glow ? 0 : Math.max(0, Math.min(p.hpMax - p.hp, Math.round(t.lures.healOnSnuff)));
   p.hp += heal;
   events.push({
     type: 'lureSnuff',
@@ -440,12 +452,18 @@ export function snuffLure(
     kind: l.kind,
     x: f.x,
     y: f.y,
-    dir: by === 'fling' ? 'fwd' : by,
+    dir: by === 'fling' || by === 'gust' ? 'fwd' : by,
     moths,
     freed: s.freed,
     snuffed: s.snuffed,
     heal,
     fling: by === 'fling',
     side,
+    ...(by === 'gust' ? { gust: true } : {}),
   });
+  // A lamp-held gate (Lanternroot): its flag is set as it goes out.
+  if (l.sets && !state.save.flags.includes(l.sets)) {
+    state.save.flags.push(l.sets);
+    events.push({ type: 'flagSet', flag: l.sets, by: l.id, x: f.x, y: f.y });
+  }
 }

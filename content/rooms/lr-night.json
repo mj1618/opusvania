@@ -1,0 +1,1069 @@
+{
+  "id": "lr-night",
+  "title": "Lanternroot: the crown, the trunk, the plate",
+  "region": "lanternroot",
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump", "doubleJump"],
+  "glow": true,
+  "senses": "lamp",
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "night",
+    "seed": 101
+  },
+  "width": 5760,
+  "height": 1536,
+  "spawn": {
+    "x": 620,
+    "y": 1300
+  },
+  "solids": [
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1300,
+      "w": 1088,
+      "h": 236,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 1100,
+      "w": 400,
+      "h": 50,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 760,
+      "y": 1236,
+      "w": 80,
+      "h": 64,
+      "kick": false
+    },
+    {
+      "tag": "branch",
+      "x": 420,
+      "y": 280,
+      "w": 260,
+      "h": 40,
+      "kick": false
+    },
+    {
+      "tag": "branch",
+      "x": 420,
+      "y": 320,
+      "w": 20,
+      "h": 100,
+      "kick": false
+    },
+    {
+      "tag": "branch",
+      "x": 440,
+      "y": 420,
+      "w": 140,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "branch",
+      "x": 680,
+      "y": 280,
+      "w": 24,
+      "h": 200,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 1344,
+      "y": 1300,
+      "w": 64,
+      "h": 236,
+      "kick": "west"
+    },
+    {
+      "tag": "root",
+      "x": 1408,
+      "y": 1460,
+      "w": 256,
+      "h": 76,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1664,
+      "y": 920,
+      "w": 384,
+      "h": 616,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 2048,
+      "y": 908,
+      "w": 192,
+      "h": 628,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2240,
+      "y": 896,
+      "w": 192,
+      "h": 640,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2432,
+      "y": 884,
+      "w": 192,
+      "h": 652,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2880,
+      "y": 880,
+      "w": 192,
+      "h": 656,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 3072,
+      "y": 872,
+      "w": 256,
+      "h": 664,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 3328,
+      "y": 868,
+      "w": 256,
+      "h": 668,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 3584,
+      "y": 864,
+      "w": 256,
+      "h": 672,
+      "kick": false
+    },
+    {
+      "tag": "branch",
+      "x": 3160,
+      "y": 260,
+      "w": 100,
+      "h": 500,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3840,
+      "y": 0,
+      "w": 160,
+      "h": 300,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3880,
+      "y": 340,
+      "w": 80,
+      "h": 220,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 4040,
+      "y": 300,
+      "w": 1016,
+      "h": 1236,
+      "kick": "east"
+    },
+    {
+      "tag": "root",
+      "x": 3840,
+      "y": 640,
+      "w": 200,
+      "h": 896,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3840,
+      "y": 300,
+      "w": 40,
+      "h": 260,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3880,
+      "y": 300,
+      "w": 80,
+      "h": 40,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 5312,
+      "y": 300,
+      "w": 448,
+      "h": 1236,
+      "kick": "west"
+    }
+  ],
+  "oneWays": [],
+  "pickups": [
+    {
+      "id": "g-nest1",
+      "kind": "glint",
+      "x": 460,
+      "y": 349
+    },
+    {
+      "id": "g-nest2",
+      "kind": "glint",
+      "x": 480,
+      "y": 349
+    },
+    {
+      "id": "g-nest3",
+      "kind": "glint",
+      "x": 500,
+      "y": 349
+    },
+    {
+      "id": "g-nest4",
+      "kind": "glint",
+      "x": 520,
+      "y": 349
+    },
+    {
+      "id": "g-nest5",
+      "kind": "glint",
+      "x": 540,
+      "y": 349
+    },
+    {
+      "id": "g-nest6",
+      "kind": "glint",
+      "x": 560,
+      "y": 349
+    },
+    {
+      "id": "g-nest7",
+      "kind": "glint",
+      "x": 460,
+      "y": 366
+    },
+    {
+      "id": "g-nest8",
+      "kind": "glint",
+      "x": 480,
+      "y": 366
+    },
+    {
+      "id": "g-nest9",
+      "kind": "glint",
+      "x": 500,
+      "y": 366
+    },
+    {
+      "id": "g-nest10",
+      "kind": "glint",
+      "x": 520,
+      "y": 366
+    },
+    {
+      "id": "g-nest11",
+      "kind": "glint",
+      "x": 540,
+      "y": 366
+    },
+    {
+      "id": "g-nest12",
+      "kind": "glint",
+      "x": 560,
+      "y": 366
+    },
+    {
+      "id": "g-nest13",
+      "kind": "glint",
+      "x": 460,
+      "y": 384
+    },
+    {
+      "id": "g-nest14",
+      "kind": "glint",
+      "x": 480,
+      "y": 384
+    },
+    {
+      "id": "g-nest15",
+      "kind": "glint",
+      "x": 500,
+      "y": 384
+    },
+    {
+      "id": "g-nest16",
+      "kind": "glint",
+      "x": 520,
+      "y": 384
+    },
+    {
+      "id": "g-nest17",
+      "kind": "glint",
+      "x": 540,
+      "y": 384
+    },
+    {
+      "id": "g-nest18",
+      "kind": "glint",
+      "x": 560,
+      "y": 384
+    },
+    {
+      "id": "g-nest19",
+      "kind": "glint",
+      "x": 460,
+      "y": 401
+    },
+    {
+      "id": "g-nest20",
+      "kind": "glint",
+      "x": 480,
+      "y": 401
+    },
+    {
+      "id": "g-a1-1",
+      "kind": "glint",
+      "x": 860,
+      "y": 1230
+    },
+    {
+      "id": "g-a1-2",
+      "kind": "glint",
+      "x": 900,
+      "y": 1160
+    },
+    {
+      "id": "g-a1-3",
+      "kind": "glint",
+      "x": 940,
+      "y": 1124
+    },
+    {
+      "id": "g-a1-4",
+      "kind": "glint",
+      "x": 980,
+      "y": 1124
+    },
+    {
+      "id": "g-a1-5",
+      "kind": "glint",
+      "x": 1020,
+      "y": 1160
+    },
+    {
+      "id": "g-a1-6",
+      "kind": "glint",
+      "x": 1060,
+      "y": 1230
+    },
+    {
+      "id": "g-b1-1",
+      "kind": "glint",
+      "x": 2160,
+      "y": 860
+    },
+    {
+      "id": "g-b1-2",
+      "kind": "glint",
+      "x": 2223,
+      "y": 787
+    },
+    {
+      "id": "g-b1-3",
+      "kind": "glint",
+      "x": 2286,
+      "y": 738
+    },
+    {
+      "id": "g-b1-4",
+      "kind": "glint",
+      "x": 2349,
+      "y": 713
+    },
+    {
+      "id": "g-b1-5",
+      "kind": "glint",
+      "x": 2411,
+      "y": 713
+    },
+    {
+      "id": "g-b1-6",
+      "kind": "glint",
+      "x": 2474,
+      "y": 738
+    },
+    {
+      "id": "g-b1-7",
+      "kind": "glint",
+      "x": 2537,
+      "y": 787
+    },
+    {
+      "id": "g-b1-8",
+      "kind": "glint",
+      "x": 2600,
+      "y": 860
+    },
+    {
+      "id": "g-c1-1",
+      "kind": "glint",
+      "x": 4900,
+      "y": 260
+    },
+    {
+      "id": "g-c1-2",
+      "kind": "glint",
+      "x": 5000,
+      "y": 193
+    },
+    {
+      "id": "g-c1-3",
+      "kind": "glint",
+      "x": 5100,
+      "y": 153
+    },
+    {
+      "id": "g-c1-4",
+      "kind": "glint",
+      "x": 5200,
+      "y": 140
+    },
+    {
+      "id": "g-c1-5",
+      "kind": "glint",
+      "x": 5300,
+      "y": 153
+    },
+    {
+      "id": "g-c1-6",
+      "kind": "glint",
+      "x": 5400,
+      "y": 193
+    },
+    {
+      "id": "g-c1-7",
+      "kind": "glint",
+      "x": 5500,
+      "y": 260
+    }
+  ],
+  "pods": [
+    {
+      "id": "pod-a1",
+      "x": 1040,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-b1",
+      "x": 2330,
+      "y": 874,
+      "mount": "sit",
+      "regrow": 1200
+    }
+  ],
+  "enemies": [
+    {
+      "id": "j-a1",
+      "kind": "juvenileBurrback",
+      "x": 980,
+      "y": 1300,
+      "facing": -1,
+      "senses": "always"
+    },
+    {
+      "id": "h-b1",
+      "kind": "hawker",
+      "x": 3100,
+      "y": 200,
+      "facing": 1,
+      "guards": "l-b1a",
+      "radius": 160
+    }
+  ],
+  "lures": [
+    {
+      "id": "m-a1",
+      "kind": "moonwick",
+      "x": 800,
+      "y": 1186
+    },
+    {
+      "id": "l-a1",
+      "kind": "wick",
+      "x": 1480,
+      "y": 1020
+    },
+    {
+      "id": "l-b1c",
+      "kind": "wick",
+      "x": 2120,
+      "y": 760
+    },
+    {
+      "id": "l-b1a",
+      "kind": "wick",
+      "x": 3030,
+      "y": 500,
+      "sets": "bramble-a-out"
+    },
+    {
+      "id": "l-b1b",
+      "kind": "wick",
+      "x": 3030,
+      "y": 630,
+      "sets": "bramble-b-out"
+    },
+    {
+      "id": "l-er1",
+      "kind": "wick",
+      "x": 3390,
+      "y": 650
+    },
+    {
+      "id": "l-er2",
+      "kind": "wick",
+      "x": 3400,
+      "y": 380
+    },
+    {
+      "id": "l-er3",
+      "kind": "wick",
+      "x": 3620,
+      "y": 260
+    },
+    {
+      "id": "l-er4",
+      "kind": "wick",
+      "x": 3430,
+      "y": 120,
+      "swing": {
+        "length": 100,
+        "reach": 70,
+        "period": 150
+      }
+    },
+    {
+      "id": "l-er5",
+      "kind": "wick",
+      "x": 3280,
+      "y": 60
+    }
+  ],
+  "bark": [
+    {
+      "id": "seal-log",
+      "x": 340,
+      "y": 1150,
+      "w": 40,
+      "h": 150,
+      "kick": false
+    },
+    {
+      "id": "knot",
+      "x": 2624,
+      "y": 880,
+      "w": 256,
+      "h": 40,
+      "floor": true,
+      "kick": false
+    }
+  ],
+  "hollows": [
+    {
+      "id": "h1",
+      "x": 40,
+      "y": 1170,
+      "w": 260,
+      "h": 130,
+      "upgrade": "longBreath"
+    },
+    {
+      "id": "h-er",
+      "x": 3160,
+      "y": 180,
+      "w": 100,
+      "h": 80,
+      "upgrade": "moonDrop"
+    }
+  ],
+  "signs": [
+    {
+      "id": "s1",
+      "x": 150,
+      "y": 1300,
+      "rhythm": ".-.-"
+    },
+    {
+      "id": "s4",
+      "x": 4720,
+      "y": 300,
+      "rhythm": "..."
+    }
+  ],
+  "marks": {
+    "covers": [
+      {
+        "id": "cover-log",
+        "x": 0,
+        "y": 1100,
+        "w": 380,
+        "h": 200,
+        "opens": "lr-night:seal-log"
+      }
+    ],
+    "moonholes": [
+      {
+        "x": 24,
+        "y": 1104
+      },
+      {
+        "x": 2700,
+        "y": 40
+      },
+      {
+        "x": 5600,
+        "y": 120
+      }
+    ],
+    "landmarks": [
+      {
+        "id": "crows-nest",
+        "kind": "nest",
+        "x": 540,
+        "y": 380
+      },
+      {
+        "id": "ember-run",
+        "kind": "ember-run",
+        "x": 3400,
+        "y": 400
+      },
+      {
+        "id": "cap",
+        "kind": "bell-cap",
+        "x": 3500,
+        "y": 868
+      },
+      {
+        "id": "vista",
+        "kind": "vista",
+        "x": 5600,
+        "y": 300
+      }
+    ],
+    "calm": [
+      {
+        "x": 860,
+        "y": 1220,
+        "w": 220,
+        "h": 80
+      }
+    ],
+    "chambers": [
+      {
+        "id": "a1",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      },
+      {
+        "id": "b1",
+        "x": 1920,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      },
+      {
+        "id": "c1",
+        "x": 3840,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      }
+    ],
+    "places": [
+      {
+        "id": "ridge",
+        "x": 620,
+        "y": 1300
+      },
+      {
+        "id": "log-mouth",
+        "x": 430,
+        "y": 1300
+      },
+      {
+        "id": "nest",
+        "x": 500,
+        "y": 420
+      },
+      {
+        "id": "crown",
+        "x": 1800,
+        "y": 920
+      },
+      {
+        "id": "trunk",
+        "x": 2300,
+        "y": 896
+      },
+      {
+        "id": "knot-top",
+        "x": 2750,
+        "y": 880
+      },
+      {
+        "id": "stub-top",
+        "x": 3210,
+        "y": 260
+      },
+      {
+        "id": "cap-side",
+        "x": 3400,
+        "y": 868
+      },
+      {
+        "id": "crest",
+        "x": 4400,
+        "y": 300
+      }
+    ]
+  },
+  "patches": [
+    {
+      "id": "p-a1",
+      "x": 500,
+      "y": 1300
+    },
+    {
+      "id": "p-c1",
+      "x": 4400,
+      "y": 300
+    }
+  ],
+  "ceilingY": 0,
+  "moonmoss": [
+    {
+      "id": "moss-nest1",
+      "x": 860,
+      "y": 1150,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-nest2",
+      "x": 680,
+      "y": 1020,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-nest3",
+      "x": 840,
+      "y": 890,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-nest4",
+      "x": 660,
+      "y": 790,
+      "w": 120,
+      "h": 20
+    }
+  ],
+  "exits": [
+    {
+      "id": "split",
+      "edge": "s",
+      "from": 1088,
+      "to": 1344
+    },
+    {
+      "id": "knot",
+      "edge": "s",
+      "from": 2624,
+      "to": 2880,
+      "oneWay": true
+    },
+    {
+      "id": "chimney",
+      "edge": "s",
+      "from": 5056,
+      "to": 5312
+    }
+  ],
+  "thorns": [
+    {
+      "id": "t-gully",
+      "x": 1408,
+      "y": 1420,
+      "w": 256,
+      "h": 40
+    },
+    {
+      "id": "t-stub-e",
+      "x": 3260,
+      "y": 320,
+      "w": 30,
+      "h": 420
+    },
+    {
+      "id": "t-bramble",
+      "x": 2900,
+      "y": 360,
+      "w": 260,
+      "h": 400
+    }
+  ],
+  "catches": [
+    {
+      "id": "c-gully",
+      "x": 1408,
+      "y": 1380,
+      "w": 256,
+      "h": 40
+    }
+  ],
+  "bells": [
+    {
+      "id": "cap",
+      "x": 3500,
+      "y": 820,
+      "rhythm": "-..-",
+      "sets": "answer"
+    }
+  ],
+  "doors": [
+    {
+      "id": "cache-door",
+      "x": 3720,
+      "y": 864,
+      "to": "lr-cache#door"
+    }
+  ],
+  "gates": [
+    {
+      "id": "cache-knot",
+      "x": 3672,
+      "y": 704,
+      "w": 96,
+      "h": 160,
+      "flag": "answer",
+      "kick": false
+    }
+  ],
+  "shortcuts": [
+    {
+      "id": "crest-lid",
+      "x": 3960,
+      "y": 300,
+      "w": 80,
+      "h": 40,
+      "opens": "n"
+    }
+  ],
+  "triggers": [
+    {
+      "id": "valley",
+      "x": 5560,
+      "y": 100,
+      "w": 200,
+      "h": 200,
+      "sets": "lanternroot-end"
+    }
+  ],
+  "camera": {
+    "zones": [
+      {
+        "id": "a1",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "b1",
+        "x": 1920,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "c1",
+        "x": 3840,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  },
+  "routes": [
+    {
+      "from": "spawn",
+      "to": "ridge"
+    },
+    {
+      "from": "ridge",
+      "to": "log-mouth"
+    },
+    {
+      "from": "log-mouth",
+      "to": "h1"
+    },
+    {
+      "from": "log-mouth",
+      "to": "s1"
+    },
+    {
+      "from": "ridge",
+      "to": "p-a1"
+    },
+    {
+      "from": "ridge",
+      "to": "split",
+      "oneWay": true
+    },
+    {
+      "from": "ridge",
+      "to": "crown",
+      "lamps": ["l-a1"],
+      "oneWay": true
+    },
+    {
+      "from": "crown",
+      "to": "ridge",
+      "oneWay": true
+    },
+    {
+      "from": "ridge",
+      "to": "nest",
+      "needs": ["kindle"],
+      "light": ["m-a1"],
+      "oneWay": true
+    },
+    {
+      "from": "nest",
+      "to": "ridge",
+      "oneWay": true
+    },
+    {
+      "from": "crown",
+      "to": "trunk"
+    },
+    {
+      "from": "trunk",
+      "to": "cap-side"
+    },
+    {
+      "from": "trunk",
+      "to": "knot",
+      "oneWay": true
+    },
+    {
+      "from": "cap-side",
+      "to": "h-er",
+      "lamps": ["l-er1", "l-er2", "l-er3", "l-er4", "l-er5"]
+    },
+    {
+      "from": "cap-side",
+      "to": "cap-side",
+      "needs": ["gust"],
+      "oneWay": true,
+      "sets": ["answer"]
+    },
+    {
+      "from": "cap-side",
+      "to": "cache-door",
+      "flags": ["answer"],
+      "oneWay": true
+    },
+    {
+      "from": "crest",
+      "to": "p-c1"
+    },
+    {
+      "from": "crest",
+      "to": "s4"
+    },
+    {
+      "from": "crest",
+      "to": "valley"
+    },
+    {
+      "from": "crest",
+      "to": "cap-side",
+      "oneWay": true
+    },
+    {
+      "from": "crest",
+      "to": "chimney",
+      "oneWay": true
+    },
+    {
+      "from": "split",
+      "to": "ridge",
+      "oneWay": true
+    },
+    {
+      "from": "chimney",
+      "to": "crest",
+      "oneWay": true
+    },
+    {
+      "from": "cache-door",
+      "to": "cap-side",
+      "oneWay": true
+    }
+  ],
+  "shots": {
+    "wide": [
+      {
+        "name": "a1",
+        "x": 960,
+        "y": 900
+      },
+      {
+        "name": "b1",
+        "x": 2880,
+        "y": 900
+      },
+      {
+        "name": "c1",
+        "x": 4800,
+        "y": 900
+      }
+    ]
+  }
+}

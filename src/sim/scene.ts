@@ -37,7 +37,7 @@ export interface SolidRect {
    */
   kick?: boolean | 'east' | 'west';
   /** Set on the solids the level kit adds while they stand (src/sim/kit.ts): never safe ground. */
-  kit?: 'bark' | 'gate' | 'cap';
+  kit?: 'bark' | 'gate' | 'cap' | 'moss';
 }
 
 /** A one-way platform: a line at `y` that only blocks a body falling onto it. Down+Jump drops through. */
@@ -77,6 +77,8 @@ export interface Pod {
   mount: PodMount;
   /** Toughness: hit points, 1 (default) to 3. A hit takes its `power` (1, or 2 for the finisher). */
   hp?: number;
+  /** A glow pod (Lanternroot): burst, its bud grows back this many frames later (renewable fuel). */
+  regrow?: number;
 }
 
 /**
@@ -93,7 +95,8 @@ export type EnemyKind =
   | 'weaverBoss'
   | 'dangler'
   | 'juvenileBurrback'
-  | 'carrier';
+  | 'carrier'
+  | 'gloamweaver';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
@@ -171,11 +174,17 @@ export interface EnemySpawn {
   crack?: string;
   /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
   sets?: string;
+  /** Dead, it comes back at its spawn this many frames later (the Gloamweaver's spiderlings: fuel in the fight). */
+  respawn?: number;
+  /** Only there while the room's boss fight is on (from the lock to its defeat; the spiderlings). */
+  fight?: boolean;
   /**
    * Web: points that hold strands besides solids and the room's edges (the great lamp's heart, which
    * hangs on its own chain: a spoke cut from it falls alone).
    */
   anchors?: Array<[number, number]>;
+  /** Web: `false` = its strands never hold her (Lanternroot's orb: the player keeps control). */
+  grab?: boolean;
 }
 
 /**
@@ -201,7 +210,7 @@ export interface Lantern {
  * a great lamp's ring flames and heart (a boss arena, memory/bosses.md); `greatWide` is the heart's
  * row in its boss's last phase (a room names `great`; the boss switches the row in play).
  */
-export type LureKind = 'wick' | 'lantern' | 'ring' | 'great' | 'greatWide';
+export type LureKind = 'wick' | 'lantern' | 'ring' | 'great' | 'greatWide' | 'moonwick';
 
 /**
  * A lure: one of the story's false lamps (src/sim/lures.ts, memory/lures.md). Named `lure` in code
@@ -224,6 +233,50 @@ export interface Lure {
    * (no moths counted). Real rooms never use it.
    */
   relight?: number;
+  /**
+   * A moonwick (`kind: 'moonwick'`, Lanternroot): once kindled it burns for good (the save keeps `room:id` in
+   * `opened`): a route light.
+   */
+  keep?: boolean;
+  /** A lamp-held gate (Lanternroot): this story flag is set when it goes out (cut, flung or gusted). */
+  sets?: string;
+  /** The moths it holds, if not its kind's (the cache's firefly-lamp: the level's biggest release). */
+  moths?: number;
+  /** A moonwick that burns this many frames once kindled, if not `moonwick.burn` (the vault's: a shorter clock). */
+  burn?: number;
+}
+
+/**
+ * Moonmoss (Lanternroot, src/sim/light.ts): a pale lichen ledge, solid (or one-way) only while its centre is
+ * within `moonwick.light` px of a burning moonwick of the room.
+ */
+export interface Moonmoss {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  oneWay?: boolean;
+}
+
+/** A wick set (Lanternroot): when every wick of it burns on the same frame, `sets` is saved and they burn for good. */
+export interface WickSet {
+  id: string;
+  wicks: string[];
+  sets: string;
+}
+
+/**
+ * A bell-cap (Lanternroot §5, the Answer): a slash target (`x`, `y` its centre) that counts the gaps between
+ * strikes while no warm lamp burns within `bells.darkPx`; the `rhythm` (`.` short, `-` long gaps) sets `sets`.
+ */
+export interface Bell {
+  id: string;
+  x: number;
+  y: number;
+  rhythm: string;
+  sets: string;
+  dark?: boolean;
 }
 
 /**
@@ -402,6 +455,15 @@ export interface Scene {
   reformPatch?: boolean;
   /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */
   boss?: BossSpec;
+  /**
+   * The light economy (Lanternroot, src/sim/light.ts, memory/glow.md): hits, kills, snuffs and glints fill her
+   * glow; the Lamp button also mends, kindles moonwicks and gusts; a fade drops her glow; glints are saved as taken.
+   */
+  glow?: boolean;
+  /** Lanternroot's light pieces (src/sim/light.ts). */
+  moonmoss?: Moonmoss[];
+  wickSets?: WickSet[];
+  bells?: Bell[];
 }
 
 /** A rect (sim px) that catches a fall: see `Scene.catches`. */

@@ -27,7 +27,7 @@ import { seenScale } from '../seen';
 import type { EnemyState, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { frames, heldUnseen, type KindRules, mix, type StepInfo, segmentBlocked, setMode } from './common';
-import { SENSE_WALLET, seenBy } from './senses';
+import { SENSE_WALLET, seenBy, shyOf } from './senses';
 
 type L = Tuning['lampwing'];
 
@@ -427,6 +427,9 @@ function rhythm(e: EnemyState, info: StepInfo, t: L): boolean {
     } else if (--e.timer <= 0 && heldUnseen(e, p)) {
       // (Held helpless and it was off her screen as she was caught: it waits.)
       e.timer = 1;
+    } else if (e.timer <= 0 && shyOf(e, info, p.x + p.w / 2, p.y + p.h / 2)) {
+      // (Silver light: it holds its perch until she is out of it.)
+      e.timer = 1;
     } else if (e.timer <= 0) {
       const n = frames(t.passTellFrames, 1);
       setMode(e, 'curious', n);
@@ -670,6 +673,8 @@ function tell(e: EnemyState, info: StepInfo): void {
   const p = info.state.player;
   // (Not at one held helpless who never saw it coming: round 4.)
   if (heldUnseen(e, p)) return;
+  // (Nor into silver light: Lanternroot's moonwicks make it shy.)
+  if (shyOf(e, info, p.x + p.w / 2, p.y + p.h / 2)) return;
   const n = frames(rowOf(info.t, e).curiousFrames, 1);
   setMode(e, 'curious', n);
   e.targetX = p.x + p.w / 2;

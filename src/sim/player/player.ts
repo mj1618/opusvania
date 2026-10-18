@@ -3,6 +3,7 @@ import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEnd
 import { beatGrab, freeGrab, tickGrab } from '../grab';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { floorBarkAt, slashKit, thornAt } from '../kit';
+import { kindle, kindleTarget, spendGlow, startGust } from '../light';
 import { flameAt, flingAim, flingLaunch, flingTarget, lurePull, slashLures, tickLures } from '../lures';
 import {
   type Body,
@@ -130,6 +131,12 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     grabY: 0,
     grabGrace: 0,
     lit: 0,
+    glow: 0,
+    moonlit: 0,
+    mend: 0,
+    lampHold: 0,
+    gustCd: 0,
+    gustHop: 1,
     seen: 0,
     seenLevel: 0,
     offering: 0,
@@ -735,6 +742,8 @@ function pogoBounce(c: Ctx): void {
   p.airDash = P.airDashes;
   p.dj = P.doubleJumps;
   p.hangUsed = 0;
+  // (A pogo gives the gust's hop back too: Lanternroot.)
+  p.gustHop = 1;
 }
 
 function jumpCommon(c: Ctx, kind: JumpKind, dir: number): void {
@@ -1150,6 +1159,8 @@ function controller(c: Ctx): void {
   if (held && caught(c)) return;
   // The fling off a lamp: aiming, she holds (the launch lets the ordinary step below run on).
   if (!held && fling(c)) return;
+  // The rest of the Lamp button in a glow room (Lanternroot): kindle, mend, gust.
+  if (!held && c.scene.glow) lampVerb(c);
   if (!held) updateSlash(c);
   const wasGrounded = p.grounded;
   const x0 = p.x;
@@ -1366,6 +1377,104 @@ function fling(c: Ctx): boolean {
   return true;
 }
 
+/**
+ * The Lamp button's other verbs in a glow room (docs/design/levels/proto-1.md §3 "Controls on one button"), after
+ * the fling had its chance (a burning flame in reach takes the press first):
+ *  1. a cold moonwick in reach, Kindle owned: **kindle** it (too little glow: `kindleRefuse`, nothing else);
+ *  2. nothing in reach, held `glow.tapFrames`, grounded, still: **mend** (`mendStart`; it lands at
+ *     `glow.mendFrames`: `glow.mendCost` for 1 light; held on, it mends again). Any other input, a hurt or the air
+ *     breaks it (`mendBreak`), nothing spent;
+ *  3. nothing in reach, a tap (let go within `tapFrames`), Gust owned: **gust** along the held direction.
+ */
+function lampVerb(c: Ctx): void {
+  const p = c.p;
+  const t = c.P.tuning;
+  const G = t.glow;
+  const st = c.state;
+  const owns = (a: string) => (st.save.abilities as readonly string[]).includes(a);
+  const tap = Math.max(1, Math.round(G.tapFrames));
+  const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
+  if (c.pressed(ActionBit.lamp)) {
+    // (A press the fling refused, or a fresh one: a cold moonwick in reach takes it.)
+    const k = owns('kindle') ? kindleTarget(st, c.scene, t) : -1;
+    if (k >= 0) {
+      kindle(st, c.scene, k, t, c.events);
+      p.lampHold = -1;
+      return;
+    }
+    p.lampHold = 1;
+    p.lureAimX = c.inX;
+    p.lureAimY = aimY;
+    return;
+  }
+  if (c.held(ActionBit.lamp)) {
+    if (p.lampHold <= 0) return;
+    p.lampHold++;
+    // (The way a tap will gust: the direction held through it, kept in the fling's aim fields.)
+    if (c.inX !== 0 || aimY !== 0) {
+      p.lureAimX = c.inX;
+      p.lureAimY = aimY;
+    }
+    const others = c.input & ~ActionBit.lamp;
+    if (p.mend > 0) {
+      const why =
+        others !== 0
+          ? 'input'
+          : !p.grounded
+            ? 'air'
+            : p.hp >= p.hpMax
+              ? 'full'
+              : p.glow < G.mendCost
+                ? 'empty'
+                : '';
+      if (why !== '') {
+        p.mend = 0;
+        p.lampHold = -1;
+        c.events.push({ type: 'mendBreak', why, x: c.fx, y: p.y + p.h / 2 });
+        return;
+      }
+      p.mend++;
+      if (p.mend >= Math.max(tap + 1, Math.round(G.mendFrames))) {
+        spendGlow(st, Math.max(0, Math.round(G.mendCost)), 'mend', c.events);
+        p.hp = Math.min(p.hpMax, p.hp + 1);
+        c.events.push({ type: 'mend', hp: p.hp, glow: p.glow, x: c.fx, y: p.y + p.h / 2 });
+        // (Held on, the next mend starts its channel over.)
+        p.mend = 0;
+        p.lampHold = 1;
+      }
+      return;
+    }
+    if (
+      p.lampHold >= tap &&
+      others === 0 &&
+      p.grounded &&
+      p.vx === 0 &&
+      p.mode === 'normal' &&
+      p.hp < p.hpMax &&
+      p.glow >= G.mendCost
+    ) {
+      p.mend = tap;
+      c.events.push({
+        type: 'mendStart',
+        frames: Math.max(1, Math.round(G.mendFrames) - tap),
+        x: c.fx,
+        y: p.y + p.h / 2,
+      });
+    }
+    return;
+  }
+  // Let go.
+  if (p.mend > 0) {
+    p.mend = 0;
+    c.events.push({ type: 'mendBreak', why: 'input', x: c.fx, y: p.y + p.h / 2 });
+  } else if (p.lampHold > 0 && p.lampHold <= tap && owns('gust') && p.gustCd === 0) {
+    // (Held now, else held during the tap.)
+    const held = c.inX !== 0 || aimY !== 0;
+    startGust(st, t, held ? c.inX : p.lureAimX, held ? aimY : p.lureAimY, c.events);
+  }
+  p.lampHold = 0;
+}
+
 /** 5. Post: timers, ground probe, walls, transitions, facing, events. */
 function post(c: Ctx, wasGrounded: boolean, x0: number, impactVy: number): void {
   const p = c.p;
@@ -1550,6 +1659,12 @@ export function hurtPlayer(
   // A blow ends a fling's aim (the flame stays lit).
   p.fling = -1;
   p.flingFrames = 0;
+  // And a mend (Lanternroot): nothing spent.
+  if (p.mend > 0) {
+    p.mend = 0;
+    events.push({ type: 'mendBreak', why: 'hurt', x, y: p.y + p.h / 2 });
+  }
+  if (p.lampHold > 0) p.lampHold = -1;
   if (p.mode === 'dash') events.push({ type: 'dashEnd', x, y, dir: p.dashDir });
   else if (p.mode === 'wallSlide') events.push({ type: 'wallSlideEnd', x, y, dir: p.wallDir });
   if (p.mode !== 'normal') p.modeFrames = 0;
@@ -1684,6 +1799,8 @@ export function reformPlayer(
   p.attackFacing = old.facing;
   p.attackSeq = old.attackSeq;
   p.hurtSeq = old.hurtSeq;
+  // (In a glow room a fade has dropped it already: src/sim/light.ts `dropGlow`.)
+  p.glow = old.glow;
   keepOffer(p, old);
   p.invuln = P.reformInvulnFrames;
   freshStart(p, P.tuning);

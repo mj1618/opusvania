@@ -1,0 +1,914 @@
+{
+  "id": "lr-roots",
+  "title": "Lanternroot: the black roots",
+  "region": "lanternroot",
+  "edgeKick": false,
+  "abilities": ["glide", "wallJump", "doubleJump"],
+  "glow": true,
+  "senses": "lamp",
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "roots",
+    "seed": 303
+  },
+  "width": 5760,
+  "height": 1536,
+  "spawn": {
+    "x": 440,
+    "y": 1350
+  },
+  "solids": [
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 0,
+      "w": 576,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 832,
+      "y": 0,
+      "w": 576,
+      "h": 240,
+      "kick": "east"
+    },
+    {
+      "tag": "root",
+      "x": 1664,
+      "y": 0,
+      "w": 1280,
+      "h": 240,
+      "kick": "west"
+    },
+    {
+      "tag": "root",
+      "x": 3200,
+      "y": 0,
+      "w": 1280,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 4736,
+      "y": 0,
+      "w": 1024,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1350,
+      "w": 1920,
+      "h": 186,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1680,
+      "y": 820,
+      "w": 160,
+      "h": 40,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1920,
+      "y": 240,
+      "w": 64,
+      "h": 1060,
+      "kick": "east"
+    },
+    {
+      "tag": "root",
+      "x": 1920,
+      "y": 1300,
+      "w": 64,
+      "h": 50,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 1984,
+      "y": 1300,
+      "w": 1792,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 2040,
+      "y": 1060,
+      "w": 200,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3520,
+      "y": 1060,
+      "w": 200,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 2440,
+      "y": 610,
+      "w": 160,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3160,
+      "y": 610,
+      "w": 160,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3776,
+      "y": 240,
+      "w": 64,
+      "h": 820,
+      "kick": "west"
+    },
+    {
+      "tag": "ground",
+      "x": 3840,
+      "y": 1300,
+      "w": 460,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "pool",
+      "x": 4300,
+      "y": 1340,
+      "w": 900,
+      "h": 196,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 5200,
+      "y": 1300,
+      "w": 560,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 4400,
+      "y": 240,
+      "w": 80,
+      "h": 860,
+      "kick": "east"
+    },
+    {
+      "tag": "root",
+      "x": 4736,
+      "y": 240,
+      "w": 80,
+      "h": 860,
+      "kick": "west"
+    },
+    {
+      "tag": "root",
+      "x": 5500,
+      "y": 1150,
+      "w": 260,
+      "h": 40,
+      "kick": false
+    }
+  ],
+  "oneWays": [],
+  "pickups": [
+    {
+      "id": "g-c3-1",
+      "kind": "glint",
+      "x": 3900,
+      "y": 1240
+    },
+    {
+      "id": "g-c3-2",
+      "kind": "glint",
+      "x": 3951,
+      "y": 1191
+    },
+    {
+      "id": "g-c3-3",
+      "kind": "glint",
+      "x": 4003,
+      "y": 1158
+    },
+    {
+      "id": "g-c3-4",
+      "kind": "glint",
+      "x": 4054,
+      "y": 1142
+    },
+    {
+      "id": "g-c3-5",
+      "kind": "glint",
+      "x": 4106,
+      "y": 1142
+    },
+    {
+      "id": "g-c3-6",
+      "kind": "glint",
+      "x": 4157,
+      "y": 1158
+    },
+    {
+      "id": "g-c3-7",
+      "kind": "glint",
+      "x": 4209,
+      "y": 1191
+    },
+    {
+      "id": "g-c3-8",
+      "kind": "glint",
+      "x": 4260,
+      "y": 1240
+    }
+  ],
+  "pods": [
+    {
+      "id": "pod-a3a",
+      "x": 560,
+      "y": 1328,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-a3b",
+      "x": 1000,
+      "y": 1328,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-a3c",
+      "x": 1240,
+      "y": 1328,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-b3a",
+      "x": 2500,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 600
+    },
+    {
+      "id": "pod-b3b",
+      "x": 3260,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 600
+    },
+    {
+      "id": "pod-c3a",
+      "x": 4100,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 1200
+    },
+    {
+      "id": "pod-c3b",
+      "x": 5260,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 1200
+    }
+  ],
+  "enemies": [
+    {
+      "id": "j-a3a",
+      "kind": "juvenileBurrback",
+      "x": 860,
+      "y": 1350,
+      "facing": 1,
+      "senses": "always"
+    },
+    {
+      "id": "j-a3b",
+      "kind": "juvenileBurrback",
+      "x": 1300,
+      "y": 1350,
+      "facing": -1,
+      "senses": "always"
+    },
+    {
+      "id": "orb",
+      "kind": "web",
+      "x": 2880,
+      "y": 640,
+      "facing": 1,
+      "grab": false,
+      "orb": {
+        "r": 520,
+        "spokes": 12,
+        "rings": 4
+      }
+    },
+    {
+      "id": "gloamweaver",
+      "kind": "gloamweaver",
+      "x": 2880,
+      "y": 640,
+      "facing": 1
+    },
+    {
+      "id": "spider1",
+      "kind": "dangler",
+      "x": 2300,
+      "y": 260,
+      "facing": 1,
+      "hp": 1,
+      "senses": "always",
+      "respawn": 240,
+      "fight": true,
+      "drop": 900
+    },
+    {
+      "id": "spider2",
+      "kind": "dangler",
+      "x": 2880,
+      "y": 260,
+      "facing": 1,
+      "hp": 1,
+      "senses": "always",
+      "respawn": 240,
+      "fight": true,
+      "drop": 900
+    },
+    {
+      "id": "spider3",
+      "kind": "dangler",
+      "x": 3460,
+      "y": 260,
+      "facing": 1,
+      "hp": 1,
+      "senses": "always",
+      "respawn": 240,
+      "fight": true,
+      "drop": 900
+    },
+    {
+      "id": "d-c3a",
+      "kind": "dangler",
+      "x": 4300,
+      "y": 260,
+      "facing": 1,
+      "senses": "always",
+      "drop": 1000
+    },
+    {
+      "id": "d-c3b",
+      "kind": "dangler",
+      "x": 5000,
+      "y": 260,
+      "facing": -1,
+      "senses": "always",
+      "drop": 1000
+    },
+    {
+      "id": "b-c3",
+      "kind": "burrback",
+      "x": 5320,
+      "y": 1300,
+      "facing": 1,
+      "senses": "always",
+      "hp": 3,
+      "radius": 134
+    }
+  ],
+  "lures": [
+    {
+      "id": "m-a3",
+      "kind": "moonwick",
+      "x": 1500,
+      "y": 1290
+    },
+    {
+      "id": "m-a3b",
+      "kind": "moonwick",
+      "x": 1760,
+      "y": 770,
+      "keep": true
+    },
+    {
+      "id": "m-w1",
+      "kind": "moonwick",
+      "x": 2140,
+      "y": 1010
+    },
+    {
+      "id": "m-w4",
+      "kind": "moonwick",
+      "x": 3620,
+      "y": 1010
+    },
+    {
+      "id": "m-w2",
+      "kind": "moonwick",
+      "x": 2520,
+      "y": 560
+    },
+    {
+      "id": "m-w3",
+      "kind": "moonwick",
+      "x": 3240,
+      "y": 560
+    },
+    {
+      "id": "gloam-lamp",
+      "kind": "great",
+      "x": 2880,
+      "y": 640
+    }
+  ],
+  "exits": [
+    {
+      "id": "hole",
+      "edge": "n",
+      "from": 576,
+      "to": 832
+    },
+    {
+      "id": "stair",
+      "edge": "n",
+      "from": 1408,
+      "to": 1664
+    },
+    {
+      "id": "seal",
+      "edge": "n",
+      "from": 2944,
+      "to": 3200
+    },
+    {
+      "id": "shaft",
+      "edge": "n",
+      "from": 4480,
+      "to": 4736
+    }
+  ],
+  "glades": [
+    {
+      "id": "kindle",
+      "x": 120,
+      "y": 1150,
+      "w": 200,
+      "h": 200,
+      "ability": "kindle"
+    },
+    {
+      "id": "gust",
+      "x": 2780,
+      "y": 1100,
+      "w": 200,
+      "h": 200,
+      "ability": "gust",
+      "when": "gloam-down"
+    }
+  ],
+  "marks": {
+    "moonholes": [
+      {
+        "x": 220,
+        "y": 240
+      },
+      {
+        "x": 2880,
+        "y": 240
+      },
+      {
+        "x": 4608,
+        "y": 0
+      }
+    ],
+    "covers": [
+      {
+        "id": "cover-heart",
+        "x": 5560,
+        "y": 1150,
+        "w": 200,
+        "h": 150,
+        "opens": "lr-roots:heartwood"
+      }
+    ],
+    "landmarks": [
+      {
+        "id": "ram-scars",
+        "kind": "ram-scars",
+        "x": 5480,
+        "y": 1260
+      }
+    ],
+    "chambers": [
+      {
+        "id": "a3",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      },
+      {
+        "id": "b3",
+        "x": 1920,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      },
+      {
+        "id": "c3",
+        "x": 3840,
+        "y": 0,
+        "w": 1920,
+        "h": 1536
+      }
+    ],
+    "places": [
+      {
+        "id": "pit",
+        "x": 700,
+        "y": 1350
+      },
+      {
+        "id": "kindle-hollow",
+        "x": 220,
+        "y": 1350
+      },
+      {
+        "id": "m-a3b-ledge",
+        "x": 1760,
+        "y": 820
+      },
+      {
+        "id": "arena",
+        "x": 2880,
+        "y": 1300
+      },
+      {
+        "id": "arena-w1",
+        "x": 2140,
+        "y": 1060
+      },
+      {
+        "id": "arena-w4",
+        "x": 3620,
+        "y": 1060
+      },
+      {
+        "id": "arena-w2",
+        "x": 2520,
+        "y": 610
+      },
+      {
+        "id": "arena-w3",
+        "x": 3240,
+        "y": 610
+      },
+      {
+        "id": "cistern-w",
+        "x": 4000,
+        "y": 1300
+      },
+      {
+        "id": "cistern-e",
+        "x": 5300,
+        "y": 1300
+      },
+      {
+        "id": "heartwood-top",
+        "x": 5560,
+        "y": 1150
+      }
+    ]
+  },
+  "patches": [
+    {
+      "id": "p-a3",
+      "x": 440,
+      "y": 1350
+    }
+  ],
+  "signs": [
+    {
+      "id": "s2",
+      "x": 1100,
+      "y": 1350,
+      "rhythm": "--.."
+    },
+    {
+      "id": "s3",
+      "x": 5700,
+      "y": 1300,
+      "rhythm": "-..-"
+    }
+  ],
+  "moonmoss": [
+    {
+      "id": "moss-stair1",
+      "x": 1560,
+      "y": 1200,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-stair2",
+      "x": 1400,
+      "y": 1060,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-stair3",
+      "x": 1580,
+      "y": 920,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-stair4",
+      "x": 1540,
+      "y": 680,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-stair5",
+      "x": 1700,
+      "y": 540,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-stair6",
+      "x": 1520,
+      "y": 400,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-w1",
+      "x": 2240,
+      "y": 900,
+      "w": 100,
+      "h": 20
+    },
+    {
+      "id": "moss-w2",
+      "x": 2340,
+      "y": 760,
+      "w": 100,
+      "h": 20
+    },
+    {
+      "id": "moss-e1",
+      "x": 3420,
+      "y": 900,
+      "w": 100,
+      "h": 20
+    },
+    {
+      "id": "moss-e2",
+      "x": 3320,
+      "y": 760,
+      "w": 100,
+      "h": 20
+    }
+  ],
+  "gates": [
+    {
+      "id": "east-door",
+      "x": 3776,
+      "y": 1060,
+      "w": 64,
+      "h": 240,
+      "flag": "gloam-down",
+      "kick": false
+    }
+  ],
+  "boss": {
+    "id": "gloam",
+    "kind": "gloamweaver",
+    "name": "The Gloamweaver",
+    "arena": {
+      "x": 1984,
+      "y": 300,
+      "w": 1792,
+      "h": 1000
+    },
+    "lock": [
+      {
+        "id": "seal-lock",
+        "x": 2944,
+        "y": 240,
+        "w": 256,
+        "h": 60
+      }
+    ],
+    "flag": "gloam-down",
+    "met": "gloam-met",
+    "creature": "gloamweaver",
+    "heart": "gloam-lamp",
+    "rings": [],
+    "retryOut": [],
+    "drops": [2300, 3460, 2880],
+    "canopy": 300,
+    "floor": 1300,
+    "hub": {
+      "x": 2880,
+      "y": 640
+    },
+    "orbR": 520,
+    "wicks": ["m-w1", "m-w2", "m-w3", "m-w4"],
+    "high": ["m-w2", "m-w3"]
+  },
+  "triggers": [
+    {
+      "id": "shaft-up",
+      "x": 4480,
+      "y": 0,
+      "w": 256,
+      "h": 120,
+      "sets": "shaft-open"
+    }
+  ],
+  "bark": [
+    {
+      "id": "heartwood",
+      "x": 5480,
+      "y": 1190,
+      "w": 80,
+      "h": 110,
+      "heartwood": true,
+      "kick": false
+    }
+  ],
+  "hollows": [
+    {
+      "id": "h3",
+      "x": 5600,
+      "y": 1200,
+      "w": 140,
+      "h": 100,
+      "upgrade": "moonDrop"
+    }
+  ],
+  "camera": {
+    "zones": [
+      {
+        "id": "arena",
+        "x": 1984,
+        "y": 300,
+        "w": 1792,
+        "h": 1080,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "a3",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "b3",
+        "x": 1920,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "c3",
+        "x": 3840,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  },
+  "routes": [
+    {
+      "from": "pit",
+      "to": "kindle"
+    },
+    {
+      "from": "pit",
+      "to": "p-a3"
+    },
+    {
+      "from": "pit",
+      "to": "s2"
+    },
+    {
+      "from": "pit",
+      "to": "stair",
+      "needs": ["kindle"],
+      "light": ["m-a3", "m-a3b"],
+      "oneWay": true
+    },
+    {
+      "from": "arena",
+      "to": "gloam",
+      "needs": ["kindle"],
+      "light": ["m-w1", "m-w2", "m-w3", "m-w4"]
+    },
+    {
+      "from": "arena",
+      "to": "gust",
+      "flags": ["gloam-down"]
+    },
+    {
+      "from": "arena",
+      "to": "cistern-w",
+      "flags": ["gloam-down"],
+      "oneWay": true
+    },
+    {
+      "from": "cistern-w",
+      "to": "cistern-e"
+    },
+    {
+      "from": "cistern-w",
+      "to": "shaft",
+      "oneWay": true
+    },
+    {
+      "from": "cistern-e",
+      "to": "heartwood-top",
+      "oneWay": true
+    },
+    {
+      "from": "heartwood-top",
+      "to": "cistern-e",
+      "oneWay": true
+    },
+    {
+      "from": "heartwood-top",
+      "to": "h3"
+    },
+    {
+      "from": "cistern-e",
+      "to": "s3"
+    },
+    {
+      "from": "hole",
+      "to": "pit",
+      "oneWay": true
+    },
+    {
+      "from": "stair",
+      "to": "pit",
+      "oneWay": true
+    },
+    {
+      "from": "seal",
+      "to": "arena",
+      "oneWay": true
+    },
+    {
+      "from": "shaft",
+      "to": "cistern-w",
+      "oneWay": true
+    }
+  ],
+  "shots": {
+    "wide": [
+      {
+        "name": "a3",
+        "x": 960,
+        "y": 900
+      },
+      {
+        "name": "b3",
+        "x": 2880,
+        "y": 900
+      },
+      {
+        "name": "c3",
+        "x": 4800,
+        "y": 900
+      }
+    ]
+  }
+}

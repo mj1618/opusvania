@@ -19,7 +19,16 @@ export const KIT_FIELDS = {
   seedCases: z.array(z.object({ id, x: int, y: int }).strict()).optional(),
   bark: z
     .array(
-      z.object({ ...rect, floor: z.boolean().optional(), hp: int.min(1).max(9).optional(), kick }).strict(),
+      z
+        .object({
+          ...rect,
+          floor: z.boolean().optional(),
+          hp: int.min(1).max(9).optional(),
+          kick,
+          // Lanternroot: heartwood, not rotten (the blade clangs; only a burrback's ram breaks it).
+          heartwood: z.boolean().optional(),
+        })
+        .strict(),
     )
     .optional(),
   gates: z.array(z.object({ ...rect, flag: id, kick }).strict()).optional(),
@@ -71,6 +80,23 @@ export const KIT_FIELDS = {
     )
     .optional(),
   hollows: z.array(z.object({ ...rect, upgrade: z.enum(UPGRADE_IDS) }).strict()).optional(),
+  // --- Lanternroot's light pieces (src/sim/light.ts, memory/glow.md).
+  moonmoss: z.array(z.object({ ...rect, oneWay: z.boolean().optional() }).strict()).optional(),
+  wickSets: z.array(z.object({ id, wicks: z.array(id).min(2), sets: id }).strict()).optional(),
+  bells: z
+    .array(
+      z
+        .object({
+          id,
+          x: int,
+          y: int,
+          rhythm: z.string().regex(/^[.-]+$/),
+          sets: id,
+          dark: z.boolean().optional(),
+        })
+        .strict(),
+    )
+    .optional(),
 };
 
 /** A lure's `swing` (src/sim/paths.ts). */
@@ -101,6 +127,8 @@ export const CAMERA_ZONES = z
         bounds: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
         /** Only until this story flag is saved (the den's close frame lets go once the beetle is down). */
         until: z.string().min(1).optional(),
+        /** Frames the view takes to slide into this zone (Lanternroot's chambers: 20; default the camera's own). */
+        frames: int.min(1).max(120).optional(),
       })
       .strict(),
   )
@@ -141,10 +169,14 @@ interface KitRoom {
   mothStones?: Array<{ id: string; x: number; y: number }> | undefined;
   signs?: Array<{ id: string; x: number; y: number }> | undefined;
   hollows?: Array<Box & { id: string }> | undefined;
+  moonmoss?: Array<Box & { id: string }> | undefined;
+  wickSets?: Array<{ id: string; wicks: string[]; sets: string }> | undefined;
+  bells?: Array<{ id: string; x: number; y: number }> | undefined;
   lures?:
     | Array<{
         id: string;
-        kind: 'wick' | 'lantern' | 'ring' | 'great';
+        kind: 'wick' | 'lantern' | 'ring' | 'great' | 'moonwick';
+        keep?: boolean | undefined;
         x: number;
         y: number;
         swing?: { length: number; reach?: number | undefined; period?: number | undefined } | undefined;
@@ -240,6 +272,25 @@ export function checkKit(s: KitRoom, seen: Set<string>): void {
       if (s.solids.some((q) => hits(q, core))) bad(`lure "${l.id}" swings into a solid`);
     }
   }
+  // Lanternroot: moss inside the room and clear of solids (it is its own solid); sets of the room's moonwicks;
+  // bells in the room; `keep` only on a moonwick.
+  for (const m of s.moonmoss ?? []) {
+    named(m);
+    inside(`moonmoss "${m.id}"`, m);
+    if (s.solids.some((q) => hits(q, m))) bad(`moonmoss "${m.id}" overlaps a solid`);
+  }
+  for (const w of s.wickSets ?? []) {
+    named(w);
+    for (const id of w.wicks)
+      if (!(s.lures ?? []).some((l) => l.id === id && l.kind === 'moonwick'))
+        bad(`wick set "${w.id}" names "${id}", which is no moonwick of the room`);
+  }
+  for (const b of s.bells ?? []) {
+    named(b);
+    if (b.x < 0 || b.x > s.width || b.y < 0 || b.y > s.height) bad(`bell "${b.id}" is outside the scene`);
+  }
+  for (const l of s.lures ?? [])
+    if (l.keep && l.kind !== 'moonwick') bad(`lure "${l.id}" keeps, but is no moonwick`);
   for (const z of s.camera?.zones ?? []) {
     inside(`camera zone "${z.id}"`, z);
     if (z.bounds) inside(`camera zone "${z.id}"'s bounds`, z.bounds);

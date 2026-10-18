@@ -11,7 +11,16 @@ import type { SaveState } from './state';
 import type { Tuning } from './tuning';
 
 /** Every upgrade, in the order the region docs list them. */
-export const UPGRADE_IDS = ['quickWings', 'keenBlade', 'nightEyes', 'longBreath', 'sharpWings'] as const;
+export const UPGRADE_IDS = [
+  'quickWings',
+  'keenBlade',
+  'nightEyes',
+  'longBreath',
+  'sharpWings',
+  'glowVessel',
+  'brightKindle',
+  'moonDrop',
+] as const;
 export type UpgradeId = (typeof UPGRADE_IDS)[number];
 
 /** What each one changes. */
@@ -38,6 +47,15 @@ const APPLY: Record<UpgradeId, (t: Tuning) => Tuning> = {
   // what a launch does to each creature is the creatures' rule (`upgradesOwned` has it; the launch is
   // `player.thrown` with `lureThrow` running).
   sharpWings: (t) => t,
+  // Lanternroot (proto-1.md §3): the gallery vault's vessel raises the glow meter; the cache's Bright Kindle
+  // makes a kindle cheaper.
+  glowVessel: (t) => ({ ...t, glow: { ...t.glow, max: Math.max(t.glow.max, t.upgrades.glowVessel.max) } }),
+  brightKindle: (t) => ({
+    ...t,
+    glow: { ...t.glow, kindleCost: Math.min(t.glow.kindleCost, t.upgrades.brightKindle.kindleCost) },
+  }),
+  // A moon-drop is one more light per hollow that gave one (its flag is `moonDrop:<room>:<hollow>`, counted below).
+  moonDrop: (t) => t,
 };
 
 export function isUpgrade(id: string): id is UpgradeId {
@@ -58,11 +76,14 @@ export function upgradesOwned(save: Pick<SaveState, 'flags'>): UpgradeId[] {
 export function withUpgrades(t: Tuning, save: Pick<SaveState, 'flags'>): Tuning {
   let out = t;
   const flags = save.flags;
+  let drops = 0;
   for (let i = 0; i < flags.length; i++) {
     const f = flags[i] as string;
+    if (f.startsWith('moonDrop:')) drops++;
     if (!f.startsWith('upgrade:')) continue;
     const id = f.slice(8);
     if (isUpgrade(id)) out = APPLY[id](out);
   }
+  if (drops > 0) out = { ...out, health: { ...out.health, max: out.health.max + drops } };
   return out;
 }

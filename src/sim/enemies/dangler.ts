@@ -31,7 +31,7 @@ import { solidAt } from '../physics/aabb';
 import type { EnemyState } from '../state';
 import type { Tuning } from '../tuning';
 import { frames, heldUnseen, type KindRules, type StepInfo, segmentBlocked, setMode } from './common';
-import { seenBy } from './senses';
+import { seenBy, shyOf } from './senses';
 import { segmentInBox } from './web';
 
 type D = Tuning['dangler'];
@@ -222,7 +222,9 @@ export const dangler: KindRules = {
       if (
         e.strikeCd === 0 &&
         !heldUnseen(e, p) &&
-        (D.stopFrames > 0 ? e.lost >= D.stopFrames : sees(e, info))
+        (D.stopFrames > 0 ? e.lost >= D.stopFrames : sees(e, info)) &&
+        // (Silver light, Lanternroot: it holds its perch over a moonlit stop.)
+        !shyOf(e, info, p.x + p.w / 2, p.y + p.h / 2)
       ) {
         e.lost = 0;
         tell(e, info);

@@ -18,13 +18,13 @@
 import type { AbilityId } from '../sim/abilities';
 import { exitSegment, linkWorld, mirrorOf, type World, type WorldRoom } from '../sim/world';
 import { bossNodes } from './boss';
-import { ROOMS, WORLD } from './index';
+import { ROOMS, WORLD, WORLD_FILES, type WorldFile } from './index';
 import { findIds, kitNodes } from './kit';
 import type { Room } from './room';
 
-/** Every room (placed ones with their world position; test rooms at 0, 0, unplaced). */
-function worldRooms(): WorldRoom[] {
-  const placed = new Map(WORLD.rooms.map((r) => [r.id, r]));
+/** Every room (the file's placed ones with their world position; the rest at 0, 0, unplaced). */
+function worldRooms(file: WorldFile = WORLD): WorldRoom[] {
+  const placed = new Map(file.rooms.map((r) => [r.id, r]));
   return Object.values(ROOMS).map((scene) => {
     const at = placed.get(scene.id);
     return { id: scene.id, x: at?.x ?? 0, y: at?.y ?? 0, placed: at !== undefined, scene };
@@ -33,6 +33,30 @@ function worldRooms(): WorldRoom[] {
 
 /** The game's world, linked. */
 export const GAME_WORLD: World = linkWorld(WORLD.start, worldRooms());
+
+/** Every world by id (`game` and the prototype levels': src/scene/index.ts `WORLD_FILES`), linked. */
+export const WORLDS: Readonly<Record<string, World>> = Object.fromEntries(
+  Object.entries(WORLD_FILES).map(([id, f]) => [
+    id,
+    id === 'game' ? GAME_WORLD : linkWorld(f.start, worldRooms(f)),
+  ]),
+);
+
+/** Lanternroot's world (docs/design/levels/proto-1.md): `?world=proto-1`. */
+export const PROTO_WORLD: World = WORLDS['proto-1'] as World;
+
+/** A world by id; throws, naming the worlds there are, if there is none. */
+export function getWorld(id: string): World {
+  const w = WORLDS[id];
+  if (!w) throw new Error(`Unknown world "${id}". Worlds: ${Object.keys(WORLDS).join(', ')}.`);
+  return w;
+}
+
+/** The areas of a world (its file's `areas`). */
+export function areasOf(world: World): Area[] {
+  for (const [id, w] of Object.entries(WORLDS)) if (w === world) return WORLD_FILES[id]?.areas ?? [];
+  return [];
+}
 
 /** The same world with every room passed through `fn` (`?nopickups` strips the rooms; links stay). */
 export function mapWorld(world: World, fn: (room: Room) => Room): World {
@@ -51,6 +75,17 @@ function setFlags(world: World, reached: ReadonlySet<Node>, owned: Set<string>):
   let grew = false;
   for (const r of Object.values(world.rooms)) {
     if (!r.placed) continue;
+    // A route that sets flags (a puzzle on the way: `routes[].sets`), from a node reached with what it needs.
+    for (const q of (r.scene as Room).routes ?? []) {
+      if (!q.sets || !reached.has(`${r.id}:${q.from}`)) continue;
+      if (!(q.needs ?? []).every((a) => owned.has(a)) || !(q.flags ?? []).every((f) => owned.has(flagKey(f))))
+        continue;
+      for (const f of q.sets)
+        if (!owned.has(flagKey(f))) {
+          owned.add(flagKey(f));
+          grew = true;
+        }
+    }
     for (const t of r.scene.triggers ?? []) {
       if (!reached.has(`${r.id}:${t.id}`) || owned.has(flagKey(t.sets))) continue;
       owned.add(flagKey(t.sets));
@@ -86,6 +121,7 @@ function nodesOf(room: Room): string[] {
     ...(room.glades ?? []).map((g) => g.id),
     ...kitNodes(room),
     ...bossNodes(room),
+    ...(room.marks?.places ?? []).map((p) => p.id),
   ];
 }
 
@@ -211,10 +247,7 @@ export interface Area {
  * Problems with the world (empty = good). `world` defaults to the game's, `areas` to world.json's for it (none
  * for another world). A moth-stone draws its area: memory/level-kit.md.
  */
-export function validateWorld(
-  world: World = GAME_WORLD,
-  areas: readonly Area[] = world === GAME_WORLD ? WORLD.areas : [],
-): string[] {
+export function validateWorld(world: World = GAME_WORLD, areas: readonly Area[] = areasOf(world)): string[] {
   const out: string[] = [];
   const placed = Object.values(world.rooms).filter((r) => r.placed);
   if (!world.rooms[world.start]?.placed)
@@ -288,6 +321,7 @@ export function validateWorld(
     placed.flatMap((r) => [
       ...(r.scene.triggers ?? []).map((t) => t.sets),
       ...(r.scene.boss ? [r.scene.boss.flag] : []),
+      ...((r.scene as Room).routes ?? []).flatMap((q) => q.sets ?? []),
     ]),
   );
   for (const r of placed)

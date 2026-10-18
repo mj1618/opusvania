@@ -235,6 +235,8 @@ export const web: KindRules = {
       return false;
     }
     if (!grabbable(p)) return false;
+    // (A web that never holds her: Lanternroot's orb.)
+    if (scene.enemies?.[index]?.grab === false) return false;
     const list = strandsOf(scene, index);
     const h = info.t.web.strandHalf;
     const bx0 = p.x - h;

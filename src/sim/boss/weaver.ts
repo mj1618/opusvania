@@ -708,7 +708,7 @@ function lowerHeart(c: BossCtx): void {
 // --- The creature.
 
 /** Its thread (pivot to its back) meets her slash's area this frame: it is cut. */
-function threadCut(
+export function threadCut(
   state: GameState,
   b: NonNullable<GameState['boss']>,
   e: EnemyState,

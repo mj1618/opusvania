@@ -25,12 +25,13 @@ import type { BossState, EnemyState, GameState, LuresState, SaveState } from '..
 import type { Tuning } from '../tuning';
 import { at, type BossCtx, type BossRules, lureIndex, runCues, startCues } from './core';
 import type { BossSpec } from './data';
+import { gloamRules } from './gloam';
 import { weaverRules } from './weaver';
 
 export type { BossCtx, BossRules, PhaseRow } from './core';
 export { defeat, enemyIndex, lureIndex, setPhase, shift, startCues } from './core';
 
-const RULES: Record<BossSpec['kind'], BossRules> = { weaver: weaverRules };
+const RULES: Record<BossSpec['kind'], BossRules> = { weaver: weaverRules, gloamweaver: gloamRules };
 
 /** The rules of a kind of boss. */
 export function bossRules(kind: BossSpec['kind']): BossRules {
@@ -66,6 +67,10 @@ function freshBoss(spec: BossSpec): BossState {
     dir: 1,
     landX: 0,
     heartDy: 0,
+    ux: 0,
+    uy: -1,
+    exposed: 0,
+    throws: 0,
   };
 }
 

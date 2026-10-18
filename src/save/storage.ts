@@ -120,4 +120,10 @@ export const PROGRESS_EVENTS: ReadonlySet<string> = new Set([
   'lureSnuff',
   'shortcutOpen',
   'roomEnter',
+  // (Lanternroot: a flag set, a wick kept or a set burned whole, a find, a broken wall.)
+  'flagSet',
+  'lureKindle',
+  'wickSet',
+  'hollowGrant',
+  'barkBreak',
 ]);

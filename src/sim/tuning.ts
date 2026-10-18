@@ -345,6 +345,36 @@ export const defaultTuning = withVariants({
        * 200, 1.5 at 100): a field this big at a lantern's profile saturated her drift (12 px/f, faster
        * than her run) and no column face could be climbed (memory/bosses.md).
        */
+      /**
+       * A moonwick (Lanternroot, `moonwick` above): no pull, no moths, never cut out (the blade passes through
+       * it); `fling` = its reach as an anchor, and the reach of a kindle. `radius` = its silver light.
+       */
+      moonwick: {
+        radius: 420,
+        pullEdge: 0,
+        pullCore: 0,
+        swirl: 0,
+        core: 40,
+        hp: 1,
+        moths: 0,
+        sharp: 1,
+        fling: 110,
+      },
+      /**
+       * The Gloam lamp (Lanternroot's mini-boss, src/sim/boss/gloam.ts): the boss runs its `great` lamp on this
+       * row. No pull (the player keeps control), no fling, its light the arena's; 60 moths at the defeat.
+       */
+      gloam: {
+        radius: 700,
+        pullEdge: 0,
+        pullCore: 0,
+        swirl: 0,
+        core: 72,
+        hp: 3,
+        moths: 60,
+        sharp: 1,
+        fling: 0,
+      },
       great: {
         radius: 700,
         pullEdge: 0.02,
@@ -490,7 +520,66 @@ export const defaultTuning = withVariants({
    * of a grab in `beats` presses (`grab.beats` without), `keenBlade` grows the flame's hit box by
    * `flameRadiusAdd`, `longBreath` makes the fling's aim `flingMult` x as long (`sharpWings`: no number).
    */
-  upgrades: { quickWings: { beats: 2 }, keenBlade: { flameRadiusAdd: 20 }, longBreath: { flingMult: 2 } },
+  upgrades: {
+    quickWings: { beats: 2 },
+    keenBlade: { flameRadiusAdd: 20 },
+    longBreath: { flingMult: 2 },
+    /** Lanternroot (docs/design/levels/proto-1.md §3): the vault's vessel raises the glow meter's max; Bright Kindle cheapens a kindle. */
+    glowVessel: { max: 24 },
+    brightKindle: { kindleCost: 3 },
+  },
+  /**
+   * The light economy (Lanternroot, docs/design/levels/proto-1.md §3, memory/glow.md): glow, the light she
+   * carries, in sparks. Only rooms with `glow: true` play it. Hits charge it (`hit` a blade hit on a creature,
+   * `kill` more on a kill, `snuff` a warm lamp out by a cut, a fling or a gust, `glint` a glint or pod glint),
+   * up to `max` (6 pips of `pip`). **Mend** (Lamp held `tapFrames`, grounded, still, nothing in reach) spends
+   * `mendCost` for 1 light when the channel lands at `mendFrames`; **Kindle** spends `kindleCost` (a cold
+   * moonwick in reach). A fade leaves all of it where she fell as a glint cluster.
+   */
+  glow: {
+    max: 18,
+    pip: 3,
+    hit: 3,
+    kill: 3,
+    snuff: 6,
+    glint: 1,
+    mendCost: 6,
+    mendFrames: 36,
+    kindleCost: 6,
+    /** A Lamp press released within this many frames is a tap (Gust); held this long it starts a mend. */
+    tapFrames: 12,
+  },
+  /**
+   * Moonwicks (Lanternroot §3 Tool 1): pale glass buds that only take her light. Kindled, one burns `burn`
+   * frames (its last `gutter` flicker: a readable clock) and lights `light` px of silver: moonmoss within it is
+   * solid, and hawkers and danglers start no strike at her (or at a point) inside it. A burning one is a fling
+   * anchor that never embers. A `keep` wick, or a whole `wickSets` set burning on one frame, burns for good.
+   */
+  moonwick: { burn: 720, gutter: 120, light: 420 },
+  /**
+   * Gust (Lanternroot §3 Tool 2): Lamp tapped with nothing in reach: a puff from her centre along the held
+   * 8-way direction (facing if none), `speed` px/f for `frames` (480 px), a `size` box, stopped by solids;
+   * `cooldown` before the next. It snuffs warm lamps (not great ones), fans a burning moonwick (its burn starts
+   * over), knocks a hawker out of its tell or dive (stalled `hawkerStall`, open), swings a dangler, shoves
+   * beetles (`shove` px/f). Tapped with Down held in the air: a hop (`hopVy`), once an airtime (refilled on
+   * landing or a pogo).
+   */
+  gust: {
+    speed: 16,
+    frames: 30,
+    size: 64,
+    cooldown: 30,
+    hawkerStall: 60,
+    shove: 12,
+    swingPx: 200,
+    hopVy: -9,
+  },
+  /**
+   * The cap's answer (Lanternroot §5 layer 3, `scene.bells`): a gap of at most `shortMax` frames between two
+   * strikes is short, `longMin`..`longMax` long; any other gap starts the count over. It counts only in the
+   * dark: no warm lamp burning within `darkPx` (else it chimes dull).
+   */
+  bells: { shortMax: 24, longMin: 36, longMax: 90, darkPx: 1200, size: 72 },
   /**
    * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
    * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at
@@ -1208,6 +1297,57 @@ export const defaultTuning = withVariants({
       p2end: { fall: 0, flare: 40, next: 100 },
       p3end: { flee: 0, lower: 30, next: 130 },
       defeat: { heartOut: 0, burst: 12, sky: 60, curtain: 90, relight: 170, done: 230 },
+    },
+  },
+  /**
+   * The Gloamweaver (Lanternroot's mini-boss, src/sim/boss/gloam.ts, memory/bosses.md): an orb-weaver round the
+   * Gloam lamp, built on the Weaver's framework.
+   * - P1 "find it": it hunts on its orb (`orbShare` of the web's radius from the hub, `huntSpeed` px/f round it)
+   *   toward the sector over her, never into silver light; shielded (the blade glances). A kindle of an arena
+   *   wick within `exposePx` of it (or with it cornered) drops it exposed: it falls (`fallGravity`, `fallMax`),
+   *   lies open `openFrames` (at most `exposeCuts` cuts a window), then climbs back (`climbSpeed`). `p1Hp` cuts
+   *   (`retryP1Hp` on a retry: one exposure).
+   * - P2 "the drops": the Weaver's drops over `drops` (tell, drop, swing, winded), the swing stopping at the edge
+   *   of silver light (a burning wick near her is a safe pocket). `p2Hp` cuts.
+   * - P3 "the Gloam lamp": it wraps the lamp at the hub. The high pair burning together floods the moon-hole and
+   *   it drops exposed; or `throwsToFall` throw-cuts knock it off. On the floor `p3Hp` cuts end it (`p3OpenFrames`
+   *   a window, then it climbs back).
+   */
+  gloam: {
+    width: 96,
+    height: 64,
+    contactDamage: 1,
+    hurtFrames: 8,
+    hurtSafeFrames: 8,
+    deadFrames: 90,
+    p1Hp: 8,
+    retryP1Hp: 4,
+    exposeCuts: 4,
+    orbShare: 1,
+    huntSpeed: 3,
+    exposePx: 420,
+    fallGravity: 1.2,
+    fallMax: 24,
+    openFrames: 150,
+    climbSpeed: 8,
+    p2Hp: 6,
+    tellFrames: 45,
+    dropFrames: 18,
+    swingFrames: 60,
+    threadPx: 920,
+    swingReach: 520,
+    windedFrames: 90,
+    stunFrames: 120,
+    climbFrames: 50,
+    perchFrames: 30,
+    p3Hp: 3,
+    throwsToFall: 2,
+    p3OpenFrames: 300,
+    cues: {
+      intro: { name: 20, start: 80, nameOut: 170 },
+      p1end: { climb: 0, next: 110 },
+      p2end: { fall: 0, next: 120 },
+      defeat: { lampOut: 0, moths: 20, moonhole: 30, glade: 90, done: 200 },
     },
   },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */

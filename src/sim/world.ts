@@ -17,6 +17,7 @@ import type { SimEvent } from './events';
 import { createGoal } from './goal';
 import { createHatch } from './hatch';
 import { createKit, kitSolids } from './kit';
+import { createLight, initTaken, initWicks } from './light';
 import { createLures } from './lures';
 import { solidAt } from './physics/aabb';
 import { createPickups } from './pickups';
@@ -161,9 +162,13 @@ export function remember(list: string[], id: string): boolean {
  */
 export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boolean): RoomLocal {
   const lures = createLures(scene, t, save.snuffed);
+  // (Lanternroot's moonwicks: cold, but for those the save keeps burning.)
+  initWicks(lures, scene, save);
   const enemies = createEnemies(scene, t);
+  const pickups = createPickups(scene);
+  initTaken({ pickups }, scene, save);
   return {
-    pickups: createPickups(scene),
+    pickups,
     pods: createPods(scene),
     lures,
     enemies,
@@ -177,6 +182,7 @@ export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boo
     boss: createBoss(scene, t, { lures, enemies, save }),
     entry: null,
     seam: null,
+    light: createLight(scene, save),
   };
 }
 
@@ -256,6 +262,7 @@ export function enterRoom(
     fresh.attackSeq = old.attackSeq;
     fresh.hurtSeq = old.hurtSeq;
     fresh.facing = old.facing;
+    fresh.glow = old.glow;
     keepOffer(fresh, old);
     state.player = fresh;
   }

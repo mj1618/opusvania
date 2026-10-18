@@ -19,6 +19,7 @@
  * against where the enemies stood, then they move, then contact is tested (`updateEnemies`).
  */
 
+import { gloamweaver } from './boss/gloam';
 import { weaverBoss } from './boss/weaver';
 import { burrback, juvenileBurrback, oldBurrback } from './enemies/burrback';
 import { carrier } from './enemies/carrier';
@@ -33,7 +34,7 @@ import {
 } from './enemies/common';
 import { dangler } from './enemies/dangler';
 import { hawker, lampwing } from './enemies/lampwing';
-import { litNow, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
+import { litNow, moonlitAt, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
 import { weaver } from './enemies/weaver';
 import { web } from './enemies/web';
 import type { SimEvent } from './events';
@@ -54,6 +55,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   dangler,
   juvenileBurrback,
   carrier,
+  gloamweaver,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -66,6 +68,7 @@ const KIND_LIST: EnemyKind[] = [
   'dangler',
   'juvenileBurrback',
   'carrier',
+  'gloamweaver',
 ];
 
 /**
@@ -104,7 +107,7 @@ function wingCuts(state: GameState, scene: Scene, t: Tuning, events: SimEvent[])
 
 /** How heavy a blow on it reads (round 7: `slashHit.weight`, render's shake and sound): fodder, a body, a boss. */
 export function weightOf(kind: EnemyKind): 'light' | 'medium' | 'heavy' {
-  if (kind === 'oldBurrback' || kind === 'weaverBoss') return 'heavy';
+  if (kind === 'oldBurrback' || kind === 'weaverBoss' || kind === 'gloamweaver') return 'heavy';
   if (kind === 'burrback' || kind === 'hawker' || kind === 'weaver' || kind === 'web') return 'medium';
   return 'light';
 }
@@ -203,6 +206,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
         (spawn.kind === 'oldBurrback' ||
         spawn.kind === 'weaver' ||
         spawn.kind === 'weaverBoss' ||
+        spawn.kind === 'gloamweaver' ||
         spawn.kind === 'juvenileBurrback' ||
         spawn.kind === 'carrier'
           ? 'always'
@@ -231,6 +235,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     waveX: 0,
     waveHit: false,
     slams: 0,
+    shy: 0,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);
@@ -354,6 +359,8 @@ export function updateEnemies(
   const p = state.player;
   // How lit she is by the lures (memory/creatures.md): what a lamp room's sight hunters see her by.
   p.lit = litNow(state, scene, t);
+  // And by silver light (Lanternroot): moonwicks keep flyers from striking at her.
+  p.moonlit = p.hp > 0 && p.faded === 0 ? moonlitAt(state, scene, t, p.x + p.w / 2, p.y + p.h / 2) : 0;
   if (list.length === 0) return -1;
   const I = info(state, scene, t, events);
   I.first = first;

@@ -1,6 +1,7 @@
 import type { AbilityId } from './abilities';
 import type { InputFrame } from './input';
 import { cloneKit, type KitState } from './kit';
+import { cloneLight, type LightState } from './light-state';
 import type { EnemyKind } from './scene';
 
 /**
@@ -200,6 +201,20 @@ export interface PlayerState {
    */
   lit: number;
   /**
+   * Lanternroot's light (src/sim/light.ts, memory/glow.md; only in rooms with `scene.glow`). `glow` = the light
+   * she carries, in sparks (0 .. `glow.max`, kept through rooms; a fade drops all of it). `moonlit` = how lit she
+   * is by burning moonwicks (0 .. 1, like `lit`): hawkers and danglers start no strike at her while it is above 0.
+   * `mend` = frames of a mend's channel (0 = none; it lands at `glow.mendFrames`), `lampHold` = frames the Lamp
+   * button has been held with nothing in reach (-1: the press went to a fling or a kindle), `gustCd` = frames
+   * before the next gust, `gustHop` = 1 while the air hop is still hers this airtime.
+   */
+  glow: number;
+  moonlit: number;
+  mend: number;
+  lampHold: number;
+  gustCd: number;
+  gustHop: number;
+  /**
    * Being seen (src/sim/giving.ts, memory/giving.md): the creatures notice her by the light she
    * carries. `seenLevel` 0-4 (0 = she carries nothing: unseen; the steps are `tuning.giving.seen1..4`
    * of her wallet), `seen` = the same as 0..1 (level / 4). Set at the end of every step from
@@ -287,6 +302,8 @@ export interface GlintDrop {
   value: number;
   left: number;
   timer: number;
+  /** Lanternroot: her glow dropped at a fade (it comes back as glow, not into the wallet). */
+  glow?: boolean;
 }
 
 /** Collectibles (src/sim/pickups.ts). */
@@ -372,6 +389,11 @@ export interface LuresState {
    * yet out): it goes out for good when she lands on safe ground, and burns again if she falls or meets thorns.
    */
   ember: number[];
+  /**
+   * Moonwicks (Lanternroot, src/sim/light.ts): frames of burn left (`-1` = burns for good: `keep`, a set; 0 = cold
+   * or not a moonwick). A moonwick burns while its `hp` is 1.
+   */
+  burn: number[];
   /**
    * Frames each lure leaves her alone (no pull, no catch): the one she broke free of and every core
    * her throw passed through (`lures.throwFrames`). 0 = acts.
@@ -675,6 +697,8 @@ export interface EnemyState {
   waveX: number;
   waveHit: boolean;
   slams: number;
+  /** Lanternroot: 1 while silver light keeps it from starting a strike (`enemyShy` fired; src/sim/light.ts). */
+  shy: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */
@@ -931,6 +955,11 @@ export interface BossState {
   landX: number;
   /** The heart's offset now (it lowers at the end). */
   heartDy: number;
+  /** The Gloamweaver (Lanternroot): its place on the orb (a unit vector from the hub), exposures, throw-cuts taken in P3. */
+  ux: number;
+  uy: number;
+  exposed: number;
+  throws: number;
 }
 
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */
@@ -960,6 +989,8 @@ export interface RoomLocal {
    * have passed (`frames`). Null otherwise.
    */
   seam: { exit: string; frames: number } | null;
+  /** Lanternroot's light pieces (src/sim/light.ts): the gust in the air, moonmoss, the bells, regrowing pods. */
+  light: LightState;
 }
 
 export interface GameState {
@@ -1000,6 +1031,8 @@ export interface GameState {
    * have passed (`frames`). Null otherwise.
    */
   seam: { exit: string; frames: number } | null;
+  /** Lanternroot's light pieces (src/sim/light.ts): the gust in the air, moonmoss, the bells, regrowing pods. */
+  light: LightState;
 }
 
 export function cloneState(s: GameState): GameState {
@@ -1028,6 +1061,7 @@ export function cloneState(s: GameState): GameState {
       freed: s.lures.freed,
       grace: s.lures.grace.slice(),
       ember: s.lures.ember.slice(),
+      burn: s.lures.burn.slice(),
       ...(s.lures.live
         ? {
             live: {
@@ -1059,6 +1093,7 @@ export function cloneState(s: GameState): GameState {
     boss: s.boss ? { ...s.boss } : null,
     entry: s.entry ? { ...s.entry } : null,
     seam: s.seam ? { ...s.seam } : null,
+    light: cloneLight(s.light),
   };
 }
 

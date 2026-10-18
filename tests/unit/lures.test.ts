@@ -73,7 +73,16 @@ describe('lures: scene data', () => {
 
   it('the test grove has none and plays as before', () => {
     const s = newSim(GROVE);
-    expect(s.state.lures).toEqual({ hp: [], hitBy: [], out: [], snuffed: 0, freed: 0, grace: [], ember: [] });
+    expect(s.state.lures).toEqual({
+      hp: [],
+      hitBy: [],
+      out: [],
+      snuffed: 0,
+      freed: 0,
+      grace: [],
+      ember: [],
+      burn: [],
+    });
     s.run('R60 R+J20 R40');
     expect(s.state.player.pullX).toBe(0);
   });

@@ -181,8 +181,11 @@ export function updateDrops(state: GameState, t: Tuning['pickups'], events: SimE
     }
     if (--d.timer > 0) continue;
     d.left--;
-    s.count++;
-    s.lost--;
+    // (Her dropped glow comes back as glow, not into the wallet: src/sim/light.ts.)
+    if (!d.glow) {
+      s.count++;
+      s.lost--;
+    }
     s.combo = s.comboTimer > 0 ? s.combo + 1 : 0;
     s.comboTimer = t.comboFrames;
     events.push({

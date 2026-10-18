@@ -13,6 +13,7 @@ import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goa
 import { createHatch, updateHatch } from './hatch';
 import { ActionBit, type InputFrame, wasPressed } from './input';
 import { afterCatch, catchHold, updateKit } from './kit';
+import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
 import { dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
@@ -291,6 +292,8 @@ export function placePlayer(
   // Slashes stay numbered on: targets remember the last slash that hit them (`hitBy`), so a
   // number used again would pass through whatever it hit before.
   state.player.attackSeq = old.attackSeq;
+  // (Her glow goes where she goes: Lanternroot.)
+  state.player.glow = old.glow;
   keepOffer(state.player, old);
   state.prevInput = 0;
   // Placed back in the room: whatever exit she was leaving by, or fall she was caught in, is
@@ -344,7 +347,11 @@ export function step(
   const first = events.length;
   state.save.time++;
   // The scene as played: closed shortcuts are solids (memory/world.md), and a boss's doors while sealed.
-  const S = seamScene(lockedScene(withShortcuts(scene, state.save), state.boss), state, t);
+  // (And Lanternroot's moonmoss that is lit: src/sim/light.ts.)
+  const S = withMoss(
+    seamScene(lockedScene(withShortcuts(scene, state.save), state.boss), state, t),
+    state.light,
+  );
   // Leaving the room: no new input reaches her while the room holds her; then the next room, or the
   // room again when nothing is there.
   const ex = state.exit;
@@ -435,7 +442,9 @@ export function step(
   // The end of a fade: she re-forms at her last moon patch (any room: everything earned is kept),
   // else at the last light / safe ground, and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
-    dropGlints(state, S, t.health.fadeDrop, events);
+    // (In a glow room all her glow lies where she fell instead: src/sim/light.ts.)
+    if (S.glow) dropGlow(state, S, events);
+    else dropGlints(state, S, t.health.fadeDrop, events);
     const patch = state.save.patch;
     const pr = patch && world ? world.rooms[patch.room] : undefined;
     const pp = pr && patch ? pr.scene.patches?.find((q) => q.id === patch.id) : undefined;
@@ -452,7 +461,14 @@ export function step(
     // A death re-forms her in the room she died in (area 1 plan r5, item 5): in lamp rooms the saved patch
     // counts only when it is in this room; else the room's `reform` point, else her door (below). (The test
     // grove's rule: a patch anywhere unless the room names its own `reform`.)
-    else if (pr && pp && world && (pr.id === scene.id || (S.senses !== 'lamp' && !S.reform))) {
+    // (A glow room, Lanternroot: HK's bench, the last patch rested at anywhere in the world: the boss's retry is
+    // the hall's patch over the seal.)
+    else if (
+      pr &&
+      pp &&
+      world &&
+      (pr.id === scene.id || S.glow === true || (S.senses !== 'lamp' && !S.reform))
+    ) {
       if (pr.id !== scene.id) {
         // Another room: she re-forms there (the room's creatures are fresh anyway).
         gotoRoom(state, t, world, pr.id, pp.x, pp.y, 'reform', events);
@@ -620,6 +636,8 @@ export function step(
   updatePickups(state, S, t.pickups, events);
   updateDrops(state, t.pickups, events);
   updateGoal(state, S, t, live, events, first);
+  // Lanternroot's light (src/sim/light.ts): the gust, moonwicks, moss, pods, respawns, heartwood, the glow paid.
+  updateLight(state, S, t, events, first);
   markSeen(state, t);
   if (S.senses !== 'lamp') markOfferTarget(state, S, t, goalHolds(state.goal, t.goal));
   else if (state.player.offerTarget) state.player.offerTarget = null;

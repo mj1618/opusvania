@@ -13,7 +13,7 @@ const rect = z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).
 export const BOSS = z
   .object({
     id,
-    kind: z.literal('weaver'),
+    kind: z.enum(['weaver', 'gloamweaver']),
     name: z.string().min(1),
     arena: rect,
     lock: z.array(z.object({ id, x: int, y: int, w: int.positive(), h: int.positive() }).strict()),
@@ -21,7 +21,7 @@ export const BOSS = z
     met: id,
     creature: id,
     heart: id,
-    rings: z.array(id).min(1),
+    rings: z.array(id),
     retryOut: z.array(id),
     web: id.optional(),
     drops: z.array(int).min(1).optional(),
@@ -29,6 +29,11 @@ export const BOSS = z
     floor: int.optional(),
     lowered: z.object({ x: int, y: int }).strict().optional(),
     relight: id.optional(),
+    // The Gloamweaver (src/sim/boss/gloam.ts): its orb's hub and radius, the arena's moonwicks, the high pair.
+    hub: z.object({ x: int, y: int }).strict().optional(),
+    orbR: int.min(64).max(1600).optional(),
+    wicks: z.array(id).optional(),
+    high: z.array(id).optional(),
   })
   .strict()
   .optional();
@@ -91,6 +96,18 @@ export function checkBoss(s: BossRoom, seen: Set<string>): void {
     return l;
   };
   const heart = lure(b.heart, ['great'], 'heart');
+  if (b.kind === 'gloamweaver') {
+    // The Gloamweaver: its creature, its moonwicks; it starts on its orb (no rings).
+    const cr = s.enemies.find((e) => e.id === b.creature);
+    if (cr?.kind !== 'gloamweaver')
+      throw new Error(`${where}: its creature "${b.creature}" must be a gloamweaver`);
+    for (const w of [...(b.wicks ?? []), ...(b.high ?? [])]) lure(w, ['moonwick'], 'moonwick');
+    for (const w of b.high ?? [])
+      if (!(b.wicks ?? []).includes(w)) throw new Error(`${where}: high wick "${w}" is not one of its wicks`);
+    if (!b.hub) throw new Error(`${where}: the Gloamweaver needs its hub`);
+    return;
+  }
+  if (b.rings.length === 0) throw new Error(`${where}: the Weaver needs ring flames`);
   for (const r of b.rings) lure(r, ['ring'], 'ring flame');
   for (const r of b.retryOut)
     if (!b.rings.includes(r)) throw new Error(`${where}: retry husk "${r}" is not one of its rings`);

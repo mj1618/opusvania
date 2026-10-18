@@ -28,6 +28,7 @@
 import type { SimEvent, SlashDir } from './events';
 import { updateFinds } from './finds';
 import type { Bark, BounceCap } from './kit-data';
+import { strikeBell } from './light';
 import type { Box } from './player/attack';
 import type { Scene, SolidRect } from './scene';
 import type { GameState, PlayerState, SaveState } from './state';
@@ -199,7 +200,7 @@ export function slashKit(
   const py = p.y + (p.h >> 1);
   const pogoStop = Math.max(0, Math.round(t.enemies.pogoHitstopFrames));
   const hit = (
-    kind: 'thorns' | 'seedCase' | 'bark' | 'cap',
+    kind: 'thorns' | 'seedCase' | 'bark' | 'cap' | 'bell',
     id: string,
     x: number,
     y: number,
@@ -293,6 +294,34 @@ export function slashKit(
     if (b.floor && dir !== 'down') continue;
     if (!overlaps(box, b.x, b.y, b.w, b.h)) continue;
     kit.barkHitBy[i] = seq;
+    // Heartwood (Lanternroot): not rotten. The blade clangs off it (a pogo still bounces); only a ram breaks it.
+    if (b.heartwood) {
+      const hx = Math.max(box.x, Math.min(box.x + box.w, b.x + b.w / 2));
+      const hy = Math.max(box.y, Math.min(box.y + box.h, b.y + b.h / 2));
+      if (dir === 'down' && pogo) {
+        hit('bark', b.id, Math.max(b.x, Math.min(b.x + b.w, px)), b.y, pogoStop);
+        RES.hits++;
+        RES.bounce = true;
+        RES.stop = Math.max(RES.stop, pogoStop);
+        continue;
+      }
+      const stop = Math.max(0, Math.round(K.seedCase.clangHitstop));
+      events.push({
+        type: 'kitClang',
+        id: b.id,
+        kind: 'heartwood',
+        x: b.x + b.w / 2,
+        y: b.y + b.h / 2,
+        hitX: hx,
+        hitY: hy,
+        dir,
+        hitstop: stop,
+        recoil: dir === 'fwd' ? K.seedCase.clangRecoil : 0,
+      });
+      RES.clang = true;
+      RES.stop = Math.max(RES.stop, stop);
+      continue;
+    }
     const hpMax = barkHpMax(b, t);
     const hpLeft = hp - 1;
     kit.bark[i] = hpLeft;
@@ -318,6 +347,21 @@ export function slashKit(
     const k = key(scene, b.id);
     if (!state.save.opened.includes(k)) state.save.opened.push(k);
     events.push({ type: 'barkBreak', id: b.id, x: cx, y: cy, w: b.w, h: b.h, dir, floor });
+  }
+  // Bell-caps (Lanternroot, src/sim/light.ts `strikeBell`): any cut strikes one, a pogo bounces off it.
+  const bells = scene.bells ?? [];
+  const bh = Math.round(t.bells.size) >> 1;
+  for (let i = 0; i < bells.length; i++) {
+    const b = bells[i];
+    const s = state.light.bells[i];
+    if (!b || !s || s.hitBy === seq || !overlaps(box, b.x - bh, b.y - bh, 2 * bh, 2 * bh)) continue;
+    s.hitBy = seq;
+    const stop = dir === 'down' && pogo ? pogoStop : Math.max(0, Math.round(K.bark.hitstop));
+    hit('bell', b.id, b.x, b.y, stop);
+    RES.hits++;
+    RES.stop = Math.max(RES.stop, stop);
+    if (dir === 'down' && pogo) RES.bounce = true;
+    strikeBell(state, scene, i, t, events);
   }
   return RES;
 }

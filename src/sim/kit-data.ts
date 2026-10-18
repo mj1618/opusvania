@@ -34,6 +34,11 @@ export interface Bark {
   floor?: boolean;
   hp?: number;
   kick?: boolean | 'east' | 'west';
+  /**
+   * Heartwood (Lanternroot puzzle 4): not rotten, so the blade clangs off it (`kitClang` kind `heartwood`);
+   * only a burrback's ram into its face breaks it (`barkBreak {by: 'ram'}`).
+   */
+  heartwood?: boolean;
 }
 
 /** A gate: a solid while the save has not got `flag` in `flags` (the silk curtain that falls with the boss). */

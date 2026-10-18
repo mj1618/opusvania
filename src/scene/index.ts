@@ -7,6 +7,10 @@ import labWeaverJson from '../../content/rooms/lab-weaver.json' with { type: 'js
 import labWorldAJson from '../../content/rooms/lab-world-a.json' with { type: 'json' };
 import labWorldBJson from '../../content/rooms/lab-world-b.json' with { type: 'json' };
 import labWorldCJson from '../../content/rooms/lab-world-c.json' with { type: 'json' };
+import lrCacheJson from '../../content/rooms/lr-cache.json' with { type: 'json' };
+import lrHallJson from '../../content/rooms/lr-hall.json' with { type: 'json' };
+import lrNightJson from '../../content/rooms/lr-night.json' with { type: 'json' };
+import lrRootsJson from '../../content/rooms/lr-roots.json' with { type: 'json' };
 import testGroveJson from '../../content/rooms/test-grove.json' with { type: 'json' };
 import woodBurrowJson from '../../content/rooms/wood-burrow.json' with { type: 'json' };
 import woodCanopyJson from '../../content/rooms/wood-canopy.json' with { type: 'json' };
@@ -22,8 +26,10 @@ import woodSilkJson from '../../content/rooms/wood-silk.json' with { type: 'json
 import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
+import proto1Json from '../../content/worlds/proto-1.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
+import { UPGRADE_IDS } from '../sim/upgrades';
 import { BOSS, bossNodes, checkBoss } from './boss';
 import { checkCreatures, ENEMIES, SENSES } from './creatures';
 import { CAMERA_ZONES, checkKit, KIT_FIELDS, kitNodes, ROUTE_FLAGS, SWING } from './kit';
@@ -92,6 +98,8 @@ const SceneSchema = z
             y: int,
             mount: z.enum(['sit', 'hang']),
             hp: int.min(1).max(3).optional(),
+            // A glow pod (Lanternroot): its bud grows back this many frames after it bursts.
+            regrow: int.min(60).max(7200).optional(),
           })
           .strict(),
       )
@@ -130,13 +138,18 @@ const SceneSchema = z
         z
           .object({
             id: z.string().min(1),
-            kind: z.enum(['wick', 'lantern', 'ring', 'great']),
+            kind: z.enum(['wick', 'lantern', 'ring', 'great', 'moonwick']),
             x: int,
             y: int,
             spin: z.union([z.literal(-1), z.literal(1)]).optional(),
             swing: SWING,
             after: z.string().min(1).optional(),
             relight: int.min(30).max(3600).optional(),
+            // Lanternroot: a moonwick that burns for good once kindled; a lamp whose going out sets a flag.
+            keep: z.boolean().optional(),
+            sets: z.string().min(1).optional(),
+            moths: int.min(0).max(500).optional(),
+            burn: int.min(60).max(3600).optional(),
           })
           .strict(),
       )
@@ -230,12 +243,20 @@ const SceneSchema = z
             oneWay: z.boolean().optional(),
             door: z.string().min(1).optional(),
             flags: ROUTE_FLAGS,
+            // Lanternroot's solver: wicks the way needs burning, lamps it spends, upgrades it needs.
+            light: z.array(z.string().min(1)).optional(),
+            lamps: z.array(z.string().min(1)).optional(),
+            upgrades: z.array(z.enum(UPGRADE_IDS)).optional(),
+            // Story flags this way sets (a puzzle solved on it: a set burned, a cap answered).
+            sets: z.array(z.string().min(1)).optional(),
           })
           .strict(),
       )
       .optional(),
     // --- The level kit (src/scene/kit.ts, memory/level-kit.md).
     ...KIT_FIELDS,
+    // --- Lanternroot's light economy (src/sim/light.ts, memory/glow.md): glow, mend, kindle, gust.
+    glow: z.boolean().optional(),
     // --- A boss fight (src/scene/boss.ts, memory/bosses.md).
     boss: BOSS,
     art: z
@@ -243,7 +264,9 @@ const SceneSchema = z
         // `greybox`: flat shapes and labels instead of the painted layers (src/render/greybox, memory/greybox.md).
         mode: z.enum(['painted', 'greybox']).optional(),
         labels: z.boolean().optional(),
-        kit: z.enum(['grove', 'wood']).optional(),
+        kit: z.enum(['grove', 'wood', 'lanternroot']).optional(),
+        // Lanternroot's layer (render: room-look.ts): the night crown, the lamp hall, the black roots, the cache.
+        band: z.enum(['night', 'hall', 'roots', 'cache']).optional(),
         seed: int.optional(),
         moon: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict().optional(),
         afterglow: z
@@ -329,6 +352,47 @@ const SceneSchema = z
           .optional(),
         drop: z.object({ x: int, y: int }).strict().optional(),
         notes: z.array(z.object({ x: int, y: int, text: z.string().min(1) }).strict()).optional(),
+        // Lanternroot (render and tools; src/scene/room.ts `RoomMarks`).
+        covers: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                x: int,
+                y: int,
+                w: int.positive(),
+                h: int.positive(),
+                opens: z.string().min(1).optional(),
+              })
+              .strict(),
+          )
+          .optional(),
+        calm: z.array(z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict()).optional(),
+        landmarks: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                kind: z.string().min(1),
+                x: int,
+                y: int,
+                w: int.positive().optional(),
+                h: int.positive().optional(),
+              })
+              .strict(),
+          )
+          .optional(),
+        moonholes: z.array(z.object({ x: int, y: int }).strict()).optional(),
+        places: z
+          .array(z.object({ id: z.string().min(1), x: int, y: int, note: z.string().optional() }).strict())
+          .optional(),
+        chambers: z
+          .array(
+            z
+              .object({ id: z.string().min(1), x: int, y: int, w: int.positive(), h: int.positive() })
+              .strict(),
+          )
+          .optional(),
         stage: StageSchema.optional(),
         camera: z
           .array(
@@ -588,6 +652,8 @@ export function parseScene(json: unknown): Room {
     ...(s.glades ?? []).map((g) => g.id),
     ...kitNodes(s),
     ...bossNodes(s),
+    // (Lanternroot: the solver's places.)
+    ...(s.marks?.places ?? []).map((p) => p.id),
   ]);
   for (const r of s.routes ?? []) {
     for (const end of [r.from, r.to])
@@ -626,6 +692,11 @@ const FILES: readonly unknown[] = [
   labKitJson,
   labCreaturesJson,
   labWeaverJson,
+  // Lanternroot (docs/design/levels/proto-1.md): its own world, content/worlds/proto-1.json.
+  lrNightJson,
+  lrHallJson,
+  lrRootsJson,
+  lrCacheJson,
 ];
 
 /** Every room, by id. */
@@ -655,6 +726,27 @@ export const WORLD = WorldSchema.parse(worldJson);
 for (const id of [WORLD.start, ...WORLD.rooms.map((r) => r.id), ...WORLD.tests])
   if (!ROOMS[id])
     throw new Error(`content/world.json names room "${id}", which has no file in content/rooms/`);
+
+/** A world file: content/world.json (the game) or one of content/worlds/<id>.json (a prototype level's own). */
+export type WorldFile = z.infer<typeof WorldSchema>;
+
+/**
+ * Every world, by id: `game` (content/world.json) and the prototype levels' own worlds (content/worlds/<id>.json,
+ * booted with `?world=<id>`: memory/lanternroot.md). Each is linked and checked on its own.
+ */
+export const WORLD_FILES: Readonly<Record<string, WorldFile>> = {
+  game: WORLD,
+  'proto-1': WorldSchema.parse(proto1Json),
+};
+for (const [wid, w] of Object.entries(WORLD_FILES))
+  for (const id of [w.start, ...w.rooms.map((r) => r.id), ...w.tests])
+    if (!ROOMS[id]) throw new Error(`world "${wid}" names room "${id}", which has no file in content/rooms/`);
+
+/** The world a room belongs to (the first world file that places it), else `game`. */
+export function worldIdOf(room: string): string {
+  for (const [wid, w] of Object.entries(WORLD_FILES)) if (w.rooms.some((r) => r.id === room)) return wid;
+  return 'game';
+}
 
 /** Every room id: the real game's rooms first, then the test rooms. */
 export const ROOM_IDS: readonly string[] = [...WORLD.rooms.map((r) => r.id), ...WORLD.tests];

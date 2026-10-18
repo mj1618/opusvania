@@ -4,7 +4,11 @@
  * `resolveParams` turns off the moves of the ones she does not own, so the controller code never
  * asks. A new ability is one id here plus its move and its gate in `resolveParams`.
  */
-export const ABILITIES = ['glide', 'wallJump', 'doubleJump', 'dash'] as const;
+/**
+ * `kindle` and `gust` are Lanternroot's (docs/design/levels/proto-1.md §3): the Lamp button gives her light to a
+ * cold moonwick, and a tap of it is a wingbeat that snuffs at range. They act only in glow rooms (`scene.glow`).
+ */
+export const ABILITIES = ['glide', 'wallJump', 'doubleJump', 'dash', 'kindle', 'gust'] as const;
 export type AbilityId = (typeof ABILITIES)[number];
 
 export function isAbility(id: string): id is AbilityId {

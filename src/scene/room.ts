@@ -41,6 +41,15 @@ export interface RouteClaim {
   door?: string;
   /** Story flags that must be set to pass (a flag gate, memory/level-kit.md); set by triggers she reaches. */
   flags?: string[];
+  /**
+   * Lanternroot's solver (tools/solve/proto-1.ts): the moonwicks the way needs burning (kindles: glow, so fuel
+   * in reach), the warm lamps it flings off (spent once she has passed), and the upgrades it needs.
+   */
+  light?: string[];
+  lamps?: string[];
+  upgrades?: string[];
+  /** Story flags passing it sets (a puzzle solved on the way: the world check counts them as set). */
+  sets?: string[];
 }
 
 /**
@@ -97,6 +106,8 @@ export interface CameraZone {
   bounds?: { x: number; y: number; w: number; h: number };
   /** Only until this story flag is saved. */
   until?: string;
+  /** Frames the view slides into it (Lanternroot's chambers: 20). */
+  frames?: number;
 }
 
 /** One of the art kit's mood stops: from world x on, the room leans this way (blended between stops). */
@@ -114,7 +125,9 @@ export interface RoomArt {
   /** Greybox: show the marker labels (ids) at boot (default true; `__game.debug.labels()` / G toggles). */
   labels?: boolean;
   /** The region kit that paints it. `grove` = the test grove's hand-placed look (landmarks, waterfall, well). Required when painted. */
-  kit?: 'grove' | 'wood';
+  kit?: 'grove' | 'wood' | 'lanternroot';
+  /** Lanternroot's layer: the night crown, the lamp hall, the black roots, the firefly's cache. */
+  band?: 'night' | 'hall' | 'roots' | 'cache';
   /** Seed for every layout choice the painters make. Required when painted. */
   seed?: number;
   /**
@@ -185,6 +198,19 @@ export interface RoomMarks {
   camera?: Array<{ id: string; x: number; y: number; zoom?: number; note?: string }>;
   /** Greybox story staging (src/scene/stage.ts, memory/staging.md): render only. */
   stage?: StageMarks;
+  /**
+   * Lanternroot (docs/design/levels/proto-1.md, memory/lanternroot.md), render and tools only:
+   * `covers` HK's secret masks (a painted mass over hidden space; it fades when her body enters, or once
+   * `opens` = `room:bark` is broken); `calm` fight spots kept plain; `landmarks` named painted things (`kind`
+   * says what); `moonholes` where real moonlight leaks in (freed moths fly there); `places` the solver's nodes
+   * (feet points, in `routes`); `chambers` the camera chambers (rects, for shots and the density lint).
+   */
+  covers?: Array<{ id: string; x: number; y: number; w: number; h: number; opens?: string }>;
+  calm?: Array<{ x: number; y: number; w: number; h: number }>;
+  landmarks?: Array<{ id: string; kind: string; x: number; y: number; w?: number; h?: number }>;
+  moonholes?: Array<{ x: number; y: number }>;
+  places?: Array<{ id: string; x: number; y: number; note?: string }>;
+  chambers?: Array<{ id: string; x: number; y: number; w: number; h: number }>;
 }
 
 /**
