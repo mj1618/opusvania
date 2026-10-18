@@ -5,25 +5,49 @@ A metroidvania whose look and feel could sit next to Ori and the Blind Forest or
 `memory/story.md`: Wing the moth flies by the real moon through the last firefly's false lights to bring her kind
 home. The story is told by the world and the play, not by cutscenes or text. `docs/art-direction.md` is the visual brief and the bar.
 
-## Where we are (2026-10-18, overnight)
-**Wood area 1, in greybox, is being iterated on.** It runs from the hatching branch (`wood-hatch`, the only painted
-room; art is paused) to the crown of the great oak: 10 rooms. The hub and the trunk climb are now one room, the oak
-(`wood-hollow`).
+## Where we are (2026-10-18 morning)
+**Wood area 1, in greybox, is ready for Matt to play.** It runs from the hatching branch (`wood-hatch`, the only painted
+room; art is paused) to the crown of the great oak: 10 rooms on the main path, plus a west root road. Six review rounds
+took it from "random and disjointed" to one journey. The reviewers' verdict: in structure and staging it is now a peer
+of the reference first areas (art aside). The next real gate is a human playing it.
 
-**Where the reviews stand:**
-- **One journey:** the round 4 reviews say area 1 reads as one journey from the vista to the crown, with about ten good
-  beats in 17–20 minutes.
-- **First-timer:** a first-timer agent finished it with 0 deaths and said they'd keep playing.
-- **Gap to the references:** it's close to the reference first areas in shape and staging but below them in depth. It
-  needs a real boss, more creature kinds that work with the lamp, a second kind of reward, a more web-like world, and a
-  role for Tatter.
-- **Next:** round 5 is that depth pass (`docs/design/regions/reviews/area1-plan-r5.md`).
+**Measured on HEAD** (1fd2846): human-like bots got through 7 of 9 runs, in 15–17 minutes (people will take longer),
+with 0–2 deaths. Each new thing arrives about a second apart.
 
-**The design:** the through-line is "up, back to the sky" (`docs/design/regions/wood-area1-director.md`, with the
-revisions at its top). The core set:
-- **The lamp,** with three moments: caught, thrown and snuffed. Each moment has a predator that hunts it: the beetle,
-  the dangler and the rhythm hawker.
-- **Glide and claws.**
+**What's in area 1:**
+- **Teaching:** the first five minutes teach the lamp's catch, throw and snuff, one idea per screen.
+- **R6:** the glidewalk, with its lamp chain.
+- **The oak:** the hub, with its glimpse of the firefly and Tatter's hollow.
+- **R8:** the hawkers' clearing, with the rhythm hawker and a dark door.
+- **R9:** the silk hall, with the dangler and the beetle together.
+- **The roots:** a nest of carrier ants.
+- **The den, under the oak:** the old burrback, a three-phase boss. Its staged death breaks the floor and grants the
+  claws.
+- **The climb:** up the inside of the oak to the crown.
+- **The finale:** the moth cloud lifts off with Tatter.
+
+**Known gaps:**
+- The west root road is never found, because there's no reason to go west.
+- The descent and the oak's interior still read plainly in grey.
+- Only 4 creature kinds.
+- No sound.
+- The bots can't judge feel.
+
+**Next steps:**
+- Matt plays area 1.
+- Then iterate on his notes.
+- Then build area 2 (the high wood: the web, the Weaver, the canopy road) with the same onion loop.
+
+**How to play it:** `npm run dev`, then http://localhost:5180 (a new game: `?fresh`). Keys:
+- arrows or WASD to move;
+- Z or Space to jump, held while falling to glide;
+- C to attack, with up or down;
+- Tab for the map;
+- R to go back to the last rest;
+- Enter for full screen.
+
+**The design:** the through-line is "up, back to the sky" (`docs/design/regions/wood-area1-director.md`; the round
+plans and reviews are in `docs/design/regions/reviews/`).
 
 **Systems in place:**
 - Rooms, exits, saves, moon patches, glades and the map.
