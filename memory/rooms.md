@@ -214,6 +214,8 @@ tests/unit/wood-oak.test.ts (the trunk and the crown), wood-rooms.test.ts (the h
   of the west wall toward the crown (1792-2048 from y 0) were "unwalked ground at 1984, 0" to every persona after the
   finale, and 7 of 9 runs wandered the oak instead of leaving (human-r6 on b62eab5); removed. The narrowing to the
   ring is render's.
+- **Tatter at the crown:** it sits on the rim at 3240, 100+ px west of where the finale's hold stops her (~3330-3350
+  walking in), so render's close-up opens on the two apart; on `wood-crown-gone` it walks east to the exit and vanishes.
 - **Tatter close (round 6 #8):** zones `hollow` (zoom 1.4, inside the root flare) and `crown-close` (1.3, the rim
   at the root's knot) frame its two beats; the finale's pull-out is render's.
 - **Cut in round 4:** the postgame crown lantern (in view of the rim it drew players off the top: human-like
