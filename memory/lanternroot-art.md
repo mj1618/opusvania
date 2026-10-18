@@ -100,6 +100,29 @@ Gloamweaver) and `src/scene/`; this is the render / sound side. Boot a room with
   Gloam lamp are simple; no map hollows yet (P2); the cache is the hall's look plus garlands, no firefly-lamp
   centrepiece yet.
 
+## Wired to the level's sim (2026-10-18, after 8dd43ab / 7d31e93)
+- Camera: a zone's `frames` sets its slide (camera/index.ts `stepZones`; Lanternroot's chambers 20, else
+  `cameraTuning.zones.frames` 30); leaving a zone for none keeps the last zone's.
+- Events drawn: `mendBreak` (motes scatter), `wickSet` (a ring at each wick, a thread of light between them),
+  `enemyShy` (a cold ring), `enemyRespawn` (silk puff), `podRegrow` (a small bloom), `bossOpen` (ring), `bossCue` p3
+  `moonhole` (the plug's bark rains down, then a moonlight shaft from the room's moon-hole nearest the hub to the
+  arena floor, kept for good once `boss.flag` is saved) / `thrown` + `throwCut` (a white star and ring). Her
+  `player.moonlit` puts a faint silver halo about her. Sound: the moon-hole's cold bloom + moss shimmer.
+- Covers lift on `save.opened`, a find in `save.taken`, a bare flag (`lr-hall:vault-open`) or a hollow whose upgrade
+  she has (`lr-hall:h2` -> `upgrade:sharpWings`).
+- The cache's `firefly-lamp` (a `lantern` lure) is drawn as a glass firefly in a jar on three silk lines, 24 moths.
+- Foreground masses inside the giant: only the outer quarter of each side, smaller, fewer (in the middle half they
+  read as smudges on the room in the play-throughs).
+
+## Play-through clips (how they were made)
+- `shots/lanternroot/play/<room>-tour.mp4` (+ `.wav`, `.sheet.png`) and `boss.mp4`: the solver's edge lines
+  (`tools/solve/proto-1-tapes.json`) replayed in the page, each from its own place (a cut), with the game's audio;
+  `boss.mp4` is the `driver:gloam` tape (the whole fight, won at frame 3684). Two scratch scripts did it (not in the
+  repo): a headless generator (a `Game` built as main.ts builds it, `grant` / `glow` / `teleport`, then
+  `explore.play(macro)` per line into a DSL) and a recorder (the same setup in the page, `input` + `step(1)` +
+  screenshot per frame, `audio.record` / `render`, ffmpeg). The page replays a headless tape exactly (checked by
+  position at frames 50..800). A tape played as one chain diverges (creatures, lamps); one line per place does not.
+
 ## Dev loop (what worked)
 - The shared tree is mid-edit by the level agent: iterate in a private worktree mirrored from it (`rsync src/
   content/`) with its own vite on another port (5180 is the orchestrator's), and shoot with a scratch script
