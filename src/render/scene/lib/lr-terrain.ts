@@ -908,6 +908,21 @@ export function paintLanternTerrain(
       m.under,
       0.55,
     );
+    // Inside the giant a long underside (the vault) catches a thin bounce of light along its edge, broken in
+    // patches: without it the vault's lower edge was a dark ruler against the dark (review r1).
+    if (band !== 'night' && run.x1 - run.x0 > 200)
+      p.tint(
+        strip(
+          run.x0 + 10,
+          run.x1 - 10,
+          () => run.y,
+          -7,
+          (x) => -3 + 5 * Math.max(0, wobble(x, sd + 5, 70)),
+          8,
+        ),
+        m.grainLit,
+        0.55,
+      );
     const r = rngFor(sd, 2);
     for (let x = run.x0 + range(r, 10, 40); x < run.x1 - 10; x += range(r, 24, 70)) {
       const len = range(r, 10, band === 'roots' ? 60 : 34);

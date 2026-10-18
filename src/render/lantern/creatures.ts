@@ -178,8 +178,11 @@ function spider(
   for (const rm of rims) {
     if (rm.k <= 0.01) continue;
     const a = Math.atan2(rm.dy, rm.dx);
+    // (An arc continues the path from its last point: move to the arc's start first, or a line runs to 0, 0.)
+    g.moveTo(ab[0] + Math.cos(a - 1.05) * s * 1.04, ab[1] + Math.sin(a - 1.05) * s * 1.04);
     g.arc(ab[0], ab[1], s * 1.04, a - 1.05, a + 1.05);
     g.stroke({ color: rm.color, width: Math.max(1.2, s * 0.07), alpha: Math.min(1, rm.k) });
+    g.moveTo(ce[0] + Math.cos(a - 0.9) * s * 0.5, ce[1] + Math.sin(a - 0.9) * s * 0.5);
     g.arc(ce[0], ce[1], s * 0.5, a - 0.9, a + 0.9);
     g.stroke({ color: rm.color, width: Math.max(1, s * 0.05), alpha: Math.min(1, rm.k) * 0.8 });
     glow.add(ab[0] + rm.dx * s, ab[1] + rm.dy * s, s * 0.9, rm.color, 0.08 * rm.k);
