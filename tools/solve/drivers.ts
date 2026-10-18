@@ -5,7 +5,7 @@
  * order of things, a wait, a rhythm, a fight.
  *
  *  - `vault`: kindle M-g1, round the wall to M-g2, fan M-g1 through the window and kindle M-g2, round to M-g3, fan
- *    M-g2, kindle M-g3: the set burns whole, the vault's silk drops, the vessel.
+ *    M-g2, kindle M-g3: the set burns whole, the vault's silk drops, a moon-drop.
  *  - `answer`: gust the bramble pair out from under them (the rest of the trunk's lamps spent), then strike the cap
  *    long, short, short, long.
  *  - `ram`: stand on the heartwood's root shelf; the burrback rams the face and breaks it; walk in to H3.
@@ -162,6 +162,22 @@ export function driverStart(name: string): { state: GameState; room: Room; t: Tu
   return { state, room: { ...room, enemies: [] } as Room, t };
 }
 
+/** Walks to feet x `x` on the ground she stands on (pressing only while far: no slide past it), settled. */
+function walkTo(r: Run, x: number, max = 120): boolean {
+  return r.until(
+    () => {
+      const dx = x - r.feet().x;
+      const v = r.s.player.vx;
+      if (Math.abs(dx) < 10) return 0;
+      // (Press while the speed it has would not carry it past.)
+      if (Math.abs(v) * 6 > Math.abs(dx)) return 0;
+      return dx > 0 ? R : L;
+    },
+    () => Math.abs(x - r.feet().x) < 12 && Math.abs(r.s.player.vx) < 0.5,
+    max,
+  );
+}
+
 /** Taps Lamp (a kindle in reach, or a gust that way with nothing in reach): 2 frames held, then let go. */
 function tapLamp(r: Run, aim = 0): void {
   r.run(aim | B, 2);
@@ -190,8 +206,7 @@ function vault(): DriverResult {
     return { ok: false, frames: r.frames, why: 'S2 not reached' };
   const gone1 = !r.burning('m-g1');
   // Fan M-g1 back through the window (she faces west on S2's west end), then kindle M-g2.
-  r.until(L, () => r.feet().x <= 4325, 60);
-  r.run(0, 2);
+  walkTo(r, 4300);
   tapLamp(r, L);
   r.until(
     () => (r.feet().x < 4460 ? R : L),
@@ -243,9 +258,9 @@ function vault(): DriverResult {
       frames: r.frames,
       why: `the set did not burn whole (g1 ${r.burning('m-g1')}, g2 ${r.burning('m-g2')}, g3 ${r.burning('m-g3')}; ${r.frames - t1} frames from the first kindle)`,
     };
-  // Into the vault: the vessel.
-  if (!r.leg('find:vessel', { creatures: false }))
-    return { ok: false, frames: r.frames, why: 'the vessel not reached' };
+  // Into the vault: its moon-drop.
+  if (!r.leg('find:vault-drop', { creatures: false }))
+    return { ok: false, frames: r.frames, why: 'the moon-drop not reached' };
   return { ok: true, frames: r.frames, tape: r.tape };
 }
 
@@ -307,17 +322,18 @@ function gloam(): DriverResult {
   const boss = () => r.s.boss;
   if (!r.until(0, () => boss()?.stage === 'fight', 240))
     return { ok: false, frames: r.frames, why: 'no lock' };
-  // P1: at a low wick, wait for it to come round, kindle, cut it where it falls.
+  // P1: at a cold low wick, wait for it to come (round its orb, or a lunge at her), kindle, cut it where it falls.
   for (const [place, wick, wx, wy] of [
     ['arena-w1', 'm-w1', 2140, 1010],
     ['arena-w4', 'm-w4', 3620, 1010],
     ['arena-w1', 'm-w1', 2140, 1010],
+    ['arena-w4', 'm-w4', 3620, 1010],
   ] as const) {
     if (boss()?.phase !== 1 || boss()?.stage !== 'fight') break;
     if (!r.leg(place)) return { ok: false, frames: r.frames, why: `P1: ${place} not reached` };
     const near = () => {
       const e = spider();
-      if (e?.mode !== 'hunt') return false;
+      if (!e || !['hunt', 'windup', 'dive', 'stall', 'climb'].includes(e.mode)) return false;
       const dx = e.x + e.w / 2 - wx;
       const dy = e.y + e.h / 2 - wy;
       return dx * dx + dy * dy < 360 * 360;

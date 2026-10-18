@@ -41,27 +41,29 @@ export const BASE_KIT = BASE;
 
 export const EDGES: LrEdge[] = [
   // --- lr-night: the crown, the trunk's back, the plate.
-  { room: 'lr-night', from: 'spawn', to: 'ridge', both: true, proof: 'explore' },
-  { room: 'lr-night', from: 'ridge', to: 'log-mouth', both: true, proof: 'explore' },
+  { room: 'lr-night', from: 'spawn', to: 'ridge', both: true, creatures: true, proof: 'explore' },
+  { room: 'lr-night', from: 'ridge', to: 'log-mouth', both: true, creatures: true, proof: 'explore' },
   {
     room: 'lr-night',
     from: 'log-mouth',
     to: 'find:h1',
+    creatures: true,
     proof: 'explore',
     note: 'cut the rotten seal: Long Breath',
   },
-  { room: 'lr-night', from: 'log-mouth', to: 'find:s1', proof: 'explore' },
-  { room: 'lr-night', from: 'ridge', to: 'find:p-a1', proof: 'explore' },
-  { room: 'lr-night', from: 'ridge', to: 'exit:split', proof: 'explore' },
+  { room: 'lr-night', from: 'log-mouth', to: 'find:s1', creatures: true, proof: 'explore' },
+  { room: 'lr-night', from: 'ridge', to: 'find:p-a1', creatures: true, proof: 'explore' },
+  { room: 'lr-night', from: 'ridge', to: 'exit:split', creatures: true, proof: 'explore' },
   {
     room: 'lr-night',
     from: 'ridge',
     to: 'crown',
     lamps: ['l-a1'],
+    creatures: true,
     proof: 'explore',
-    note: 'the first fling',
+    note: 'the first fling (the crown end stands out of a double jump’s reach)',
   },
-  { room: 'lr-night', from: 'crown', to: 'ridge', proof: 'explore' },
+  { room: 'lr-night', from: 'crown', to: 'ridge', creatures: true, proof: 'explore' },
   {
     room: 'lr-night',
     from: 'ridge',
@@ -69,13 +71,33 @@ export const EDGES: LrEdge[] = [
     needs: ['kindle'],
     light: ['m-a1'],
     byTime: true,
+    creatures: true,
     proof: 'explore',
     note: 'the crow’s nest: M-a1’s moss',
   },
-  { room: 'lr-night', from: 'nest', to: 'ridge', proof: 'explore' },
-  { room: 'lr-night', from: 'crown', to: 'trunk', both: true, proof: 'explore' },
-  { room: 'lr-night', from: 'trunk', to: 'cap-side', both: true, proof: 'explore' },
-  { room: 'lr-night', from: 'trunk', to: 'exit:knot', proof: 'explore', note: 'three down cuts on the knot' },
+  { room: 'lr-night', from: 'nest', to: 'ridge', creatures: true, proof: 'explore' },
+  { room: 'lr-night', from: 'crown', to: 'trunk', both: true, creatures: true, proof: 'explore' },
+  { room: 'lr-night', from: 'trunk', to: 'cap-side', both: true, creatures: true, proof: 'explore' },
+  {
+    room: 'lr-night',
+    from: 'trunk',
+    to: 'exit:knot',
+    creatures: true,
+    proof: 'explore',
+    note: 'three down cuts on the knot',
+  },
+  {
+    room: 'lr-night',
+    from: 'trunk',
+    to: 'sky-limb',
+    needs: ['kindle'],
+    light: ['m-b1'],
+    byTime: true,
+    creatures: true,
+    proof: 'explore',
+    note: 'the sky limb: M-b1’s moss (a Kindle revisit)',
+  },
+  { room: 'lr-night', from: 'sky-limb', to: 'trunk', proof: 'explore' },
   {
     room: 'lr-night',
     from: 'cap-side',
@@ -111,10 +133,11 @@ export const EDGES: LrEdge[] = [
     room: 'lr-hall',
     from: 'split-foot',
     to: 'exit:split',
+    creatures: true,
     proof: 'explore',
     note: 'back up the split’s faces',
   },
-  { room: 'lr-hall', from: 'split-foot', to: 'west-floor', both: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'split-foot', to: 'west-floor', both: true, creatures: true, proof: 'explore' },
   {
     room: 'lr-hall',
     from: 'west-floor',
@@ -125,46 +148,73 @@ export const EDGES: LrEdge[] = [
   },
   { room: 'lr-hall', from: 'stone-shelf', to: 'find:stone', proof: 'explore' },
   { room: 'lr-hall', from: 'stone-shelf', to: 'west-floor', proof: 'explore' },
-  { room: 'lr-hall', from: 'split-foot', to: 'exit:hole', proof: 'explore' },
-  { room: 'lr-hall', from: 'split-foot', to: 'exit:stair', proof: 'explore' },
-  { room: 'lr-hall', from: 'split-foot', to: 'hub', both: true, proof: 'explore' },
-  { room: 'lr-hall', from: 'hub', to: 'find:p-b2', proof: 'explore' },
+  { room: 'lr-hall', from: 'split-foot', to: 'exit:hole', creatures: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'split-foot', to: 'exit:stair', creatures: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'split-foot', to: 'hub', both: true, creatures: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'hub', to: 'seal-foot', both: true, creatures: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'hub', to: 'tunnel-w', both: true, creatures: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'tunnel-w', to: 'find:p-b2', creatures: true, proof: 'explore' },
   {
     room: 'lr-hall',
-    from: 'hub',
+    from: 'seal-foot',
     to: 'flag:seal-open',
     needs: ['kindle'],
     light: ['m-s1', 'm-s2'],
     byTime: true,
-    proof: 'explore',
+    creatures: true,
     budget: 4000,
-    note: 'puzzle 2, the seal: a burning moonwick is a reusable anchor',
+    proof: 'explore',
+    note: 'puzzle 2, the seal: kindle M-s1 in the air, fling off it, kindle M-s2 in that flight',
   },
-  { room: 'lr-hall', from: 'hub', to: 'exit:seal', flags: ['seal-open'], proof: 'explore' },
+  { room: 'lr-hall', from: 'seal-foot', to: 'exit:seal', flags: ['seal-open'], proof: 'explore' },
   {
     room: 'lr-hall',
-    from: 'hub',
+    from: 'seal-foot',
     to: 'find:h2',
     needs: ['kindle'],
-    light: ['m-s1', 'm-s2'],
-    byTime: true,
-    proof: 'explore',
+    flags: ['seal-open'],
+    creatures: true,
     budget: 4000,
-    note: 'H2, the moss loft in M-s2’s light',
+    proof: 'explore',
+    note: 'H2, the loft: up the burning pair (Bright Kindle)',
   },
-  { room: 'lr-hall', from: 'hub', to: 'gallery-w', both: true, proof: 'explore' },
+  {
+    room: 'lr-hall',
+    from: 'tunnel-w',
+    to: 'gallery-w',
+    needs: ['kindle'],
+    light: ['m-c1'],
+    byTime: true,
+    creatures: true,
+    proof: 'explore',
+    note: 'through the thorn tunnel off M-c1',
+  },
   {
     room: 'lr-hall',
     from: 'gallery-w',
+    to: 'tunnel-w',
+    needs: ['kindle'],
+    light: ['m-c2'],
+    byTime: true,
+    creatures: true,
+    proof: 'explore',
+    note: 'back through the tunnel off M-c2',
+  },
+  {
+    room: 'lr-hall',
+    from: 'tunnel-w',
     to: 'flag:shaft-open',
     needs: ['kindle'],
     light: ['m-c1', 'm-c2'],
     byTime: true,
+    creatures: true,
+    budget: 4000,
     proof: 'explore',
-    note: 'puzzle 3, the guarded set (the hawker’s side: tests/unit/proto-1-puzzles.test.ts)',
+    note: 'puzzle 3, the guarded set: off M-c1 through the tunnel, M-c2 kindled under the hawker',
   },
   { room: 'lr-hall', from: 'gallery-w', to: 'exit:shaft', flags: ['shaft-open'], proof: 'explore' },
-  { room: 'lr-hall', from: 'gallery-w', to: 'gallery-e', both: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'gallery-w', to: 'gallery-e', both: true, creatures: true, proof: 'explore' },
+  { room: 'lr-hall', from: 'gallery-w', to: 'roof', both: true, proof: 'explore' },
   {
     room: 'lr-hall',
     from: 'gallery-e',
@@ -177,7 +227,7 @@ export const EDGES: LrEdge[] = [
   {
     room: 'lr-hall',
     from: 'gallery-w',
-    to: 'find:vessel',
+    to: 'find:vault-drop',
     needs: ['kindle', 'gust'],
     light: ['m-g1', 'm-g2', 'm-g3'],
     proof: 'driver:vault',
@@ -185,19 +235,17 @@ export const EDGES: LrEdge[] = [
   },
   {
     room: 'lr-hall',
-    from: 'gallery-w',
+    from: 'roof',
     to: 'alcove',
-    lamps: ['l-c2a', 'l-c2b', 'l-c2c'],
     proof: 'explore',
-    note: 'the alcove chain and its bark wall (a hoard)',
+    note: 'up to the alcove and through its bark wall (a hoard)',
   },
-
-  { room: 'lr-hall', from: 'alcove', to: 'gallery-w', proof: 'explore' },
+  { room: 'lr-hall', from: 'alcove', to: 'roof', proof: 'explore' },
 
   // --- lr-roots: the drowned roots, the Gloam, the cistern.
-  { room: 'lr-roots', from: 'pit', to: 'find:kindle', proof: 'explore', note: 'Kindle' },
-  { room: 'lr-roots', from: 'pit', to: 'find:p-a3', proof: 'explore' },
-  { room: 'lr-roots', from: 'pit', to: 'find:s2', proof: 'explore' },
+  { room: 'lr-roots', from: 'pit', to: 'find:kindle', creatures: true, proof: 'explore', note: 'Kindle' },
+  { room: 'lr-roots', from: 'pit', to: 'find:p-a3', creatures: true, proof: 'explore' },
+  { room: 'lr-roots', from: 'pit', to: 'find:s2', creatures: true, proof: 'explore' },
   {
     room: 'lr-roots',
     from: 'pit',
@@ -205,8 +253,20 @@ export const EDGES: LrEdge[] = [
     needs: ['kindle'],
     light: ['m-a3', 'm-a3b'],
     byTime: true,
+    creatures: true,
     proof: 'explore',
     note: 'puzzle 1, First Light',
+  },
+  {
+    room: 'lr-roots',
+    from: 'pit',
+    to: 'find:h4',
+    needs: ['kindle', 'gust'],
+    light: ['m-a3c'],
+    byTime: true,
+    budget: 4000,
+    proof: 'explore',
+    note: 'the flue: fan M-a3c through the window from the third step',
   },
   {
     room: 'lr-roots',
@@ -219,8 +279,15 @@ export const EDGES: LrEdge[] = [
   },
   { room: 'lr-roots', from: 'arena', to: 'find:gust', flags: ['gloam-down'], proof: 'explore', note: 'Gust' },
   { room: 'lr-roots', from: 'arena', to: 'cistern-w', flags: ['gloam-down'], proof: 'explore' },
-  { room: 'lr-roots', from: 'cistern-w', to: 'cistern-e', both: true, proof: 'explore' },
-  { room: 'lr-roots', from: 'cistern-w', to: 'exit:shaft', proof: 'explore', note: 'up the root column' },
+  { room: 'lr-roots', from: 'cistern-w', to: 'cistern-e', both: true, creatures: true, proof: 'explore' },
+  {
+    room: 'lr-roots',
+    from: 'cistern-w',
+    to: 'exit:shaft',
+    creatures: true,
+    proof: 'explore',
+    note: 'up the root column',
+  },
   { room: 'lr-roots', from: 'cistern-e', to: 'heartwood-top', proof: 'explore' },
   { room: 'lr-roots', from: 'heartwood-top', to: 'cistern-e', proof: 'explore' },
   {
@@ -233,16 +300,17 @@ export const EDGES: LrEdge[] = [
   { room: 'lr-roots', from: 'cistern-e', to: 'find:s3', flags: [], proof: 'driver:ram' },
 
   // --- lr-cache: the firefly's workshop.
-  { room: 'lr-cache', from: 'cache-floor', to: 'exit:door', proof: 'explore' },
+  { room: 'lr-cache', from: 'cache-floor', to: 'exit:door', creatures: true, proof: 'explore' },
   {
     room: 'lr-cache',
     from: 'cache-floor',
-    to: 'find:bright',
+    to: 'find:cache-vessel',
     needs: ['kindle'],
     light: ['m-ring1', 'm-ring2', 'm-ring3'],
+    creatures: true,
     proof: 'explore',
     budget: 4000,
-    note: 'Bright Kindle on the top shelf: flings off her own lights',
+    note: 'the glow vessel on the top shelf: flings off her own lights',
   },
 ];
 
@@ -265,7 +333,8 @@ export const ARRIVALS: Record<string, string> = {
 
 /**
  * The locks the skip-hunter tries round (proto-1.md §10 "Solvable and in order"): from these places, with this kit
- * (the tool held back), the search must never reach `goal`.
+ * (the tool held back), the search must never reach `goal`. The must-use locks take a puzzle's own piece away
+ * (`stripLures`: the moonwick or lamp it is meant to be flung off) and ask that it cannot be done without it.
  */
 export interface Lock {
   id: string;
@@ -278,6 +347,10 @@ export interface Lock {
   byTime?: boolean;
   /** Glades taken out of the room for the hunt (the tool itself, when it lies on the way). */
   strip?: string[];
+  /** Lures taken out of the room (a must-use lock: the puzzle's own anchor). */
+  stripLures?: string[];
+  /** Warm lamps spent for the hunt (the revisit's state); default: every warm lamp burns for ever. */
+  spent?: boolean;
 }
 
 export const LOCKS: Lock[] = [
@@ -289,8 +362,32 @@ export const LOCKS: Lock[] = [
     goal: 'exit:stair',
     strip: ['kindle'],
   },
+  {
+    id: 'gully-without-the-fling',
+    room: 'lr-night',
+    from: ['ridge'],
+    kit: BASE,
+    goal: 'crown',
+    stripLures: ['l-a1'],
+  },
   { id: 'nest-without-kindle', room: 'lr-night', from: ['ridge', 'crown'], kit: BASE, goal: 'nest' },
-  { id: 'loft-without-kindle', room: 'lr-hall', from: ['hub', 's2-shelf'], kit: BASE, goal: 'find:h2' },
+  { id: 'loft-without-kindle', room: 'lr-hall', from: ['hub', 'seal-foot'], kit: BASE, goal: 'find:h2' },
+  {
+    id: 'seal-without-m-s1',
+    room: 'lr-hall',
+    from: ['hub', 'seal-foot', 'tunnel-w'],
+    kit: KINDLE,
+    goal: 'lit:m-s2',
+    stripLures: ['m-s1'],
+  },
+  {
+    id: 'tunnel-without-m-c1',
+    room: 'lr-hall',
+    from: ['hub', 'tunnel-w'],
+    kit: KINDLE,
+    goal: 'gallery-w',
+    stripLures: ['m-c1'],
+  },
   {
     id: 'crest-without-the-chimney',
     room: 'lr-night',
@@ -315,9 +412,17 @@ export const LOCKS: Lock[] = [
   {
     id: 'vault-without-gust',
     room: 'lr-hall',
-    from: ['gallery-w'],
+    from: ['gallery-w', 'roof'],
     kit: KINDLE,
     goal: 'flag:vault-open',
+    byTime: true,
+  },
+  {
+    id: 'flue-without-gust',
+    room: 'lr-roots',
+    from: ['pit'],
+    kit: KINDLE,
+    goal: 'find:h4',
     byTime: true,
   },
   {

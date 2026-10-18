@@ -49,6 +49,8 @@ const base = {
   respawn: int.min(30).max(3600).optional(),
   /** Lanternroot: there only while the room's boss fight is on. */
   fight: z.boolean().optional(),
+  /** Lanternroot: there only once the save has this ability or flag (the pit wakes with Kindle). */
+  wakes: z.string().optional(),
 };
 
 export const ENEMIES = z

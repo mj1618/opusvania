@@ -120,6 +120,8 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
   `KeyboardEvent`s (`code: 'ArrowRight' | 'KeyZ' | 'KeyC'`) on `window`.
 
 ## Lanternroot (2026-10-18)
+- `boss().phaseName` reads the fighting boss's own phase table (`bossRules(kind).phases`): it used to be the Weaver's
+  names for every boss ("the ring" in the Gloamweaver's P1). The greybox boss layer still has the Weaver's list.
 `__game.glow(n?)` -> `{glow, max}`: her glow (memory/glow.md), set when `n` is given. `__game.goto/room/load` take any
 room of `ROOMS` (the proto world's too). The tuning panel lists the rooms of the world being played (a list without
 the room in play snapped it, and so `setTuning`, back to its first room).

@@ -20,7 +20,8 @@
  * The harness of the working tree runs over the build's game: it is copied into the snapshot
  * (`<snapshot>/tools/playtest-human/`), so the tape is played by the very code the page replays.
  * Options: --skills a,b --seeds 1,2,3 --minutes 40 --give-up 180 --jobs 3 --chunk id,id,... --upto wood-well
- * --speed 2 --size 960x540 --out dir --tree --url http://localhost:5180 --no-render.
+ * --speed 2 --size 960x540 --out dir --tree --url http://localhost:5180 --no-render; `--world proto-1` plays a
+ * prototype level's world (its rooms are the chunk).
  */
 import { spawn, spawnSync } from 'node:child_process';
 import {
@@ -77,9 +78,20 @@ const { values: args, positionals } = parseArgs({
     room: { type: 'string' },
     radius: { type: 'string' },
     at: { type: 'string' },
+    /** A prototype level's own world (`proto-1`, Lanternroot): its rooms are the chunk, from its start. */
+    world: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
+
+// (`--world <id>`: the chunk is that world's rooms, its start first, and the run has no `upto`: it is through once
+// she has been in every room. The page picks the world from the room, as `?room=` does.)
+if (args.world) {
+  const file = join(HERE, '..', '..', 'content', 'worlds', `${args.world}.json`);
+  const w = JSON.parse(readFileSync(file, 'utf8')) as { start: string; rooms: Array<{ id: string }> };
+  args.chunk = [w.start, ...w.rooms.map((r) => r.id).filter((id) => id !== w.start)].join(',');
+  args.upto = '';
+}
 
 const clock = (f: number): string => {
   const s = Math.floor(f / 60);

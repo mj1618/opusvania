@@ -94,17 +94,17 @@
     {
       "tag": "trunk",
       "x": 1664,
-      "y": 920,
-      "w": 384,
-      "h": 616,
-      "kick": "west"
+      "y": 740,
+      "w": 136,
+      "h": 796,
+      "kick": false
     },
     {
       "tag": "trunk",
-      "x": 2048,
-      "y": 908,
-      "w": 192,
-      "h": 628,
+      "x": 1800,
+      "y": 912,
+      "w": 184,
+      "h": 624,
       "kick": false
     },
     {
@@ -118,8 +118,16 @@
     {
       "tag": "trunk",
       "x": 2432,
+      "y": 888,
+      "w": 268,
+      "h": 648,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2780,
       "y": 884,
-      "w": 192,
+      "w": 100,
       "h": 652,
       "kick": false
     },
@@ -153,6 +161,22 @@
       "y": 864,
       "w": 256,
       "h": 672,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 2700,
+      "y": 1020,
+      "w": 80,
+      "h": 516,
+      "kick": false
+    },
+    {
+      "tag": "branch",
+      "x": 2340,
+      "y": 360,
+      "w": 220,
+      "h": 26,
       "kick": false
     },
     {
@@ -379,6 +403,78 @@
       "y": 1230
     },
     {
+      "id": "g-moss-1",
+      "kind": "glint",
+      "x": 920,
+      "y": 1100
+    },
+    {
+      "id": "g-moss-2",
+      "kind": "glint",
+      "x": 740,
+      "y": 970
+    },
+    {
+      "id": "g-moss-3",
+      "kind": "glint",
+      "x": 900,
+      "y": 840
+    },
+    {
+      "id": "g-moss-4",
+      "kind": "glint",
+      "x": 720,
+      "y": 740
+    },
+    {
+      "id": "g-fling-1",
+      "kind": "glint",
+      "x": 1540,
+      "y": 930
+    },
+    {
+      "id": "g-fling-2",
+      "kind": "glint",
+      "x": 1590,
+      "y": 860
+    },
+    {
+      "id": "g-fling-3",
+      "kind": "glint",
+      "x": 1640,
+      "y": 800
+    },
+    {
+      "id": "g-burl-1",
+      "kind": "glint",
+      "x": 2720,
+      "y": 948
+    },
+    {
+      "id": "g-burl-2",
+      "kind": "glint",
+      "x": 2740,
+      "y": 948
+    },
+    {
+      "id": "g-burl-3",
+      "kind": "glint",
+      "x": 2760,
+      "y": 948
+    },
+    {
+      "id": "g-burl-4",
+      "kind": "glint",
+      "x": 2720,
+      "y": 983
+    },
+    {
+      "id": "g-burl-5",
+      "kind": "glint",
+      "x": 2740,
+      "y": 983
+    },
+    {
       "id": "g-b1-1",
       "kind": "glint",
       "x": 2160,
@@ -427,6 +523,54 @@
       "y": 860
     },
     {
+      "id": "g-limb-1",
+      "kind": "glint",
+      "x": 2360,
+      "y": 330
+    },
+    {
+      "id": "g-limb-2",
+      "kind": "glint",
+      "x": 2386,
+      "y": 315
+    },
+    {
+      "id": "g-limb-3",
+      "kind": "glint",
+      "x": 2411,
+      "y": 306
+    },
+    {
+      "id": "g-limb-4",
+      "kind": "glint",
+      "x": 2437,
+      "y": 301
+    },
+    {
+      "id": "g-limb-5",
+      "kind": "glint",
+      "x": 2463,
+      "y": 301
+    },
+    {
+      "id": "g-limb-6",
+      "kind": "glint",
+      "x": 2489,
+      "y": 306
+    },
+    {
+      "id": "g-limb-7",
+      "kind": "glint",
+      "x": 2514,
+      "y": 315
+    },
+    {
+      "id": "g-limb-8",
+      "kind": "glint",
+      "x": 2540,
+      "y": 330
+    },
+    {
       "id": "g-c1-1",
       "kind": "glint",
       "x": 4900,
@@ -471,28 +615,84 @@
   ],
   "pods": [
     {
+      "id": "pod-nest",
+      "x": 640,
+      "y": 342,
+      "mount": "hang",
+      "regrow": 3600
+    },
+    {
+      "id": "pod-log",
+      "x": 240,
+      "y": 1078,
+      "mount": "sit",
+      "regrow": 3600
+    },
+    {
+      "id": "pod-crown",
+      "x": 1760,
+      "y": 718,
+      "mount": "sit",
+      "regrow": 3600
+    },
+    {
       "id": "pod-a1",
       "x": 1040,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-b1",
       "x": 2330,
       "y": 874,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
+    },
+    {
+      "id": "pod-cap",
+      "x": 3620,
+      "y": 842,
+      "mount": "sit",
+      "regrow": 3600
     }
   ],
   "enemies": [
     {
       "id": "j-a1",
       "kind": "juvenileBurrback",
-      "x": 980,
+      "x": 1000,
       "y": 1300,
       "facing": -1,
-      "senses": "always"
+      "senses": "always",
+      "radius": 120
+    },
+    {
+      "id": "h-a1",
+      "kind": "hawker",
+      "x": 1880,
+      "y": 480,
+      "facing": -1,
+      "senses": "always",
+      "radius": 160
+    },
+    {
+      "id": "j-b1a",
+      "kind": "juvenileBurrback",
+      "x": 2560,
+      "y": 888,
+      "facing": 1,
+      "senses": "always",
+      "radius": 110
+    },
+    {
+      "id": "j-b1b",
+      "kind": "juvenileBurrback",
+      "x": 2840,
+      "y": 884,
+      "facing": -1,
+      "senses": "always",
+      "radius": 50
     },
     {
       "id": "h-b1",
@@ -522,6 +722,12 @@
       "kind": "wick",
       "x": 2120,
       "y": 760
+    },
+    {
+      "id": "m-b1",
+      "kind": "moonwick",
+      "x": 2440,
+      "y": 840
     },
     {
       "id": "l-b1a",
@@ -584,10 +790,19 @@
     },
     {
       "id": "knot",
-      "x": 2624,
-      "y": 880,
+      "x": 1984,
+      "y": 908,
       "w": 256,
       "h": 40,
+      "floor": true,
+      "kick": false
+    },
+    {
+      "id": "burl",
+      "x": 2700,
+      "y": 886,
+      "w": 80,
+      "h": 30,
       "floor": true,
       "kick": false
     }
@@ -724,8 +939,8 @@
       },
       {
         "id": "crown",
-        "x": 1800,
-        "y": 920
+        "x": 1740,
+        "y": 740
       },
       {
         "id": "trunk",
@@ -734,8 +949,13 @@
       },
       {
         "id": "knot-top",
-        "x": 2750,
-        "y": 880
+        "x": 2112,
+        "y": 908
+      },
+      {
+        "id": "sky-limb",
+        "x": 2450,
+        "y": 360
       },
       {
         "id": "stub-top",
@@ -795,6 +1015,34 @@
       "y": 790,
       "w": 120,
       "h": 20
+    },
+    {
+      "id": "moss-limb1",
+      "x": 2520,
+      "y": 760,
+      "w": 110,
+      "h": 20
+    },
+    {
+      "id": "moss-limb2",
+      "x": 2380,
+      "y": 650,
+      "w": 110,
+      "h": 20
+    },
+    {
+      "id": "moss-limb3",
+      "x": 2520,
+      "y": 550,
+      "w": 110,
+      "h": 20
+    },
+    {
+      "id": "moss-limb4",
+      "x": 2400,
+      "y": 450,
+      "w": 110,
+      "h": 20
     }
   ],
   "exits": [
@@ -807,8 +1055,8 @@
     {
       "id": "knot",
       "edge": "s",
-      "from": 2624,
-      "to": 2880,
+      "from": 1984,
+      "to": 2240,
       "oneWay": true
     },
     {
@@ -989,6 +1237,18 @@
     {
       "from": "trunk",
       "to": "knot",
+      "oneWay": true
+    },
+    {
+      "from": "trunk",
+      "to": "sky-limb",
+      "needs": ["kindle"],
+      "light": ["m-b1"],
+      "oneWay": true
+    },
+    {
+      "from": "sky-limb",
+      "to": "trunk",
       "oneWay": true
     },
     {

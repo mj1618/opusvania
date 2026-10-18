@@ -15,6 +15,7 @@
  *  - **Locks** (the skip-hunter): from the places before a tool, without it, the explorer (double jumps, glides,
  *    flings and their chains, pogos, cuts) must never reach what the tool opens.
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { getRoom } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
@@ -88,8 +89,9 @@ export interface Setup {
 export function setup(
   o: Setup,
   t: Tuning = cloneTuning(defaultTuning),
+  as?: Room,
 ): { state: GameState; room: Room; t: Tuning } {
-  const room = getRoom(o.room);
+  const room = as ?? getRoom(o.room);
   const save = newSave(o.kit as never);
   save.flags.push(...(o.flags ?? []));
   save.opened.push(...(o.opened ?? []));
@@ -114,6 +116,10 @@ export function setup(
 /** Does the state meet goal `to` (a place, a flag, a find)? Exits are judged by the explorer's exits. */
 export function meets(room: Room, to: string, s: GameState): boolean {
   if (to.startsWith('flag:')) return s.save.flags.includes(to.slice(5));
+  if (to.startsWith('lit:')) {
+    const i = (room.lures ?? []).findIndex((l) => l.id === to.slice(4));
+    return i >= 0 && (s.lures.hp[i] ?? 0) > 0;
+  }
   if (to.startsWith('exit:')) return false;
   const f = feet(s);
   if (to.startsWith('find:')) {
@@ -385,13 +391,21 @@ export function huntLock(
   k: Lock,
   budget = k.budget ?? 2500,
 ): { held: boolean; found?: string; nodes: number } {
-  const starts = k.from.map(
-    (at) => setup({ room: k.room, at, kit: k.kit, flags: k.flags ?? [], lamps: lampsOf(k.room) }).state,
-  );
   const base = getRoom(k.room);
-  const room = k.strip
+  let room = k.strip
     ? ({ ...base, glades: (base.glades ?? []).filter((g) => !k.strip?.includes(g.id)) } as Room)
     : base;
+  // (A must-use lock: the puzzle's own anchor taken out of the room, its state built on the room without it.)
+  if (k.stripLures)
+    room = { ...room, lures: (room.lures ?? []).filter((l) => !k.stripLures?.includes(l.id)) } as Room;
+  const starts = k.from.map(
+    (at) =>
+      setup(
+        { room: k.room, at, kit: k.kit, flags: k.flags ?? [], lamps: k.spent ? [] : lampsOf(k.room) },
+        undefined,
+        room,
+      ).state,
+  );
   const t = cloneTuning(defaultTuning);
   const exit = k.goal.startsWith('exit:') ? k.goal.slice(5) : null;
   const res = explore({
@@ -421,6 +435,11 @@ function lampsOf(id: string): string[] {
   return (getRoom(id).lures ?? []).filter((l) => l.kind !== 'moonwick').map((l) => l.id);
 }
 
+/** (The repo's JSON style: Biome formats the tapes file once written.) */
+function formatTapes(): void {
+  execFileSync('npx', ['biome', 'format', '--write', TAPES_FILE], { stdio: 'ignore' });
+}
+
 /** The stored lines (edge id -> macro names). */
 export function readTapes(): Record<string, string[]> {
   try {
@@ -430,9 +449,18 @@ export function readTapes(): Record<string, string[]> {
   }
 }
 
-if (process.argv[1]?.endsWith('proto-1.ts')) {
+if (process.argv[1]?.endsWith('proto-1.ts') && process.argv.includes('--merge')) {
+  // `--merge <part.json> ...`: the parts' lines into the tapes file (the rest kept).
+  const all = readTapes();
+  for (const f of process.argv.slice(2).filter((a) => a.endsWith('.json')))
+    Object.assign(all, JSON.parse(readFileSync(f, 'utf8')) as Record<string, string[]>);
+  writeFileSync(TAPES_FILE, `${JSON.stringify(all, null, 2)}\n`);
+  formatTapes();
+  console.log(`merged into ${TAPES_FILE}`);
+} else if (process.argv[1]?.endsWith('proto-1.ts')) {
   const write = process.argv.includes('--write');
   const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+  const exact = process.argv.find((a) => a.startsWith('--edge='))?.slice(7);
   const lockOnly = process.argv.find((a) => a.startsWith('--lock='))?.slice(7);
   const tapes = readTapes();
   const out: Record<string, string[]> = { ...tapes };
@@ -442,6 +470,7 @@ if (process.argv[1]?.endsWith('proto-1.ts')) {
     for (const back of e.both ? [false, true] : [false]) {
       const id = back ? `${e.room}:${e.to}->${e.from}` : edgeId(e);
       if (only && !id.includes(only)) continue;
+      if (exact && id !== exact) continue;
       const t0 = performance.now();
       const r = proveEdge(e, back);
       const ms = Math.round(performance.now() - t0);
@@ -469,8 +498,18 @@ if (process.argv[1]?.endsWith('proto-1.ts')) {
       );
     }
   if (write && edges) {
-    writeFileSync(TAPES_FILE, `${JSON.stringify(out, null, 2)}\n`);
-    console.log(`wrote ${TAPES_FILE}`);
+    // (`--part=<file>`: only this run's lines, to that file; runs side by side merge their parts with `--merge`.)
+    const part = process.argv.find((a) => a.startsWith('--part='))?.slice(7);
+    if (part) {
+      const mine: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(out)) if (tapes[k] !== v) mine[k] = v;
+      writeFileSync(part, `${JSON.stringify(mine, null, 2)}\n`);
+      console.log(`wrote ${part}`);
+    } else {
+      writeFileSync(TAPES_FILE, `${JSON.stringify(out, null, 2)}\n`);
+      formatTapes();
+      console.log(`wrote ${TAPES_FILE}`);
+    }
   }
   if (bad) process.exitCode = 1;
 }

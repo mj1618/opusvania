@@ -165,24 +165,66 @@
       "x": 400,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
+    },
+    {
+      "id": "pod-k4",
+      "x": 1220,
+      "y": 452,
+      "mount": "hang",
+      "regrow": 3600
+    },
+    {
+      "id": "pod-k5",
+      "x": 700,
+      "y": 746,
+      "mount": "hang",
+      "regrow": 3600
     },
     {
       "id": "pod-k2",
       "x": 1500,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-k3",
       "x": 1700,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     }
   ],
-  "enemies": [],
+  "enemies": [
+    {
+      "id": "d-k1",
+      "kind": "dangler",
+      "x": 820,
+      "y": 220,
+      "facing": 1,
+      "senses": "always",
+      "drop": 700
+    },
+    {
+      "id": "d-k2",
+      "kind": "dangler",
+      "x": 1100,
+      "y": 220,
+      "facing": -1,
+      "senses": "always",
+      "drop": 700
+    },
+    {
+      "id": "j-k1",
+      "kind": "juvenileBurrback",
+      "x": 1400,
+      "y": 1300,
+      "facing": -1,
+      "senses": "always",
+      "radius": 160
+    }
+  ],
   "lures": [
     {
       "id": "m-ring1",
@@ -284,12 +326,12 @@
   },
   "hollows": [
     {
-      "id": "bright",
+      "id": "cache-vessel",
       "x": 1130,
       "y": 300,
       "w": 180,
       "h": 100,
-      "upgrade": "brightKindle"
+      "upgrade": "glowVessel"
     }
   ],
   "camera": {
@@ -313,7 +355,7 @@
     },
     {
       "from": "cache-floor",
-      "to": "bright",
+      "to": "cache-vessel",
       "needs": ["kindle"],
       "light": ["m-ring1", "m-ring2", "m-ring3"]
     },

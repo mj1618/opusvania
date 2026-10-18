@@ -86,9 +86,11 @@ no rings; `hub`, `orbR`, `wicks` (the arena's four moonwicks), `high` (the pair 
 `grab: false`: it holds nothing. Spiderlings are the room's danglers with `fight` + `respawn` 240.
 | phase | what | how it is won |
 |---|---|---|
-| P1 find it | hunts round its orb (r 520 x `orbShare`) toward the sector over her at `huntSpeed` 3, never into silver light; every cut glances | kindle a wick within `exposePx` 420 of it (or with it cornered): it falls, lies open `openFrames` 150 (at most `exposeCuts` 4 a window), climbs back; `p1Hp` 8 (a retry 4) |
+| P1 the hunt | hunts round its orb (r 520 x `orbShare`) toward the sector over her at `huntSpeed` 3, never into silver light; every cut glances. On a clock (`lungeFirst` 150 after the lock, then every `lungeEvery` 270) it **lunges**: `bossTell attack: lunge` (`lungeTell` 40 f, `px/py` = where it lands: the line through her to the floor), a straight run at `lungeSpeed` 14 that hurts, `lungeRest` 40 on the floor (`stall`), a climb back to the orb point nearest | kindle a wick within `exposePx` 420 of it (on the web, mid-lunge or resting: or with it cornered), or **bait a lunge into silver light** (it is dazzled: `bossCue p1:dazzled`): it falls, lies open `openFrames` 150 (at most `exposeCuts` 4 a window), climbs back; `p1Hp` 8 (a retry 4) |
 | P2 the drops | the Weaver's P2 (tell 45, drop 18, swing 60, winded 90; a cut thread: stunned 120), thread `threadPx` 920 from the canopy at 300 | its swing stops (winded) at the edge of silver light; `p2Hp` 6 |
 | P3 the Gloam lamp | it wraps the lamp at the hub | the high pair burning at once floods the moon-hole (`bossCue p3:moonhole`), or `throwsToFall` 2 throw-cuts (`bossCue p3:throwCut`) knock it off; on the floor `p3Hp` 3 cuts, the lamp dies with it |
-Defeat: `gloam-down` (the east door's gate, the Gust glade's `when`), the lamp out (60 moths). A fade re-forms her at
+(Review r1: P1 was a waiting game, it avoided her; it hunts now. `__game.boss().phaseName` reads each boss's own phase
+table: it said the Weaver's "the ring".) Defeat: `gloam-down` (the east door's gate, the Gust glade's `when`), the lamp
+out (60 moths). A fade re-forms her at
 the hall's patch over the seal (glow rooms keep the saved patch anywhere). The winning bot (tools/solve/drivers.ts
 `gloam`, the solver's proof) wins in ~66 s with every creature in, its glow earned in the fight.

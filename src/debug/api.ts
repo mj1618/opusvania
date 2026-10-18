@@ -15,7 +15,7 @@ import { clearSave, readSave, type SlotStore } from '../save/storage';
 import { ROOM_IDS, ROOMS } from '../scene/index';
 import type { Room } from '../scene/room';
 import { ABILITIES, type AbilityId, isAbility } from '../sim/abilities';
-import { jumpBoss } from '../sim/boss/index';
+import { bossRules, jumpBoss } from '../sim/boss/index';
 import { enemiesAlive } from '../sim/enemies';
 import type { SimEvent } from '../sim/events';
 import { offerTarget } from '../sim/giving';
@@ -995,7 +995,8 @@ export function installDebugApi(deps: {
       const hi = lures.findIndex((l) => l.id === spec.heart);
       const hl = lures[hi];
       const hf = hl ? flameAt(st.lures, hi, hl, Math.max(0, st.frame - 1), game.tuning) : { x: 0, y: 0 };
-      const names = ['the ring', 'the drops', 'the floor', 'the heart'];
+      // (Each boss's own phase table: the Weaver's ring, the Gloamweaver's hunt.)
+      const names = bossRules(spec.kind).phases.map((p) => p.name);
       return {
         id: b.id,
         name: spec.name,

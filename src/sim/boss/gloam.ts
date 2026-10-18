@@ -3,10 +3,12 @@
  * the dark under the lamp hall, its great lamp (the Gloam lamp) at the web's hub. Built on the Weaver's framework
  * (src/sim/boss/index.ts: lock, phase table, cues, retry, defeat) and its P2 drops. One exam a phase:
  *
- *  - **P1, find it (kindle to expose).** It hunts on its orb in the dark, toward the sector over her, and never
- *    walks into silver light. Shielded: the blade glances. Kindle an arena moonwick within `exposePx` of it (or
- *    when it is cornered between lights) and it falls, exposed: open on the floor for `openFrames` (at most
- *    `exposeCuts` cuts), then it climbs back. `p1Hp` cuts end the phase (`retryP1Hp` on a retry).
+ *  - **P1, the hunt (kindle to expose; bait it into silver).** It hunts on its orb in the dark, toward the sector
+ *    over her, and never walks into silver light. On a clock it lunges at her: a tell aimed where she stands, a
+ *    straight run to the floor, a rest, a climb back. Shielded: the blade glances. Kindle an arena moonwick within
+ *    `exposePx` of it (or when it is cornered between lights), or let its lunge run into silver light, and it
+ *    falls, exposed: open on the floor for `openFrames` (at most `exposeCuts` cuts), then it climbs back. `p1Hp`
+ *    cuts end the phase (`retryP1Hp` on a retry).
  *  - **P2, the drops (read the arc; light is a shield).** The Weaver's drops: a tell that draws the arc, the drop,
  *    the swing end to end, then it hangs winded. Its swing stops at the edge of any silver light. A cut through its
  *    thread drops it stunned. `p2Hp` cuts.
@@ -239,15 +241,143 @@ function kindledNear(c: BossCtx, e: EnemyState, W: G, cornered: boolean): boolea
   return false;
 }
 
+/**
+ * P1's lunge: the tell, aimed at her as she stands now. It will run from where it hangs through that point on to
+ * the floor (`pivotX`, `pivotY`: where it lands), so stepping off the line is the dodge.
+ */
+function beginLunge(c: BossCtx, e: EnemyState, W: G): void {
+  const b = c.boss;
+  const g = ground(c);
+  const p = c.state.player;
+  const x0 = cx(e);
+  const y0 = cy(e);
+  const dx = p.x + p.w / 2 - x0;
+  // (Always down at her: never a run up its own web.)
+  const dy = Math.max(60, p.y + p.h / 2 - y0);
+  const fy = g.floor - e.h / 2;
+  const k = (fy - y0) / dy;
+  const half = e.w / 2;
+  b.pivotX = Math.round(Math.max(g.x0 + half, Math.min(g.x1 - half, x0 + dx * k)));
+  b.pivotY = Math.round(fy);
+  b.len = Math.round(Math.sqrt((b.pivotX - x0) * (b.pivotX - x0) + (fy - y0) * (fy - y0)));
+  b.dir = b.pivotX >= x0 ? 1 : -1;
+  const n = frames(W.lungeTell, 1);
+  setMode(e, 'windup', n);
+  e.facing = b.dir > 0 ? 1 : -1;
+  b.tell = 'lunge';
+  b.tellFrames = n;
+  b.tellX0 = Math.round(b.pivotX - e.w);
+  b.tellX1 = Math.round(b.pivotX + e.w);
+  b.safeX = -1;
+  c.events.push({
+    type: 'bossTell',
+    id: b.id,
+    x: Math.round(x0),
+    y: Math.round(y0),
+    attack: 'lunge',
+    frames: n,
+    x0: b.tellX0,
+    x1: b.tellX1,
+    safeX: -1,
+    px: b.pivotX,
+    py: b.pivotY,
+    len: b.len,
+    reach: 0,
+    side: b.dir,
+    dir: b.dir,
+  });
+  c.events.push({
+    type: 'enemyWindup',
+    id: e.id,
+    kind: e.kind,
+    x: Math.round(x0),
+    y: Math.round(y0),
+    dir: b.dir,
+    frames: n,
+    px: b.len,
+    speed: Math.round(W.lungeSpeed),
+  });
+}
+
+/** Back onto its orb at the point nearest where it is (its place round the hub follows it). */
+function backToOrb(c: BossCtx, e: EnemyState): void {
+  const h = hub(c);
+  const dx = cx(e) - h.x;
+  const dy = cy(e) - h.y;
+  const m = Math.sqrt(dx * dx + dy * dy);
+  if (m > 1) {
+    c.boss.ux = dx / m;
+    c.boss.uy = dy / m;
+  }
+  setMode(e, 'climb', 0);
+}
+
 function stepP1(c: BossCtx, e: EnemyState, W: G): void {
   const b = c.boss;
+  // A kindle near it, wherever it is on its web or the floor (not while it lies open or falls): exposed.
+  const onWeb = e.mode === 'hunt' || e.mode === 'sit' || e.mode === 'windup' || e.mode === 'climb';
   if (e.mode === 'hunt' || e.mode === 'sit') {
     if (e.mode === 'sit') setMode(e, 'hunt', 0);
     const { cornered } = hunt(c, e, W);
     if (kindledNear(c, e, W, cornered)) {
       b.exposed++;
       drop(c, e);
+      return;
     }
+    // On its clock it comes for her (not out of silver: it never stands in it, and never lunges from it).
+    if (--b.lunge <= 0 && !silver(c, cx(e), cy(e))) {
+      b.lunge = frames(W.lungeEvery, 1);
+      beginLunge(c, e, W);
+    }
+    return;
+  }
+  if ((onWeb || e.mode === 'dive' || e.mode === 'stall') && kindledNear(c, e, W, false)) {
+    b.exposed++;
+    drop(c, e);
+    return;
+  }
+  if (e.mode === 'windup') {
+    b.tellFrames = Math.max(0, b.tellFrames - 1);
+    if (--e.timer <= 0) {
+      b.tell = '';
+      setMode(e, 'dive', 0);
+      c.events.push({
+        type: 'bossAttack',
+        id: b.id,
+        x: cx(e),
+        y: cy(e),
+        attack: 'lunge',
+        frames: Math.max(1, Math.round(b.len / Math.max(1, W.lungeSpeed))),
+      });
+    }
+    return;
+  }
+  if (e.mode === 'dive') {
+    // The run: a lunge into silver light is dazzled (it falls, exposed); at the floor it rests, then climbs back.
+    const x0 = e.x;
+    const y0 = e.y;
+    const there = climbTo(e, b.pivotX, b.pivotY, W.lungeSpeed);
+    if (silver(c, cx(e), cy(e))) {
+      e.x = x0;
+      e.y = y0;
+      b.exposed++;
+      c.events.push({
+        type: 'bossCue',
+        id: b.id,
+        x: cx(e),
+        y: cy(e),
+        set: 'p1',
+        cue: 'dazzled',
+        frame: b.phaseTime,
+      });
+      drop(c, e);
+      return;
+    }
+    if (there) setMode(e, 'stall', frames(W.lungeRest, 1));
+    return;
+  }
+  if (e.mode === 'stall') {
+    if (--e.timer <= 0) backToOrb(c, e);
     return;
   }
   if (e.mode === 'fall') {
@@ -258,7 +388,7 @@ function stepP1(c: BossCtx, e: EnemyState, W: G): void {
     const cuts = e.taken - e.hp;
     if (--e.timer <= 0 || cuts >= W.exposeCuts) {
       e.stunned = false;
-      setMode(e, 'climb', 0);
+      backToOrb(c, e);
     }
     return;
   }
@@ -438,7 +568,7 @@ function stepP3(c: BossCtx, e: EnemyState, W: G): void {
 
 export const gloamRules: BossRules = {
   phases: [
-    { name: 'find it', exam: 'kindle to expose' },
+    { name: 'the hunt', exam: 'kindle to expose; bait it into silver' },
     { name: 'the drops', exam: 'read the arc; light is a shield' },
     { name: 'the Gloam lamp', exam: 'flinging off moonwicks, a set' },
   ],
@@ -503,6 +633,7 @@ export const gloamRules: BossRules = {
     const W = c.t.gloam;
     if (n <= 1) {
       setPhase(c, 1);
+      c.boss.lunge = frames(W.lungeFirst, 1);
       if (e) setMode(e, 'hunt', 0);
       return;
     }
@@ -523,6 +654,7 @@ export const gloamRules: BossRules = {
     const W = c.t.gloam;
     if (set === 'intro' && cue === 'start') {
       setPhase(c, 1);
+      c.boss.lunge = frames(W.lungeFirst, 1);
       if (e) setMode(e, 'hunt', 0);
     } else if (set === 'p1end' && cue === 'next') {
       setPhase(c, 2);
@@ -651,10 +783,11 @@ export const gloamweaver: KindRules = {
     return true;
   },
 
-  /** Its touch is live only in P2's drop and swing. */
+  /** Its touch is live only in P1's lunge and P2's drop and swing. */
   harmless(e, info) {
     const b = info.state.boss;
     if (b?.stage !== 'fight') return true;
+    if (b.phase === 1) return e.mode !== 'dive';
     return !(b.phase === 2 && (e.mode === 'dive' || e.mode === 'swing'));
   },
 };

@@ -364,22 +364,24 @@ export function flingMacros(): Macro[] {
     ['djU', (k) => (k < 22 ? J : k < 24 ? 0 : J)],
     ['stand', () => 0],
   ];
-  for (const [an, approach] of approaches)
-    for (const [aimName, aim] of AIMS)
-      for (const glide of [false, true])
-        for (const chain of ['same', 'up', 'ul', 'ur'] as const) {
-          // (A chain goes on with the same aim, or turns up; a straight-up chain may turn up-left or up-right.)
-          if (chain === 'up' && aimName === 'U') continue;
-          if ((chain === 'ul' || chain === 'ur') && aimName !== 'U') continue;
-          const horiz = aim & (L | R);
-          const chainAim = chain === 'up' ? U | horiz : chain === 'ul' ? U | L : chain === 'ur' ? U | R : aim;
-          const tag = chain === 'same' ? '' : chain === 'up' ? '-cu' : `-c${chain === 'ul' ? 'l' : 'r'}`;
-          out.push({
-            name: `fling-${an}-${aimName}${glide ? '-g' : ''}${tag}`,
-            max: 420,
-            prog: makeFling(approach, aim, horiz, glide, chainAim),
-          });
-        }
+  for (const kindle of [false, true])
+    for (const [an, approach] of approaches)
+      for (const [aimName, aim] of AIMS)
+        for (const glide of [false, true])
+          for (const chain of ['same', 'up', 'ul', 'ur'] as const) {
+            // (A chain goes on with the same aim, or turns up; a straight-up chain may turn up-left or up-right.)
+            if (chain === 'up' && aimName === 'U') continue;
+            if ((chain === 'ul' || chain === 'ur') && aimName !== 'U') continue;
+            const horiz = aim & (L | R);
+            const chainAim =
+              chain === 'up' ? U | horiz : chain === 'ul' ? U | L : chain === 'ur' ? U | R : aim;
+            const tag = chain === 'same' ? '' : chain === 'up' ? '-cu' : `-c${chain === 'ul' ? 'l' : 'r'}`;
+            out.push({
+              name: `fling-${an}-${aimName}${glide ? '-g' : ''}${tag}${kindle ? '-k' : ''}`,
+              max: 420,
+              prog: makeFling(approach, aim, horiz, glide, chainAim, kindle),
+            });
+          }
   return out;
 }
 
@@ -389,6 +391,7 @@ function makeFling(
   horiz: number,
   glide: boolean,
   chainAim: number,
+  kindle = false,
 ): Program {
   // (The program keeps its own small state in a closure, reset at k 0.)
   let phase = 0;
@@ -422,8 +425,10 @@ function makeFling(
       t0 = k;
       return a;
     }
-    // Flight: the horizontal held; wings after the launch; a flame met again is flung again.
+    // Flight: the horizontal held; wings after the launch; a flame met again is flung again (`kindle`: a cold
+    // moonwick met is kindled in the air, and then flung off like any burning flame).
     if (p.grounded && k - t0 > 3) return -1;
+    if (kindle && k - t0 > 2 && p.fling < 0 && !reachFlame(s) && coldInReach(s)) return B;
     if (k - t0 > 6 && p.fling < 0 && p.flingCd === 0 && flings < 6 && reachFlame(s)) {
       phase = 1;
       t0 = k;
@@ -450,6 +455,12 @@ let TUNE: Tuning | null = null;
 function reachFlame(s: GameState): boolean {
   if (!SCENE || !TUNE) return false;
   return flingTarget(s, withShortcuts(SCENE, s.save), TUNE) >= 0;
+}
+
+/** A cold moonwick in kindle reach (and Kindle owned: the press would kindle it). */
+function coldInReach(s: GameState): boolean {
+  if (!SCENE || !TUNE || !(s.save.abilities as readonly string[]).includes('kindle')) return false;
+  return kindleTarget(s, withShortcuts(SCENE, s.save), TUNE) >= 0;
 }
 
 /** A kindle: Lamp pressed standing by a cold moonwick (owned Kindle, glow topped up by the explorer). */
@@ -682,8 +693,16 @@ export function explore(o: ExploreOpts): ExploreResult {
       // bring a flame into reach: one that way or above, within a jump's, or a double jump's, rise.)
       const many = flamesNear(s, S, 1000) > 1;
       const ok = approachesFor(s, S);
-      const chained = (n: string) => /-c[ulr]$/.test(n);
-      list.push(...flings.filter((f) => (many || !chained(f.name)) && ok.has(f.name.split('-')[1] ?? '')));
+      const chained = (n: string) => /-c[ulr](-k)?$/.test(n);
+      const airKindle = o.kindle !== false && owns('kindle') && !!scene.glow && coldNear(s, S, 1000);
+      list.push(
+        ...flings.filter(
+          (f) =>
+            (many || !chained(f.name) || (airKindle && f.name.endsWith('-k'))) &&
+            ok.has(f.name.split('-')[1] ?? '') &&
+            (airKindle || !f.name.endsWith('-k')),
+        ),
+      );
     }
     const keep = o.keepLamps ?? true;
     for (const m of list) {

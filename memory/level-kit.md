@@ -124,6 +124,7 @@ pivot. Labels with G. **Painted rooms draw none of the kit yet.** Room-fade dips
 | `moonmoss`, `wickSets` | | lures.md "Moonwicks" |
 | `pods[].regrow` | frames | a burst pod's bud grows back (`podRegrow`) once its glints are paid |
 | `enemies[].respawn` / `fight` | frames / bool | dead, it is back at its spawn that long after (`enemyRespawn`); `fight`: only there while the room's boss fight is on (the spiderlings) |
+| `enemies[].wakes` | ability or flag | away (`gone`) until the save has it, then in at its spawn on that step (`enemyRespawn`): the pit's juveniles wake as she takes Kindle (the quiet minute, then the fight that buys the first kindle) |
 | `hollows[].upgrade: 'moonDrop'` | | one more light for good (flag `moonDrop:<room>:<id>`, counted by `withUpgrades`); `glowVessel` (meter 24), `brightKindle` (kindle 3) are ordinary upgrades |
 | `camera.zones[].frames` | 1..120 | the slide into the zone (Lanternroot's chambers: 20). **Not read by the camera yet** (src/render/camera/zones.ts eases every zone in `cameraTuning.zones.frames` 30): render's to wire |
 | `routes[].light / lamps / upgrades / sets` | | the solver's claims: wicks a way kindles, warm lamps it flings off, upgrades it needs, flags passing it sets (the world check counts `sets`) |

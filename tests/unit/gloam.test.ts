@@ -23,11 +23,11 @@ const boss = (d: Drive) => d.g.state.boss;
 const lure = (d: Drive, id: string) => (d.g.scene.lures ?? []).findIndex((l) => l.id === id);
 
 describe('the Gloamweaver', () => {
-  it('locks as she drops in: the seal shuts behind her, the name card, then P1 (find it)', () => {
+  it('locks as she drops in: the seal shuts behind her, the name card, then P1 (the hunt)', () => {
     const d = drive('lr-roots', 3060, 1300, ABIL);
     const ev = d.run(0, 120);
     expect(of(ev, 'bossLock')).toHaveLength(1);
-    expect(of(ev, 'bossPhase')[0]?.name).toBe('find it');
+    expect(of(ev, 'bossPhase')[0]?.name).toBe('the hunt');
     expect(boss(d)?.phase).toBe(1);
     // The spiderlings (fuel in the fight) are there now.
     expect(d.g.state.enemies.filter((e) => e.id.startsWith('spider') && !e.gone)).toHaveLength(3);
@@ -54,6 +54,36 @@ describe('the Gloamweaver', () => {
       const dy = e.y + e.h / 2 - 1010;
       expect(dx * dx + dy * dy).toBeGreaterThan(400 * 400);
     }
+  });
+
+  it('P1: on its clock it lunges at her (told, then a straight run to the floor that hurts); she steps off the line', () => {
+    const d = arena();
+    const ev = d.run(0, 300);
+    const tell = of(ev, 'bossTell').find((e) => e.attack === 'lunge');
+    expect(tell, 'no lunge told').toBeDefined();
+    expect(tell?.frames).toBe(d.g.tuning.gloam.lungeTell);
+    expect(of(ev, 'bossAttack').some((e) => e.attack === 'lunge')).toBe(true);
+    // (It lands where the tell aimed: on the floor under the line through her.)
+    expect(Math.abs((tell?.py ?? 0) + 32 - 1300)).toBeLessThan(2);
+  });
+
+  it('P1: a lunge that runs into silver light is dazzled: it falls, exposed (bait it into a burning wick)', () => {
+    const d = arena();
+    d.g.teleport(3620, 1060);
+    // Kindle the east low wick while it is far off (no exposure by the kindle itself), then wait in its light.
+    const far = () => {
+      const e = spider(d);
+      if (e?.mode !== 'hunt') return false;
+      const dx = e.x + e.w / 2 - 3620;
+      const dy = e.y + e.h / 2 - 1010;
+      return dx * dx + dy * dy > 600 * 600;
+    };
+    expect(d.until(0, far, 600)).toBe(true);
+    d.run(B, 1);
+    expect(d.g.state.lures.hp[lure(d, 'm-w4')]).toBe(1);
+    const ev = d.run(0, 600);
+    expect(of(ev, 'bossCue').some((e) => e.cue === 'dazzled')).toBe(true);
+    expect(of(ev, 'bossOpen').length).toBeGreaterThan(0);
   });
 
   it('P1: a kindle near it exposes it: it falls, lies open, takes cuts; two windows (8 cuts) end P1', () => {
@@ -173,7 +203,7 @@ describe('the Gloamweaver', () => {
   });
 
   it('a fade in the fight re-forms her at the hall patch above (a glow room keeps the save patch anywhere); a retry is short', () => {
-    const d = drive('lr-hall', 3330, 1300, ABIL, { flags: ['seal-open'] });
+    const d = drive('lr-hall', 3600, 1300, ABIL, { flags: ['seal-open'] });
     d.run(U, 2);
     d.run(0, 40);
     expect(d.g.state.save.patch?.id).toBe('p-b2');

@@ -179,6 +179,11 @@ export interface EnemySpawn {
   /** Only there while the room's boss fight is on (from the lock to its defeat; the spiderlings). */
   fight?: boolean;
   /**
+   * Only there once the save has this ability or flag (Lanternroot's pit: the roots wake when she takes Kindle).
+   * It comes in like a respawn (`enemyRespawn`) on the step it wakes.
+   */
+  wakes?: string;
+  /**
    * Web: points that hold strands besides solids and the room's edges (the great lamp's heart, which
    * hangs on its own chain: a spoke cut from it falls alone).
    */

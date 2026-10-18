@@ -613,7 +613,10 @@ function fightOn(state: GameState): boolean {
   return !!b && b.locked && b.stage !== 'end' && b.stage !== 'down';
 }
 
-/** `respawn` creatures come back after their time; `fight` ones are there only while the fight is on. */
+/**
+ * `respawn` creatures come back after their time; `fight` ones are there only while the fight is on; `wakes` ones
+ * only once the save has their ability or flag.
+ */
 function respawn(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): void {
   const list = scene.enemies ?? [];
   const L = state.light;
@@ -621,6 +624,25 @@ function respawn(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]):
     const s = list[i];
     const e = state.enemies[i];
     if (!s || !e) continue;
+    if (s.wakes) {
+      const w = s.wakes;
+      const on = (state.save.abilities as readonly string[]).includes(w) || state.save.flags.includes(w);
+      if (!on) {
+        if (!L.hidden[i] || !e.gone) {
+          L.hidden[i] = 1;
+          L.respawn[i] = 0;
+          e.gone = true;
+        }
+        continue;
+      }
+      if (L.hidden[i]) {
+        L.hidden[i] = 0;
+        const fresh = createEnemy(s, t, scene);
+        state.enemies[i] = fresh;
+        events.push({ type: 'enemyRespawn', id: s.id, kind: s.kind, x: fresh.homeX, y: fresh.homeY });
+        continue;
+      }
+    }
     if (s.fight) {
       const on = fightOn(state);
       if (!on && !L.hidden[i]) {

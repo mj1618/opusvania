@@ -15,7 +15,7 @@
   "width": 5760,
   "height": 1536,
   "spawn": {
-    "x": 2620,
+    "x": 3600,
     "y": 1300
   },
   "solids": [
@@ -31,24 +31,16 @@
       "tag": "trunk",
       "x": 1344,
       "y": 0,
-      "w": 1280,
+      "w": 640,
       "h": 160,
       "kick": "west"
     },
     {
       "tag": "trunk",
-      "x": 2880,
+      "x": 2240,
       "y": 0,
-      "w": 2176,
+      "w": 2816,
       "h": 100,
-      "kick": false
-    },
-    {
-      "tag": "trunk",
-      "x": 2880,
-      "y": 100,
-      "w": 260,
-      "h": 220,
       "kick": false
     },
     {
@@ -87,15 +79,15 @@
       "tag": "ground",
       "x": 3200,
       "y": 1300,
-      "w": 1050,
+      "w": 580,
       "h": 236,
-      "kick": "east"
+      "kick": false
     },
     {
       "tag": "ground",
-      "x": 4950,
+      "x": 4736,
       "y": 1300,
-      "w": 810,
+      "w": 1024,
       "h": 236,
       "kick": "west"
     },
@@ -141,50 +133,10 @@
     },
     {
       "tag": "root",
-      "x": 2210,
-      "y": 1240,
-      "w": 80,
-      "h": 60,
-      "kick": false
-    },
-    {
-      "tag": "floating",
-      "x": 2280,
-      "y": 800,
-      "w": 200,
-      "h": 30,
-      "kick": false
-    },
-    {
-      "tag": "floating",
-      "x": 2600,
-      "y": 760,
-      "w": 160,
-      "h": 30,
-      "kick": false
-    },
-    {
-      "tag": "floating",
-      "x": 2960,
-      "y": 720,
-      "w": 160,
-      "h": 30,
-      "kick": false
-    },
-    {
-      "tag": "floating",
-      "x": 3260,
-      "y": 700,
-      "w": 160,
-      "h": 30,
-      "kick": false
-    },
-    {
-      "tag": "floating",
-      "x": 3520,
-      "y": 700,
-      "w": 200,
-      "h": 40,
+      "x": 3000,
+      "y": 100,
+      "w": 48,
+      "h": 900,
       "kick": false
     },
     {
@@ -212,35 +164,27 @@
       "kick": false
     },
     {
-      "tag": "root",
-      "x": 4250,
-      "y": 1480,
-      "w": 166,
-      "h": 56,
+      "tag": "trunk",
+      "x": 3760,
+      "y": 100,
+      "w": 100,
+      "h": 1000,
       "kick": false
     },
     {
       "tag": "root",
-      "x": 4416,
-      "y": 1440,
-      "w": 64,
-      "h": 96,
-      "kick": "east"
+      "x": 3860,
+      "y": 1060,
+      "w": 620,
+      "h": 40,
+      "kick": false
     },
     {
       "tag": "root",
-      "x": 4736,
-      "y": 1440,
-      "w": 64,
-      "h": 96,
-      "kick": "west"
-    },
-    {
-      "tag": "root",
-      "x": 4800,
-      "y": 1480,
-      "w": 150,
-      "h": 56,
+      "x": 3780,
+      "y": 1360,
+      "w": 700,
+      "h": 176,
       "kick": false
     },
     {
@@ -288,22 +232,22 @@
       "x": 4180,
       "y": 632,
       "w": 40,
-      "h": 358,
+      "h": 328,
       "kick": "east"
     },
     {
       "tag": "floating",
-      "x": 4220,
-      "y": 1000,
-      "w": 80,
+      "x": 4280,
+      "y": 640,
+      "w": 220,
       "h": 30,
       "kick": false
     },
     {
-      "tag": "floating",
+      "tag": "root",
       "x": 4300,
-      "y": 640,
-      "w": 200,
+      "y": 820,
+      "w": 260,
       "h": 30,
       "kick": false
     },
@@ -325,25 +269,25 @@
     },
     {
       "tag": "floating",
-      "x": 4600,
-      "y": 1260,
+      "x": 4800,
+      "y": 1180,
       "w": 100,
       "h": 30,
       "kick": false
     },
     {
       "tag": "floating",
-      "x": 4760,
-      "y": 1030,
+      "x": 4640,
+      "y": 1010,
       "w": 100,
       "h": 30,
       "kick": false
     },
     {
       "tag": "floating",
-      "x": 4620,
-      "y": 820,
-      "w": 80,
+      "x": 4780,
+      "y": 830,
+      "w": 100,
       "h": 30,
       "kick": false
     },
@@ -383,7 +327,7 @@
       "tag": "floating",
       "x": 3860,
       "y": 380,
-      "w": 310,
+      "w": 250,
       "h": 30,
       "kick": false
     },
@@ -410,6 +354,12 @@
       "w": 160
     },
     {
+      "tag": "branch",
+      "x": 3400,
+      "y": 200,
+      "w": 80
+    },
+    {
       "tag": "root",
       "x": 4480,
       "y": 1500,
@@ -420,6 +370,12 @@
       "x": 5070,
       "y": 1100,
       "w": 220
+    },
+    {
+      "tag": "branch",
+      "x": 4110,
+      "y": 380,
+      "w": 70
     }
   ],
   "pickups": [
@@ -556,6 +512,60 @@
       "y": 1273
     },
     {
+      "id": "g-vault-1",
+      "kind": "glint",
+      "x": 2100,
+      "y": 300
+    },
+    {
+      "id": "g-vault-2",
+      "kind": "glint",
+      "x": 2175,
+      "y": 283
+    },
+    {
+      "id": "g-vault-3",
+      "kind": "glint",
+      "x": 2250,
+      "y": 270
+    },
+    {
+      "id": "g-vault-4",
+      "kind": "glint",
+      "x": 2325,
+      "y": 263
+    },
+    {
+      "id": "g-vault-5",
+      "kind": "glint",
+      "x": 2400,
+      "y": 260
+    },
+    {
+      "id": "g-vault-6",
+      "kind": "glint",
+      "x": 2475,
+      "y": 263
+    },
+    {
+      "id": "g-vault-7",
+      "kind": "glint",
+      "x": 2550,
+      "y": 270
+    },
+    {
+      "id": "g-vault-8",
+      "kind": "glint",
+      "x": 2625,
+      "y": 283
+    },
+    {
+      "id": "g-vault-9",
+      "kind": "glint",
+      "x": 2700,
+      "y": 300
+    },
+    {
       "id": "g-b2-1",
       "kind": "glint",
       "x": 2300,
@@ -602,6 +612,42 @@
       "kind": "glint",
       "x": 2800,
       "y": 1240
+    },
+    {
+      "id": "g-tunnel-1",
+      "kind": "glint",
+      "x": 3880,
+      "y": 1230
+    },
+    {
+      "id": "g-tunnel-2",
+      "kind": "glint",
+      "x": 3984,
+      "y": 1217
+    },
+    {
+      "id": "g-tunnel-3",
+      "kind": "glint",
+      "x": 4088,
+      "y": 1211
+    },
+    {
+      "id": "g-tunnel-4",
+      "kind": "glint",
+      "x": 4192,
+      "y": 1211
+    },
+    {
+      "id": "g-tunnel-5",
+      "kind": "glint",
+      "x": 4296,
+      "y": 1217
+    },
+    {
+      "id": "g-tunnel-6",
+      "kind": "glint",
+      "x": 4400,
+      "y": 1230
     },
     {
       "id": "g-alcove1",
@@ -742,56 +788,70 @@
       "x": 1260,
       "y": 1058,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
+    },
+    {
+      "id": "pod-a2c",
+      "x": 200,
+      "y": 1278,
+      "mount": "sit",
+      "regrow": 3600
+    },
+    {
+      "id": "pod-a2d",
+      "x": 120,
+      "y": 582,
+      "mount": "hang",
+      "regrow": 3600
     },
     {
       "id": "pod-a2b",
       "x": 1720,
       "y": 958,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
+    },
+    {
+      "id": "pod-b2b",
+      "x": 3330,
+      "y": 262,
+      "mount": "hang",
+      "regrow": 3600
     },
     {
       "id": "pod-b2a",
       "x": 2560,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
-    },
-    {
-      "id": "pod-b2b",
-      "x": 3340,
-      "y": 678,
-      "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-c2a",
-      "x": 3990,
-      "y": 1278,
+      "x": 4060,
+      "y": 1038,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-c2b",
       "x": 5150,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-c2c",
       "x": 3930,
       "y": 958,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-c2d",
       "x": 4380,
       "y": 618,
       "mount": "sit",
-      "regrow": 900
+      "regrow": 3600
     }
   ],
   "enemies": [
@@ -802,6 +862,16 @@
       "y": 170,
       "facing": 1,
       "drop": 1100
+    },
+    {
+      "id": "j-a2c",
+      "kind": "juvenileBurrback",
+      "x": 380,
+      "y": 1300,
+      "facing": -1,
+      "senses": "always",
+      "radius": 110,
+      "wakes": "kindle"
     },
     {
       "id": "j-a2a",
@@ -822,33 +892,35 @@
     {
       "id": "j-b2a",
       "kind": "juvenileBurrback",
-      "x": 1990,
+      "x": 2440,
       "y": 1300,
       "facing": 1,
-      "senses": "always"
+      "senses": "always",
+      "radius": 160
     },
     {
       "id": "j-b2b",
       "kind": "juvenileBurrback",
-      "x": 2140,
+      "x": 2760,
       "y": 1300,
       "facing": -1,
-      "senses": "always"
+      "senses": "always",
+      "radius": 130
     },
     {
       "id": "d-b2",
       "kind": "dangler",
-      "x": 3610,
-      "y": 110,
+      "x": 3160,
+      "y": 250,
       "facing": -1,
-      "drop": 600,
+      "drop": 1000,
       "senses": "always"
     },
     {
       "id": "h-c2",
       "kind": "hawker",
-      "x": 4400,
-      "y": 860,
+      "x": 4630,
+      "y": 1120,
       "facing": -1,
       "senses": "always",
       "radius": 120
@@ -859,7 +931,8 @@
       "x": 5300,
       "y": 1300,
       "facing": -1,
-      "senses": "always"
+      "senses": "always",
+      "radius": 160
     },
     {
       "id": "j-c2b",
@@ -867,7 +940,8 @@
       "x": 5560,
       "y": 1300,
       "facing": 1,
-      "senses": "always"
+      "senses": "always",
+      "radius": 120
     },
     {
       "id": "d-c2",
@@ -875,7 +949,7 @@
       "x": 3960,
       "y": 672,
       "facing": -1,
-      "drop": 560
+      "drop": 360
     }
   ],
   "lures": [
@@ -912,61 +986,55 @@
     {
       "id": "m-s1",
       "kind": "moonwick",
-      "x": 2250,
-      "y": 1190
+      "x": 3300,
+      "y": 1010
     },
     {
       "id": "m-s2",
       "kind": "moonwick",
-      "x": 3600,
-      "y": 650
+      "x": 3440,
+      "y": 560
     },
     {
       "id": "l-b2a",
       "kind": "wick",
-      "x": 2400,
+      "x": 2060,
       "y": 1060
     },
     {
       "id": "l-b2b",
       "kind": "wick",
-      "x": 2700,
+      "x": 2340,
       "y": 1080
     },
     {
       "id": "l-b2c",
       "kind": "wick",
-      "x": 3000,
+      "x": 2640,
       "y": 1060
     },
     {
       "id": "l-b2d",
       "kind": "wick",
-      "x": 2180,
-      "y": 620
+      "x": 2200,
+      "y": 760
     },
     {
       "id": "l-b2e",
       "kind": "wick",
-      "x": 2420,
-      "y": 600
-    },
-    {
-      "id": "l-b2f",
-      "kind": "wick",
-      "x": 2660,
-      "y": 620
+      "x": 2500,
+      "y": 740
     },
     {
       "id": "m-c1",
       "kind": "moonwick",
-      "x": 4130,
+      "x": 3730,
       "y": 1240
     },
     {
       "id": "m-c2",
       "kind": "moonwick",
-      "x": 5030,
+      "x": 4560,
       "y": 1240
     },
     {
@@ -1000,20 +1068,8 @@
     {
       "id": "l-c2a",
       "kind": "wick",
-      "x": 4040,
-      "y": 1060
-    },
-    {
-      "id": "l-c2b",
-      "kind": "wick",
-      "x": 4120,
-      "y": 800
-    },
-    {
-      "id": "l-c2c",
-      "kind": "wick",
-      "x": 4100,
-      "y": 520
+      "x": 4140,
+      "y": 680
     }
   ],
   "exits": [
@@ -1026,8 +1082,8 @@
     {
       "id": "knot",
       "edge": "n",
-      "from": 2624,
-      "to": 2880
+      "from": 1984,
+      "to": 2240
     },
     {
       "id": "chimney",
@@ -1066,6 +1122,10 @@
     "moonholes": [
       {
         "x": 1216,
+        "y": 0
+      },
+      {
+        "x": 2112,
         "y": 0
       },
       {
@@ -1136,13 +1196,13 @@
       },
       {
         "id": "hub",
-        "x": 3330,
+        "x": 2500,
         "y": 1300
       },
       {
-        "id": "s2-shelf",
-        "x": 3600,
-        "y": 700
+        "id": "seal-foot",
+        "x": 3300,
+        "y": 1300
       },
       {
         "id": "loft",
@@ -1150,19 +1210,24 @@
         "y": 200
       },
       {
+        "id": "tunnel-w",
+        "x": 3740,
+        "y": 1300
+      },
+      {
         "id": "gallery-w",
-        "x": 4150,
+        "x": 4950,
         "y": 1300
       },
       {
         "id": "gallery-e",
-        "x": 5100,
+        "x": 5150,
         "y": 1300
       },
       {
-        "id": "shaft-gate",
-        "x": 4608,
-        "y": 1480
+        "id": "roof",
+        "x": 4380,
+        "y": 1060
       },
       {
         "id": "alcove",
@@ -1212,6 +1277,23 @@
       "kick": false
     }
   ],
+  "wickSets": [
+    {
+      "id": "seal-set",
+      "wicks": ["m-s1", "m-s2"],
+      "sets": "seal-open"
+    },
+    {
+      "id": "shaft-set",
+      "wicks": ["m-c1", "m-c2"],
+      "sets": "shaft-open"
+    },
+    {
+      "id": "vault-set",
+      "wicks": ["m-g1", "m-g2", "m-g3"],
+      "sets": "vault-open"
+    }
+  ],
   "gates": [
     {
       "id": "seal",
@@ -1225,9 +1307,9 @@
     {
       "id": "shaft",
       "x": 4480,
-      "y": 1480,
+      "y": 1300,
       "w": 256,
-      "h": 56,
+      "h": 40,
       "flag": "shaft-open",
       "kick": false
     },
@@ -1250,27 +1332,10 @@
       "kick": false
     }
   ],
-  "wickSets": [
-    {
-      "id": "seal-set",
-      "wicks": ["m-s1", "m-s2"],
-      "sets": "seal-open"
-    },
-    {
-      "id": "shaft-set",
-      "wicks": ["m-c1", "m-c2"],
-      "sets": "shaft-open"
-    },
-    {
-      "id": "vault-set",
-      "wicks": ["m-g1", "m-g2", "m-g3"],
-      "sets": "vault-open"
-    }
-  ],
   "patches": [
     {
       "id": "p-b2",
-      "x": 3330,
+      "x": 3600,
       "y": 1300
     }
   ],
@@ -1281,75 +1346,24 @@
       "y": 110,
       "w": 260,
       "h": 90,
-      "upgrade": "sharpWings"
+      "upgrade": "brightKindle"
     },
     {
-      "id": "vessel",
+      "id": "vault-drop",
       "x": 4885,
       "y": 550,
       "w": 70,
       "h": 90,
-      "upgrade": "glowVessel"
-    }
-  ],
-  "moonmoss": [
-    {
-      "id": "moss-loft1",
-      "x": 3500,
-      "y": 600,
-      "w": 110,
-      "h": 20
-    },
-    {
-      "id": "moss-loft2",
-      "x": 3640,
-      "y": 520,
-      "w": 110,
-      "h": 20
-    },
-    {
-      "id": "moss-loft3",
-      "x": 3500,
-      "y": 400,
-      "w": 110,
-      "h": 20
-    },
-    {
-      "id": "moss-loft4",
-      "x": 3380,
-      "y": 300,
-      "w": 110,
-      "h": 20
-    },
-    {
-      "id": "moss-shaft1",
-      "x": 4300,
-      "y": 1360,
-      "w": 100,
-      "h": 20
-    },
-    {
-      "id": "moss-shaft2",
-      "x": 4820,
-      "y": 1360,
-      "w": 100,
-      "h": 20
+      "upgrade": "moonDrop"
     }
   ],
   "thorns": [
     {
-      "id": "t-shaft-w",
-      "x": 4250,
-      "y": 1440,
-      "w": 166,
-      "h": 40
-    },
-    {
-      "id": "t-shaft-e",
-      "x": 4800,
-      "y": 1440,
-      "w": 150,
-      "h": 40
+      "id": "t-tunnel",
+      "x": 3780,
+      "y": 1340,
+      "w": 700,
+      "h": 20
     },
     {
       "id": "t-grille",
@@ -1431,35 +1445,53 @@
     },
     {
       "from": "hub",
-      "to": "p-b2"
+      "to": "seal-foot"
     },
     {
       "from": "hub",
-      "to": "hub",
+      "to": "tunnel-w"
+    },
+    {
+      "from": "tunnel-w",
+      "to": "p-b2"
+    },
+    {
+      "from": "seal-foot",
+      "to": "seal-foot",
       "needs": ["kindle"],
       "light": ["m-s1", "m-s2"],
       "oneWay": true,
       "sets": ["seal-open"]
     },
     {
-      "from": "hub",
+      "from": "seal-foot",
       "to": "seal",
       "flags": ["seal-open"],
       "oneWay": true
     },
     {
-      "from": "hub",
+      "from": "seal-foot",
       "to": "h2",
       "needs": ["kindle"],
-      "light": ["m-s1", "m-s2"]
+      "flags": ["seal-open"]
     },
     {
-      "from": "hub",
-      "to": "gallery-w"
+      "from": "tunnel-w",
+      "to": "gallery-w",
+      "needs": ["kindle"],
+      "light": ["m-c1"],
+      "oneWay": true
     },
     {
       "from": "gallery-w",
-      "to": "gallery-w",
+      "to": "tunnel-w",
+      "needs": ["kindle"],
+      "light": ["m-c2"],
+      "oneWay": true
+    },
+    {
+      "from": "tunnel-w",
+      "to": "tunnel-w",
       "needs": ["kindle"],
       "light": ["m-c1", "m-c2"],
       "oneWay": true,
@@ -1476,6 +1508,10 @@
       "to": "gallery-e"
     },
     {
+      "from": "gallery-w",
+      "to": "roof"
+    },
+    {
       "from": "gallery-e",
       "to": "gallery-e",
       "needs": ["gust"],
@@ -1490,19 +1526,18 @@
     },
     {
       "from": "gallery-w",
-      "to": "vessel",
+      "to": "vault-drop",
       "needs": ["kindle", "gust"],
       "light": ["m-g1", "m-g2", "m-g3"]
     },
     {
-      "from": "gallery-w",
+      "from": "roof",
       "to": "alcove",
-      "lamps": ["l-c2a", "l-c2b", "l-c2c"],
       "oneWay": true
     },
     {
       "from": "alcove",
-      "to": "gallery-w",
+      "to": "roof",
       "oneWay": true
     },
     {
@@ -1546,7 +1581,7 @@
       {
         "name": "c2",
         "x": 4800,
-        "y": 1000
+        "y": 1080
       }
     ]
   }

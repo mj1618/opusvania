@@ -58,7 +58,7 @@ const of = <K extends SimEvent['type']>(ev: SimEvent[], type: K) =>
   ev.filter((e) => e.type === type) as Extract<SimEvent, { type: K }>[];
 
 describe('glow', () => {
-  it('a hit pays a pip, a kill a pip more; a glint a spark (saved as taken); all of it is capped at the max', () => {
+  it('a hit pays its glow, a kill a little more; a glint a spark (saved as taken); all of it is capped at the max', () => {
     const s = sim(
       scene({
         enemies: [{ id: 'j', kind: 'juvenileBurrback', x: 1090, y: FLOOR, facing: -1, hp: 2 }],
@@ -72,10 +72,13 @@ describe('glow', () => {
     const gains = of(ev, 'glowGain');
     expect(gains.filter((g) => g.from === 'hit').reduce((n, g) => n + g.n, 0)).toBe(2 * T.glow.hit);
     expect(gains.filter((g) => g.from === 'kill').reduce((n, g) => n + g.n, 0)).toBe(T.glow.kill);
-    expect(s.state.player.glow).toBe(3 * T.glow.pip);
+    // (Review r1: a juvenile, two cuts and its kill, is most of one kindle, not three.)
+    const fight = 2 * T.glow.hit + T.glow.kill;
+    expect(s.state.player.glow).toBe(fight);
+    expect(fight).toBeLessThan(T.glow.kindleCost);
     s.run(L, 40);
     s.run(0, 30);
-    expect(s.state.player.glow).toBe(3 * T.glow.pip + 1);
+    expect(s.state.player.glow).toBe(fight + 1);
     expect(s.state.save.taken).toContain('lr-test:g1');
     s.state.player.glow = T.glow.max - 1;
     const local = createLocal(s.scene, s.t, s.state.save, false);
@@ -362,7 +365,44 @@ describe('heartwood and bells', () => {
   });
 });
 
+describe('the signs teach the cap’s tempo', () => {
+  it('a short and a long as the signs flash them (onset to onset) fall inside the cap’s windows, over the blade’s floor', () => {
+    const S = T.bells.sign;
+    const short = S.beat + S.short;
+    const long = S.beat + S.long;
+    // (The blade strikes at most every 18 f: a cut, its recovery.)
+    expect(short).toBeGreaterThanOrEqual(18);
+    expect(short).toBeLessThanOrEqual(T.bells.shortMax);
+    expect(long).toBeGreaterThanOrEqual(T.bells.longMin);
+    expect(long).toBeLessThanOrEqual(T.bells.longMax);
+    // And struck at exactly the sign's tempo, the cap answers.
+    const s = sim(scene({ bells: [{ id: 'cap', x: 1050, y: FLOOR - 40, rhythm: '-..-', sets: 'answer' }] }));
+    s.state.player.facing = 1;
+    const all = s.run(A, 1);
+    for (const g of [long, short, short, long]) {
+      all.push(...s.run(0, g - 1));
+      all.push(...s.run(A, 1));
+    }
+    all.push(...s.run(0, 20));
+    expect(of(all, 'bellAnswer')).toHaveLength(1);
+  });
+});
+
 describe('glow pods and respawns', () => {
+  it('a creature that wakes with an ability is away until she owns it, then comes in at its spawn', () => {
+    const sc = scene({
+      abilities: ['glide'],
+      enemies: [{ id: 'j', kind: 'juvenileBurrback', x: 1400, y: FLOOR, facing: -1, wakes: 'kindle' }],
+    } as Partial<Scene>);
+    const s = sim(sc);
+    s.run(0, 30);
+    expect(s.state.enemies[0]?.gone).toBe(true);
+    (s.state.save.abilities as string[]).push('kindle');
+    const ev = s.run(0, 2);
+    expect(of(ev, 'enemyRespawn').map((e) => e.id)).toEqual(['j']);
+    expect(s.state.enemies[0]?.gone).toBeFalsy();
+  });
+
   it('a burst glow pod grows back after its regrow time', () => {
     const sc = scene({ pods: [{ id: 'p', x: 1060, y: FLOOR - 22, mount: 'sit', regrow: 300 }] });
     const s = sim(sc);

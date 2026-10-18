@@ -6,16 +6,17 @@ play it** (Lanternroot's four): the wood, the grove and the labs are untouched (
 
 ## The meter
 `player.glow` (integer sparks, kept through rooms, not saved: a Continue starts empty). Max `glow.max` 18 (6 pips of
-3); the gallery vault's **vessel** (`glowVessel`) makes it 24. `__game.glow(n)` sets it (debug-api.md).
+3); the cache's **vessel** (`glowVessel`, the Answer's reward) makes it 24. `__game.glow(n)` sets it (debug-api.md).
 
 | gain (`glowGain {n, from}`) | sparks | read from the step's own events (`payGlow`, last in the step) |
 |---|---|---|
-| a blade hit on a creature (`slashHit`, any creature kind, the bosses too) | `hit` 3 | not pods, flames, kit pieces, webs |
-| a kill (`slashHit.kill`) | `kill` 3 more | |
-| a warm lamp out (`lureSnuff`: a cut, a fling's embers committing, a gust) | `snuff` 6 | not moonwicks or great lamps |
+| a blade hit on a creature (`slashHit`, any creature kind, the bosses too) | `hit` 2 | not pods, flames, kit pieces, webs |
+| a kill (`slashHit.kill`) | `kill` 1 more | |
+| a warm lamp out (`lureSnuff`: a cut, a fling's embers committing, a gust) | `snuff` 3 | not moonwicks or great lamps |
 | a glint (`pickup`: a scene glint, a pod's, a dropped cluster's) | `glint` 1 per value | a great glint is 5 |
 
-Spends (`glowSpend {n, for}`): **Mend** `mendCost` 6 for 1 light; **Kindle** `kindleCost` 6 (Bright Kindle: 3).
+Spends (`glowSpend {n, for}`): **Mend** `mendCost` 6 for 1 light; **Kindle** `kindleCost` 6 (Bright Kindle, the hall's
+loft H2 behind the seal, before the boss: 3).
 In a glow room a lamp out heals nothing (`healOnSnuff` is off there): healing is Mend's.
 
 ## Mend (HK's focus)
@@ -30,12 +31,17 @@ glow rooms.
 
 ## Glints are saved
 A scene glint taken in a glow room goes into `save.taken` (`room:id`) and is gone for good (`initTaken` on entry):
-completion. Pod and creature glints are not saved (pods regrow: `pods[].regrow`, 1200 frames by default in the
-generator, the arena's 600).
+completion. Pod and creature glints are not saved (pods regrow: `pods[].regrow`, 3600 frames (a minute) in the
+generator, the arena's 1200).
 
-## Why these numbers (the brief's)
-Three kindles or three mends at most from a full meter: no stockpiling past a fight. A juvenile pays 9 (two cuts and
-the kill) = one and a half kindles; a lamp out pays a kindle. The vault's three wicks are exactly a full meter (18).
+## Why these numbers (review r1, 2026-10-18)
+The first numbers (hit 3, kill 3, snuff 6, pods every 20 s beside the wicks) filled the meter 30 s from the spawn and
+two pit juveniles took it from 0 to 18 in a second: Mend against Kindle was never a choice. Now **one fight buys one
+kindle**: a juvenile pays 5 (two cuts 2 + 2, the kill 1), a spiderling 3, a pod 3, a warm lamp out 3, a glint 1 (the
+trickle). Three kindles or three mends at most from a full meter. Pods regrow in a minute and stand off the wicks.
+The pit is the lesson: it is empty until she takes Kindle (`enemies[].wakes`), then two juveniles come up between
+her and First Light's bud: the fight that buys the first kindle. The solver's fuel check still holds (pods regrow,
+creatures come back on entry, the arena's spiderlings respawn).
 
 ## Gotchas
 - One button, four verbs (`lampVerb`, after `fling`): a burning flame in reach is a fling; a cold moonwick in reach

@@ -104,7 +104,12 @@ describe('Lanternroot: the progression', () => {
     const p = progress({ without: ['lr-roots:gust'] });
     expect(p.abilities).toEqual(['kindle']);
     for (const f of ['curtain-open', 'answer', 'vault-open']) expect(p.flags.has(f), f).toBe(false);
-    for (const node of ['lr-night:crest', 'lr-cache:cache-floor', 'lr-hall:find:vessel'])
+    for (const node of [
+      'lr-night:crest',
+      'lr-cache:cache-floor',
+      'lr-hall:find:vault-drop',
+      'lr-roots:find:h4',
+    ])
       expect(p.places.has(node), node).toBe(false);
   });
 

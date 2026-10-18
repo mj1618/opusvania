@@ -71,6 +71,7 @@ function freshBoss(spec: BossSpec): BossState {
     uy: -1,
     exposed: 0,
     throws: 0,
+    lunge: 0,
   };
 }
 

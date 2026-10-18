@@ -7,15 +7,16 @@
 import { Game } from '../../src/game';
 import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
 import { cameraFor } from '../../src/render/camera/tuning';
-import { getRoom } from '../../src/scene/index';
+import { getRoom, worldIdOf } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
-import { GAME_WORLD } from '../../src/scene/world';
+import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { cloneState } from '../../src/sim/index';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { Feel, surprising } from './feel';
 import { Motor, SKILLS, type Skill } from './human';
+import { LightHands } from './light-hands';
 import { observe, type ViewRect, viewRect } from './observe';
 import { makePersona, type Persona } from './personas';
 import { Recorder, type RunTrace } from './recorder';
@@ -69,9 +70,10 @@ export interface HeadlessResult {
 export function runHeadless(opts: RunOpts): HeadlessResult {
   const room = typeof opts.room === 'string' ? getRoom(opts.room) : opts.room;
   const tuning = cloneTuning(defaultTuning);
-  // The game's world (memory/world.md): an exit leads into the next room. A room built by a test (not
-  // the registry's) plays alone: its exits restart it.
-  const world = typeof opts.room === 'string' ? GAME_WORLD : null;
+  // The room's world (memory/world.md): an exit leads into the next room (a prototype level's rooms play in their
+  // own world, as the page's `?room=` picks it). A room built by a test (not the registry's) plays alone: its
+  // exits restart it.
+  const world = typeof opts.room === 'string' ? getWorld(worldIdOf(room.id)) : null;
   const game = new Game(tuning, room, opts.seed ?? 1, () => 0, opts.abilities ?? null, { world });
   game.mode = 'manual';
   if (opts.at) game.teleport(opts.at.x, opts.at.y);
@@ -109,6 +111,8 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
   const been = new Set<string>();
   const row = opts.human ? SKILLS[opts.human] : null;
   const motor = row ? new Motor(row, opts.personaSeed ?? 1) : null;
+  // (A human-like run in a glow room kindles and mends by habit: light-hands.ts.)
+  const hands = row ? new LightHands() : null;
   // What a person sees is a few frames old: a ring of past states (and their views and rooms).
   const ring: Array<{ s: GameState; view: ViewRect; scene: Room }> = [];
   const feel = new Feel();
@@ -128,7 +132,8 @@ export function runHeadless(opts: RunOpts): HeadlessResult {
       tuning,
       ...(world ? { world } : {}),
     });
-    const mask = motor ? motor.step(i, intent) : intent;
+    const lit = hands ? hands.step(seen.s, seen.scene, tuning, intent) : intent;
+    const mask = motor ? motor.step(i, lit) : lit;
     tape.push(mask);
     game.queueInput([mask]);
     game.stepOnce();

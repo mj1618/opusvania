@@ -69,10 +69,66 @@
     },
     {
       "tag": "root",
-      "x": 1680,
-      "y": 820,
-      "w": 160,
+      "x": 1640,
+      "y": 790,
+      "w": 180,
       "h": 40,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1420,
+      "y": 180,
+      "w": 100,
+      "h": 24,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 860,
+      "y": 240,
+      "w": 40,
+      "h": 1010,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1140,
+      "y": 240,
+      "w": 40,
+      "h": 230,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1140,
+      "y": 550,
+      "w": 40,
+      "h": 700,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1180,
+      "y": 440,
+      "w": 140,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1180,
+      "y": 550,
+      "w": 140,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1300,
+      "y": 470,
+      "w": 20,
+      "h": 80,
       "kick": false
     },
     {
@@ -191,6 +247,66 @@
   "oneWays": [],
   "pickups": [
     {
+      "id": "g-stair-1",
+      "kind": "glint",
+      "x": 1440,
+      "y": 1080
+    },
+    {
+      "id": "g-stair-2",
+      "kind": "glint",
+      "x": 1620,
+      "y": 970
+    },
+    {
+      "id": "g-stair-3",
+      "kind": "glint",
+      "x": 1440,
+      "y": 860
+    },
+    {
+      "id": "g-stair-4",
+      "kind": "glint",
+      "x": 1600,
+      "y": 620
+    },
+    {
+      "id": "g-stair-5",
+      "kind": "glint",
+      "x": 1760,
+      "y": 490
+    },
+    {
+      "id": "g-column-1",
+      "kind": "glint",
+      "x": 4520,
+      "y": 1100
+    },
+    {
+      "id": "g-column-2",
+      "kind": "glint",
+      "x": 4700,
+      "y": 900
+    },
+    {
+      "id": "g-column-3",
+      "kind": "glint",
+      "x": 4520,
+      "y": 700
+    },
+    {
+      "id": "g-column-4",
+      "kind": "glint",
+      "x": 4700,
+      "y": 500
+    },
+    {
+      "id": "g-column-5",
+      "kind": "glint",
+      "x": 4520,
+      "y": 330
+    },
+    {
       "id": "g-c3-1",
       "kind": "glint",
       "x": 3900,
@@ -241,71 +357,75 @@
   ],
   "pods": [
     {
-      "id": "pod-a3a",
-      "x": 560,
-      "y": 1328,
-      "mount": "sit",
-      "regrow": 1200
-    },
-    {
       "id": "pod-a3b",
       "x": 1000,
       "y": 1328,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-a3c",
       "x": 1240,
       "y": 1328,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
+    },
+    {
+      "id": "pod-a3d",
+      "x": 1780,
+      "y": 852,
+      "mount": "hang",
+      "regrow": 3600
     },
     {
       "id": "pod-b3a",
       "x": 2500,
       "y": 1278,
       "mount": "sit",
-      "regrow": 600
+      "regrow": 1200
     },
     {
       "id": "pod-b3b",
       "x": 3260,
       "y": 1278,
       "mount": "sit",
-      "regrow": 600
+      "regrow": 1200
     },
     {
       "id": "pod-c3a",
       "x": 4100,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     },
     {
       "id": "pod-c3b",
       "x": 5260,
       "y": 1278,
       "mount": "sit",
-      "regrow": 1200
+      "regrow": 3600
     }
   ],
   "enemies": [
     {
       "id": "j-a3a",
       "kind": "juvenileBurrback",
-      "x": 860,
+      "x": 1040,
       "y": 1350,
-      "facing": 1,
-      "senses": "always"
+      "facing": -1,
+      "senses": "always",
+      "radius": 120,
+      "wakes": "kindle"
     },
     {
       "id": "j-a3b",
       "kind": "juvenileBurrback",
       "x": 1300,
       "y": 1350,
-      "facing": -1,
-      "senses": "always"
+      "facing": 1,
+      "senses": "always",
+      "radius": 110,
+      "wakes": "kindle"
     },
     {
       "id": "orb",
@@ -382,6 +502,24 @@
       "drop": 1000
     },
     {
+      "id": "j-c3a",
+      "kind": "juvenileBurrback",
+      "x": 3960,
+      "y": 1300,
+      "facing": 1,
+      "senses": "always",
+      "radius": 90
+    },
+    {
+      "id": "j-c3b",
+      "kind": "juvenileBurrback",
+      "x": 4180,
+      "y": 1300,
+      "facing": -1,
+      "senses": "always",
+      "radius": 80
+    },
+    {
       "id": "b-c3",
       "kind": "burrback",
       "x": 5320,
@@ -397,14 +535,28 @@
       "id": "m-a3",
       "kind": "moonwick",
       "x": 1500,
-      "y": 1290
+      "y": 1290,
+      "burn": 240
     },
     {
       "id": "m-a3b",
       "kind": "moonwick",
-      "x": 1760,
-      "y": 770,
+      "x": 1730,
+      "y": 740,
       "keep": true
+    },
+    {
+      "id": "m-a3c",
+      "kind": "moonwick",
+      "x": 1230,
+      "y": 840
+    },
+    {
+      "id": "l-flue",
+      "kind": "wick",
+      "x": 1020,
+      "y": 290,
+      "sets": "flue-open"
     },
     {
       "id": "m-w1",
@@ -499,6 +651,14 @@
     ],
     "covers": [
       {
+        "id": "cover-flue",
+        "x": 1180,
+        "y": 440,
+        "w": 140,
+        "h": 140,
+        "opens": "lr-roots:flue-open"
+      },
+      {
         "id": "cover-heart",
         "x": 5560,
         "y": 1150,
@@ -551,8 +711,18 @@
       },
       {
         "id": "m-a3b-ledge",
-        "x": 1760,
-        "y": 820
+        "x": 1730,
+        "y": 790
+      },
+      {
+        "id": "flue-top",
+        "x": 1060,
+        "y": 550
+      },
+      {
+        "id": "flue-niche",
+        "x": 1240,
+        "y": 550
       },
       {
         "id": "arena",
@@ -599,7 +769,7 @@
   "patches": [
     {
       "id": "p-a3",
-      "x": 440,
+      "x": 400,
       "y": 1350
     }
   ],
@@ -621,44 +791,93 @@
     {
       "id": "moss-stair1",
       "x": 1560,
-      "y": 1200,
+      "y": 1230,
       "w": 120,
       "h": 20
     },
     {
       "id": "moss-stair2",
-      "x": 1400,
-      "y": 1060,
+      "x": 1380,
+      "y": 1120,
       "w": 120,
       "h": 20
     },
     {
       "id": "moss-stair3",
-      "x": 1580,
-      "y": 920,
+      "x": 1560,
+      "y": 1010,
       "w": 120,
       "h": 20
     },
     {
       "id": "moss-stair4",
-      "x": 1540,
-      "y": 680,
+      "x": 1380,
+      "y": 900,
       "w": 120,
       "h": 20
     },
     {
       "id": "moss-stair5",
-      "x": 1700,
-      "y": 540,
+      "x": 1540,
+      "y": 660,
       "w": 120,
       "h": 20
     },
     {
       "id": "moss-stair6",
+      "x": 1700,
+      "y": 530,
+      "w": 120,
+      "h": 20
+    },
+    {
+      "id": "moss-stair7",
       "x": 1520,
       "y": 400,
       "w": 120,
       "h": 20
+    },
+    {
+      "id": "moss-flue1",
+      "x": 900,
+      "y": 1100,
+      "w": 160,
+      "h": 20
+    },
+    {
+      "id": "moss-flue2",
+      "x": 980,
+      "y": 990,
+      "w": 160,
+      "h": 20
+    },
+    {
+      "id": "moss-flue3",
+      "x": 900,
+      "y": 880,
+      "w": 160,
+      "h": 20
+    },
+    {
+      "id": "moss-flue4",
+      "x": 980,
+      "y": 770,
+      "w": 160,
+      "h": 20
+    },
+    {
+      "id": "moss-flue5",
+      "x": 900,
+      "y": 660,
+      "w": 160,
+      "h": 20
+    },
+    {
+      "id": "moss-flue-top",
+      "x": 980,
+      "y": 550,
+      "w": 160,
+      "h": 30
     },
     {
       "id": "moss-w1",
@@ -689,7 +908,25 @@
       "h": 20
     }
   ],
+  "thorns": [
+    {
+      "id": "t-flue-cage",
+      "x": 900,
+      "y": 240,
+      "w": 240,
+      "h": 200
+    }
+  ],
   "gates": [
+    {
+      "id": "flue-silk",
+      "x": 1140,
+      "y": 470,
+      "w": 40,
+      "h": 80,
+      "flag": "flue-open",
+      "kick": false
+    },
     {
       "id": "east-door",
       "x": 3776,
@@ -698,6 +935,24 @@
       "h": 240,
       "flag": "gloam-down",
       "kick": false
+    }
+  ],
+  "hollows": [
+    {
+      "id": "h4",
+      "x": 1190,
+      "y": 475,
+      "w": 100,
+      "h": 70,
+      "upgrade": "moonDrop"
+    },
+    {
+      "id": "h3",
+      "x": 5600,
+      "y": 1200,
+      "w": 140,
+      "h": 100,
+      "upgrade": "moonDrop"
     }
   ],
   "boss": {
@@ -755,16 +1010,6 @@
       "h": 110,
       "heartwood": true,
       "kick": false
-    }
-  ],
-  "hollows": [
-    {
-      "id": "h3",
-      "x": 5600,
-      "y": 1200,
-      "w": 140,
-      "h": 100,
-      "upgrade": "moonDrop"
     }
   ],
   "camera": {
@@ -826,6 +1071,12 @@
       "needs": ["kindle"],
       "light": ["m-a3", "m-a3b"],
       "oneWay": true
+    },
+    {
+      "from": "pit",
+      "to": "h4",
+      "needs": ["kindle", "gust"],
+      "light": ["m-a3c"]
     },
     {
       "from": "arena",

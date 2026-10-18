@@ -539,9 +539,10 @@ export const defaultTuning = withVariants({
   glow: {
     max: 18,
     pip: 3,
-    hit: 3,
-    kill: 3,
-    snuff: 6,
+    // (Review r1: one fight buys one kindle, not three. A juvenile's 2 cuts and its kill are 5; glints trickle.)
+    hit: 2,
+    kill: 1,
+    snuff: 3,
     glint: 1,
     mendCost: 6,
     mendFrames: 36,
@@ -577,9 +578,18 @@ export const defaultTuning = withVariants({
   /**
    * The cap's answer (Lanternroot §5 layer 3, `scene.bells`): a gap of at most `shortMax` frames between two
    * strikes is short, `longMin`..`longMax` long; any other gap starts the count over. It counts only in the
-   * dark: no warm lamp burning within `darkPx` (else it chimes dull).
+   * dark: no warm lamp burning within `darkPx` (else it chimes dull). The blade strikes at most every 18 f, so a
+   * short is 18..`shortMax`. `sign`: the phrase as the signs flash it, onset to onset in frames (render's
+   * `phraseLit` reads it): its short and long both fall inside the cap's windows (tests/unit/light.test.ts).
    */
-  bells: { shortMax: 24, longMin: 36, longMax: 90, darkPx: 1200, size: 72 },
+  bells: {
+    shortMax: 34,
+    longMin: 42,
+    longMax: 90,
+    darkPx: 1200,
+    size: 72,
+    sign: { beat: 11, short: 17, long: 42, rest: 132 },
+  },
   /**
    * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
    * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at
@@ -1302,11 +1312,14 @@ export const defaultTuning = withVariants({
   /**
    * The Gloamweaver (Lanternroot's mini-boss, src/sim/boss/gloam.ts, memory/bosses.md): an orb-weaver round the
    * Gloam lamp, built on the Weaver's framework.
-   * - P1 "find it": it hunts on its orb (`orbShare` of the web's radius from the hub, `huntSpeed` px/f round it)
-   *   toward the sector over her, never into silver light; shielded (the blade glances). A kindle of an arena
-   *   wick within `exposePx` of it (or with it cornered) drops it exposed: it falls (`fallGravity`, `fallMax`),
-   *   lies open `openFrames` (at most `exposeCuts` cuts a window), then climbs back (`climbSpeed`). `p1Hp` cuts
-   *   (`retryP1Hp` on a retry: one exposure).
+   * - P1 "the hunt": it hunts on its orb (`orbShare` of the web's radius from the hub, `huntSpeed` px/f round it)
+   *   toward the sector over her, never into silver light; shielded (the blade glances). Every `lungeEvery` frames
+   *   (the first `lungeFirst` after the lock) it lunges at her off the orb: a tell of `lungeTell` frames aimed at
+   *   where she stood, then a straight run at `lungeSpeed` px/f to the floor (its touch hurts), `lungeRest` frames
+   *   there and a climb back. A lunge that runs into silver light is dazzled: it falls exposed. A kindle of an
+   *   arena wick within `exposePx` of it (or with it cornered) drops it exposed too: it falls (`fallGravity`,
+   *   `fallMax`), lies open `openFrames` (at most `exposeCuts` cuts a window), then climbs back (`climbSpeed`).
+   *   `p1Hp` cuts (`retryP1Hp` on a retry: one exposure).
    * - P2 "the drops": the Weaver's drops over `drops` (tell, drop, swing, winded), the swing stopping at the edge
    *   of silver light (a burning wick near her is a safe pocket). `p2Hp` cuts.
    * - P3 "the Gloam lamp": it wraps the lamp at the hub. The high pair burning together floods the moon-hole and
@@ -1323,6 +1336,11 @@ export const defaultTuning = withVariants({
     p1Hp: 8,
     retryP1Hp: 4,
     exposeCuts: 4,
+    lungeFirst: 150,
+    lungeEvery: 270,
+    lungeTell: 40,
+    lungeSpeed: 14,
+    lungeRest: 40,
     orbShare: 1,
     huntSpeed: 3,
     exposePx: 420,

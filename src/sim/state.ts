@@ -955,11 +955,15 @@ export interface BossState {
   landX: number;
   /** The heart's offset now (it lowers at the end). */
   heartDy: number;
-  /** The Gloamweaver (Lanternroot): its place on the orb (a unit vector from the hub), exposures, throw-cuts taken in P3. */
+  /**
+   * The Gloamweaver (Lanternroot): its place on the orb (a unit vector from the hub), exposures, throw-cuts taken in
+   * P3, frames to its next P1 lunge.
+   */
   ux: number;
   uy: number;
   exposed: number;
   throws: number;
+  lunge: number;
 }
 
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */
