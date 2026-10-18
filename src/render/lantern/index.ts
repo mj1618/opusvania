@@ -23,6 +23,7 @@ import { Fx } from './fx';
 import { GlowPool } from './glow';
 import { Kit } from './kit';
 import { Lamps } from './lamps';
+import { Vista } from './vista';
 import { RootWater } from './water';
 
 export class LanternPieces implements EnvModule {
@@ -32,6 +33,7 @@ export class LanternPieces implements EnvModule {
   private fx!: Fx;
   private water: RootWater | null = null;
   private depth: InteriorDepth | null = null;
+  private vista: Vista | null = null;
   private readonly back = new Graphics();
   private readonly front = new Graphics();
   private readonly glowBack = new GlowPool('lr-glow-back');
@@ -42,6 +44,11 @@ export class LanternPieces implements EnvModule {
   init(ctx: SceneContext): void {
     this.lamps = new Lamps(ctx.scene, ctx.lights);
     this.fx = new Fx(ctx.lights);
+    const marks = ctx.scene.marks as
+      | { landmarks?: Array<{ kind: string; x: number; y: number }> }
+      | undefined;
+    const v = marks?.landmarks?.find((l) => l.kind === 'vista');
+    if (v && LOOK.band === 'night') this.vista = new Vista(ctx.layers, v);
     if (isInterior() && LOOK.band)
       this.depth = new InteriorDepth(ctx.renderer, ctx.layers, LOOK.band, ctx.scene.width, LOOK.seed);
     if (LOOK.band === 'roots') {
@@ -83,6 +90,7 @@ export class LanternPieces implements EnvModule {
     this.creatures.draw(dt, clock, sim, camera, this.back, this.front, this.glowMid);
     this.fx.draw(dt, clock, sim, this.front, this.glowFront);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
+    this.vista?.update(camera, clock);
     if (this.depth && LOOK.band) {
       this.depth.update(camera, sim.player);
       drawMotes(clock, sim, camera, LOOK.band, this.glowFront);
@@ -96,5 +104,6 @@ export class LanternPieces implements EnvModule {
     this.lamps?.destroy();
     this.fx?.destroy();
     this.depth?.destroy();
+    this.vista?.destroy();
   }
 }

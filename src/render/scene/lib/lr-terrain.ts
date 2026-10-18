@@ -292,10 +292,14 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   const bl = open(x0 - 2, y1 - 2) && open(x0 + 2, y1 + 2) && open(x0 - 2, y1 + 2) ? rB : 0;
   // Faces: a little lip overhang under the top, then slow bulges and tooth, mostly receding (she must never
   // seem to stand inside the paint: -rf .. +4 px).
+  // A face that takes no wall kick (she only ever falls past it) may wander much further in: bulges, hollows,
+  // a sheer face of roots or bark that is not a ruler. A climbable face stays close (she slides on it).
+  const sheer = s.kick === false;
+  const amp = sheer ? 2.6 : 1;
   const face = (y: number, sd: number): number => {
     const lip = Math.exp(-(((y - y0) / 26) ** 2));
-    const wob = 0.7 * wobble(y, sd, 170) + 0.3 * wobble(y, sd + 3, 30);
-    return lip * 5 + (1 - lip) * (wob * rf * 0.6 - rf * 0.4);
+    const wob = 0.6 * wobble(y, sd, 210) + 0.28 * wobble(y, sd + 3, 60) + 0.12 * wobble(y, sd + 9, 18);
+    return lip * 5 + (1 - lip) * (wob * rf * 0.6 * amp - rf * 0.4 * amp);
   };
   // Top edge, west to east.
   for (let x = x0; x < x1; x += step) {
@@ -312,7 +316,10 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   // Underside, east to west: lumps and sags.
   for (let x = x1; x > x0; x -= step) {
     const o = open(x - 1, y1 + 2);
-    const d = o ? ru * (0.3 + 0.7 * Math.abs(wobble(x, seed + 23, 70))) : cover;
+    const d = o
+      ? ru * (0.3 + 0.7 * Math.abs(wobble(x, seed + 23, 70))) +
+        ru * 0.8 * Math.max(0, wobble(x, seed + 29, 160))
+      : cover;
     out.push(x, y1 + d - inset(br, x1 - x) - inset(bl, x - x0));
   }
   // West face, bottom to top.
