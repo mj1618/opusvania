@@ -826,9 +826,7 @@ describe("the director's three predators (wood-area1-director.md)", () => {
   });
 });
 
-// (Round 7: "the hawker hunts the caught" is off (`huntCaught` false): the lamp's hold becomes a fling's slowed
-// aim, and nothing hunts her in it. Its tests went with it.)
-describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not race it', () => {
+describe('the hawker on a rhythm (area1-plan-r3 §4.3)', () => {
   const H = T.hawker;
   // The throw wick and its hawker, perched to the east.
   const scene = () =>
@@ -860,83 +858,6 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
     expect((ev.find((x) => x.e.type === 'enemyDive')?.f ?? 0) - notice).toBe(H.passTellFrames);
   });
 
-  it('caught as it passes, she is struck straight down, out of the pull, with 2 s before that lamp can take her again (round 5)', () => {
-    const s = newSim(scene());
-    s.place(1400, FLOOR);
-    // Wait for a pass to begin, then into the core in the middle of it.
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 400 && !types(ev).includes('enemyDive'); i++) ev = s.run('.1');
-    s.run('.8');
-    s.place(2000, 540);
-    const hurt: SimEvent[] = [];
-    for (let i = 0; i < 40 && !types(hurt).includes('hurt'); i++) hurt.push(...s.run('.1'));
-    expect(of(hurt, 'hurt')[0]?.source).toEqual({ kind: 'hawker', id: 'h' });
-    expect(types(hurt)).toContain('lureFree');
-    const p = s.state.player;
-    expect(p.vx).toBe(0);
-    expect(p.vy).toBeGreaterThan(0);
-    expect(p.lure).toBe(-1);
-    expect(p.lureGraceFrames).toBeGreaterThanOrEqual(H.passGraceFrames - 2);
-    // Never twice in one pass.
-    const rest = s.run(`.${H.passFrames}`);
-    expect(of(rest, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
-  });
-
-  it('caught just after a pass, a slow player (beats 6-10 frames apart, 20-30 frames to start) is free long before the next', () => {
-    for (const react of [20, 25, 30])
-      for (const gap of [6, 8, 10]) {
-        const s = newSim(scene());
-        s.place(1400, FLOOR);
-        let ev: SimEvent[] = [];
-        for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
-        for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
-        s.place(2000, 540);
-        const after = s.run(`.${react} R+J1 R${gap} R+J1 R${gap} R+J1 R40 .200`);
-        expect(types(after)).toContain('lureFree');
-        expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
-      }
-  });
-
-  it('round 5: it never starts a pass while she is caught in its orbit: its tell holds until she is free', () => {
-    const s = newSim(scene());
-    s.place(1400, FLOOR);
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
-    for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
-    s.run(`.${H.passRestFrames + 2}`);
-    // Caught and held there (no beats) through where its next pass would have come.
-    s.place(2000, 540);
-    const held = s.run(`.${H.passPeriod + 40}`);
-    expect(s.state.player.lure).toBeGreaterThanOrEqual(0);
-    expect(types(held)).not.toContain('enemyDive');
-    expect(of(held, 'hurt')).toEqual([]);
-    // Free, the pass comes.
-    const free = s.run('J1 .6 J1 .6 J1 .60');
-    expect(types(free)).toContain('lureFree');
-    expect(types(free)).toContain('enemyDive');
-  });
-
-  it('round 4: a rim (spawn) sends her toward it, up and over, whatever struck her', () => {
-    const s = newSim(
-      room(
-        [{ id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, orbit: 'w', guards: 'w', rim: 2600 }],
-        [wick('w', 2000, 500)],
-      ),
-    );
-    s.place(1400, FLOOR);
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 400 && !types(ev).includes('enemyDive'); i++) ev = s.run('.1');
-    s.run('.8');
-    s.place(2000, 540);
-    const x0 = s.state.player.x;
-    let hit = false;
-    for (let i = 0; i < 60 && !hit; i++) hit = types(s.run('.1')).includes('hurt');
-    expect(hit).toBe(true);
-    expect(s.state.player.vy).toBeLessThan(0);
-    s.run('.20');
-    expect(s.state.player.x).toBeGreaterThan(x0 + 100);
-  });
-
   it("round 4: a finale (a `finale` trigger's held release) sends it away; so does its `until` flag", () => {
     const s = newSim(
       room(
@@ -963,32 +884,6 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
     expect(types(u.run('.5'))).not.toContain('enemyDisperse');
     u.state.save.flags.push('crown');
     expect(of(u.run('.2'), 'enemyDisperse')[0]?.id).toBe('h');
-  });
-});
-
-describe('round 4: nothing arrives from off-screen while she is helpless', () => {
-  it('a dangler off her screen when a lamp caught her does not drop on her until she is free', () => {
-    // A dangler over a wick far from where she stands (off her screen); she is caught by that wick (thrown
-    // there, say): it waits until she is free.
-    const s = newSim(
-      room([{ id: 'd', kind: 'dangler', x: 2000, y: 300, facing: 1 }], [wick('w', 2000, 600)], {
-        solids: [
-          { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
-          { tag: 'trunk', x: 1800, y: 240, w: 400, h: 60 },
-        ],
-      }),
-    );
-    s.place(300, FLOOR);
-    s.run('.2');
-    s.place(2000, 600);
-    const ev = s.run('.60');
-    const caught = ev.findIndex((e) => e.type === 'lureCaught');
-    expect(caught).toBeGreaterThanOrEqual(0);
-    expect(enemy(s, 'd').catchSeen).toBe(0);
-    const held = ev.slice(caught);
-    const free = held.findIndex((e) => e.type === 'lureFree');
-    const tell = held.findIndex((e) => e.type === 'enemyWindup');
-    expect(tell === -1 || (free >= 0 && tell > free)).toBe(true);
   });
 });
 

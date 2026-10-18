@@ -16,6 +16,7 @@ import {
   withShortcuts,
 } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import { flingTarget } from '../../src/sim/lures';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { flatScene, newSim, type Sim } from './helpers';
 
@@ -262,25 +263,22 @@ describe('swinging lures', () => {
     expect(lureAt(l, (3 * period) / 4, t).x).toBeCloseTo(l.x - reach, 6);
   });
 
-  it('its core goes with the flame: she is caught where the flame is, not where it hangs at rest', () => {
+  it('its fling reach goes with the flame: in reach where the flame is, not where it hangs at rest', () => {
     const s = newSim(LAB);
-    const l = LAB.lures?.find((q) => q.id === 'swing-lantern');
+    const i = LAB.lures?.findIndex((q) => q.id === 'swing-lantern') ?? -1;
+    const l = LAB.lures?.[i];
     if (!l?.swing) throw new Error('no swing-lantern');
-    const quarter = (l.swing.period ?? 0) / 4;
-    s.state.frame = Math.round(quarter);
+    s.state.frame = Math.round((l.swing.period ?? 0) / 4);
     const f = lureAt(l, s.state.frame, s.tuning);
+    expect(Math.abs(f.x - l.x)).toBeGreaterThan(200);
+    s.place(l.x, l.y + 40);
+    expect(flingTarget(s.state, s.scene, s.tuning)).not.toBe(i);
     s.place(f.x, f.y + 40);
-    // (A core catches her as she moves into it, or after she has stayed in it a few frames.)
-    const ev: SimEvent[] = [];
-    let at = { x: 0, y: 0 };
-    for (let k = 0; k < 30 && of(ev, 'lureCaught').length === 0; k++) {
-      at = { ...lureAt(l, s.state.frame, s.tuning) };
-      ev.push(...once(s, 0));
-    }
-    const caught = of(ev, 'lureCaught')[0];
-    expect(caught?.id).toBe('swing-lantern');
-    expect(caught?.x).toBeCloseTo(at.x, 6);
-    expect(Math.abs((caught?.x ?? 0) - l.x)).toBeGreaterThan(200);
+    expect(flingTarget(s.state, s.scene, s.tuning)).toBe(i);
+    const at = { ...lureAt(l, s.state.frame, s.tuning) };
+    const start = of(once(s, ActionBit.lamp), 'flingStart')[0];
+    expect(start?.id).toBe('swing-lantern');
+    expect(start?.x).toBeCloseTo(at.x, 6);
   });
 
   it('a run with swinging lures replays exactly', () => {

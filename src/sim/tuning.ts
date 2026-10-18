@@ -299,22 +299,45 @@ export const defaultTuning = withVariants({
    */
   lures: {
     kinds: {
-      wick: { radius: 240, pullEdge: 0.15, pullCore: 1.9, swirl: 0.5, core: 40, hp: 1, moths: 5, sharp: 1 },
+      // (Since Matt's play, 2026-10-18, a lamp no longer drags her or catches her: no pull (`pullEdge` /
+      // `pullCore` 0) and no core; `fling` = how near her body centre must be to fling off it.)
+      wick: {
+        radius: 240,
+        pullEdge: 0,
+        pullCore: 0,
+        swirl: 0,
+        core: 40,
+        hp: 1,
+        moths: 5,
+        sharp: 1,
+        fling: 110,
+      },
       lantern: {
         radius: 360,
-        pullEdge: 0.2,
-        pullCore: 2.3,
-        swirl: 0.6,
+        pullEdge: 0,
+        pullCore: 0,
+        swirl: 0,
         core: 52,
         hp: 2,
         moths: 10,
         sharp: 1,
+        fling: 140,
       },
       /**
        * A great lamp's ring flame (the Weaver's arena, memory/bosses.md): a wick whose moths feed the
        * heart (0 here: the heart frees them all when it goes out).
        */
-      ring: { radius: 240, pullEdge: 0.15, pullCore: 1.9, swirl: 0.5, core: 40, hp: 1, moths: 0, sharp: 1 },
+      ring: {
+        radius: 240,
+        pullEdge: 0,
+        pullCore: 0,
+        swirl: 0,
+        core: 40,
+        hp: 1,
+        moths: 0,
+        sharp: 1,
+        fling: 110,
+      },
       /**
        * A great lamp's heart (wood.md §6: R 700, core 72, pull 0.2 -> 2.3, 3 hits, 60 moths). The boss
        * switches its row by phase (`state.lures.live.row`): `greatWide` is the last phase's bigger reach.
@@ -322,7 +345,17 @@ export const defaultTuning = withVariants({
        * 200, 1.5 at 100): a field this big at a lantern's profile saturated her drift (12 px/f, faster
        * than her run) and no column face could be climbed (memory/bosses.md).
        */
-      great: { radius: 700, pullEdge: 0.02, pullCore: 2.3, swirl: 0.4, core: 72, hp: 3, moths: 60, sharp: 4 },
+      great: {
+        radius: 700,
+        pullEdge: 0.02,
+        pullCore: 2.3,
+        swirl: 0.4,
+        core: 72,
+        hp: 3,
+        moths: 60,
+        sharp: 4,
+        fling: 0,
+      },
       greatWide: {
         radius: 1100,
         pullEdge: 0.02,
@@ -332,6 +365,7 @@ export const defaultTuning = withVariants({
         hp: 3,
         moths: 60,
         sharp: 4,
+        fling: 0,
       },
     },
     /**
@@ -340,6 +374,22 @@ export const defaultTuning = withVariants({
      * the air, never faster than `pullXMax`.
      */
     pullXKeep: 0.97,
+    /**
+     * The fling (Matt's play, 2026-10-18: "the lamp catch is super annoying"; Ori's Bash): Lamp pressed within a
+     * burning flame's `fling` radius snaps the moment. She holds still and the world slows (creatures move one
+     * step in `flingSlowEvery`) for up to `flingFrames` while she aims with the stick (8-way; nothing held: out
+     * from the flame); released (or at the cap) she is flung along the aim at `flingSpeed` (+ `flingLift` up)
+     * with the launch below (`throwFrames`, `launchGravity`: a throw-cut works off it), double jump and air
+     * dash back, and the flame goes out behind her (its moths freed, 1 light back). `flingCooldown` frames
+     * before the next.
+     */
+    flingFrames: 36,
+    flingSlowEvery: 4,
+    flingSpeed: 15,
+    flingLift: 5,
+    flingCooldown: 8,
+    /** Landing within this many px of where a fling chain began (on the same ground) is a miss: its embers relight. */
+    chainBackPx: 160,
     /**
      * How the pull grows from the edge to the core: 0 = linearly, 1 = with the square (a well that bites
      * late). A row's `sharp` n first raises the depth k to the 2^(n-1)th power (1 = as is, 2 = k², 3 = k⁴).
@@ -362,17 +412,13 @@ export const defaultTuning = withVariants({
      */
     glidePullMult: 0.45,
     catchFrames: 4,
-    /** Caught: she circles the flame at this share of its core radius, this fast (px/f along the circle). */
+    /** (Render's greybox ring and old catch pips read these; the catch itself is gone: the fling.) */
     orbitShare: 0.6,
-    orbitSpeed: 7,
-    /**
-     * Beating free: presses of jump (or the blade) it takes; each throws her circle `beatPush` px
-     * further out, which sinks back at `beatSink` px/f; a press within `beatCd` frames of the last
-     * beat waits in a queue of `beatQueue`, so a mash is never lost.
-     */
     beats: 3,
-    beatPush: 18,
-    beatSink: 0.6,
+    /**
+     * A grab's beats (src/sim/grab.ts: its count is `grab.beats`): a press within `beatCd` frames of the
+     * last beat waits in a queue of `beatQueue`, so a mash is never lost.
+     */
     beatCd: 6,
     beatQueue: 2,
     /** Freed: thrown out at this speed (px/f, plus `freeLift` up), and that lure leaves her alone for `graceFrames`. */
@@ -441,9 +487,10 @@ export const defaultTuning = withVariants({
   finds: { stoneWidth: 96, stoneHeight: 160, signWidth: 200, signHeight: 200, signFrames: 40 },
   /**
    * Moonlit hollows' upgrades (src/sim/upgrades.ts; core.md §6), each a number: `quickWings` beats free
-   * of a lure in `beats` presses (3 without), `keenBlade` grows the flame's hit box by `flameRadiusAdd`.
+   * of a grab in `beats` presses (`grab.beats` without), `keenBlade` grows the flame's hit box by
+   * `flameRadiusAdd`, `longBreath` makes the fling's aim `flingMult` x as long (`sharpWings`: no number).
    */
-  upgrades: { quickWings: { beats: 2 }, keenBlade: { flameRadiusAdd: 20 } },
+  upgrades: { quickWings: { beats: 2 }, keenBlade: { flameRadiusAdd: 20 }, longBreath: { flingMult: 2 } },
   /**
    * Vesper's health (rules: memory/enemies.md). She has `max` lights; contact with an enemy costs
    * one, knocks her back and makes her untouchable for a while. At none she fades and re-forms at

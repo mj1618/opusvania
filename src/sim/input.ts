@@ -5,9 +5,11 @@
  */
 /**
  * `offer` (bit 128, memory/giving.md): give one carried glint to what is in reach (a creature, a
- * dormant lantern or lamp, the heart).
+ * dormant lantern or lamp, the heart). The test grove's only.
+ * `lamp` (bit 256, memory/lures.md): the fling. Pressed near a burning flame it snaps the moment (she
+ * holds, aims with the stick), released it flings her off the flame, which goes out.
  */
-export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'dash', 'attack', 'offer'] as const;
+export const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'dash', 'attack', 'offer', 'lamp'] as const;
 
 export type Action = (typeof ACTIONS)[number];
 export type InputFrame = number;

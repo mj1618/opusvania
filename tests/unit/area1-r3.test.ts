@@ -3,12 +3,13 @@ import { getRoom, parseScene } from '../../src/scene/index';
 import type { SimEvent } from '../../src/sim/events';
 import { step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import { flingTarget } from '../../src/sim/lures';
 import type { Lure, Scene } from '../../src/sim/scene';
 import { defaultTuning } from '../../src/sim/tuning';
 import { flatScene, newSim, type Sim } from './helpers';
 
 /**
- * Area 1 plan, round 3 (docs/design/regions/reviews/area1-plan-r3.md), the sim's part: the honest throw arc
+ * Area 1 plan, round 3 (docs/design/regions/reviews/area1-plan-r3.md), the sim's part: the honest fling arc
  * (every lure kind, a hawker about), the glide-lip assist, the finale's long hold, re-forming in the room
  * (`reformPatch`, the oak), and what a fall catch tells render for a fade instead of a black cut.
  */
@@ -16,7 +17,6 @@ import { flatScene, newSim, type Sim } from './helpers';
 const R = ActionBit.right;
 const L = ActionBit.left;
 const U = ActionBit.up;
-const J = ActionBit.jump;
 const LT = defaultTuning.lures;
 function run(s: Sim, mask: number, n: number): SimEvent[] {
   const from = s.events.length;
@@ -28,27 +28,29 @@ const centre = (s: Sim) => [
   Math.round(s.state.player.y + s.state.player.h / 2),
 ];
 
+const B = ActionBit.lamp;
+
 /**
- * Caught (already), two beats holding `aim`, `delay` more frames held, then the last beat: the flight must be
- * the arc shown the step before, point for point, and land on its last point. Returns whether a blow came.
+ * The fling from the flame in reach: the lamp pressed with `aim` held, `delay` more frames held (the world slowed),
+ * then let go: the flight must be the arc shown the step before, point for point, and land on its last point.
+ * Returns whether a blow came, and how many points were compared.
  */
-function arcIsTheThrow(s: Sim, aim: number, delay: number): { hurt: boolean; compared: number } {
-  run(s, aim | J, 1);
-  run(s, aim, 6);
-  run(s, aim | J, 1);
-  run(s, aim, delay);
-  if (s.state.player.lure < 0) return { hurt: true, compared: 0 };
+function arcIsTheFling(s: Sim, aim: number, delay: number): { hurt: boolean; compared: number } {
+  run(s, aim | B, 1);
+  expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+  run(s, aim | B, delay);
   const arc = s.state.player.lureArc.slice();
   expect(arc.length).toBeGreaterThanOrEqual(2);
   const got: number[] = [];
   const ev: SimEvent[] = [];
   for (let f = 0; f < LT.arcFrames; f++) {
-    ev.push(...run(s, f === 0 ? aim | J : aim, 1));
+    ev.push(...run(s, aim, 1));
     const p = s.state.player;
-    const done = f > 0 && (p.grounded || p.lure >= 0 || p.hp <= 0);
+    const done = f > 0 && (p.grounded || p.fling >= 0 || p.hp <= 0);
     if (f % LT.arcEvery === 0 || done) got.push(...centre(s));
     if (done) break;
   }
+  expect(ev.some((e) => e.type === 'fling')).toBe(true);
   const hurt = ev.some((e) => e.type === 'hurt');
   if (!hurt) expect(got, `aim ${aim} delay ${delay}`).toEqual(arc);
   return { hurt, compared: hurt ? 0 : got.length };
@@ -56,60 +58,56 @@ function arcIsTheThrow(s: Sim, aim: number, delay: number): { hurt: boolean; com
 
 const room = (lure: Lure, extra: Partial<Scene> = {}): Scene => ({ ...flatScene(), lures: [lure], ...extra });
 
-describe('the throw arc is the throw', () => {
-  for (const [kind, y] of [
-    ['wick', 520],
-    ['lantern', 520],
-    ['ring', 520],
-    ['great', 600],
-  ] as const) {
-    it(`${kind}: every aim, every beat timing, lands on the arc's last point`, () => {
+describe('the fling arc is the fling', () => {
+  for (const kind of ['wick', 'lantern', 'ring'] as const) {
+    it(`${kind}: every aim, every aim time, lands on the arc's last point`, () => {
       for (const aim of [R, U | R, L, U, 0]) {
-        for (const delay of [0, 2, 5, 9]) {
-          const s = newSim(room({ id: 'l', kind, x: 2000, y }));
-          s.place(2000, y + 40);
-          for (let i = 0; i < 8 && s.state.player.lure < 0; i++) run(s, 0, 1);
-          expect(s.state.player.lure).toBe(0);
-          expect(arcIsTheThrow(s, aim, delay).compared).toBeGreaterThan(0);
+        for (const delay of [0, 2, 9, 30]) {
+          const s = newSim(room({ id: 'l', kind, x: 2000, y: 520 }));
+          s.place(2000, 560);
+          expect(arcIsTheFling(s, aim, delay).compared).toBeGreaterThan(0);
         }
       }
     });
   }
 
-  it('a swinging lure (lab-kit): the arc follows the flame as it swings', () => {
+  it('a great lamp is not flung from (the boss heart keeps its pull)', () => {
+    const s = newSim(room({ id: 'g', kind: 'great', x: 2000, y: 600 }));
+    s.place(2000, 640);
+    run(s, B, 1);
+    expect(s.state.player.fling).toBe(-1);
+    expect(s.state.player.lureArc).toEqual([]);
+  });
+
+  it('a swinging lure (lab-kit): the fling and its arc go from where the flame is', () => {
     const lab = getRoom('lab-kit');
     const l = lab.lures?.find((q) => q.id === 'swing-lantern');
     if (!l) throw new Error('no swing-lantern');
+    let compared = 0;
     for (const aim of [R, U | L]) {
       for (const delay of [0, 4]) {
         const s = newSim(lab);
         s.place(l.x, l.y + 40);
-        for (let i = 0; i < 60 && s.state.player.lure < 0; i++) run(s, 0, 1);
-        if (s.state.player.lure < 0) continue;
-        expect(arcIsTheThrow(s, aim, delay).compared).toBeGreaterThan(0);
+        for (let i = 0; i < 60 && flingTarget(s.state, s.scene, s.tuning) < 0; i++) run(s, 0, 1);
+        if (flingTarget(s.state, s.scene, s.tuning) < 0) continue;
+        compared += arcIsTheFling(s, aim, delay).compared;
       }
     }
+    expect(compared).toBeGreaterThan(0);
   });
 
-  it('a hawker about: with no blow the throw is the arc; a strike while caught frees her and the arc is gone', () => {
+  it('a hawker about: with no blow the fling is the arc; while she aims, nothing touches her', () => {
     const scene = room(
       { id: 'wh', kind: 'wick', x: 2000, y: 520 },
       { senses: 'lamp', enemies: [{ id: 'h', kind: 'hawker', x: 2200, y: 300, facing: -1, guards: 'wh' }] },
     );
     let compared = 0;
-    for (const delay of [0, 3, 6, 9, 14, 20]) {
+    for (const delay of [0, 3, 9, 20, 34]) {
       const s = newSim(scene);
       s.place(2000, 560);
-      for (let i = 0; i < 8 && s.state.player.lure < 0; i++) run(s, 0, 1);
-      compared += arcIsTheThrow(s, U | R, delay).compared;
+      compared += arcIsTheFling(s, U | R, delay).compared;
     }
     expect(compared).toBeGreaterThan(0);
-    // Caught and left there: a strike frees her (`lureFree` how hurt), and with it the arc goes.
-    const s = newSim(scene);
-    s.place(2000, 560);
-    let freed: SimEvent | undefined;
-    for (let i = 0; i < 600 && !freed; i++) freed = run(s, 0, 1).find((e) => e.type === 'lureFree');
-    if (freed?.type === 'lureFree' && freed.how === 'hurt') expect(s.state.player.lureArc).toEqual([]);
   });
 });
 

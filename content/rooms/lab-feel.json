@@ -1,0 +1,384 @@
+{
+  "id": "lab-feel",
+  "title": "Lab: feel (greybox)",
+  "width": 16600,
+  "height": 2200,
+  "spawn": {
+    "x": 300,
+    "y": 1700
+  },
+  "art": {
+    "mode": "greybox",
+    "labels": true
+  },
+  "solids": [
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1700,
+      "w": 4400,
+      "h": 500
+    },
+    {
+      "tag": "ground",
+      "x": 5000,
+      "y": 1700,
+      "w": 600,
+      "h": 500
+    },
+    {
+      "tag": "ground",
+      "x": 6950,
+      "y": 950,
+      "w": 650,
+      "h": 1250
+    },
+    {
+      "tag": "ground",
+      "x": 7600,
+      "y": 1700,
+      "w": 400,
+      "h": 500
+    },
+    {
+      "tag": "ground",
+      "x": 9500,
+      "y": 1800,
+      "w": 2100,
+      "h": 400
+    },
+    {
+      "tag": "ground",
+      "x": 11000,
+      "y": 1050,
+      "w": 600,
+      "h": 750
+    },
+    {
+      "tag": "ground",
+      "x": 11600,
+      "y": 1800,
+      "w": 100,
+      "h": 400
+    },
+    {
+      "tag": "ground",
+      "x": 11700,
+      "y": 2000,
+      "w": 1100,
+      "h": 200
+    },
+    {
+      "tag": "ground",
+      "x": 12800,
+      "y": 1700,
+      "w": 800,
+      "h": 500
+    },
+    {
+      "tag": "ground",
+      "x": 13600,
+      "y": 1700,
+      "w": 1400,
+      "h": 500
+    },
+    {
+      "tag": "ground",
+      "x": 15000,
+      "y": 1850,
+      "w": 1600,
+      "h": 350
+    }
+  ],
+  "oneWays": [],
+  "catches": [
+    {
+      "id": "s1-gap",
+      "x": 4400,
+      "y": 1900,
+      "w": 600,
+      "h": 300
+    },
+    {
+      "id": "s2-pit",
+      "x": 5600,
+      "y": 1900,
+      "w": 1350,
+      "h": 300
+    },
+    {
+      "id": "s3-gap",
+      "x": 8000,
+      "y": 1950,
+      "w": 1500,
+      "h": 250
+    }
+  ],
+  "thorns": [
+    {
+      "id": "s5-thorns",
+      "x": 11700,
+      "y": 1968,
+      "w": 1100,
+      "h": 32
+    }
+  ],
+  "lures": [
+    {
+      "id": "s1",
+      "kind": "wick",
+      "x": 4560,
+      "y": 1540,
+      "relight": 150
+    },
+    {
+      "id": "s2-a",
+      "kind": "wick",
+      "x": 5820,
+      "y": 1470,
+      "relight": 150
+    },
+    {
+      "id": "s2-b",
+      "kind": "wick",
+      "x": 6167,
+      "y": 1251,
+      "relight": 150
+    },
+    {
+      "id": "s2-c",
+      "kind": "wick",
+      "x": 6516,
+      "y": 1029,
+      "relight": 150
+    },
+    {
+      "id": "s3",
+      "kind": "lantern",
+      "x": 8080,
+      "y": 1520,
+      "relight": 150
+    },
+    {
+      "id": "s4-a",
+      "kind": "wick",
+      "x": 10000,
+      "y": 1520,
+      "relight": 150
+    },
+    {
+      "id": "s4-b",
+      "kind": "wick",
+      "x": 10429,
+      "y": 1415,
+      "relight": 150
+    },
+    {
+      "id": "s4-c",
+      "kind": "wick",
+      "x": 10778,
+      "y": 1192,
+      "relight": 150
+    },
+    {
+      "id": "s5-a",
+      "kind": "wick",
+      "x": 11860,
+      "y": 1560,
+      "relight": 240
+    },
+    {
+      "id": "s5-b",
+      "kind": "wick",
+      "x": 12114,
+      "y": 1622,
+      "relight": 240
+    },
+    {
+      "id": "s5-c",
+      "kind": "wick",
+      "x": 12355,
+      "y": 1599,
+      "relight": 240
+    },
+    {
+      "id": "s6",
+      "kind": "wick",
+      "x": 14000,
+      "y": 1500,
+      "relight": 150
+    },
+    {
+      "id": "s7",
+      "kind": "lantern",
+      "x": 15450,
+      "y": 1650,
+      "relight": 150
+    }
+  ],
+  "enemies": [
+    {
+      "id": "c-burr",
+      "kind": "burrback",
+      "x": 900,
+      "y": 1700,
+      "facing": -1,
+      "radius": 300,
+      "senses": "always"
+    },
+    {
+      "id": "c-juv",
+      "kind": "juvenileBurrback",
+      "x": 1700,
+      "y": 1700,
+      "facing": -1,
+      "radius": 150,
+      "senses": "always"
+    },
+    {
+      "id": "c-ant-1",
+      "kind": "carrier",
+      "x": 2300,
+      "y": 1700,
+      "facing": 1,
+      "trail": [[2900, 1700]]
+    },
+    {
+      "id": "c-ant-2",
+      "kind": "carrier",
+      "x": 2300,
+      "y": 1700,
+      "facing": 1,
+      "follow": "c-ant-1",
+      "phase": 0.33
+    },
+    {
+      "id": "c-ant-3",
+      "kind": "carrier",
+      "x": 2300,
+      "y": 1700,
+      "facing": 1,
+      "follow": "c-ant-1",
+      "phase": 0.67
+    },
+    {
+      "id": "s4-hawker",
+      "kind": "hawker",
+      "x": 10400,
+      "y": 900,
+      "facing": -1,
+      "radius": 300,
+      "senses": "always"
+    },
+    {
+      "id": "s6-beetle",
+      "kind": "burrback",
+      "x": 14400,
+      "y": 1700,
+      "facing": -1,
+      "radius": 400,
+      "senses": "always"
+    },
+    {
+      "id": "s7-shell",
+      "kind": "oldBurrback",
+      "x": 15900,
+      "y": 1850,
+      "facing": -1,
+      "radius": 650
+    }
+  ],
+  "marks": {
+    "notes": [
+      {
+        "x": 300,
+        "y": 1300,
+        "text": "LAB-FEEL  V / I near a flame: hold to aim (time slows), let go to fling"
+      },
+      {
+        "x": 900,
+        "y": 1350,
+        "text": "0  the attack: a burrback (rhythm, push-back, pogo), a juvenile, three carriers"
+      },
+      {
+        "x": 4560,
+        "y": 1250,
+        "text": "1  one flame over a gap"
+      },
+      {
+        "x": 6280,
+        "y": 1100,
+        "text": "2  a three-flame chain: each fling climbs; two fall short of the ledge"
+      },
+      {
+        "x": 8080,
+        "y": 1250,
+        "text": "3  fling, then hold jump: the wings"
+      },
+      {
+        "x": 10420,
+        "y": 1000,
+        "text": "4  a chain with a hawker hunting it (up to the high ledge)"
+      },
+      {
+        "x": 12220,
+        "y": 1150,
+        "text": "5  over thorns: flat, flat, up-right. A flame smoulders until you land; fall and it burns again"
+      },
+      {
+        "x": 14300,
+        "y": 1300,
+        "text": "6  a beetle (the attack)"
+      },
+      {
+        "x": 15700,
+        "y": 1350,
+        "text": "7  jump to the flame, fling down onto the shell"
+      }
+    ]
+  },
+  "shots": {
+    "wide": [
+      {
+        "name": "s0",
+        "x": 1500,
+        "y": 1500
+      },
+      {
+        "name": "s1",
+        "x": 4600,
+        "y": 1500
+      },
+      {
+        "name": "s2",
+        "x": 6300,
+        "y": 1300
+      },
+      {
+        "name": "s3",
+        "x": 8800,
+        "y": 1500
+      },
+      {
+        "name": "s4",
+        "x": 10500,
+        "y": 1300
+      },
+      {
+        "name": "s5",
+        "x": 12300,
+        "y": 1600
+      },
+      {
+        "name": "s6",
+        "x": 14200,
+        "y": 1500
+      },
+      {
+        "name": "s7",
+        "x": 15700,
+        "y": 1600
+      }
+    ]
+  }
+}

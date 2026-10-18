@@ -11,13 +11,16 @@ import type { SaveState } from './state';
 import type { Tuning } from './tuning';
 
 /** Every upgrade, in the order the region docs list them. */
-export const UPGRADE_IDS = ['quickWings', 'keenBlade', 'nightEyes'] as const;
+export const UPGRADE_IDS = ['quickWings', 'keenBlade', 'nightEyes', 'longBreath', 'sharpWings'] as const;
 export type UpgradeId = (typeof UPGRADE_IDS)[number];
 
 /** What each one changes. */
 const APPLY: Record<UpgradeId, (t: Tuning) => Tuning> = {
-  // Quick wings: beat free of a lure (or a grab) in fewer presses.
-  quickWings: (t) => ({ ...t, lures: { ...t.lures, beats: t.upgrades.quickWings.beats } }),
+  // Quick wings: beat free of a grab (the web, the weaver) in fewer presses (the lamp's catch is gone: the fling).
+  quickWings: (t) => ({
+    ...t,
+    grab: { ...t.grab, beats: Math.min(t.grab.beats, t.upgrades.quickWings.beats) },
+  }),
   // Keen blade: the flame's hit box grows (snuffs from further off).
   keenBlade: (t) => ({
     ...t,
@@ -26,6 +29,15 @@ const APPLY: Record<UpgradeId, (t: Tuning) => Tuning> = {
   // Night eyes (area 1 plan r5): the map shows each room's lamps she has not seen. No sim number: the map
   // reads `upgradesOwned(save)`.
   nightEyes: (t) => t,
+  // Long breath (wood-area1-v3): the fling's slow-time lasts longer (aiming at leisure).
+  longBreath: (t) => ({
+    ...t,
+    lures: { ...t.lures, flingFrames: Math.round(t.lures.flingFrames * t.upgrades.longBreath.flingMult) },
+  }),
+  // Sharp wings (wood-area1-v3, C1's reward): a fling's launch cuts through creatures and silk. A row for now:
+  // what a launch does to each creature is the creatures' rule (`upgradesOwned` has it; the launch is
+  // `player.thrown` with `lureThrow` running).
+  sharpWings: (t) => t,
 };
 
 export function isUpgrade(id: string): id is UpgradeId {

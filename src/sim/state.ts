@@ -154,6 +154,17 @@ export interface PlayerState {
   lureGraceFrames: number;
   lureAimX: number;
   lureAimY: number;
+  /**
+   * The fling (memory/lures.md): `fling` = the lure she is aiming off (-1 = none), `flingFrames` = how long (the
+   * world slows meanwhile), `flingCd` = frames before the next can start. While aiming `lureAimX/Y` is the aim
+   * and `lureArc` the flight it gives. (`lure` and the beat fields are the old catch's: always -1 / 0 now.)
+   */
+  fling: number;
+  flingFrames: number;
+  flingCd: number;
+  /** Where the fling chain began (her last ground before its first launch): landing back there is a miss. */
+  chainX: number;
+  chainY: number;
   lureThrow: number;
   lureCore: number;
   /** The way she came into the lure that holds her (-1 / 1): with nothing held the throw sends her back that way. */
@@ -356,6 +367,11 @@ export interface LuresState {
   /** How many have gone out, and the moths freed in all. */
   snuffed: number;
   freed: number;
+  /**
+   * Embers (the fling's retry rule, wood-area1-v3 §2): 1 while a flame she flung from smoulders (not burning, not
+   * yet out): it goes out for good when she lands on safe ground, and burns again if she falls or meets thorns.
+   */
+  ember: number[];
   /**
    * Frames each lure leaves her alone (no pull, no catch): the one she broke free of and every core
    * her throw passed through (`lures.throwFrames`). 0 = acts.
@@ -1011,6 +1027,7 @@ export function cloneState(s: GameState): GameState {
       snuffed: s.lures.snuffed,
       freed: s.lures.freed,
       grace: s.lures.grace.slice(),
+      ember: s.lures.ember.slice(),
       ...(s.lures.live
         ? {
             live: {

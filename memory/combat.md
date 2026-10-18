@@ -115,7 +115,7 @@ HK's nail as the reference: one even rhythm, a crisp hold on contact, the enemy 
   the enemy's kind) and a down slash pogos off them; unlike pods they need a clear line (enemies.md).
 - `impact {x, y, dir, facing, step, power, hits}`: once per blow that hits anything, on its first hit
   frame, for camera and screen effects. The sim shakes nothing.
-- **The throw-cut** (area 1 plan r5, item 2; no new button): a slash *started* during a lamp throw's launch (`player.thrown`
+- **The throw-cut** (area 1 plan r5, item 2; no new button): a slash *started* during a fling's launch (`player.thrown`
   and `lureThrow > 0`) is heavy: `player.attackHeavy`, `slash.heavy`, a `throwCut` event, `attack.throwCutPower` 3 x its
   power on every target (a lantern goes out on one) and `throwCutHitstop` 4 more hitstop. What it does to each creature
   is the creature's rule (`KindRules.heavy`, the creatures agent's); they should read `attackHeavy` (decided at the

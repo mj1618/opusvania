@@ -30,7 +30,8 @@ const KEYS: Array<[number, string, string]> = [
   [ActionBit.jump, 'KeyZ', 'z'],
   [ActionBit.dash, 'KeyX', 'x'],
   [ActionBit.attack, 'KeyC', 'c'],
-  [ActionBit.offer, 'KeyV', 'v'],
+  [ActionBit.offer, 'KeyF', 'f'],
+  [ActionBit.lamp, 'KeyV', 'v'],
 ];
 
 /**

@@ -14,7 +14,6 @@ import { flatScene, newSim, type Sim } from './helpers';
  */
 
 const R = ActionBit.right;
-const J = ActionBit.jump;
 const A = ActionBit.attack;
 const AT = defaultTuning.attack;
 function run(s: Sim, mask: number, n: number): SimEvent[] {
@@ -25,22 +24,18 @@ function run(s: Sim, mask: number, n: number): SimEvent[] {
 const of = <T extends SimEvent['type']>(events: SimEvent[], type: T) =>
   events.filter((e): e is Extract<SimEvent, { type: T }> => e.type === type);
 
-/** Caught by the wick at (2000, 500), beaten free holding right: the throw's launch is running after this. */
+/** Flung right from the wick at (2000, 500): the fling's launch is running after this. */
 function thrown(extra: Partial<Scene> = {}): Sim {
   const s = newSim({ ...flatScene(), lures: [{ id: 'w', kind: 'wick', x: 2000, y: 500 }], ...extra });
   s.place(2000, 540);
-  for (let i = 0; i < 8 && s.state.player.lure < 0; i++) run(s, 0, 1);
-  run(s, R | J, 1);
-  run(s, R, 6);
-  run(s, R | J, 1);
-  run(s, R, 6);
-  const ev = run(s, R | J, 1);
-  expect(ev.some((e) => e.type === 'lureFree')).toBe(true);
+  run(s, R | ActionBit.lamp, 1);
+  const ev = run(s, R, 1);
+  expect(ev.some((e) => e.type === 'fling')).toBe(true);
   run(s, R, 1);
   return s;
 }
 
-describe('the throw-cut: a cut in a lamp throw’s launch is heavy', () => {
+describe('the throw-cut: a cut in a fling’s launch is heavy', () => {
   it('a slash in the launch: slash.heavy, a throwCut event, player.attackHeavy', () => {
     const s = thrown();
     const ev = run(s, R | A, 1);
@@ -61,7 +56,7 @@ describe('the throw-cut: a cut in a lamp throw’s launch is heavy', () => {
   });
 
   it('it hits throwCutPower x as hard and holds longer: a lantern (2 cuts) goes out on one throw-cut', () => {
-    // A lantern ahead on the throw's line.
+    // A lantern ahead on the fling's line.
     const s = thrown({
       lures: [
         { id: 'w', kind: 'wick', x: 2000, y: 500 },

@@ -20,7 +20,7 @@
  * Pure: only + - * / sqrt, min, max, abs, floor, round (memory/sim-architecture.md).
  */
 import { bossOwnsLure } from './boss/data';
-import type { LureFreeHow, SimEvent, SlashDir } from './events';
+import type { SimEvent, SlashDir } from './events';
 import { swingOffset } from './paths';
 import type { Box } from './player/attack';
 import type { Lure, LureKind, Scene } from './scene';
@@ -111,6 +111,7 @@ export function createLures(scene: Scene, t: Tuning, snuffed: readonly string[] 
     snuffed: isOut.filter((o) => o).length,
     freed: 0,
     grace: list.map(() => 0),
+    ember: list.map(() => 0),
   };
 }
 
@@ -170,66 +171,41 @@ export function lurePull(state: GameState, scene: Scene, t: Tuning): { ax: numbe
   return PULL;
 }
 
-/** The burning lure whose core her body centre is inside (-1 = none). */
-export function lureCoreAt(state: GameState, scene: Scene, t: Tuning): number {
+/**
+ * The burning lure she can fling off now (-1 = none): the nearest whose flame is within its kind's `fling`
+ * radius of her body centre (a boss's shielded flame, a row with `fling` 0: never).
+ */
+export function flingTarget(state: GameState, scene: Scene, t: Tuning): number {
   const list = scene.lures;
   if (!list) return -1;
   const p = state.player;
   const cx = centreX(p);
   const cy = centreY(p);
+  let best = -1;
+  let bd = Number.POSITIVE_INFINITY;
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
-    if (!l || !acts(state, i)) continue;
-    const c = lureRowNow(state.lures, i, l, t).core;
+    if (!l || (state.lures.hp[i] ?? 0) <= 0 || (state.lures.live?.shield[i] ?? 0) > 0) continue;
+    const r = lureRowNow(state.lures, i, l, t).fling;
+    if (!(r > 0)) continue;
     const f = flameAt(state.lures, i, l, state.frame, t, F);
-    const dx = f.x - cx;
-    const dy = f.y - cy;
-    if (dx * dx + dy * dy <= c * c) return i;
+    const d = (f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy);
+    if (d <= r * r && d < bd) {
+      bd = d;
+      best = i;
+    }
   }
-  return -1;
+  return best;
 }
 
 /**
- * After her move in ordinary flight: the lure whose core catches her now (-1 = none). `px, py` = her
- * body centre before the move. A core catches her only when she moves inward (closer to its flame, which
- * may swing) or has been inside it `catchFrames` frames in a row (`player.lureCore`): she can stand or
- * drift beside a low wick without being glued to it. While her throw is young (`player.lureThrow`), a
- * core she passes through is given grace instead (no re-catch by the next wick).
+ * The unit direction the fling sends her (into `out`): the held direction, exactly (8-way); with nothing
+ * held, straight out from the flame through her (Up at its very centre).
  */
-export function lureCatchAt(state: GameState, scene: Scene, t: Tuning, px: number, py: number): number {
-  const p = state.player;
-  const i = lureCoreAt(state, scene, t);
-  const l = i >= 0 ? scene.lures?.[i] : undefined;
-  if (!l) {
-    p.lureCore = 0;
-    return -1;
-  }
-  if (p.lureThrow > 0) {
-    state.lures.grace[i] = Math.max(state.lures.grace[i] ?? 0, Math.max(0, Math.round(t.lures.graceFrames)));
-    p.lureCore = 0;
-    return -1;
-  }
-  p.lureCore++;
-  const now = flameAt(state.lures, i, l, state.frame, t, F);
-  const nx = centreX(p) - now.x;
-  const ny = centreY(p) - now.y;
-  const dNow = nx * nx + ny * ny;
-  const was = flameAt(state.lures, i, l, state.frame - 1, t, F);
-  const bx = px - was.x;
-  const by = py - was.y;
-  const inward = dNow < bx * bx + by * by;
-  return inward || p.lureCore >= Math.max(1, Math.round(t.lures.catchFrames)) ? i : -1;
-}
-
-/**
- * The unit direction the last beat throws her (into `out`): the held direction, exactly (8-way), so the
- * stick alone picks it (Ori's Bash). With nothing held, back the way she came in (`player.lureBack`): it
- * costs nothing (director's area 1, R3 / R4: "holding nothing throws her back").
- */
-export function lureThrowAim(
+export function flingAim(
   state: GameState,
-  _scene: Scene,
-  _t: Tuning,
+  scene: Scene,
+  t: Tuning,
   aimX: number,
   aimY: number,
   out: { x: number; y: number },
@@ -240,153 +216,116 @@ export function lureThrowAim(
     out.y = aimY / hm;
     return out;
   }
-  out.x = state.player.lureBack < 0 ? -1 : 1;
-  out.y = 0;
+  out.x = 0;
+  out.y = -1;
+  const p = state.player;
+  const l = scene.lures?.[p.fling];
+  if (!l) return out;
+  const f = flameAt(state.lures, p.fling, l, state.frame, t, F);
+  const rx = centreX(p) - f.x;
+  const ry = centreY(p) - f.y;
+  const d = Math.sqrt(rx * rx + ry * ry);
+  if (d > 0.5) {
+    out.x = rx / d;
+    out.y = ry / d;
+  }
   return out;
 }
 
-/** Scratch for the throw's aim. */
+/** Scratch for the fling's aim. */
 const AIM = { x: 0, y: 0 };
 
-/** Caught by lure `i`: her circle starts where she is and sinks in to the orbit. */
-export function catchPlayer(state: GameState, scene: Scene, i: number, t: Tuning, events: SimEvent[]): void {
-  const l = scene.lures?.[i];
-  if (!l) return;
-  const p = state.player;
-  const K = lureRowNow(state.lures, i, l, t);
-  const f = flameAt(state.lures, i, l, state.frame, t, F);
-  const dx = centreX(p) - f.x;
-  const dy = centreY(p) - f.y;
-  const d = Math.sqrt(dx * dx + dy * dy);
-  p.lure = i;
-  p.lureFrames = 0;
-  p.lureBeats = 0;
-  p.lureCd = 0;
-  p.lurePend = 0;
-  p.lureOut = Math.max(0, d - K.core * t.lures.orbitShare);
-  p.lureCore = 0;
-  p.lureThrow = 0;
-  // The way she came in: a throw with nothing held sends her back out that way (it costs nothing).
-  p.lureBack = p.vx + p.pullX > 0 ? -1 : p.vx + p.pullX < 0 ? 1 : -p.facing;
-  p.pullX = 0;
-  events.push({ type: 'lureCaught', id: l.id, kind: l.kind, x: f.x, y: f.y, spin: l.spin ?? 1 });
-}
-
 /**
- * She is out of lure `p.lure`'s hold. `beat`: thrown along `lureThrowAim` (the held direction `aimX`,
- * `aimY`; the radius she is at when none is held) at `freeSpeed` (the sideways part as `pullX`, plus
- * `freeLift` up), double jump and air dash back; for `throwFrames` every core she passes through gets
- * grace too. `dash` / `hurt` / `snuff`: no throw (the dash or the blow moves her). Either way that lure
- * leaves her alone for `graceFrames`.
+ * The fling's launch from lure `p.fling` along `flingAim` (the held `aimX`, `aimY`): `flingSpeed` (the sideways
+ * part as `pullX`, as the old throw) plus `flingLift` up, the launch (`throwFrames` at `launchGravity`, `thrown`),
+ * and the flame goes out behind her (`snuffLure`). Pushes `fling`, then the snuff's events.
  */
-export function freePlayer(
+export function flingLaunch(
   state: GameState,
   scene: Scene,
   t: Tuning,
-  how: LureFreeHow,
   events: SimEvent[],
-  aimX = 0,
-  aimY = 0,
+  aimX: number,
+  aimY: number,
 ): void {
   const p = state.player;
-  const i = p.lure;
+  const i = p.fling;
   const l = scene.lures?.[i];
-  p.lure = -1;
-  p.lureBeats = 0;
-  p.lureOut = 0;
-  p.lureCd = 0;
-  p.lurePend = 0;
+  // (The aim reads `p.fling`: before it is cleared.)
+  flingAim(state, scene, t, aimX, aimY, AIM);
+  p.fling = -1;
+  p.flingFrames = 0;
   if (!l) return;
   const T = t.lures;
   const f = flameAt(state.lures, i, l, state.frame, t, F);
-  const fx = f.x;
-  const fy = f.y;
-  let vx = 0;
-  let vy = 0;
-  if (how === 'beat') {
-    // (`p.lure` is cleared above: aim with the lure's index restored for the radius.)
-    p.lure = i;
-    const a = lureThrowAim(state, scene, t, aimX, aimY, AIM);
-    p.lure = -1;
-    vx = a.x * T.freeSpeed;
-    vy = a.y * T.freeSpeed - T.freeLift;
-    p.vx = 0;
-    p.pullX = vx;
-    p.vy = vy;
-    p.lureThrow = Math.max(0, Math.round(T.throwFrames));
-    p.thrown = true;
-  } else {
-    p.pullX = 0;
+  const vx = AIM.x * T.flingSpeed;
+  const vy = AIM.y * T.flingSpeed - T.flingLift;
+  p.vx = 0;
+  p.pullX = vx;
+  p.vy = vy;
+  p.lureThrow = Math.max(0, Math.round(T.throwFrames));
+  p.thrown = true;
+  // (The chain's first launch remembers the ground it left: landing back there is a miss.)
+  if (!hasEmbers(state)) {
+    p.chainX = p.groundX;
+    p.chainY = p.groundY;
   }
-  const grace = Math.max(0, Math.round(T.graceFrames));
-  p.lureGrace = i;
-  p.lureGraceFrames = grace;
-  state.lures.grace[i] = Math.max(state.lures.grace[i] ?? 0, grace);
-  p.lureCore = 0;
-  events.push({ type: 'lureFree', id: l.id, x: fx, y: fy, how, vx, vy, grace });
+  p.flingCd = Math.max(0, Math.round(T.flingCooldown));
+  events.push({ type: 'fling', id: l.id, x: f.x, y: f.y, vx, vy, aimX: AIM.x, aimY: AIM.y });
+  // Used up: it smoulders behind her (embers) until she lands safe (out for good) or fails (it burns again).
+  state.lures.hp[i] = 0;
+  state.lures.ember[i] = 1;
+  events.push({ type: 'lureEmber', id: l.id, x: f.x, y: f.y });
 }
 
-/** One beat: a press while caught. Returns true when it was the last one (she is free). */
-export function beatLure(
-  state: GameState,
-  scene: Scene,
-  t: Tuning,
-  events: SimEvent[],
-  aimX = 0,
-  aimY = 0,
-): boolean {
-  const p = state.player;
-  const l = scene.lures?.[p.lure];
-  if (!l) return false;
-  const T = t.lures;
-  const of = Math.max(1, Math.round(T.beats));
-  p.lureBeats++;
-  p.lureOut += T.beatPush;
-  p.lureCd = Math.max(0, Math.round(T.beatCd));
-  const f = flameAt(state.lures, p.lure, l, state.frame, t, F);
-  events.push({ type: 'lureBeat', id: l.id, x: f.x, y: f.y, beats: p.lureBeats, of, out: p.lureOut });
-  if (p.lureBeats < of) return false;
-  freePlayer(state, scene, t, 'beat', events, aimX, aimY);
-  return true;
+/** Any flame smouldering behind her (embers)? */
+export function hasEmbers(state: GameState): boolean {
+  const e = state.lures.ember;
+  for (let i = 0; i < e.length; i++) if (e[i]) return true;
+  return false;
+}
+
+/** She landed safe (or left the room in flight): every ember goes out for good (`snuffLure`: moths, save, heal). */
+export function commitEmbers(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): void {
+  const e = state.lures.ember;
+  for (let i = 0; i < e.length; i++) {
+    if (!e[i]) continue;
+    e[i] = 0;
+    snuffLure(state, scene, i, t, events, 1, 'fling');
+  }
+}
+
+/** She fell or met thorns with embers behind her: they burn again (the chain can be tried again). */
+export function relightEmbers(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): void {
+  const e = state.lures.ember;
+  for (let i = 0; i < e.length; i++) {
+    const l = scene.lures?.[i];
+    if (!e[i] || !l) continue;
+    e[i] = 0;
+    state.lures.hp[i] = lureHpMax(l, t);
+    const f = flameAt(state.lures, i, l, state.frame, t, F);
+    events.push({ type: 'lureRelight', id: l.id, x: f.x, y: f.y });
+  }
 }
 
 /**
- * Where her body centre goes this frame while caught: a step of `orbitSpeed` along the tangent, then
- * back onto the circle of radius `core x orbitShare + lureOut`. Returns the move (dx, dy) in `out`.
+ * Per-step bookkeeping that runs whatever she does (also in hitstop): the graces count down, and a toy room's
+ * `relight` lamps burn again.
  */
-export function orbitStep(state: GameState, scene: Scene, t: Tuning, out: { dx: number; dy: number }): void {
-  const p = state.player;
-  out.dx = 0;
-  out.dy = 0;
-  const l = scene.lures?.[p.lure];
-  if (!l) return;
-  const T = t.lures;
-  const K = lureRowNow(state.lures, p.lure, l, t);
-  const r = K.core * T.orbitShare + p.lureOut;
-  const cx = centreX(p);
-  const cy = centreY(p);
-  const f = flameAt(state.lures, p.lure, l, state.frame, t, F);
-  const lx = f.x;
-  const ly = f.y;
-  let rx = cx - lx;
-  let ry = cy - ly;
-  let d = Math.sqrt(rx * rx + ry * ry);
-  if (d < 0.001) {
-    rx = 0;
-    ry = 1;
-    d = 1;
+export function tickLures(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): void {
+  const list = scene.lures;
+  if (list) {
+    const s = state.lures;
+    for (let i = 0; i < list.length; i++) {
+      const l = list[i];
+      if (!l?.relight || (s.hp[i] ?? 0) > 0 || !s.out[i]) continue;
+      if (state.frame + 1 - (s.out[i] as number) < l.relight) continue;
+      s.hp[i] = lureHpMax(l, t);
+      s.out[i] = 0;
+      const f = flameAt(s, i, l, state.frame, t, F);
+      events.push({ type: 'lureRelight', id: l.id, x: f.x, y: f.y });
+    }
   }
-  const s = l.spin ?? 1;
-  // Clockwise tangent at (rx, ry) from the flame = (-ry, rx) / d (y down).
-  const nx = rx + ((-ry * s) / d) * T.orbitSpeed;
-  const ny = ry + ((rx * s) / d) * T.orbitSpeed;
-  const n = Math.sqrt(nx * nx + ny * ny);
-  out.dx = lx + (nx * r) / n - cx;
-  out.dy = ly + (ny * r) / n - cy;
-}
-
-/** Per-step bookkeeping that runs whatever she does (also in hitstop): the graces count down. */
-export function tickLures(state: GameState): void {
   const p = state.player;
   if (p.lureGraceFrames > 0 && --p.lureGraceFrames === 0) p.lureGrace = -1;
   if (p.lureThrow > 0) p.lureThrow--;
@@ -459,32 +398,54 @@ export function slashLures(
       continue;
     }
     res.snuffs++;
-    s.out[i] = state.frame + 1;
-    s.snuffed++;
-    const moths = Math.max(0, Math.round(lureRowNow(s, i, l, t).moths));
-    s.freed += moths;
-    // Out for good (memory/save.md): the save remembers it by `room:id`, and the moths it freed. A
-    // boss's flames are saved when it is beaten (src/sim/boss/index.ts): a fight lost starts over.
-    const key = `${scene.id}:${l.id}`;
-    if (!bossOwnsLure(scene.boss, l.id) && !state.save.snuffed.includes(key)) {
-      state.save.snuffed.push(key);
-      state.save.moths += moths;
-    }
-    const heal = Math.max(0, Math.min(p.hpMax - p.hp, Math.round(T.healOnSnuff)));
-    p.hp += heal;
-    if (p.lure === i) freePlayer(state, scene, t, 'snuff', events);
-    events.push({
-      type: 'lureSnuff',
-      id: l.id,
-      kind: l.kind,
-      x: lx,
-      y: ly,
-      dir,
-      moths,
-      freed: s.freed,
-      snuffed: s.snuffed,
-      heal,
-    });
+    snuffLure(state, scene, i, t, events, dir === 'fwd' ? (facing < 0 ? -1 : 1) : facing < 0 ? -1 : 1, dir);
   }
   return res;
+}
+
+/**
+ * Lure `i` goes out for good (a slash's last cut, or a fling off it): its moths are freed, the save remembers
+ * it (`room:id`; a boss's flames when the boss is beaten, a `relight` lure never), 1 light back. `by` = the
+ * slash's direction, or `fling`.
+ */
+export function snuffLure(
+  state: GameState,
+  scene: Scene,
+  i: number,
+  t: Tuning,
+  events: SimEvent[],
+  side: number,
+  by: SlashDir | 'fling',
+): void {
+  const l = scene.lures?.[i];
+  if (!l) return;
+  const s = state.lures;
+  const p = state.player;
+  const f = flameAt(s, i, l, state.frame, t, F);
+  s.hp[i] = 0;
+  s.out[i] = state.frame + 1;
+  s.snuffed++;
+  const moths = Math.max(0, Math.round(lureRowNow(s, i, l, t).moths));
+  s.freed += moths;
+  const key = `${scene.id}:${l.id}`;
+  if (!bossOwnsLure(scene.boss, l.id) && !l.relight && !state.save.snuffed.includes(key)) {
+    state.save.snuffed.push(key);
+    state.save.moths += moths;
+  }
+  const heal = Math.max(0, Math.min(p.hpMax - p.hp, Math.round(t.lures.healOnSnuff)));
+  p.hp += heal;
+  events.push({
+    type: 'lureSnuff',
+    id: l.id,
+    kind: l.kind,
+    x: f.x,
+    y: f.y,
+    dir: by === 'fling' ? 'fwd' : by,
+    moths,
+    freed: s.freed,
+    snuffed: s.snuffed,
+    heal,
+    fling: by === 'fling',
+    side,
+  });
 }

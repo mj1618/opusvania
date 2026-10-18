@@ -3,17 +3,7 @@ import type { GlideEndReason, HurtSource, JumpKind, SimEvent, SlashDir, SlashEnd
 import { beatGrab, freeGrab, tickGrab } from '../grab';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { floorBarkAt, slashKit, thornAt } from '../kit';
-import {
-  beatLure,
-  catchPlayer,
-  freePlayer,
-  lureCatchAt,
-  lurePull,
-  lureThrowAim,
-  orbitStep,
-  slashLures,
-  tickLures,
-} from '../lures';
+import { flameAt, flingAim, flingLaunch, flingTarget, lurePull, slashLures, tickLures } from '../lures';
 import {
   type Body,
   type Collider,
@@ -125,6 +115,11 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     lureAimY: -1,
     lureThrow: 0,
     lureCore: 0,
+    fling: -1,
+    flingFrames: 0,
+    flingCd: 0,
+    chainX: Math.round(feetX),
+    chainY: y + h,
     lureBack: -1,
     lureArc: [],
     thrown: false,
@@ -1100,7 +1095,7 @@ export function updatePlayer(
   // Out of control: thrown by a hit (directions come back for the tail of it), or faded.
   const sides = ActionBit.left | ActionBit.right;
   const eff = p.faded > 0 || p.stagger > P.steerFrames ? 0 : p.stagger > 0 ? fresh & sides : fresh;
-  tickLures(state);
+  tickLures(state, scene, P.tuning, events);
   tickGrab(p);
   const c = new Ctx(state, p, scene, eff, state.prevInput | p.inputLock, P, events);
   c.inX = axisX(eff);
@@ -1150,19 +1145,16 @@ function controller(c: Ctx): void {
   // 2. Latch presses into buffers.
   latch(c);
   c.jumpPressedNow = c.pressed(ActionBit.jump);
-  // Caught by a lure: she circles its flame and beats free (a dash or the last beat lets the
-  // ordinary step below run on from where she is thrown; the slash clock ran inside).
-  // (A grab is the same Caught, held where it took her: src/sim/grab.ts.)
-  const held = p.lure >= 0 || p.grab >= 0;
+  // A grab (src/sim/grab.ts): she is held where it took her and beats free (the slash clock runs inside).
+  const held = p.grab >= 0;
   if (held && caught(c)) return;
+  // The fling off a lamp: aiming, she holds (the launch lets the ordinary step below run on).
+  if (!held && fling(c)) return;
   if (!held) updateSlash(c);
   const wasGrounded = p.grounded;
   const x0 = p.x;
   c.y0 = p.y;
   const vy0 = p.vy;
-  // Her body centre before the move (a core catches her only moving inward: memory/lures.md).
-  const pcx = p.x + p.rx + p.w / 2;
-  const pcy = p.y + p.ry + p.h / 2;
 
   // Wall speed retention: a wall zeroed vx recently and has gone -> restore it. Moving the other
   // way cancels it (Celeste does the same); otherwise it undoes wall jumps and turn-arounds.
@@ -1215,14 +1207,6 @@ function controller(c: Ctx): void {
   post(c, wasGrounded, x0, impactVy);
   if (!p.grounded && !wasGrounded && vy0 < 0 && p.vy >= 0 && !c.jumped)
     events.push({ type: 'apex', x: c.fx, y: c.fy });
-  // Reaching a burning core in ordinary flight (a dash passes through; a blow's throw does not catch).
-  if (p.mode === 'normal' && p.stagger === 0 && p.faded === 0 && p.hp > 0) {
-    const i = lureCatchAt(c.state, c.scene, P.tuning, pcx, pcy);
-    if (i >= 0) {
-      endGlide(c, 'lure');
-      catchPlayer(c.state, c.scene, i, P.tuning, events);
-    }
-  } else p.lureCore = 0;
 }
 
 /**
@@ -1251,8 +1235,8 @@ function pull(c: Ctx): void {
 }
 
 /** Scratch for the orbit step and the throw's aim. */
-const ORBIT = { dx: 0, dy: 0 };
 const AIM_NOW = { x: 0, y: 0 };
+const FLAME = { x: 0, y: 0 };
 
 /**
  * One frame caught by a lure. A dash (owned, ready) frees her at once and the dash starts as usual; a
@@ -1267,18 +1251,16 @@ function caught(c: Ctx): boolean {
   const L = t.lures;
   p.lureFrames++;
   if (p.lureCd > 0) p.lureCd--;
-  // A slash already swinging plays out (it may put this very flame out); no new one starts.
+  // A slash already swinging plays out; no new one starts.
   updateSlash(c);
   // A dash frees her even with the air dash spent (the hold gives it back: forgiving).
-  const grab = p.grab >= 0;
   if (p.dashBuf > 0 && P.dash && p.dashCd === 0) {
-    if (grab) freeGrab(c.state, t, 'dash', c.events);
-    else freePlayer(c.state, c.scene, t, 'dash', c.events);
+    freeGrab(c.state, t, 'dash', c.events);
     p.airDash = Math.max(p.airDash, 1);
     return false;
   }
   // Presses of jump or the blade are beats: queued (up to `beatQueue`), so a mash faster than
-  // `beatCd` is never lost; one buffered just before the catch counts as the first.
+  // `beatCd` is never lost; one buffered just before the grab counts as the first.
   const now = c.pressed(ActionBit.jump) || c.pressed(ActionBit.attack);
   const early = p.lureFrames === 1 && !now && (p.jumpBuf > 0 || p.attackBuf > 0);
   if (now || early) p.lurePend = Math.min(Math.max(1, Math.round(L.beatQueue)), p.lurePend + 1);
@@ -1286,14 +1268,9 @@ function caught(c: Ctx): boolean {
   p.djBuf = 0;
   p.attackBuf = 0;
   const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
-  let beat = false;
   if (p.lurePend > 0 && p.lureCd === 0) {
     p.lurePend--;
-    beat = true;
-    const free = grab
-      ? beatGrab(c.state, t, c.events, c.inX, aimY)
-      : beatLure(c.state, c.scene, t, c.events, c.inX, aimY);
-    if (free) {
+    if (beatGrab(c.state, t, c.events, c.inX, aimY)) {
       p.airDash = P.airDashes;
       p.dj = P.doubleJumps;
       p.grounded = false;
@@ -1302,31 +1279,21 @@ function caught(c: Ctx): boolean {
       return false;
     }
   }
-  // The last beat is due (`beatCd` after the one before it): the orbit stands still, so the throw
-  // arrow she sees is the throw she gets (feel review problem 6). A grab holds her where it took her;
-  // otherwise the core turns her round its flame.
-  const frozen = grab || (p.lureBeats === Math.max(1, Math.round(L.beats)) - 1 && p.lureCd > 0);
-  if (!beat && !frozen) p.lureOut = Math.max(0, p.lureOut - L.beatSink);
-  if (frozen) {
-    ORBIT.dx = 0;
-    ORBIT.dy = 0;
-  } else orbitStep(c.state, c.scene, t, ORBIT);
+  // A grab holds her where it took her.
   p.pullX = 0;
   p.kickX = 0;
   p.lungeX = 0;
-  p.vx = ORBIT.dx;
-  p.vy = ORBIT.dy;
-  moveX(p, ORBIT.dx, c);
-  moveY(p, ORBIT.dy, c);
-  // Where the last beat would throw her from here (render's arrow).
-  if (!grab) {
-    const a = lureThrowAim(c.state, c.scene, t, c.inX, aimY, AIM_NOW);
-    p.lureAimX = a.x;
-    p.lureAimY = a.y;
-  }
+  p.vx = 0;
+  p.vy = 0;
   p.grounded = false;
   p.coyote = 0;
   p.airTopY = p.y;
+  tickHeld(p);
+  return true;
+}
+
+/** The timers that run while she is held (a grab, a fling's aim). */
+function tickHeld(p: PlayerState): void {
   if (p.jumpBuf > 0) p.jumpBuf--;
   if (p.djBuf > 0) p.djBuf--;
   if (p.dashBuf > 0) p.dashBuf--;
@@ -1336,6 +1303,66 @@ function caught(c: Ctx): boolean {
   if (p.dashCd > 0) p.dashCd--;
   if (p.kick > 0) p.kick--;
   if (p.forceTimer > 0) p.forceTimer--;
+}
+
+/**
+ * The fling (memory/lures.md; Matt's play, 2026-10-18: Ori's Bash in place of the catch). Lamp pressed within a
+ * burning flame's `fling` radius snaps the moment: she holds where she is (the world slows: `step`) and aims
+ * with the stick; Lamp let go, or `flingFrames` up, flings her along the aim and the flame goes out behind her.
+ * Returns true while she is aiming (the frame is spent holding).
+ */
+function fling(c: Ctx): boolean {
+  const p = c.p;
+  const P = c.P;
+  const t = P.tuning;
+  const L = t.lures;
+  if (p.flingCd > 0) p.flingCd--;
+  const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
+  if (p.fling < 0) {
+    if (!c.pressed(ActionBit.lamp) || p.flingCd > 0 || p.mode === 'dash' || p.stagger > 0) return false;
+    const i = flingTarget(c.state, c.scene, t);
+    const l = i >= 0 ? c.scene.lures?.[i] : undefined;
+    if (!l) return false;
+    p.fling = i;
+    p.flingFrames = 0;
+    endGlide(c, 'lure');
+    if (p.mode === 'wallSlide') {
+      c.events.push({ type: 'wallSlideEnd', x: c.fx, y: c.fy, dir: p.wallDir });
+      p.mode = 'normal';
+    }
+    const f = flameAt(c.state.lures, i, l, c.state.frame, t, FLAME);
+    c.events.push({ type: 'flingStart', id: l.id, x: f.x, y: f.y, frames: Math.round(L.flingFrames) });
+  }
+  p.flingFrames++;
+  const gone = (c.state.lures.hp[p.fling] ?? 0) <= 0;
+  if (gone) {
+    p.fling = -1;
+    p.flingFrames = 0;
+    return false;
+  }
+  if (!c.held(ActionBit.lamp) || p.flingFrames >= Math.max(1, Math.round(L.flingFrames))) {
+    flingLaunch(c.state, c.scene, t, c.events, c.inX, aimY);
+    p.airDash = P.airDashes;
+    p.dj = P.doubleJumps;
+    p.grounded = false;
+    p.fromJump = false;
+    p.sustain = 0;
+    p.jumpBuf = 0;
+    p.djBuf = 0;
+    return false;
+  }
+  // Aiming: she holds still; the arrow is the aim.
+  const a = flingAim(c.state, c.scene, t, c.inX, aimY, AIM_NOW);
+  p.lureAimX = a.x;
+  p.lureAimY = a.y;
+  p.pullX = 0;
+  p.kickX = 0;
+  p.lungeX = 0;
+  p.vx = 0;
+  p.vy = 0;
+  p.coyote = 0;
+  p.airTopY = p.y;
+  tickHeld(p);
   return true;
 }
 
@@ -1520,6 +1547,9 @@ export function hurtPlayer(
   }
   // A blow knocks her out of a grab (a web's hold, the weaver's bite): src/sim/grab.ts.
   if (p.grab >= 0) freeGrab(state, P.tuning, 'hurt', events);
+  // A blow ends a fling's aim (the flame stays lit).
+  p.fling = -1;
+  p.flingFrames = 0;
   if (p.mode === 'dash') events.push({ type: 'dashEnd', x, y, dir: p.dashDir });
   else if (p.mode === 'wallSlide') events.push({ type: 'wallSlideEnd', x, y, dir: p.wallDir });
   if (p.mode !== 'normal') p.modeFrames = 0;
@@ -1584,7 +1614,7 @@ function enemyNear(enemies: EnemyState[], x: number, y: number, px: number, t: T
  * (not a one-way branch), in control, with no living enemy near. While that holds, where she is
  * is where she will re-form. Runs at the end of every step.
  */
-export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): void {
+export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): boolean {
   const p = state.player;
   const cx = p.x + p.w / 2;
   const bottom = p.y + p.h;
@@ -1617,6 +1647,7 @@ export function trackSafeGround(state: GameState, scene: Scene, P: MoveParams): 
     p.safeX = cx;
     p.safeY = bottom;
   }
+  return ok;
 }
 
 /**

@@ -13,7 +13,7 @@ import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goa
 import { createHatch, updateHatch } from './hatch';
 import { ActionBit, type InputFrame, wasPressed } from './input';
 import { afterCatch, catchHold, updateKit } from './kit';
-import { freePlayer } from './lures';
+import { commitEmbers, hasEmbers, relightEmbers } from './lures';
 import { dropGlints, updateDrops, updatePickups } from './pickups';
 import { resolveParams } from './player/params';
 import {
@@ -501,16 +501,21 @@ export function step(
     t,
     (dir, damage, id, hitX, hitY) => {
       hurtPlayer(state, P, dir, damage, { kind: 'thorns', id }, hitX, hitY, events);
-      if (state.player.lure >= 0) freePlayer(state, S, t, 'hurt', events);
+      // Thorns end a fling chain: its embers burn again.
+      relightEmbers(state, S, t, events);
     },
     events,
     (live & ActionBit.jump) !== 0,
   );
+  // While she aims a fling the world slows: the boss and the creatures move one step in `flingSlowEvery`, and
+  // nothing touches her (memory/lures.md).
+  const aiming = state.player.fling >= 0;
+  const slowed = aiming && state.frame % Math.max(1, Math.round(t.lures.flingSlowEvery)) !== 0;
   // A boss fight (memory/bosses.md): the lock, its phases and cues, before its creature moves.
-  updateBoss(state, S, t, events);
-  const touch = updateEnemies(state, S, t, events, first);
+  if (!slowed) updateBoss(state, S, t, events);
+  const touch = slowed ? -1 : updateEnemies(state, S, t, events, first);
   const p = state.player;
-  const e = touch >= 0 ? state.enemies[touch] : undefined;
+  const e = touch >= 0 && !aiming ? state.enemies[touch] : undefined;
   if (e && p.invuln === 0 && p.hp > 0 && !state.goal.gathered) {
     const pc = p.x + p.w / 2;
     const ec = e.x + e.w / 2;
@@ -532,12 +537,20 @@ export function step(
       );
       // The creature that hit her holds as long as she does (the blow lands: `health.hurtHitstop`).
       e.hitstop = Math.max(e.hitstop, state.player.hitstop);
-      // A blow knocks her out of a lure's hold (memory/lures.md).
-      if (state.player.lure >= 0) freePlayer(state, S, t, 'hurt', events);
     }
     enemyTouched(state, S, touch, dir, t, events);
   }
-  if (ran) trackSafeGround(state, S, P);
+  // On safe ground after a fling chain: its embers go out for good, or burn again if she landed back where the
+  // chain began (a miss); faded, they burn again.
+  if (ran && trackSafeGround(state, S, P) && hasEmbers(state)) {
+    const q = state.player;
+    const back =
+      Math.abs(q.groundY - q.chainY) <= t.ground.stepUp &&
+      Math.abs(q.groundX - q.chainX) <= t.lures.chainBackPx;
+    if (back) relightEmbers(state, S, t, events);
+    else commitEmbers(state, S, t, events);
+  }
+  if (state.player.faded > 0 && hasEmbers(state)) relightEmbers(state, S, t, events);
   // Progress (memory/world.md): shortcuts she pushes open, glades, the moon patch she stands in.
   updateShortcuts(state, scene, events);
   updateGlades(state, scene, events);
@@ -551,10 +564,14 @@ export function step(
       const frames = Math.max(1, Math.round(t.room.catchFrames));
       state.caught = { id, frames: 0 };
       events.push({ type: 'fallCatch', id, x: p.x + p.w / 2, y: p.y + p.h, frames });
+      // A fall ends a fling chain: its embers burn again.
+      relightEmbers(state, S, t, events);
     }
   }
   if (!state.exit && !state.caught) {
     const out = crossedExit(state, S);
+    // (Out of the room in flight: the chain carried her; its embers go out for good.)
+    if (out && hasEmbers(state)) commitEmbers(state, S, t, events);
     // An exit the other side of a one-way drop is arrival only: crossing it does nothing.
     const link = out && world ? world.links[`${scene.id}#${out.id}`] : undefined;
     if (out && link !== null) {
@@ -623,9 +640,8 @@ export function step(
       milestone: mothMilestone(base, state.save.moths).prev,
     });
   }
-  // Caught by a lure: the throw's arc from here, for render (src/sim/arc.ts). Last in the step, so a blow
-  // that freed her this step leaves no arc behind.
-  if (state.player.lure >= 0) state.player.lureArc = lureArc(state, S, t, P, live);
+  // Aiming a fling: the flight a release now gives, for render (src/sim/arc.ts). Last in the step.
+  if (state.player.fling >= 0) state.player.lureArc = lureArc(state, S, t, P, live);
   else if (state.player.lureArc.length > 0) state.player.lureArc = [];
   // Presses are edges of the real input (the hatching counts them while `live` is 0).
   state.prevInput = shut ? input : live;

@@ -219,6 +219,11 @@ export interface Lure {
   swing?: Swing;
   /** It burns only once this story flag is set (the firefly's glow-cap after the glimpse: src/sim/kit.ts). */
   after?: string;
+  /**
+   * A toy room's lamp (lab-feel): out, it burns again this many frames later, and its snuff is never saved
+   * (no moths counted). Real rooms never use it.
+   */
+  relight?: number;
 }
 
 /**

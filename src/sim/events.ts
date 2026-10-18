@@ -77,7 +77,21 @@ export type SimEvent =
       freed: number;
       snuffed: number;
       heal: number;
+      /** Put out by a fling off it (not a cut); `side` = the way she left it (-1 / 1). */
+      fling?: boolean;
+      side?: number;
     }
+  /**
+   * The fling (memory/lures.md). `flingStart`: Lamp pressed near lure `id` (`x`, `y` = its flame): the moment
+   * snaps (she holds, the world slows) for at most `frames` while she aims (`player.lureAimX/Y`, the arc in
+   * `player.lureArc`). `fling`: she leaves it at (`vx`, `vy`) along (`aimX`, `aimY`); a `lureSnuff` (fling) follows.
+   * `lureRelight`: a flame burns again (embers after a failed chain, or a toy room's `relight`).
+   */
+  | { type: 'flingStart'; id: string; x: number; y: number; frames: number }
+  | { type: 'fling'; id: string; x: number; y: number; vx: number; vy: number; aimX: number; aimY: number }
+  | { type: 'lureRelight'; id: string; x: number; y: number }
+  /** A flame she flung from smoulders (embers) until she lands safe (`lureSnuff`) or fails (`lureRelight`). */
+  | { type: 'lureEmber'; id: string; x: number; y: number }
   /**
    * She crossed an open room edge (`scene.exits`, `id` = the exit). The room holds her (no input,
    * she keeps falling or running on) for `frames` (= `tuning.room.exitFrames`), then restarts:
