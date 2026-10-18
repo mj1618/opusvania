@@ -95,6 +95,8 @@
   "marks": {
     "stage": {
       "circlers": [{ "lure": "wick-throw", "count": 6, "r": 95 }],
+      "leaks": [{ "x": 3392, "y": 864, "w": 64, "h": 160, "dir": 1 }],
+      "strays": [{ "x": 3480, "y": 940, "r": 40, "count": 1 }],
       "tatters": [
         {
           "x": 700,

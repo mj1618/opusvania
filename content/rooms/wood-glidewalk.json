@@ -176,6 +176,11 @@
     { "from": "e", "to": "w", "needs": ["wallJump"], "oneWay": true }
   ],
   "marks": {
+    "stage": {
+      "leaks": [{ "x": 7504, "y": 1984, "w": 96, "h": 64, "up": true }],
+      "strays": [{ "x": 7552, "y": 1900, "r": 48, "count": 2 }],
+      "oak": { "x": 10560, "y": 1984, "top": -1508, "w": 384 }
+    },
     "notes": [
       {
         "x": 40,
@@ -234,8 +239,7 @@
         "text": "RETURN BOUGH (wall jump): kick up T-ret's east face, walk west, drop onto E0"
       },
       { "x": 2600, "y": 200, "text": "LANDMARK: the long bough overhead; ahead, the oak's door" }
-    ],
-    "stage": { "oak": { "x": 10560, "y": 1984, "top": -1508, "w": 384 } }
+    ]
   },
   "shots": {
     "wide": [

@@ -260,6 +260,8 @@
   "marks": {
     "stage": {
       "carpet": { "x0": 1980, "x1": 3540, "y": 2112 },
+      "leaks": [{ "x": 2432, "y": 444, "w": 64, "h": 256, "dir": 1 }],
+      "strays": [{ "x": 2470, "y": 600, "r": 50, "count": 2 }],
       "den": {
         "flag": "wood-old-burrback-down",
         "crack": "wood-den-cracked",

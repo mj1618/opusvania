@@ -91,6 +91,8 @@
       "circlers": [{ "lure": "wick-pocket", "count": 1, "r": 70 }],
       "stragglers": { "count": 2, "path": [[700, 1180], [560, 1230], [432, 1270], [432, 1300]] },
       "props": [{ "kind": "deadMoth", "x": 420, "y": 1280, "facing": 1 }],
+      "leaks": [{ "x": 384, "y": 1280, "w": 96, "h": 64, "up": true }],
+      "strays": [{ "x": 432, "y": 1190, "r": 48, "count": 2 }],
       "guide": {
         "path": [
           [700, 1150],

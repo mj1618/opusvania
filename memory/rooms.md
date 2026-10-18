@@ -159,6 +159,8 @@ snuff, bounce, L2.
   critical-path floor (checked by script over every area-1 room).
   **The den's flag fires on a `gone` boss too** (src/sim/kit.ts: `dead || gone`): any way the old burrback leaves without
   dying opens the plug and the glade. A no-skip test (den door, nest, den floor, no claws, the boss alive) holds.
+  Hidden finds whisper (`stage.leaks`, `stage.strays`, render's): R4's door pocket (up through the panel), R5's grate
+  (the road's mouth), R10's tunnel opening on the column's climb, R8's hollow bark, R6's floor pocket.
 - A one-way's `noDrop` may name a flag (refuses drop-through until it is set).
 - A floor bark panel is hit by a down cut from the air (cut ~70-90 px over it, falling): each hit bounces
   her; cut as she lands and it hits with no bounce; a standing down cut does not reach it.
