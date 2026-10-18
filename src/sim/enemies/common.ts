@@ -78,8 +78,9 @@ export function segmentBlocked(scene: Scene, x0: number, y0: number, x1: number,
  * She is held (a lamp's orbit or a grab) and it was off her screen when the catch began: it may start no
  * strike on her until she is free (round 4: nothing arrives from off-screen while she is helpless).
  */
-export function heldUnseen(e: EnemyState, p: { lure: number; grab: number }): boolean {
-  return (p.lure >= 0 || p.grab >= 0) && e.catchSeen === 0;
+export function heldUnseen(e: EnemyState, p: { lure: number; grab: number; fling: number }): boolean {
+  // (The fling's slowed aim is the new helpless moment: the same rule.)
+  return (p.lure >= 0 || p.grab >= 0 || p.fling >= 0) && e.catchSeen === 0;
 }
 
 /**

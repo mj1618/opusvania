@@ -247,6 +247,13 @@ Each hunts one moment of the lamp verb; placement is the builders', these are th
   - Numbers (scaled): slow pilot (den replica) 22 of 24 at the first try, all win, 40-107 s, 0-7 hits.
     `npm run humanplay -- den` (6 seeds a skill): all 18 down; casual 0-3 fades, 45-128 s; average 0-2, 39-99 s;
     skilled 0-2, 44-71 s.
+- **The fling (round 7, e284ebf)**: the lamp's catch is gone. While she aims (`player.fling >= 0`) the sim slows the
+  creatures and ignores every touch (src/sim/index.ts); on top of that nothing shoves her (the old burrback's slam,
+  its body, its rise), a rhythm hawker holds its pass while she aims off its lamp, and the aim is a helpless moment
+  for `heldUnseen` (nothing off her screen starts a strike). `hawker.huntCaught` is off.
+- **Sharp wings** (upgrade `sharpWings`): in a fling's launch (`thrown`, `lureThrow` running) her body is a step-1
+  cut on every creature and strand it meets, once a flight (`wingCuts` in enemies.ts: `slashEnemies` with her box,
+  the launch frame naming the blow). A braced shell glances, a web loses strands, a dangler its silk.
 - **First-timer r6**: windows after a miss are 100 f (was 70); its ram and its ball hurt only from their front
   half (behind it as it goes she is let be). A pogo on its brace and a throw-cut already land (chip / flip). The
   crack's blade of light is no mechanic: staging should land it on the taproot (phase 3's target), out of the

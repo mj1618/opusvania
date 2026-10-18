@@ -446,14 +446,14 @@ function rhythm(e: EnemyState, info: StepInfo, t: L): boolean {
     e.flap += t.flapCurious;
     // (Round 5: it never starts a pass while she is caught in its orbit: the tell holds until she is free.)
     if (--e.timer <= 0) {
-      if (info.state.player.lure === e.orbit) e.timer = 1;
+      if (info.state.player.lure === e.orbit || info.state.player.fling === e.orbit) e.timer = 1;
       else swoop(e, info, t, f, frames(t.passFrames, 1));
     }
   } else {
     // The pass: a pull-back, then a curve from its perch down through the flame and up to the mirror perch
     // (through her, if she circles in that orbit: it takes a moth from it, and she is one).
     const p = info.state.player;
-    if (p.lure === e.orbit) {
+    if (p.lure === e.orbit || p.fling === e.orbit) {
       f.x = p.x + p.w / 2;
       f.y = p.y + p.h / 2;
     }

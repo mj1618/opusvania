@@ -41,6 +41,7 @@ import type { Box } from './player/attack';
 import type { EnemyKind, EnemySpawn, Scene } from './scene';
 import type { AttackDir, EnemyState, GameState, PlayerState } from './state';
 import type { Tuning } from './tuning';
+import { upgradesOwned } from './upgrades';
 
 const KINDS: Record<EnemyKind, KindRules> = {
   burrback,
@@ -66,6 +67,40 @@ const KIND_LIST: EnemyKind[] = [
   'juvenileBurrback',
   'carrier',
 ];
+
+/**
+ * Sharp wings (`sharpWings`, a moonlit hollow's upgrade): her body in a fling's launch (`player.thrown`, the
+ * launch's `lureThrow` running) is a blade: every creature and strand it overlaps takes a step-1 cut, once a launch
+ * (the launch's frame names the blow: no creature is cut twice by one flight). What each one does about it is its own
+ * rule, as for a slash (a braced shell glances, a web loses the strands, a dangler its silk).
+ */
+function wingCuts(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]): void {
+  const p = state.player;
+  if (!p.thrown || p.lureThrow <= 0 || p.hp <= 0) return;
+  if (!upgradesOwned(state.save).includes('sharpWings')) return;
+  const launched = state.frame - (Math.max(0, Math.round(t.lures.throwFrames)) - p.lureThrow);
+  const seq = -1 - launched;
+  const heavy = p.attackHeavy;
+  p.attackHeavy = false;
+  const facing = p.vx + p.pullX < 0 ? -1 : 1;
+  const S = t.slash1;
+  slashEnemies(
+    state,
+    scene,
+    { x: p.x, y: p.y, w: p.w, h: p.h },
+    seq,
+    'fwd',
+    facing,
+    false,
+    1,
+    S.power,
+    S.knockback,
+    Math.max(0, Math.round(t.enemies.hitstopFrames)),
+    t,
+    events,
+  );
+  p.attackHeavy = heavy;
+}
 
 /** How heavy a blow on it reads (round 7: `slashHit.weight`, render's shake and sound): fodder, a body, a boss. */
 export function weightOf(kind: EnemyKind): 'light' | 'medium' | 'heavy' {
@@ -338,6 +373,8 @@ export function updateEnemies(
       }
     }
   }
+  // Sharp wings (an upgrade): in a fling's launch her body cuts what it meets, creatures and strands.
+  wingCuts(state, scene, t, events);
   let touch = -1;
   const finale =
     state.kit.story > 0 &&
@@ -367,7 +404,7 @@ export function updateEnemies(
     e.modeFrames++;
     const K = KINDS[e.kind];
     // (On her screen as she was caught? Kept while she is free, frozen while she is held.)
-    if (p.lure < 0 && p.grab < 0)
+    if (p.lure < 0 && p.grab < 0 && p.fling < 0)
       e.catchSeen =
         Math.abs(e.x + e.w / 2 - (p.x + p.w / 2)) <= t.enemies.screenHalfW &&
         Math.abs(e.y + e.h / 2 - (p.y + p.h / 2)) <= t.enemies.screenHalfH

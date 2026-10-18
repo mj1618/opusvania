@@ -1242,6 +1242,45 @@ describe('round 5: the carriers (ants)', () => {
   });
 });
 
+describe('the fling (round 7): nothing strikes her while she aims; sharp wings cut in the launch', () => {
+  it('a ram that reaches her while she aims a fling does not hurt her', () => {
+    const s = newSim(
+      room(
+        [{ id: 'b', kind: 'burrback', x: 2400, y: FLOOR, facing: -1, radius: 600 }],
+        [wick('w', 2000, 700)],
+      ),
+    );
+    s.place(2000, FLOOR);
+    s.run('B1');
+    expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+    // Its ram, right on her as she holds the moment.
+    const b = enemy(s, 'b');
+    b.mode = 'charge';
+    b.chargeLeft = 400;
+    b.x = s.state.player.x + 10;
+    b.facing = -1;
+    const ev = s.run('B20');
+    expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+    expect(of(ev, 'hurt')).toEqual([]);
+  });
+
+  it('sharp wings: her body in the launch cuts what it meets (once a flight); without them it does not', () => {
+    for (const owned of [true, false]) {
+      // A lampwing hanging just right of the wick, in the line of a fling to the right.
+      const s = newSim(
+        room([{ id: 'l', kind: 'lampwing', x: 2140, y: 690, facing: -1 }], [wick('w', 2000, 700)]),
+      );
+      if (owned) s.state.save.flags.push('upgrade:sharpWings');
+      s.place(1990, 760);
+      s.run('R+B1 R+B3');
+      expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+      const ev = s.run('R1 R20');
+      const cut = [...of(ev, 'enemyHit'), ...of(ev, 'enemyDie')].filter((e) => e.id === 'l');
+      expect(cut.length, `owned ${owned}`).toBe(owned ? 1 : 0);
+    }
+  });
+});
+
 describe('fairness: every attack is told, with time to answer', () => {
   it('telegraphs are at least 20 frames, and the weaver count outlasts the fastest beat-free', () => {
     expect(T.burrback.windupFrames).toBeGreaterThanOrEqual(20);
