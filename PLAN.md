@@ -75,12 +75,8 @@ target, is the wood and the valley of lamps as a standalone chapter (27 rooms, 2
 The demo level is a test bed (`test-grove`) and constrains nothing in the real game.
 
 ## Next
-Art is paused (Matt, 2026-10-18). Scene 1 keeps its art as the wood's look target. The game is now designed and
-played in greybox one region at a time: `STUDIO.md` has the loop. First region: **the wood** (about 12 rooms, 35–45
-min, glide and wall jump, the first predators, the Weaver).
-- **Phase 0:** a greybox render mode, the lamp verb (pull, caught, snuff) in a lab room, the wood's paper design
-  (`docs/design/regions/wood.md`), and a playtest harness with persona bots and telemetry.
-- **Phase 1:** a multi-room engine (exits between rooms, moon patches that save and respawn, glades that give
-  abilities, a map), then every wood room greyboxed from the paper design.
-- **Phase 2:** loop the region (playtest → design review → revise) until it meets STUDIO.md's exit criteria and Matt
-  says it's fun. Then the valley. Art is left until the end (Matt, 2026-10-18).
+1. Matt plays wood area 1 and gives notes; the notes outrank every metric (`STUDIO.md`).
+2. Iterate area 1 on those notes, using the onion loop: fix, then a human-like video review and a first-timer agent.
+3. Build area 2, the high wood (the web gauntlet, the Weaver, whose boss framework is already in `lab-weaver`, and the
+   canopy road), as one chunk. Then iterate it to the bar, then run a layer review of the whole wood.
+4. Art and sound come at the end (Matt, 2026-10-18).
