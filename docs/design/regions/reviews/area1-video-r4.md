@@ -313,6 +313,13 @@ It is also the point where bots stop being able to judge. **Matt's play of this 
 
 ---
 
+- **One run didn't render.** The video for average s3 (a 35:55 run, about 129k frames) failed with "Maximum call
+  stack size exceeded" in `Game.queueInput`. The cause is `this.scripted.push(...frames)` in `src/game.ts`: spreading
+  an input tape of over ~125k frames exceeds the engine's limit on call arguments. Its headless numbers above are
+  valid; it just has no video.
+  - **Owner:** the sim/debug API. Push in chunks or with a loop.
+  - Every other render matched its headless run.
+
 ## 9. The 8 worst problems now, ranked
 
 ### 1. The boss is staged but not dangerous (creatures, camera)
