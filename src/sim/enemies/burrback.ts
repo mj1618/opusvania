@@ -582,9 +582,11 @@ function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean, wave = false)
   const cx = e.x + e.w / 2;
   const pc = p.x + p.w / 2;
   const past = refuge(e, p);
+  // (Not while she aims a fling: the moment is hers.)
   const shook =
     p.hp > 0 &&
     p.faded === 0 &&
+    p.fling < 0 &&
     (p.y + p.h < e.fromY - B.campRisePx ||
       past ||
       lowCeiling(info.scene, p.x, p.y, p.w, p.h, B.strikeHeadroomPx)) &&
@@ -1160,6 +1162,7 @@ export const burrback: KindRules = {
     if (
       B.bodyHarmless &&
       B.risePush > 0 &&
+      p.fling < 0 &&
       !e.stunned &&
       (free || e.mode === 'recover' || e.mode === 'hurt' || e.mode === 'windup') &&
       p.x < e.x + e.w &&
@@ -1204,7 +1207,14 @@ export const burrback: KindRules = {
     if (e.mode === 'wake') {
       e.vx = 0;
       // (Getting up, the old burrback shoulders her out of its body: she is never inside it when it is live.)
-      if (B.risePush > 0 && p.x < e.x + e.w && e.x < p.x + p.w && p.y < e.y + e.h && e.y < p.y + p.h) {
+      if (
+        B.risePush > 0 &&
+        p.fling < 0 &&
+        p.x < e.x + e.w &&
+        e.x < p.x + p.w &&
+        p.y < e.y + e.h &&
+        e.y < p.y + p.h
+      ) {
         const away = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
         if (p.kickX * away < B.risePush) p.kickX = away * B.risePush;
       }

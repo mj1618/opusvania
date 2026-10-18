@@ -22,12 +22,12 @@ import { offerTarget } from '../sim/giving';
 import { restPoint } from '../sim/goal';
 import { type GameState, goalHolds, heartBox, lampCost, lanternBox, lanternCost } from '../sim/index';
 import { barkHpMax, capHeight } from '../sim/kit';
-import { flameAt, lureHpMax, lureRowNow } from '../sim/lures';
+import { flameAt, flingTarget, lureHpMax, lureRowNow } from '../sim/lures';
 import { pickupsWorth } from '../sim/pickups';
 import { podHpMax, podsWorth, podValue } from '../sim/pods';
 import { markSeen, seenNow, seenScale } from '../sim/seen';
 import type { Tuning } from '../sim/tuning';
-import { isUpgrade, UPGRADE_IDS, upgradeFlag, upgradesOwned, withUpgrades } from '../sim/upgrades';
+import { isUpgrade, UPGRADE_IDS, upgradeFlag, upgradesOwned } from '../sim/upgrades';
 import type { TuningPanel } from './tuning-panel';
 
 /**
@@ -174,18 +174,18 @@ export interface GameDebugApi {
     }>;
   };
   /**
-   * Lures, the story's lamps (memory/lures.md): how many are out, the moths freed, what holds her
-   * (`caught`: the lure's id, frames, beats of `of`, how far her circle is pushed out; null = free),
-   * her pull momentum `pullX`, the lure leaving her alone (`grace`), and every lure with its kind's
-   * numbers, `hp` left of `hpMax` and `state` (`burning` | `out`).
+   * Lures, the story's lamps (memory/lures.md): how many are out, the moths freed, the fling she is aiming
+   * (`fling`: the lure's id, frames aimed of `of`, the aim, the predicted arc; null = none), the one in reach
+   * of a fling now (`reach`), her launch momentum `pullX`, and every lure with its kind's numbers (`fling` =
+   * its reach), `hp` left of `hpMax` and `state` (`burning` | `out`).
    */
   lures(): {
     snuffed: number;
     freed: number;
     total: number;
-    caught: { id: string; frames: number; beats: number; of: number; out: number } | null;
+    fling: { id: string; frames: number; of: number; aimX: number; aimY: number; arc: number[] } | null;
+    reach: string | null;
     pullX: number;
-    grace: { id: string; frames: number } | null;
     list: Array<{
       id: string;
       kind: string;
@@ -197,6 +197,7 @@ export interface GameDebugApi {
       hpMax: number;
       radius: number;
       core: number;
+      fling: number;
       moths: number;
       outFrame: number | null;
     }>;
@@ -243,7 +244,7 @@ export interface GameDebugApi {
     areas: string[];
     upgrades: string[];
   };
-  /** Upgrades: `upgrade()` lists hers; `upgrade(id)` grants one (`quickWings`, `keenBlade`), `upgrade(id, false)` takes it away. */
+  /** Upgrades: `upgrade()` lists hers; `upgrade(id)` grants one (`UPGRADE_IDS`: `quickWings`, `keenBlade`, `nightEyes`, `longBreath`, `sharpWings`), `upgrade(id, false)` takes it away. */
   upgrade(id?: string, on?: boolean): string[];
   /**
    * Enemies: how many are alive, and each with where it is (`x`, `y` = feet centre; `box` = its
@@ -885,23 +886,24 @@ export function installDebugApi(deps: {
       const s = game.state.lures;
       const p = game.state.player;
       const list = game.scene.lures ?? [];
-      const held = list[p.lure];
-      const graced = p.lureGraceFrames > 0 ? list[p.lureGrace] : undefined;
+      const aimed = list[p.fling];
+      const near = flingTarget(game.state, game.scene, game.tuning);
       return {
         snuffed: s.snuffed,
         freed: s.freed,
         total: list.length,
-        caught: held
+        fling: aimed
           ? {
-              id: held.id,
-              frames: p.lureFrames,
-              beats: p.lureBeats,
-              of: Math.max(1, Math.round(withUpgrades(game.tuning, game.state.save).lures.beats)),
-              out: p.lureOut,
+              id: aimed.id,
+              frames: p.flingFrames,
+              of: Math.round(game.tuning.lures.flingFrames),
+              aimX: p.lureAimX,
+              aimY: p.lureAimY,
+              arc: p.lureArc.slice(),
             }
           : null,
+        reach: near >= 0 ? (list[near]?.id ?? null) : null,
         pullX: p.pullX,
-        grace: graced ? { id: graced.id, frames: p.lureGraceFrames } : null,
         list: list.map((l, i) => {
           const K = lureRowNow(s, i, l, game.tuning);
           const hp = s.hp[i] ?? 0;
@@ -917,6 +919,7 @@ export function installDebugApi(deps: {
             hpMax: lureHpMax(l, game.tuning),
             radius: K.radius,
             core: K.core,
+            fling: K.fling,
             moths: K.moths,
             outFrame: (s.out[i] ?? 0) > 0 ? (s.out[i] as number) - 1 : null,
           };

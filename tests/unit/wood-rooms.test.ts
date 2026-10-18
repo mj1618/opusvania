@@ -6,6 +6,7 @@ import type { SimEvent } from '../../src/sim/events';
 import { ActionBit } from '../../src/sim/input';
 import { solidAt } from '../../src/sim/physics/aabb';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
+import { fling, inReach, UR, untilReach } from './fling-drive';
 
 /**
  * The wood's area 1 in greybox (docs/design/regions/wood-area1-director.md, the redesign; wood.md A7;
@@ -246,41 +247,29 @@ describe('R3 wood-wicks: the first lights, one idea per screen', () => {
     expect((getRoom('wood-wicks').camera?.zones ?? []).map((z) => z.id)).toContain('lesson');
   });
 
-  it("every run-up jump from L's lip toward the stragglers is caught by W1", () => {
+  it("every run-up jump from L's lip toward the stragglers comes into W1's fling reach", () => {
     for (let lead = 0; lead <= 120; lead += 12) {
       const s = play('wood-wicks');
       s.g.teleport(1000, 960);
       s.runTo(1552 - 20 - lead);
-      const ev = s.run(R | J, 14).concat(s.run(R, 60));
       expect(
-        ev.find((e) => e.type === 'lureCaught'),
+        untilReach(s.g, (f) => (f < 14 ? R | J : R), 'wick-caught', 74),
         `jump ${lead} px before the lip`,
-      ).toMatchObject({
-        id: 'wick-caught',
-      });
+      ).toBe('wick-caught');
     }
   });
 
-  it('beaten free holding right she is thrown onto M; holding nothing, back onto L', () => {
-    const s = play('wood-wicks');
-    s.g.teleport(1000, 960);
-    s.runTo(1500);
-    s.run(R | J, 14);
-    for (let i = 0; i < 60 && s.g.state.player.lure < 0; i++) s.run(R);
-    expect(s.g.state.player.lure).toBeGreaterThanOrEqual(0);
-    beatFree(s, R);
-    for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(R);
-    expect(s.feet().y).toBe(960);
-    expect(s.feet().x).toBeGreaterThan(1808);
-    const b = play('wood-wicks');
-    b.g.teleport(1000, 960);
-    b.runTo(1500);
-    b.run(R | J, 14);
-    for (let i = 0; i < 60 && b.g.state.player.lure < 0; i++) b.run(R);
-    beatFree(b, 0);
-    for (let i = 0; i < 200 && !b.g.state.player.grounded; i++) b.run(0);
-    expect(b.feet().y).toBe(960);
-    expect(b.feet().x).toBeLessThan(1552);
+  it('flung right or up-right from W1 she lands on M; flung left, back onto L', () => {
+    for (const aim of [R, UR, L]) {
+      const s = play('wood-wicks');
+      s.g.teleport(1000, 960);
+      s.runTo(1500);
+      expect(untilReach(s.g, (f) => (f < 14 ? R | J : R), 'wick-caught', 74)).toBe('wick-caught');
+      fling(s.g, aim);
+      expect(s.feet().y, `aim ${aim}`).toBe(960);
+      if (aim === L) expect(s.feet().x).toBeLessThan(1552);
+      else expect(s.feet().x, `aim ${aim}`).toBeGreaterThan(1808);
+    }
   });
 
   it('no fork: a miss into the dip (too deep to cross) climbs back to L by a root rung in under 5 s', () => {
@@ -425,8 +414,7 @@ describe('R5 wood-glade: glade 1, the glide lock', () => {
     s.run(L, 20);
     expect(s.feet().x).toBeLessThan(1408);
     expect(s.feet().y).toBeGreaterThan(1856);
-    expect(s.events.some((e) => e.type === 'lureCaught' || e.type === 'fallCatch')).toBe(true);
-    expect(s.events.find((e) => e.type === 'lureCaught')).toMatchObject({ id: 'wick-alcove' });
+    expect(inReach(s.g)).toBe('wick-alcove');
   });
 
   it('the chasm is a catch back to the lip, at no cost', () => {
@@ -489,21 +477,12 @@ function climb(
   return out;
 }
 
-/** Beats free of a lure's hold: presses of jump, `dir` held. */
-function beatFree(s: ReturnType<typeof play>, dir = 0): void {
-  for (let k = 0; k < 8 && s.g.state.player.lure >= 0; k++) {
-    s.run(dir | J, 1);
-    s.run(dir, 9);
-  }
-}
-
 /**
  * The paper's jump-cut sweep (wood.md "Measured reach"): 60-140 px to the side facing the flame, jump held,
- * a forward cut in the rise (frames 2-18), jump still held after it. Returns hits and catches of 45.
+ * a forward cut in the rise (frames 2-18), jump still held after it. Returns hits of 45.
  */
 function jumpCuts(room: string, fx: number, floorY: number, abilities: string[] = ['glide']) {
   let hits = 0;
-  let caught = 0;
   for (const off of [60, 80, 100, 120, 140]) {
     for (let k = 2; k <= 18; k += 2) {
       const s = play(room, abilities);
@@ -511,10 +490,9 @@ function jumpCuts(room: string, fx: number, floorY: number, abilities: string[] 
       s.run(R, 1);
       const ev = s.run(J, k).concat(s.run(J | A, 1), s.run(J, 30), s.run(0, 30));
       if (ev.some((e) => e.type === 'lureHit' || e.type === 'lureSnuff')) hits++;
-      if (has(ev, 'lureCaught')) caught++;
     }
   }
-  return { hits, caught };
+  return { hits };
 }
 
 describe('R4 wood-burrow: the blade against things, light means seen, the floor gives way', () => {
@@ -574,41 +552,28 @@ describe('R4 wood-burrow: the blade against things, light means seen, the floor 
     expect(swings).toBeLessThanOrEqual(4);
   });
 
-  it("the gap (the throw's aim): caught by W-gap off the root step; up-right reaches the high ledge, right alone meets its face; holding nothing, back west", () => {
-    for (const lead of [0, 40, 80]) {
-      const s = play('wood-burrow');
+  it("the gap (the fling's aim): W-gap in reach off the root step; up-right reaches the high ledge, right alone meets its face; left, back west", () => {
+    const up = (s: ReturnType<typeof play>, lead: number) => {
       s.g.teleport(2700 - lead, 1152);
       s.run(0, 3);
       for (let i = 0; i < 40 && s.feet().x < 2800; i++) s.run(R);
-      s.run(R | J, 14);
-      for (let i = 0; i < 200 && s.g.state.player.lure < 0 && !s.g.state.player.grounded; i++) s.run(R | J);
-      expect(
-        s.events.find((e) => e.type === 'lureCaught'),
-        `lead ${lead}`,
-      ).toMatchObject({ id: 'wick-gap' });
-      beatFree(s, ActionBit.up | R);
-      for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(ActionBit.up | R);
+      return untilReach(s.g, (f) => (f < 14 ? R | J : R | J), 'wick-gap');
+    };
+    for (const lead of [0, 40, 80]) {
+      const s = play('wood-burrow');
+      expect(up(s, lead), `lead ${lead}`).toBe('wick-gap');
+      fling(s.g, UR);
       expect([900, 1152], `lead ${lead}`).toContain(s.feet().y);
       expect(s.feet().x, `lead ${lead}`).toBeGreaterThan(3456);
-      // Held right alone: the throw meets the high ledge's face and drops her to the slow line.
+      // Right alone: the fling meets the high ledge's face and drops her to the slow line.
       const r = play('wood-burrow');
-      r.g.teleport(2700 - lead, 1152);
-      r.run(0, 3);
-      for (let i = 0; i < 40 && r.feet().x < 2800; i++) r.run(R);
-      r.run(R | J, 14);
-      for (let i = 0; i < 200 && r.g.state.player.lure < 0 && !r.g.state.player.grounded; i++) r.run(R | J);
-      beatFree(r, R);
-      for (let i = 0; i < 200 && !r.g.state.player.grounded; i++) r.run(R);
+      up(r, lead);
+      fling(r.g, R);
       expect(r.feet().y, `right, lead ${lead}`).toBe(1472);
     }
     const b = play('wood-burrow');
-    b.g.teleport(2700, 1152);
-    b.run(0, 3);
-    for (let i = 0; i < 40 && b.feet().x < 2800; i++) b.run(R);
-    b.run(R | J, 14);
-    for (let i = 0; i < 200 && b.g.state.player.lure < 0 && !b.g.state.player.grounded; i++) b.run(R | J);
-    beatFree(b, 0);
-    for (let i = 0; i < 200 && !b.g.state.player.grounded; i++) b.run(0);
+    up(b, 0);
+    fling(b.g, L);
     expect(b.feet().x).toBeLessThan(2816);
   });
 
@@ -747,53 +712,35 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
         `lead ${lead}`,
       ).toMatchObject({ y: 960 });
     }
-    const { hits, caught } = jumpCuts('wood-glidewalk', 1800, 960);
+    const { hits } = jumpCuts('wood-glidewalk', 1800, 960);
     expect(hits).toBeGreaterThanOrEqual(15);
-    expect(caught).toBe(0);
   });
 
-  it('gap 2 (1024, drop 512): the jump-glide from the lip is caught by W5 and beaten free onto T3; the walk-off passes under', () => {
-    for (const lead of [0, 24, 48]) {
-      const j = play('wood-glidewalk', ['glide']);
-      j.g.teleport(1800, 960);
-      expect(
-        jumpGlide(j, 1984, lead, 120).find((e) => e.type === 'lureCaught'),
-        `lead ${lead}`,
-      ).toMatchObject({
-        id: 'wick-line',
-      });
+  it("gap 2 (1024, drop 512): the jump-glide from the lip comes into W5's reach and a fling right lands on T3; the walk-off passes under", () => {
+    for (const lead of [0, 16, 32, 48]) {
+      for (const aim of [R, UR]) {
+        const j = play('wood-glidewalk', ['glide']);
+        j.g.teleport(1800, 960);
+        jumpGlide(j, 1984, lead, 4);
+        expect(untilReach(j.g, R | J, 'wick-line'), `lead ${lead}`).toBe('wick-line');
+        fling(j.g, aim, 4, R);
+        expect(has(j.events, 'thornHit'), `lead ${lead}`).toBe(false);
+        expect(j.feet().y, `lead ${lead} aim ${aim}`).toBe(1472);
+      }
     }
-    // Beaten free holding right, jump let go: T3 (the paper's +1515) in most beat timings, gap 2's thorns
-    // in the rest (measured 5 of 8 and 3 of 8); never past T3.
-    let t3 = 0;
-    for (const lead of [0, 8, 16, 24, 32, 40, 48, 56]) {
-      const j = play('wood-glidewalk', ['glide']);
-      j.g.teleport(1800, 960);
-      jumpGlide(j, 1984, lead, 4);
-      for (let i = 0; i < 200 && j.g.state.player.lure < 0 && !j.g.state.player.grounded; i++) j.run(R | J);
-      if (j.g.state.player.lure < 0) continue;
-      beatFree(j, R);
-      const first = j.run(R, 300).find((e) => e.type === 'land' || e.type === 'thornHit') as { y: number };
-      expect(first.y).toBeLessThan(1984);
-      if (first.y === 1472) t3++;
-    }
-    expect(t3).toBeGreaterThanOrEqual(4);
     // The walk-off line from gap 1 on: landed on T2 with jump held, she walks on and off T2's lip with the
-    // wings open, under W5, onto T3 (W4 never catches a walker; a hop under it does).
+    // wings open, under W5, onto T3.
     const w = walkOff(576, 512);
-    const lands = w.ev
-      .concat(w.s.run(R | J, 300))
-      .filter((e) => e.type === 'land' || e.type === 'lureCaught');
-    expect(lands.map((e) => (e.type === 'land' ? e.y : e.id)).slice(0, 2)).toEqual([960, 1472]);
+    const lands = w.ev.concat(w.s.run(R | J, 300)).filter((e) => e.type === 'land');
+    expect(lands.map((e) => (e.type === 'land' ? e.y : 0)).slice(0, 2)).toEqual([960, 1472]);
   });
 
-  it('gap 3 (1024, drop 512): W-bend bends a glide or catches it; either way she reaches T4, never the thorns', () => {
+  it('gap 3 (1024, drop 512): W-bend is no snag: she reaches T4, never the thorns', () => {
     for (const lead of [0, 48, 120]) {
       const j = play('wood-glidewalk', ['glide']);
       j.g.teleport(3300, 1472);
       let ev = jumpGlide(j, 3648, lead, 1);
       for (let i = 0; i < 400 && !(j.g.state.player.grounded && j.feet().x > 4672); i++) {
-        if (j.g.state.player.lure >= 0) beatFree(j, R);
         ev = ev.concat(j.run(R | J));
       }
       expect(has(ev, 'thornHit'), `lead ${lead}`).toBe(false);
@@ -802,15 +749,13 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
     const w = walkOff(3648, 1472);
     let after: SimEvent[] = [];
     for (let i = 0; i < 400 && !(w.s.g.state.player.grounded && w.s.feet().x > 4672); i++) {
-      if (w.s.g.state.player.lure >= 0) beatFree(w.s, R);
       after = after.concat(w.s.run(R | J));
     }
     expect(has(w.ev.concat(after), 'thornHit')).toBe(false);
     expect(w.s.feet().x).toBeGreaterThan(4672);
   });
 
-  it('the lamp chain to the oak door: caught by C1 off T4, thrown right with wings, caught by C2, thrown up-right onto T5', () => {
-    let made = 0;
+  it("the lamp chain to the oak door: off T4 into C1's reach, one fling up-right with wings carries her onto T5 (the fling outflies the old throw: C2 is passed, not needed)", () => {
     for (const lead of [0, 30, 60, 90, 120]) {
       const s = play('wood-glidewalk', ['glide']);
       for (const e of s.g.state.enemies) {
@@ -823,26 +768,11 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
       s.g.teleport(5100, 1984);
       s.run(0, 3);
       for (let i = 0; i < 60 && s.feet().x < 5504 - lead; i++) s.run(R);
-      const caught: string[] = [];
-      for (let f = 0; f < 600; f++) {
-        const p = s.g.state.player;
-        if (p.lure >= 0) {
-          const id = s.g.scene.lures?.[p.lure]?.id ?? '?';
-          if (caught[caught.length - 1] !== id) caught.push(id);
-          s.run((id === 'wick-chain2' ? ActionBit.up | R : R) | (f % 10 === 0 ? J : 0));
-          continue;
-        }
-        s.run(R | J);
-        if (p.grounded && f > 10) break;
-      }
-      if (
-        caught.join('>') === 'wick-chain1>wick-chain2' &&
-        (s.feet().x > 7232 || s.g.state.room === 'wood-hollow')
-      )
-        made++;
+      expect(untilReach(s.g, R | J, 'wick-chain1'), `lead ${lead}`).toBe('wick-chain1');
+      fling(s.g, UR, 4, R | J);
+      expect(s.feet().y, `lead ${lead}`).toBe(1984);
+      expect(s.feet().x, `lead ${lead}`).toBeGreaterThan(7232);
     }
-    // Measured: 5 of 5 leads (and 5 of 6 out to 150 px back).
-    expect(made).toBeGreaterThanOrEqual(4);
     // A miss lands on the chasm's dark floor (Tatter's way): east, a root step, T5.
     const f = play('wood-glidewalk', ['glide']);
     f.g.teleport(5470, 1920);
@@ -856,29 +786,22 @@ describe('R6 wood-glidewalk: the glide ladder', () => {
     expect((b?.x ?? 0) - ((b && 'radius' in b && b.radius) || 0) - 4672).toBeGreaterThanOrEqual(300);
   });
 
-  it("gliding on after W5's throw lands on T3 or T4, never in gap 3's thorns", () => {
-    for (const lead of [0, 8, 16, 24, 32, 40, 48, 56]) {
+  it("gliding on after W5's fling lands on T3 or T4, never in gap 3's thorns", () => {
+    for (const lead of [0, 16, 32, 48]) {
       const j = play('wood-glidewalk', ['glide']);
       j.g.teleport(1800, 960);
       jumpGlide(j, 1984, lead, 4);
-      for (let i = 0; i < 200 && j.g.state.player.lure < 0 && !j.g.state.player.grounded; i++) j.run(R | J);
-      if (j.g.state.player.lure < 0) continue;
-      beatFree(j, R);
+      if (untilReach(j.g, R | J, 'wick-line') !== 'wick-line') continue;
+      fling(j.g, R, 4, R | J, 0);
       const ev = j.run(R | J, 300);
       expect(has(ev, 'thornHit'), `lead ${lead}`).toBe(false);
-      // (The strong throw plus wings may carry her on over T4 into the chain's chasm: a free catch.)
-      const first = ev.find(
-        (e) => e.type === 'land' || e.type === 'lureCaught' || e.type === 'fallCatch',
-      ) as {
+      // (The fling plus wings may carry her on over T4 into the chain's chasm: a free catch.)
+      const first = ev.find((e) => e.type === 'land' || e.type === 'fallCatch') as {
         type: string;
         y?: number;
       };
       expect(
-        first?.type === 'lureCaught' ||
-          first?.type === 'fallCatch' ||
-          first?.y === 1472 ||
-          first?.y === 1984 ||
-          first?.y === 1920,
+        first?.type === 'fallCatch' || first?.y === 1472 || first?.y === 1984 || first?.y === 1920,
         `lead ${lead}`,
       ).toBe(true);
     }
@@ -1049,9 +972,8 @@ describe('R7 wood-hollow: the oak, its hollow floor (the trunk and crown: wood-o
 
 describe("R8 wood-hawkers: the hawkers' clearing", () => {
   it("W7 hangs 312 over hummock B: the paper's jump-cut sweep puts it out, and the hawker leaves", () => {
-    const { hits, caught } = jumpCuts('wood-hawkers', 1920, 832);
+    const { hits } = jumpCuts('wood-hawkers', 1920, 832);
     expect(hits).toBeGreaterThanOrEqual(22);
-    expect(caught).toBe(0);
     const s = play('wood-hawkers', ['glide']);
     for (let k = 2; k <= 18 && !has(s.events, 'lureSnuff'); k += 2) {
       s.g.teleport(1920 - 100, 832);
@@ -1068,7 +990,7 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
     expect((getRoom('wood-hawkers').lures ?? []).map((l) => l.id)).toEqual(['wick-hawk', 'wick-throw']);
   });
 
-  it('the throw gap: no jump or glide reaches the far ledge; caught by W-throw and thrown up-right, she clears the pit', () => {
+  it('the throw gap: no jump or glide reaches the far ledge; flung from W-throw up-right, she clears the pit (right alone falls short)', () => {
     const g = play('wood-hawkers', ['glide']);
     const wi = (g.g.scene.lures ?? []).findIndex((l) => l.id === 'wick-throw');
     g.g.state.lures.hp[wi] = 0;
@@ -1083,8 +1005,6 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
       [40, ActionBit.up | R],
       [80, ActionBit.up | R],
       [120, ActionBit.up | R],
-      [0, R],
-      [80, R],
     ] as const) {
       const s = play('wood-hawkers', ['glide']);
       for (const e of s.g.state.enemies) {
@@ -1094,14 +1014,8 @@ describe("R8 wood-hawkers: the hawkers' clearing", () => {
       s.g.teleport(2500 - lead, 1024);
       s.run(0, 3);
       for (let i = 0; i < 40 && s.feet().x < 2540; i++) s.run(R);
-      s.run(R | J, 14);
-      for (let i = 0; i < 200 && s.g.state.player.lure < 0 && !s.g.state.player.grounded; i++) s.run(R | J);
-      expect(
-        s.events.find((e) => e.type === 'lureCaught'),
-        `lead ${lead}`,
-      ).toMatchObject({ id: 'wick-throw' });
-      beatFree(s, aim);
-      for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(aim);
+      expect(untilReach(s.g, R | J, 'wick-throw'), `lead ${lead}`).toBe('wick-throw');
+      fling(s.g, aim);
       expect(has(s.events, 'thornHit'), `lead ${lead}`).toBe(false);
       // On the far ledge's top (video r2: 8 of 9 throws fell into the tunnel's mouth), clear of both its ends.
       expect(s.feet().y, `lead ${lead} aim ${aim}`).toBe(800);
@@ -1229,20 +1143,14 @@ describe('R9 wood-silk: the silk hall', () => {
     expect(d.events.some((e) => e.type === 'enemyWindup')).toBe(true);
   });
 
-  it('the throw line: caught by W-s2 off the floor and thrown up-right onto the root shelf (beside dang-s2)', () => {
+  it('the fling line: W-s2 in reach off the floor, flung up-right onto the root shelf (beside dang-s2)', () => {
     for (const lead of [0, 40, 80]) {
       const s = bare();
       s.g.teleport(1250 - lead, 2624);
       s.run(0, 3);
       for (let i = 0; i < 40 && s.feet().x < 1290; i++) s.run(R);
-      s.run(R | J, 14);
-      for (let i = 0; i < 200 && s.g.state.player.lure < 0 && !s.g.state.player.grounded; i++) s.run(R | J);
-      expect(
-        s.events.find((e) => e.type === 'lureCaught'),
-        `lead ${lead}`,
-      ).toMatchObject({ id: 'wick-s2' });
-      beatFree(s, ActionBit.up | R);
-      for (let i = 0; i < 200 && !s.g.state.player.grounded; i++) s.run(ActionBit.up | R);
+      expect(untilReach(s.g, R | J, 'wick-s2'), `lead ${lead}`).toBe('wick-s2');
+      fling(s.g, UR);
       expect(s.feet().y, `lead ${lead}`).toBe(2304);
     }
   });
@@ -1302,15 +1210,11 @@ describe('R9 wood-silk: the silk hall', () => {
 });
 
 describe('R10 wood-well: the root stair, the nest, the den under the oak, the climb-out', () => {
-  /** Down the root stair: walk west, a jump-glide at each edge, a down cut on the pogo-wick; caught, beat free west. */
+  /** Down the root stair: walk west, a jump-glide at each edge, a down cut on the pogo-wick. */
   function stair(s: ReturnType<typeof play>, done: () => boolean, max = 3000): void {
     let jumpUntil = -1;
     for (let f = 0; f < max && !done(); f++) {
       const p = s.g.state.player;
-      if (p.lure >= 0) {
-        s.run(L | (f % 10 === 0 ? J : 0));
-        continue;
-      }
       const ft = s.feet();
       const ahead = solidAt(s.g.scene, ft.x - 12, ft.y, 1, 1);
       if (f > jumpUntil + 1 && p.grounded && (p.wallDir === -1 || !ahead)) jumpUntil = f + 14;
@@ -1334,14 +1238,10 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
     stair(s, () => s.feet().x < 6528 && s.g.state.player.grounded && s.feet().y === 1856);
     expect(s.feet().y).toBe(1856);
     for (const e of s.g.state.enemies) if (e.kind === 'dangler') e.gone = true;
-    // West through the nest: hop the pockets; caught by a pocket's lamp, beat free west.
+    // West through the nest: hop the pockets.
     let ju = -1;
     for (let f = 0; f < 1800 && s.feet().x >= 3800; f++) {
       const p = s.g.state.player;
-      if (p.lure >= 0) {
-        s.run(L | (f % 10 === 0 ? J : 0));
-        continue;
-      }
       // At the bark plug (the nest's west exit): cut it.
       if (p.grounded && s.feet().x < 4000 && s.feet().y === 1856) {
         s.run(L | (f % 8 === 0 ? A : 0));
@@ -1372,8 +1272,7 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
       for (let i = 0; i < 200 && p.g.state.player.grounded; i++) p.run(L);
       p.run(L, d);
       p.run(D | A, 1);
-      for (let i = 0; i < 200 && !p.g.state.player.grounded && p.g.state.player.lure < 0; i++)
-        p.run((p.feet().x < 8700 ? 0 : L) | J);
+      for (let i = 0; i < 200 && !p.g.state.player.grounded; i++) p.run((p.feet().x < 8700 ? 0 : L) | J);
       const snuffed = p.events.find((e) => e.type === 'lureSnuff');
       if (snuffed && 'id' in snuffed && snuffed.id === 'wick-pogo' && p.feet().y === 896) made++;
     }
@@ -1540,16 +1439,16 @@ describe('R10 wood-well: the root stair, the nest, the den under the oak, the cl
     }
   });
 
-  it('W-den hangs high in the den: a jump from the floor under it is caught, a stand is not', () => {
+  it('W-den hangs high in the den: a jump from the floor under it comes into its reach, a stand does not', () => {
     const s = play('wood-well', ['glide']);
     for (const e of s.g.state.enemies) {
       e.mode = 'dead';
       e.gone = true;
     }
     s.g.teleport(2240, 2112);
-    expect(has(s.run(0, 30), 'lureCaught')).toBe(false);
-    s.run(J, 20);
-    expect(s.events.find((e) => e.type === 'lureCaught')).toMatchObject({ id: 'wick-den' });
+    s.run(0, 30);
+    expect(inReach(s.g)).toBe(null);
+    expect(untilReach(s.g, J, 'wick-den', 20)).toBe('wick-den');
   });
 
   it('a fade in the den re-forms her at P-den by its door, not back at the hub', () => {
@@ -1623,19 +1522,11 @@ describe('the west root road (claws): the nest, over the den, under R6, up throu
     s.run(0, 3);
     let ju = -1;
     for (let f = 0; f < 3000 && s.g.state.room === 'wood-well'; f++) {
-      if (s.g.state.player.lure >= 0) {
-        s.run(L | (f % 10 === 0 ? J : 0));
-        continue;
-      }
       if (s.g.state.player.grounded && f > ju + 1 && Math.abs(s.feet().x - 2752) < 280) ju = f + 14;
       s.run(L | (f < ju ? J : 0));
     }
     expect(s.g.state.room).toBe('wood-rootroad');
     for (let f = 0; f < 3000 && s.feet().x > 420; f++) {
-      if (s.g.state.player.lure >= 0) {
-        s.run(L | (f % 10 === 0 ? J : 0));
-        continue;
-      }
       s.run(L | (s.g.state.player.grounded && f % 40 < 14 ? J : 0));
     }
     expect(s.feet().x).toBeLessThanOrEqual(420);

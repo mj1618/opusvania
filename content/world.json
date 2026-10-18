@@ -38,6 +38,7 @@
   "tests": [
     "test-grove",
     "lab-lamps",
+    "lab-feel",
     "lab-world-a",
     "lab-world-b",
     "lab-world-c",

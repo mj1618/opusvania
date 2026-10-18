@@ -22,7 +22,7 @@
  * --audio    with sound: the game's audio director records every step while the clip steps the game
  *            (muted, so nothing plays), then renders it offline (OfflineAudioContext, src/audio/offline.ts)
  *            and muxes it into the mp4; clips/<name>.wav beside it, and its levels printed (tools/lib/levels.ts).
- *            --ab also makes <name>-nohush.mp4: the same take without the Hush's layer (the owner's A/B).
+ *            --ab also makes <name>-nobed.mp4: the same take without the world bed (wind, drips): play alone.
  *            --setup "<js>" runs in the page (with `g` = window.__game) before recording (e.g. gather glints).
  *   npm run clip -- --audio --ab --pickups --wide --script "..." --name audio-m1
  */
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
     if (args.audio) {
       // The tape's first step is the clip's frame 1, at 1/60 s.
       const runs: Array<{ suffix: string; mute: string[] }> = [{ suffix: '', mute: [] }];
-      if (args.ab) runs.push({ suffix: '-nohush', mute: ['hush'] });
+      if (args.ab) runs.push({ suffix: '-nobed', mute: ['world'] });
       for (const run of runs) {
         const r = await page.evaluate(
           (mute) => window.__game.audio?.render({ mute: mute as never[] }) ?? null,

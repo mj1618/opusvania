@@ -24,6 +24,7 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `hollows` | `[{id, x, y, w, h, upgrade}]` | moonlit hollow: body centre inside grants `upgrade` (an id of `UPGRADE_IDS`: `quickWings`, `keenBlade`, **`nightEyes`** (r5: no sim number; the map shows each room's unseen lamps when `upgradesOwned` has it)) |
 | world.json `areas` | `[{id, rooms: [placed ids]}]` | the areas a moth-stone can draw; each room in one area |
 | `lures[].after` | flag | the lure burns only once the flag is set (out before, lit the step it appears, out for good once snuffed: the firefly's glow-cap W-ff after the glimpse) |
+| `lures[].relight` | frames (30-3600) | a toy room's lamp burns again that long after it went out, never saved (lab-feel) |
 | `oneWays[].noDrop` | bool or a flag (refuses until the flag is set) | down + jump does not drop through it (still passable from below): the hub's root mesh over R10's climb-out, whose drop-through skipped the pit (sim: `noDropUnder` in physics/aabb.ts, checked in `tryJump`) |
 | `enemies[].sets` | flag | set when the creature dies (`flagSet` by its id): a flag gate opens behind it (the old burrback's root gate). The world check cannot see it: leave it out of `routes[].flags` |
 | `reform` | `{x, y}` | where a fade re-forms her in this room while no moon patch is saved (no light either), instead of her last safe ground beside whatever faded her (`src/sim/index.ts`) |
@@ -85,9 +86,10 @@ a swinging lure's core must be clear along the whole arc and its pivot inside th
   flag `upgrade:<id>`.
 - **Upgrades** (`src/sim/upgrades.ts`): flags `upgrade:<id>`; `step` starts with `t = withUpgrades(base, save)` (a
   shallow copy of the changed groups, only when one is owned; else the same object), so `resolveParams` and every
-  rule read upgraded numbers. Render / debug that show a number (the beat pips, `lures().caught.of`) call it too.
-  The list (numbers in `tuning.upgrades`): **quickWings** (beat free in 2, not 3; the wood's hollow), **keenBlade**
-  (flame hit box +20 px). The rest of core.md §6's list waits for the abilities they change.
+  rule read upgraded numbers. Render / debug that show a number (`lures().fling.of`) call it too.
+  The list (numbers in `tuning.upgrades`): **quickWings** (beat free of a grab in 2, not 4; the lamp catch it was for
+  is gone), **keenBlade** (flame hit box +20 px), **nightEyes** (map), **longBreath** (the fling's aim x2),
+  **sharpWings** (a row only: a fling's launch should cut through creatures and silk; the creatures' rule to read).
 - **The map** (`src/render/map/`): a read stone's area shows every room of it, unvisited ones faint (shape only),
   with `<area>: N lamps unseen` (lures not in `seen`, not snuffed). Kit solids (caps, standing bark, shut gates) are
   drawn too. In a test room with a stone read, the map shows the drawn area instead of the test room.

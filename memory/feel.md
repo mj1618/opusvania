@@ -94,6 +94,13 @@ swelling in at the middle, needle ends), swept out over a third of its 0.13 s, t
 7 sparks (11 on the finisher) the way the cut went, as streaks, and a bright slash mark across the blow. Every landed
 blow shakes a little (`hit` 0.07; the finisher 0.16). The creatures agent is overhauling the attack itself.
 
+## The fling (Matt's play, 2026-10-18; the sim's `player.fling`, `flingStart`, `fling`, `lureEmber`, `lureRelight`)
+greybox/lures.ts: while she aims off a flame, a ring tightens on it, an arrow points from it along `lureAimX/Y`, and
+`lureArc` is drawn as bright dots to a landing ring; the launch flashes a ring; a flame flung from smoulders as a red
+ember with smoke until `lureSnuff` (or bursts back alight on `lureRelight`). HUD `FLING_SLOW`: the world dims and its
+edges darken while she aims, with clear holes round her and the flame. Read loosely (casts) until the sim's fields
+are in every build. The old catch's pips/arc code only runs while `player.lure` >= 0 (never, with the fling).
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.

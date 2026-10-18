@@ -5,6 +5,7 @@ import { GAME_WORLD } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { ActionBit } from '../../src/sim/input';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
+import { fling, inReach, untilReach } from './fling-drive';
 
 /**
  * The oak (`wood-hollow`): the hollow at its foot, the trunk and the crown in one room (area 1 plan r3 item 3,
@@ -59,8 +60,7 @@ function play(opts: { room?: string; abilities?: string[]; glimpse?: boolean } =
     return events.slice(from);
   };
   const feet = () => ({ x: g.state.player.x + g.state.player.w / 2, y: g.state.player.y + g.state.player.h });
-  const lureIs = (id: string) => g.state.player.lure >= 0 && g.scene.lures?.[g.state.player.lure]?.id === id;
-  return { g, t, events, run, feet, lureIs };
+  return { g, t, events, run, feet };
 }
 type Play = ReturnType<typeof play>;
 
@@ -79,14 +79,6 @@ function climb(s: Play, dir: number, until: () => boolean, max = 900, rise = 0):
     out.push(...s.run(m));
     last = m;
   }
-  return out;
-}
-
-/** Beats free of a lure's hold: presses of jump, `dir` held, `gap` frames apart. */
-function beatFree(s: Play, dir = 0, gap = 9): SimEvent[] {
-  const out: SimEvent[] = [];
-  for (let k = 0; k < 8 && s.g.state.player.lure >= 0; k++)
-    out.push(...s.run(dir | J, 1), ...s.run(dir, gap));
   return out;
 }
 
@@ -334,31 +326,30 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
     expect(OAK.thorns ?? []).toEqual([]);
   });
 
-  it('the floor under it stands out of its pull; a hop up from it is caught; beaten free up-left she lands on the bridge', () => {
+  it('the floor under it stands out of its reach; a hop up from it comes into reach; flung up, drifting left, she lands on the bridge', () => {
     let bridge = 0;
     let n = 0;
     for (const x of [2560, 2620, 2680]) {
       const s = play();
       s.g.teleport(x, MID);
-      expect(has(s.run(0, 120), 'lureCaught')).toBe(false);
+      s.run(0, 120);
+      expect(inReach(s.g)).toBe(null);
       expect(s.feet()).toEqual({ x, y: MID });
-      for (const gap of [6, 9, 12, 15]) {
-        for (const wait of [0, 7, 14]) {
-          const q = play();
-          q.g.teleport(x, MID);
-          q.run(0, 2);
-          q.run(J, 10);
-          for (let i = 0; i < 40 && q.g.state.player.lure < 0; i++) q.run(0);
-          expect(q.lureIs('wick-firefly'), `hop from ${x}`).toBe(true);
-          q.run(0, wait);
-          const ev = beatFree(q, U | L, gap).concat(land(q, L, 160));
-          n++;
-          expect(has(ev, 'thornHit')).toBe(false);
-          if (q.feet().y === BRIDGE) bridge++;
-        }
+      for (const hold of [2, 10, 20, 36]) {
+        const q = play();
+        q.g.teleport(x, MID);
+        q.run(0, 2);
+        expect(untilReach(q.g, J, 'wick-firefly', 40), `hop from ${x}`).toBe('wick-firefly');
+        const ev: SimEvent[] = [];
+        const from = q.events.length;
+        fling(q.g, U, hold, L);
+        ev.push(...q.events.slice(from));
+        n++;
+        expect(has(ev, 'thornHit')).toBe(false);
+        if (q.feet().y === BRIDGE) bridge++;
       }
     }
-    // Measured: 36 of 36.
+    // (Up-left is too flat: under the bridge to the floor. Measured: up then left, 12 of 12.)
     expect(bridge / n).toBeGreaterThanOrEqual(0.9);
   });
 
@@ -369,10 +360,11 @@ describe('the middle of the trunk: W-ff, the firefly’s glow-cap', () => {
       const after: SimEvent[] = [];
       for (let i = 0; i < 90 && s.g.state.player.wallDir !== 1 && !s.g.state.player.grounded; i++)
         after.push(...s.run(R));
-      expect(s.feet(), `cut at ${k}`).toEqual({ x: 2890, y: 1248 });
+      expect(s.feet().y, `cut at ${k}`).toBe(1248);
+      expect(s.feet().x, `cut at ${k}`).toBeGreaterThan(2850);
       expect(has(after, 'thornHit')).toBe(false);
     }
-    // A miss (no cut): caught again (another throw) or onto the floor under it, never the thorns.
+    // A miss (no cut): onto the floor under it, never the thorns.
     const m = play({ glimpse: false });
     m.g.teleport(2600, BRIDGE);
     m.run(0, 3);

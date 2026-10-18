@@ -15,8 +15,10 @@ export const DEFAULT_KEYS: KeyBindings = {
   jump: ['Space', 'KeyZ', 'KeyK'],
   dash: ['KeyX', 'KeyL', 'ShiftLeft', 'ShiftRight'],
   attack: ['KeyC', 'KeyJ'],
-  // Offer (give a glint): V beside the C of the cut on the left hand, F as the usual "use" key, I over J.
-  offer: ['KeyV', 'KeyF', 'KeyI'],
+  // Offer (give a glint, the test grove's only): F as the usual "use" key.
+  offer: ['KeyF'],
+  // Lamp (the fling): V beside the C of the cut on the left hand, I over J on the right.
+  lamp: ['KeyV', 'KeyI'],
 };
 
 export const DEFAULT_PAD: PadBindings = {
@@ -27,7 +29,8 @@ export const DEFAULT_PAD: PadBindings = {
   jump: [0], // A / Cross
   dash: [5, 7], // RB, RT
   attack: [2], // X / Square
-  offer: [3], // Y / Triangle
+  offer: [1], // B / Circle (the test grove's only)
+  lamp: [3, 4], // Y / Triangle, LB
 };
 
 /** Stick: a 0.25 radial deadzone, then an axis counts as a direction past 0.5. */

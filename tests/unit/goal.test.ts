@@ -207,13 +207,15 @@ describe('lanterns: kindling', () => {
     expect(of(ev, 'lanternCancel')).toHaveLength(0);
     expect(of(ev, 'lanternKindle')).toHaveLength(1);
     expect(s.state.frame).toBe(G.channelFrames);
-    // Blade out as she arrives: nothing for the 14 frames of the slash, then the full channel.
+    // Blade out as she arrives: nothing for the frames of the slash, then the full channel.
     const b = sim(scene(), 12, A_X);
     const e = b.run('A1 .60');
     expect(e.findIndex((x) => x.type === 'lanternChannel')).toBeGreaterThan(0);
     expect(of(e, 'lanternChannel')[0]?.frames).toBe(1);
     expect(of(e, 'lanternKindle')).toHaveLength(1);
-    expect(b.state.goal.lanterns[0]?.litFrame).toBe(13 + G.channelFrames);
+    expect(b.state.goal.lanterns[0]?.litFrame).toBe(
+      defaultTuning.slash1.durationFrames - 1 + G.channelFrames,
+    );
     // Mashing lets it through now: it starts in the gap between two cuts and runs on.
     const m = sim(scene(), 12, A_X);
     m.run('A1 .16 A1 .18 A1 .26 A1 .16 A1 .18 A1 .10');

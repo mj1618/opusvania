@@ -506,7 +506,7 @@ const trace = (name: string, r: Run) => {
 };
 
 describe('naive players finish the grove: the lanterns are the critical path', () => {
-  it('the tapper (90 ms presses, holds right): three lanterns in order with the ember fetched between, then the heart; no wings; she mashes, so she fades on the road, and still finishes', () => {
+  it('the tapper (90 ms presses, holds right): three lanterns in order with the ember fetched between, then the heart; no wings; she mashes, pays for it on the road, and still finishes', () => {
     const r = naive(5, 9);
     trace('tapper', r);
     expect(r.ended).toBe(true);
@@ -536,11 +536,9 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     // (burr-rise she only wounds: lamp-rise's light no longer stops its ram or takes its brace, so the
     // masher fades there, re-forms at the lamp, and its last ram carries it past her; she walks on.)
     const wounds = r.events.filter((e) => e.type === 'enemyHit' && e.id === 'burr-rise').length;
-    expect(wounds).toBeGreaterThanOrEqual(3);
-    // Mashing costs two lights a burrback now: more hits than she has lights, so she fades (and
-    // re-forms at a light she lit, with a third of her wallet to pick up again).
-    expect(r.hits).toBeGreaterThan(4);
-    expect(r.fades).toBeGreaterThanOrEqual(1);
+    expect(wounds).toBeGreaterThanOrEqual(2);
+    // Mashing costs her: round 7's fodder (3 hp) dies faster, so she may not fade, but she pays several lights.
+    expect(r.hits).toBeGreaterThanOrEqual(3);
     expect(r.glides).toBe(0);
     expect(r.frames).toBeLessThan(60 * 120);
   });
@@ -606,8 +604,13 @@ describe('naive players finish the grove: the lanterns are the critical path', (
 
   it('a fade in the shaft re-forms her at lamp-trunk by the doorway, lit or dark, not at the first lantern (playtest 6: three walks of 4.3 s)', () => {
     let shaft = 0;
+    // (Round 7's fodder (3 hp) rarely fades the masher in the shaft: the old five-hit burrbacks here, to test the
+    // re-form point.)
+    const t = cloneTuning(defaultTuning);
+    t.burrback.hp = 5;
+    t.health.max = 2;
     for (const o of [{}, { lamps: false }, { stand: false }]) {
-      const r = naive(5, 9, o);
+      const r = naive(5, 9, o, t);
       const ev = r.events;
       for (let k = 0; k < ev.length; k++) {
         const e = ev[k] as SimEvent;
@@ -645,17 +648,20 @@ describe('naive players finish the grove: the lanterns are the critical path', (
     // Every fight on the road has its second tell (playtest 6: a lit lamp beside the shaft's and the
     // rise's stopped the ram and took the brace, and the fight in the shaft drifted into the doorway,
     // where it does not brace: one tell each). wing-rise joins the last one.
+    // (Round 7: 3 hp, so one exchange may be the whole fight: at least one tell each.)
     const tells = (id: string) => r.events.filter((e) => e.type === 'enemyWindup' && e.id === id).length;
     for (const id of ['burr-path', 'burr-shaft', 'burr-rise'])
-      expect(tells(id), id).toBeGreaterThanOrEqual(2);
+      expect(tells(id), id).toBeGreaterThanOrEqual(1);
     expect(
       r.events.filter((e) => e.type === 'enemyDive' && e.id === 'wing-rise').length,
     ).toBeGreaterThanOrEqual(1);
     // Playtest 6 (four live runs: `spent`, never `wall`): the shaft's second exchange is a wall stun.
     // Its first ram ends at the doorway's mouth; from there the next one carries into trunk B's bark.
-    expect(
-      r.events.some((e) => e.type === 'enemyRecover' && e.id === 'burr-shaft' && e.cause === 'wall'),
-    ).toBe(true);
+    // (Round 7: with 3 hp the first exchange may end it: the wall stun only when there was a second.)
+    if (tells('burr-shaft') >= 2)
+      expect(
+        r.events.some((e) => e.type === 'enemyRecover' && e.id === 'burr-shaft' && e.cause === 'wall'),
+      ).toBe(true);
     // She bought the two lamps on her road and they did not shorten the fights beside them.
     expect(r.lamps).toBeGreaterThanOrEqual(2);
     expect(r.events.filter((e) => e.type === 'enemyRecover' && e.cause === 'lantern')).toEqual([]);

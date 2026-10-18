@@ -8,11 +8,12 @@
  * every tone is inharmonic or detuned with noise in its attack, every envelope starts and ends at
  * zero, nothing but glass goes far above 9 kHz.
  */
+import { at, bowl, breath, click, exp, len, panned, type Recipe, rubbed, swell } from './bake-lib';
+import { PLAY_RECIPES, PLAY_SOUNDS } from './bake-play';
 import {
   arEnv,
   biquad,
   brown,
-  type Mode,
   mixInto,
   modes,
   normalize,
@@ -42,8 +43,6 @@ export const SOUNDS = {
   bark: 5,
   plink: 5,
   voice: 3,
-  // The Hush.
-  knock: 4,
   // Lanterns (singing bowls) and wayside lamps (smaller, higher, one partial).
   lanternNotice: 2,
   lanternKindle: 1,
@@ -69,6 +68,8 @@ export const SOUNDS = {
   sleepBreath: 4,
   catchBreath: 4,
   chordCatch: 3,
+  // The greybox-era pass (bake-play.ts): her steps and wings, the blade, the lamps, the creatures.
+  ...PLAY_SOUNDS,
 } as const;
 export type SoundId = keyof typeof SOUNDS;
 
@@ -102,111 +103,8 @@ export interface Baked {
   ir: { room: Float32Array[] };
 }
 
-type Recipe = (sr: number, r: () => number, v: number) => Float32Array[];
-
-const len = (sr: number, s: number) => Math.max(1, Math.round(s * sr));
-const at = (sr: number, s: number) => Math.round(s * sr);
-const exp = (a: number, b: number, k: number) => a * (b / a) ** Math.min(1, Math.max(0, k));
-
-/** Equal-power pan of a mono signal into two new channels. */
-function panned(x: Float32Array, pan: number): Float32Array[] {
-  const a = ((pan + 1) * Math.PI) / 4;
-  const l = new Float32Array(x.length);
-  const rr = new Float32Array(x.length);
-  for (let i = 0; i < x.length; i++) {
-    l[i] = (x[i] as number) * Math.cos(a);
-    rr[i] = (x[i] as number) * Math.sin(a);
-  }
-  return [l, rr];
-}
-
-/** A soft noise click: the touch that starts every struck thing. */
-function click(sr: number, r: () => number, n: number, hz: number, tau: number): Float32Array {
-  const x = white(n, r);
-  biquad(x, sr, 'lowpass', hz);
-  return shape(x, sr, arEnv(0.0006, 0, tau, Math.min(n / sr, tau * 8)));
-}
-
-/** A rubbed, noise-excited tone: very narrow band-passed noise with a little of its pure partial. */
-function rubbed(
-  sr: number,
-  r: () => number,
-  n: number,
-  f: number,
-  env: (t: number) => number,
-  { breath = 1, pure = 0.55, beat = 0.7 } = {},
-): Float32Array {
-  const x = pink(n, r);
-  biquad(x, sr, 'bandpass', f, 90);
-  biquad(x, sr, 'bandpass', f, 90);
-  normalize([x], 0.5 * breath);
-  // The pure partial and an inharmonic one (bowl ratio 2.76), each with a slow warble.
-  modes(x, sr, [{ f, tau: 1e3, amp: pure, beat, ph: r() }], 0, 0.01);
-  modes(x, sr, [{ f: f * 2.76, tau: 1e3, amp: pure * 0.12, beat: beat * 1.9, ph: r() }], 0, 0.01);
-  return shape(x, sr, env);
-}
-
-/** A slow swell: raised-cosine attack, exponential decay, faded to zero at the end. */
-const swell = (a: number, tau: number, end: number) => arEnv(a, 0, tau, end);
-
-/** A struck bowl: inharmonic partials in beating pairs, felt mallet (soft attack, dull highs). */
-function bowl(
-  sr: number,
-  r: () => number,
-  n: number,
-  f: number,
-  partials: number,
-  decay: number,
-): Float32Array {
-  const ratios = [1, 2.76, 5.4, 8.93];
-  const amps = [1, 0.5, 0.22, 0.09];
-  const taus = [5.5, 2.8, 1.3, 0.6];
-  const beats = [0.9, 1.7, 2.6, 3.3];
-  const list: Mode[] = [];
-  for (let k = 0; k < partials; k++)
-    list.push({
-      f: f * (ratios[k] as number) * (1 + (r() - 0.5) * 0.002),
-      tau: (taus[k] as number) * decay,
-      amp: amps[k] as number,
-      beat: (beats[k] as number) * (0.8 + r() * 0.4),
-      ph: r(),
-    });
-  const x = new Float32Array(n);
-  modes(x, sr, list, 0, 0.007);
-  mixInto(x, click(sr, r, len(sr, 0.05), 900, 0.006), 0.05);
-  return shape(x, sr, arEnv(0.001, 0, 1e3, n / sr));
-}
-
-/**
- * A creature's breath (only things with mouths breathe: rule 1): pink noise through two formants
- * gliding from `a` to `b` (F1, F2 Hz), an attack of `att` s, `d` s long, the tail `tail` of it.
- */
-function breath(
-  sr: number,
-  r: () => number,
-  d: number,
-  att: number,
-  a: [number, number],
-  b: [number, number],
-  tail: number,
-): Float32Array {
-  const n = len(sr, d);
-  const src = pink(n, r);
-  const k = (i: number) => Math.min(1, i / sr / (d * 0.8));
-  const f1 = biquad(src.slice(), sr, 'bandpass', (i) => exp(a[0], b[0], k(i)), 3);
-  const f2 = biquad(src.slice(), sr, 'bandpass', (i) => exp(a[1], b[1], k(i)), 5);
-  const air = biquad(src.slice(), sr, 'highpass', 1800);
-  normalize([f1]);
-  normalize([f2]);
-  normalize([air]);
-  mixInto(f1, f2, 0.45);
-  mixInto(f1, air, 0.12);
-  biquad(f1, sr, 'lowpass', 2600);
-  const tau = Math.max(0.05, d * tail * 0.4);
-  return shape(f1, sr, arEnv(att, d * (1 - tail) - att, tau, d));
-}
-
 const RECIPES: Record<SoundId, Recipe> = {
+  ...PLAY_RECIPES,
   /** One soft *fff*: noise band-passed from ~1.8 kHz down to ~700 Hz in ~90 ms, a low push under it. */
   wing(sr, r) {
     const n = len(sr, 0.22);
@@ -496,28 +394,6 @@ const RECIPES: Record<SoundId, Recipe> = {
       mixInto(x, br, 1, s0);
     }
     biquad(x, sr, 'lowpass', 1300);
-    return normalize([x]);
-  },
-  /** The Hush's knock: soft and wooden, low-passed (it is under the soil here). */
-  knock(sr, r) {
-    const n = len(sr, 0.4);
-    const x = new Float32Array(n);
-    const f = 158 + r() * 14;
-    modes(
-      x,
-      sr,
-      [
-        { f, tau: 0.085, amp: 1 },
-        { f: f * 2.31, tau: 0.045, amp: 0.55 },
-        { f: f * 3.86, tau: 0.028, amp: 0.28 },
-        { f: f * 6.5, tau: 0.014, amp: 0.1 },
-      ],
-      0,
-      0.003,
-    );
-    normalize([x]);
-    mixInto(x, click(sr, r, n, 900, 0.003), 0.3);
-    biquad(x, sr, 'lowpass', 1600);
     return normalize([x]);
   },
   /** The dormant bowl answers at the pitch of the light she carries (A, her first note): faint. */

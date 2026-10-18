@@ -1,123 +1,117 @@
-# Audio (src/audio): milestone 1
+# Audio (src/audio)
 
-Brief and plan: `docs/audio-direction.md`. **Muted by default; the owner has not approved any of it yet.**
-Web Audio only, no samples, no dependencies. Milestone 1 = the Grove's ambience, Wing's movement, the
-lantern bowls. No slash, glints, creatures or score yet: those events route to nothing.
+Brief: `docs/audio-direction.md` (the rules) and `docs/design/look-and-sound.md` §6 (the plan). **Muted by default;
+Matt has not approved any of it yet** (M toggles, kept in localStorage; `?audio` on, `?audio=0` off). Web Audio
+only, no samples, no dependencies. The greybox-era pass (2026-10-18) is what plays in the wood and the labs; the
+test grove keeps its old lantern / giving sounds.
 
 ## How it fits
-- `AudioDirector` (index.ts), built in main.ts. Reads `game.afterStep` (events + state) and
-  `stage.afterUpdate` (camera, render clock): a generic hook in stage.ts, render never imports audio.
-  It never touches the sim: hashes match muted vs unmuted (e2e `smoke.spec.ts`).
-- `router.ts` is pure: `route(event)` -> cues, `ambient(snap)` -> the world's own cues per sim frame
-  (drips, far voice, the Hush's knock, wall-slide claws: dice are `hash01(seed, frame, salt)`, never a
-  stream, so one tape = one audio), `layers(snap, cam, clock)` -> targets for the continuous voices.
-  `snapOf(state)` is all the state the sound reads (`AudioSnap`, plain JSON: what a tape records).
-- `conductor.ts`: shared by live and offline; plays cues, aims layers (every 1/30 s of render time),
-  rate limits (wingbeats 80 ms). Muted it still routes: `__game.audio.cues(n)`.
-- `engine.ts` + `graph.ts` + `voices/`: buses world / hush / hero / lantern / creatures, each with its own room
-  and far sends (so muting a bus mutes its reverb: the A/B), roll-off 9 kHz (lantern bus 15 kHz),
-  fader (start fade, mute), master, a limiter at -2 dB that a normal mix never reaches
-  (Web Audio adds make-up gain for it: `trim` removes it).
-- `bake.ts`: every one-shot in plain JS (dsp.ts), 1-8 seeded variants, all peak 0.9, a 2 ms fade to
-  zero, everything but glass rolled off above 7 kHz. Long bowls bake at 1/4 rate (`SLOW`). ~110 ms in
-  all at 48 kHz, in idle callbacks of <= 12 ms (the biggest piece ~17 ms).
-- `clock.ts`: `hushPhase(frame)`: pulse 252 frames (4.2 s), breath 1080 (18 s), pure, for render too.
-- `tuning.ts` (`AUDIO`): every level. **One-shot levels are peaks, layer levels are RMS** (pre-master).
-  `voices/util.ts band()` trims each filtered noise bed to unit RMS by running the same cookbook
-  filters over 2 s of it, so the numbers mean what they say. Master +10 dB puts the clip at ~-20 LUFS.
+- `AudioDirector` (index.ts), built in main.ts. Reads `game.afterStep` (events + state) and `stage.afterUpdate`
+  (camera, render clock); render never imports audio, audio never touches the sim (e2e `smoke.spec.ts`: hashes
+  match muted vs unmuted).
+- `router.ts` is pure: `route(event)` -> cues (play is in **route-play.ts**, the grove's lanterns / giving in
+  router.ts, and giving sounds only in `senses: 'wallet'` rooms), `ambient(snap)` -> the world's own cues per sim
+  frame (drips, far voice, ants, claws: dice are `hash01(seed, frame, salt)`, never a stream, so one tape = one
+  audio), `layers(snap, cam, clock)` -> targets for the continuous voices. `snapOf(state, scene, tuning)` is all
+  the state sound reads (`AudioSnap`, plain JSON: what a tape records), incl. the room id, a story hold, hitstop,
+  stagger, the fling she aims (`fling`, `aim` 0..1) and the burning lamps (`lures`: flame, kind, reach).
+- The conductor sets `ctx.events` to the step's events, so sounds of many at once can share (three embers going
+  out on one landing = one chime phrase, one rush). Rate limits in conductor.ts `GAP` (wings 80 ms, pads, ticks,
+  one crack per 30 ms, slowIn 50 ms).
+- `conductor.ts` is shared by live and offline; `engine.ts` + `graph.ts` + `voices/`. Buses **world** (the bed),
+  **hero**, **combat**, **lantern** (bowls, lamps, moths), **creatures**; each with room and far sends; roll-off
+  9 kHz (lantern 15 kHz); `graph.duck` (the bed's gain: held moments) and `graph.muffle` (a low-pass over all but
+  the lantern bus: her hurt, the aim) are layer targets; a limiter at -2 dB a normal mix never reaches.
+- `bake.ts` (+ `bake-lib.ts` helpers, **`bake-play.ts`** the greybox-era recipes): every one-shot in plain JS,
+  1-8 seeded variants, peak 0.9, a 2 ms fade, all but glass rolled off above 7 kHz; ~350 ms to bake at 48 kHz now
+  (in idle callbacks live). **`creak` / `rear` variants are lengths** (`CREAK_S`, `REAR_S`): the router picks the
+  one nearest the tell, so the creak lasts as long as the brace.
+- `tuning.ts` (`AUDIO`): every level; **one-shot levels are peaks, layer levels are RMS** (pre-master; master
+  +10). `BEDS` = each room's bed; `LAMP_HZ` / `LAMP_BEAT` = the lamps' pitches.
+- **The fling's events and round 7's `slashHit.weight` / `lureSnuff.fling` are read loosely** (route-play.ts
+  `FlingEvent`, `Loose`; snapOf casts `player.fling`): the sound built against a sim with and without them while
+  they landed. Tighten once the sim's are committed.
 
-## What each sound is made of
-- Wind: pink noise, roar = HP 90 / BP 350 / LP 1.4k, one bed per ear; leaf hiss = BP 3.6k (blue) /
-  2.4k (amber) / 3k (violet) Q 0.55, two beds panned +-0.75, each driven by `wind()` from
-  `render/scene/lib/look.ts` sampled at camera x -+ 620 px (so a wave is heard crossing), the roar by the
-  same function's gust term, both times a slow seeded drift (sines of 11/17/29 s).
-- The Hush (hush bus, low-passed 420 Hz = the soil, 150 Hz near a lit lantern): breath = brown noise
-  through F1/F2 band-passes gliding oo<->aa on the 18 s breath; pulse = D2 + detuned 2nd/3rd partials,
-  tanh-saturated, LP 330, gain = cos^2 of the 4.2 s pulse; knock = 4 wood modes ~160 Hz, panned -+0.22
-  alternately at each swell top. A lit lantern within 640 px of her: soil LP down, breath flattened.
-- Forest: drips every ~2.6 s on average (leaf: 2 soft modes ~500 Hz + paper noise; bark: 3 modes
-  ~1.5 kHz; pool plink: a 1.1-1.5 kHz partial bending up 5% + click, only near the pool), deeper ones
-  quieter, duller (LP to 1.4 kHz) and in the far reverb. Far voice: owl-like B3 -> A3, FM index
-  0.15-0.65, droop, onset breath, LP 1.3k, every 21-46 s, never within 0.9 s of a knock. Pool lap
-  (brown, BP 260 + 540), root steam (amber, HP 2.6k), glass air (violet, E5/B5 at Q 45).
-- Wing (hero bus): wing = white noise BP sweeping 1.65-2k -> 0.62-0.78k in 80-100 ms + low push;
-  double jump = wing + wing 85 ms later + whoosh (pink BP 380 -> 1.1k -> 380 bell, panned across her);
-  glide catch = LP noise whumpf + membrane snap, level by `glideStart.vy` (nothing under 3 px/f, full
-  at 21); glide air = pink BP 480-900 Hz by speed, released over 0.35 s; dash = noise BP up to 1.75k and
-  back with a 3 ms random "tear", after the wind-up frames; land = noise puff BP ~1k + scale-dust grains,
-  by impact speed; hard land adds thump (moss: modes 56-415 Hz + LP thud) or thumpWood; pool = splash;
-  steps silent on moss, a faint tick on wood; wall slide = sparse 2-4-catch claw grains, ~9/s.
-- Lanterns (lantern bus): notice = a 2-partial bowl at A3 (her light's pitch); channel = rubbed rim
-  (pink double BP Q 40 at D3 + two sines 0.45% apart) swelling with `progress^1.5`; kindle = D3 bowl
-  struck (partials 1, 2.76, 5.4, 8.93 in beating pairs) blooming into rubbed A3, E4, B4, D4 entering at
-  0.14-0.9 s, panned across, 9 s; refuse = damped D3 bowl + a hollow 236 Hz knock; rest = rubbed D3 + A3
-  hum; a lit one hums faintly within 520 px. Lamps: one partial, an octave up, 4 dB down.
+## What each sound is made of (2026-10-18 pass)
+- **Her moves (hero bus).** Jump = wing (noise BP 1.8 kHz -> 700 Hz in 90 ms + low push); double jump = two wings
+  + a whoosh panned across; **wall kick** = wing + `kick` (claw scuff: two catches of BP 1.3-1.8 kHz noise, a wood
+  knock 300 / 660 Hz, a push); **glide open** = `wingOpen` (pink BP 420 -> 1.5 kHz unfurl, a membrane snap at
+  ~90 ms, a push) every glide, plus the old deep `catch` out of a fall; **glide fold** (let go in the air) =
+  `wingFold` (BP 1.3 kHz -> 520 Hz, 0.14 s); dash, land (dust puff + thump on a hard landing, by impact speed) as
+  before; **steps** = `pad` on earth (LP 320-460 Hz felt thud + 2-4 litter grains, -40) or the wood `tick` (-42).
+- **The blade (combat bus, at the target, never quieter for distance).** Swish per combo step: `slash1` (air
+  torn along a band sweeping 650 Hz -> 3.4-4 kHz in 65 ms + a Q 14 resonant "edge" riding at 0.82 of the top +
+  a low push), `slash2` (the same falling, the return cut), `slash3` (finisher: 380 -> 2.5 kHz -> 900 Hz, 0.26 s,
+  a heavier push, 3 dB up); up +150 cents, down -200; a throw-cut plays slash3 +3. **A blow** = `hitCrack` (the
+  meat: modes 96 / 152 / 232 / 365 Hz, a felt LP thud, a 1.7-2.3 kHz crack, a 5 kHz click, a falling squelch
+  900 -> 450 Hz, through tanh 1.8) + `hitTick` (the pitch: a wood-glass tick at ~1.45 kHz with 2.32x and 3.91x
+  partials, a 75 ms beating ring) pitched per step (0, +204, finisher -498 cents) and by `weight` (light +150,
+  heavy -300 and +3 dB). Pogo = `pogo` (membrane bop gliding 92 -> 165 Hz + an air thwip 500 Hz -> 2.3 kHz) + a
+  softer crack and tick. **Kill** = `crunch` (a pop gliding 230 -> 80 Hz, 34-44 grains of shell grit 0.9-3.3 kHz
+  bunched at the front, a body, tanh) + `killTail` a beat after the hitstop (a falling pink breath 1.5 kHz -> 320
+  Hz with sparse settling bits); a big creature adds a `slam`. **Clang** (braced shell, seed-case) = chitin
+  modes 790 Hz x 1, 1.47, 2.63, 3.9, 5.2 with beats, a click, a small 165 Hz knock. **Hurt** (her; no voice) =
+  `hurt` (a muffled LP 900 blow, a click, a 64 / 102 / 158 Hz thump, a crackle of scales 2-4.4 kHz, tanh) and the
+  mix low-passes to 650 Hz for the stagger. `thock` = the blade biting wood (wall, bark, thorns); `bounce` = a
+  cap's membrane bwomp; `silkSnap` = a Karplus-Strong pluck ~900 Hz (web cut, a dangler's thread).
+- **The lamps (lantern bus).** The nearest burning flame **hums** (voices/lamp.ts): two sines `LAMP_BEAT` Hz apart
+  (wick 1.3, lantern 0.9, great 0.6) at **38 cents sharp** of the forest (wick over A4 = 450 Hz, lantern over D4,
+  great over D3), faint 2.003x / 3.01x partials, a Q 60 rubbed edge; heard out to 1.6x its pull radius, louder
+  with nearness squared, its low-pass opening 380 -> 2600 Hz; the swarm = a 2.3 kHz wing band shivering at 23 Hz,
+  panned round at 0.55 Hz; nearing it ducks the bed a little. **Fling**: `slowIn` on the snap (a pink band
+  falling 2 kHz -> 280 Hz over a low glide 140 -> 70 Hz: time dropping away), then while she aims a held swell
+  (a band rising from half the hum's pitch with the aim, a sine an octave under the hum), the bed ducked to -10 dB
+  and the rest muffled (4 kHz -> 1.4 kHz with the aim), the hum 3 dB up; the launch = `launch` (pink rush 300 Hz ->
+  1.8 kHz in 60 ms back to 650, a wing snap, a push, panned the way she goes) + a wing; **the ember** (the flame
+  going out as she leaves) = `snuff` (its own two tones falling an octave in 0.3 s, into a soft pink *pff*),
+  repitched per kind; **the snuff on landing** = the moths: `glintNote` chimes climbing the forest's chord in tune
+  (D5 E5 A5 B5 D6 E6 A6 B6 D7, 0.11 s apart; a chain's flames share one phrase) and one `mothRush` (70 small wing
+  grains rising 900 Hz -> 2.6 kHz, panned away); a cut-out flame plays the snuff first. Relit embers: a soft
+  `slowIn` a fifth up.
+- **Creatures (creatures bus, placed in the world).** Beetle brace = `creak` (stick-slip catches speeding up
+  50 -> 12 ms apart and rising 45%, each ringing wood modes ~200 Hz x 1 / 2.37 / 4.1; the old burrback 500 cents
+  down and louder, a juvenile up); ram = `rumble` (LP 150 noise + scrabbling legs); a ram into a wall = thumpWood +
+  a low clang. Hawker / lampwing tell (`enemyNotice`) = `buzzUp` (wingbeat pulses 38 -> 70 a second through a body
+  band, swelling); dive = `dive` (pink swoop 2 kHz -> 350 Hz with the beat fading). Dangler tell = `silkTense` (a
+  thin tone rising 35% catching 26 times a second + a rubbed edge) and `drop` (a zip 2.6 kHz -> 600 Hz) when the
+  tell ends. Old burrback: `rear` (a deep creak ~95 Hz + an in-breath; it has a mouth) for the slam's tell, `slam`
+  (modes 38-150 Hz, a long thud, debris), roll = rumble low, bounce, unroll / feint thumps, phase = a sinking
+  breath. Ants = `skitter` (3-6 tiny clicks 2.5-4 kHz) about 2.2 a second each while walking within 520 px.
+  A hawker snatching a circling moth = one falling chime.
+- **The bed (world bus).** The Hush is retired (voice, knock, clock: dropped story); the grove's amber / violet
+  zones play only where `BEDS[room].zones`. Wind = the two-band roar / leaf hiss driven by render's `wind()` as
+  before (5 dB lower than milestone 1), drips, the far owl; per room `BEDS`: offsets, hiss band, drip rate, owl or
+  not (airy in the hatch and canopy, hushed in the hollow, the well and the roots, no owl underground).
 
-## Review clip and measured levels (2026-10-14)
-`npm run clip -- --audio --ab --pickups --wide --script "<route>" --name audio-m1`: records a tape while
-stepping (muted), renders it in an OfflineAudioContext (`__game.audio.render`), muxes, measures
-(`tools/lib/levels.ts`: ffmpeg EBU R128 + our FFT). `--ab` adds `-nohush`. The route (idle 12 s in the
-blue, run left, somersault + hard landing, refused at the stone lantern, glide catch over the pool, splash,
-air dash, pod, kindle, 18 s in its light) was made by a closed-loop sim pilot; enemies move with time, so
-re-check for `hurt` if the sim changes. Clips in progress get killed by Vite HMR reloads when others
-edit files: build to a scratch dir and `vite preview` it, then `--url http://localhost:<port>/opusvania/`.
-Measured on clips/audio-m1.wav (41.3 s): integrated -20.2 LUFS, LRA 5.0 LU, true peak -7.9 dBTP, 0 clipped
-samples, centroid 518 Hz, energy <150 Hz 18%, 2-4 kHz 2.8%, 4-9 kHz 1.8%, >9 kHz ~0; momentary loudness
-rides -25..-17 LUFS with the gusts (the kindle tops it at -17); HF per 5 ms never more than 8 dB over its
-median (no clicks). Without the Hush: -20.6 LUFS, -8.6 dBTP. Per bus alone (before the +10 master, from
-the lab run): world -30 LUFS, hush -39, hero -41 (peaks -24 dBFS), lantern -34 (peak -19).
-Offline render 41 s in 2.6 s, bake ~110 ms. Cues in the clip: 9 knocks, 20 drips, 1 far voice, 7 wingbeats,
-2 whooshes, 2 dust, 1 thump, 1 catch, 1 splash, 1 dash, 2 notices, 2 refusals, 1 kindle.
-
-## Milestone 2: giving (memory/giving.md), muted like the rest
-- Bus `creatures` added. `AudioSnap` also carries `wallet`, `seenLevel` and `creatures` (centre, kind,
-  `gift` frames left of `of`); `snapOf(..., giftFrames)`. Levels in `AUDIO.giving`.
-- `offer`: offerTone (rubbed glass A4, 45 ms soft onset, 1.1 s). `offerMiss`: flutter (three dry wing
-  grains; `none` 2 dB softer). `giftReturn`: offerTone a fifth up, softer.
-- Answers when the glint lands: `enemyGift` burrback = exhale (pink noise through two formants aa -> oo,
-  0.95 s; creatures have mouths, so formants are allowed), `was` windup/charge = settle (2.4 s, sinking);
-  lampwing = glassSettle (rubbed E5). `lanternGift` / `lampGift` = giftBowl (one bowl partial) climbing
-  A -> B -> D as the price fills (lamp an octave up). `heartGift` = D2 + D3 bowl, 5 s.
-- Calm: `calmBreath` cues from `ambient()` while `gift > 0`, intervals 2.4 s growing to 9 s (the Hush's)
-  over the calm, fading with `gift / of` (`calmBreath(elapsed, of)` in router.ts): 2-3 breaths in 10 s.
-- `enemyAware`: burrback sniff (rising in-breath, 0.32 s), lampwing wingHum (rubbed A5 swelling, 40 Hz
-  tremolo). Seen level: `ChordVoice` (voices/chord.ts), rubbed glass A4, E5, B5, D5 around her, one tone
-  per level, -50 RMS dB at level 1 to -41 at 4 (pre-master), in over ~1 s, out over ~0.5 s; none at 0.
-- Rest that costs glints (`lanternRest` / `lampRest` `cost` > 0): glintNote (struck glass, A5) per glint,
-  0.13 s apart, falling A E D B A.
-- Review: `clips/audio-m2-giving.mp4` (25 s, `--setup "g.giving(9); g.health(2)" --at 3100,1280`): chord,
-  burr-shaft's sniff and tell, offer -> settle -> calm breaths, eight offers into lamp-trunk (bowl climbing)
-  -> it catches, a rest paying her last two (notes), silence, a walk in among burr-shaft unseen. -20.5 LUFS,
-  -6.9 dBTP, 0 clipped, centroid 529 Hz; momentary -27..-16 (the lamp's bloom tops it). Alone: chord ~15 dB
-  under the bed; the hero bus is silent once she is empty-handed.
-- The pilot that makes such a route must be closed-loop on the creature (offer on `enemyWindup`); the burrback's
-  position depends on the frame, so an idle a few frames longer turns a windup into a walk-in hit.
-
-## Milestone 3 (the prologue's score): deleted
-The prologue and its score (`audio/prologue.ts`, `voices/prologue.ts`, the score sounds `pluck`, `bell`,
-`hushCall` and the rest, the layer bend) were removed with the prologue on 2026-10-17; git history
-(e31bab6 .. 875ba79) has them. What it taught that still holds:
-- The wind's gust crest pushes the peak (-4.8 dBTP once): the roar tops out at -38.
-- Render cost: one shared convolver (2.2 s IR; the far send reaches it low-passed, delayed and fed back),
-  and voices made only when first needed (`engine.ts LAZY`: glide air, pool, steam, violet air, bowls,
-  chord). 15.0 s -> 11.5 s for a 131 s tape (an unloaded run 9.9 s, 7.6% of real time; budget 5%, not met
-  while other agents load the machine).
-
-## Giving round 3 (asleep, caught, lost), muted
-- Snap creatures also carry `aware`, `dozing`, `down` (dead / hurt). Asleep (`e.dozing`): `sleepBreath` (in, then a
-  longer low out, 2.6 s) about every 3.6 s with a seeded lateness (`sleepBreath()` in router.ts), -37 dB, faded
-  by her distance and silent beyond 420 px. Noticing (`enemyAware`): a burrback's `catchBreath` (sharp 0.2 s in-
-  breath; it replaced the old sniff) or a lampwing's hum, plus `chordCatch` on her (her A4 + E5 shivering: 9 Hz
-  tremolo, +-12 cents wobble, 0.75 s), -36 dB +2 a seen level, only when she carries something. Losing her
-  (`creatureCues(prev, snap)`: awareness runs out while not calmed / dead / hurt): `settle` a semitone down, -34.
-- Clip clips/audio-giving-r3.mp4 (13.5 s: empty-handed past burr-path asleep; then 20 glints: caught over the
-  pool, lost going back): -21.2 LUFS, -7.6 dBTP, 0 clipped.
+## Review clips and levels (2026-10-18)
+Made from `lab-feel` (the fling toy room) with a closed-loop probe in the sim (a scratch script that steps
+`getRoom('lab-feel')` from the same `--at` and prints the DSL), so the page replays it exactly:
+- `clips/audio-fight.mp4` (6.7 s): `npm run clip -- --room lab-feel --pickups --at 10900,1700 --pre 0 --audio --ab
+  --name audio-fight --script "R33 A1 .99 R+J25 L+A1 J4 L17 J2 L+A1 J6 D+A1 J23 R+A1 J1 .1 J11 R6 J4 R+A1 J23 L+A1
+  J15 .8 L+A1 .10 L6 .7 L+A1 .33 .60"`: the beetle braces (creak), a cut glances (clang), its ram hits her (hurt),
+  a second brace, she jumps it, three blows from behind (crack + tick), the kill (crunch + tail). -24.3 LUFS,
+  -5.3 dBTP (the kill), hits peak -7..-9 dBFS, the bed ~-37 dBFS RMS; 0 clipped.
+- `clips/audio-lamps.mp4` (6.0 s): `--at 2400,1700 --script ".40 .10 R20 R+J14 R10 R+B24 U+R2 R30 R+B24 D+R2 R18
+  R+B24 U+R2 R50 .90"`: the hum nearing station 2, three flings (snap, held swell, launch, ember), the landing
+  frees 15 moths (one 9-chime phrase + rush). -24.3 LUFS, -7.1 dBTP.
+- `-nobed` takes (`--ab`): the same without the world bus. A bed alone (wood-hatch, 5 s): -26.6 LUFS.
+- Offline render ~4% of real time (6.7 s in 0.26 s), bake ~350 ms.
 
 ## Gotchas
-- Offline render cost is the two convolvers (~2 of 2.7 s for a 41 s clip; without them 0.8 s). IRs are
-  1.8 s (room) and 2.8 s (far) for that reason; 60 s renders in ~3.8 s on a busy laptop (budget 3 s).
-- Web Audio low/high-pass Q is in dB, band-pass Q is linear: `band()` converts.
-- In `manual` / `frozen` the context is suspended; live listening needs realtime (`?audio`,
-  then any key: browsers allow no context before a gesture).
-- Agents can't hear: the numbers catch loud, harsh, dense and clicky (`clicks` = HF energy per 5 ms vs
-  its median), not ugly. The owner's ear is the gate.
+- **`?nopickups` strips enemies too**: a clip of a fight needs `--pickups`. Use `--pre 0` so the page's frames
+  match a sim probe that starts at `placePlayer`.
+- Clips in progress get killed by Vite HMR reloads when others edit files: `vite build --outDir <scratch>` and
+  `vite preview --outDir <scratch> --port <p>`, then `--url http://localhost:<p>/opusvania/`.
+- Integrated LUFS gates out a quiet bed: with the bed ~12 dB under play, `-nobed` measures the same.
+- Web Audio low/high-pass Q is in dB, band-pass Q linear (`band()` converts). An `AudioParam.value` read while
+  scheduling ahead (offline) is not the automated value: keep the last target yourself (engine.ts `muffled`).
+- The convolver is most of the render cost (one shared, 2.2 s IR). Voices are made only when first needed
+  (engine.ts `LAZY`: glide air, pool, steam, glass air, bowls, chord, the lamp hum).
+- In `manual` / `frozen` the context is suspended; live listening needs realtime (`?audio`, then any key).
+- Agents can't hear: the numbers catch loud, harsh, dense and clicky, not ugly. Matt's ear is the gate.
+
+## The test grove's older sounds (kept while the grove exists)
+Lantern bowls (notice A3, rubbed channel, kindle D3 blooming into A3 E4 B4 D4, rest, refuse; lamps an octave up),
+the pool, root steam and violet glass air, and giving (memory/giving.md): offer = rubbed glass A4, a creature's
+breath answers (exhale / settle), calm breaths slowing, sleep breaths, the carried chord (A4 E5 B5 D5 by seen
+level) and its catch, rest notes falling. Git history (e31bab6 .. 875ba79) has the prologue's score.

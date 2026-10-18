@@ -20,7 +20,18 @@ import { AUDIO } from './tuning';
 const KEEP = 256;
 
 /** Rate limits per sound family (s): wingbeats never closer than 80 ms. */
-const GAP: Partial<Record<Cue['sound'], number>> = { wing: AUDIO.hero.wingGapS, dust: 0.06, scrape: 0.04 };
+const GAP: Partial<Record<Cue['sound'], number>> = {
+  wing: AUDIO.hero.wingGapS,
+  dust: 0.06,
+  scrape: 0.04,
+  pad: 0.09,
+  tick: 0.09,
+  skitter: 0.05,
+  // Two blows in one frame (a cut through two creatures) are one crack, two ticks at most.
+  hitCrack: 0.03,
+  crunch: 0.05,
+  slowIn: 0.05,
+};
 
 export class Conductor {
   /** The last cues routed, newest last. */
@@ -39,6 +50,7 @@ export class Conductor {
     const prev = this.last;
     this.last = snap;
     const cues: Cue[] = [];
+    this.ctx.events = events;
     events.forEach((e, i) => {
       cues.push(...route(e, i, snap, this.ctx));
     });

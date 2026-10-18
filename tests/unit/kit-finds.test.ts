@@ -137,29 +137,32 @@ describe('finds', () => {
     expect(of(s.run('.2'), 'hollowGrant')).toHaveLength(0);
   });
 
-  it('upgrades are numbers: none owned = the same tuning; quick wings beats free in two', () => {
+  it("upgrades are numbers: none owned = the same tuning; long breath doubles the fling's aim; quick wings halves a grab", () => {
     const t = defaultTuning;
     expect(withUpgrades(t, newSave())).toBe(t);
     const sv = newSave();
-    sv.flags.push(upgradeFlag('quickWings'), upgradeFlag('keenBlade'));
+    sv.flags.push(upgradeFlag('quickWings'), upgradeFlag('keenBlade'), upgradeFlag('longBreath'));
     const u = withUpgrades(t, sv);
-    expect(u.lures.beats).toBe(t.upgrades.quickWings.beats);
+    expect(u.grab.beats).toBe(t.upgrades.quickWings.beats);
+    expect(u.grab.beats).toBeLessThan(t.grab.beats);
     expect(u.lures.flameRadius).toBe(t.lures.flameRadius + t.upgrades.keenBlade.flameRadiusAdd);
-    expect(t.lures.beats).toBe(3);
+    expect(u.lures.flingFrames).toBe(t.lures.flingFrames * 2);
+    // Sharp wings is a row (the creatures read it): the tuning is unchanged.
+    const sw = newSave();
+    sw.flags.push(upgradeFlag('sharpWings'));
+    expect(withUpgrades(t, sw)).toEqual(t);
 
-    const caughtThenBeat = (quick: boolean) => {
+    /** The steps a held lamp aims (the press's own included) before the fling goes by itself. */
+    const aimFor = (breath: boolean) => {
       const scene: Scene = { ...flatScene(), lures: [{ id: 'w', kind: 'wick', x: 2000, y: 560 }] };
       const s = newSim(scene);
-      if (quick) s.state.save.flags.push(upgradeFlag('quickWings'));
-      s.place(2000, 470);
-      const ev: SimEvent[] = [];
-      for (let f = 0; f < 40 && of(ev, 'lureCaught').length === 0; f++) ev.push(...once(s, 0));
-      expect(of(ev, 'lureCaught')).toHaveLength(1);
-      const after = s.run('J1 .8 J1 .8 J1 .8');
-      return of(after, 'lureBeat').findIndex((e) => e.beats === e.of) + 1;
+      if (breath) s.state.save.flags.push(upgradeFlag('longBreath'));
+      s.place(2000, 600);
+      for (let f = 1; f < 200; f++) if (of(once(s, ActionBit.lamp), 'fling').length > 0) return f;
+      return -1;
     };
-    expect(caughtThenBeat(false)).toBe(3);
-    expect(caughtThenBeat(true)).toBe(2);
+    expect(aimFor(false)).toBe(t.lures.flingFrames);
+    expect(aimFor(true)).toBe(t.lures.flingFrames * 2);
   });
 });
 

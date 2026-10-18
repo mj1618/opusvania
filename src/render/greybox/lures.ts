@@ -39,6 +39,11 @@ const LIFE = { beat: 0.35, hit: 0.25, snuff: 0.9, catch: 0.4, free: 0.45, now: 0
  */
 const DARK = { color: 0x04060a, grow: 0.5, settle: 0.7, peak: 0.42, wash: 0.2, flash: 2 } as const;
 
+/** The sim's fling events (typed loosely until they are in every build). */
+const FLING_EVENTS = new Set(['flingStart', 'fling', 'lureEmber', 'lureRelight']);
+/** The fling's look: the aim arrow from `arrow0` to `arrow1` px off the flame; an ember's colour. */
+const FLING = { arrow0: 30, arrow1: 120, ember: 0xc0502a };
+
 /** Scratch for a flame's position this frame. */
 const AT = { x: 0, y: 0 };
 
@@ -47,6 +52,8 @@ export class LureView {
   readonly moths = new FreedMoths();
   /** Seconds since each lure went out while she was here (by id); absent = out before. */
   private readonly outT = new Map<string, number>();
+  /** Flames she flung from, smouldering until she lands safe or fails (`lureEmber`, by id). */
+  private readonly embers = new Set<string>();
   /** Reads this render frame's events. */
   onEvents(events: readonly SimEvent[], sim: SimView): void {
     for (const e of events) {
@@ -55,6 +62,19 @@ export class LureView {
         this.moths.clear();
         this.fx.length = 0;
         this.outT.clear();
+      } else if (FLING_EVENTS.has((e as { type: string }).type)) {
+        // The fling (memory/lures.md): the moment snaps (a ring on the flame), she leaves it, it smoulders, it
+        // burns again on a fail. (Typed loosely: the sim's fling events.)
+        const f = e as unknown as { type: string; id: string; x: number; y: number };
+        if (f.type === 'flingStart')
+          this.fx.push({ kind: 'catch', x: f.x, y: f.y, t: 0, life: LIFE.catch, r: 90 });
+        else if (f.type === 'fling') this.fx.push({ kind: 'now', x: f.x, y: f.y, t: 0, life: 0.3, r: 70 });
+        else if (f.type === 'lureEmber') this.embers.add(f.id);
+        else if (f.type === 'lureRelight') {
+          this.embers.delete(f.id);
+          this.outT.delete(f.id);
+          this.fx.push({ kind: 'beat', x: f.x, y: f.y, t: 0, life: LIFE.beat * 1.5, r: 40 });
+        }
       } else if (e.type === 'lureBeat')
         this.fx.push({ kind: 'beat', x: e.x, y: e.y, t: 0, life: LIFE.beat, r: 30 + e.out });
       else if (e.type === 'lureHit')
@@ -68,6 +88,7 @@ export class LureView {
         if (e.how === 'beat')
           this.fx.push({ kind: 'now', x: e.x, y: e.y, t: 0, life: tuning.lures.throwFrames / 60, r: 64 });
       } else if (e.type === 'lureSnuff') {
+        this.embers.delete(e.id);
         this.fx.push({ kind: 'snuff', x: e.x, y: e.y, t: 0, life: LIFE.snuff, r: 20 });
         this.outT.set(e.id, 0);
         this.moths.free(e.id, e.x, e.y, e.moths);
@@ -115,6 +136,18 @@ export class LureView {
         const py = l.y - l.swing.length;
         back.moveTo(l.x, py).lineTo(lx, ly).stroke({ color: GB.husk, width: 3, alpha: 0.9 });
         back.circle(l.x, py, 6).fill({ color: GB.husk });
+      }
+      // Flung from and smouldering: a low red ember, flickering, a wisp of smoke over it (no field, no pull).
+      if (this.embers.has(l.id)) {
+        const fk = 0.6 + 0.4 * Math.sin(clock * 13 + i);
+        back.circle(lx, ly, T.flameRadius * 0.5).fill({ color: FLING.ember, alpha: 0.75 * fk });
+        for (let k = 0; k < 3; k++) {
+          const u = (clock * 0.7 + k / 3) % 1;
+          back
+            .circle(lx + Math.sin(clock * 2 + k) * 6, ly - 12 - u * 40, 3 + 4 * u)
+            .fill({ color: 0x8a93a8, alpha: 0.3 * (1 - u) });
+        }
+        continue;
       }
       if (hp <= 0) {
         // The husk: cold, small, no field.
@@ -207,6 +240,36 @@ export class LureView {
             .lineTo(lx, ly)
             .stroke({ color: GB.field, width: 1 + 3 * k, alpha: 0.15 + 0.5 * k * k });
         }
+      }
+      // The fling's aim (she pressed Lamp near it: the world slows): a ring tightening on the flame, an arrow from it
+      // along her aim, and the flight it gives as bright dots to a ring where she lands.
+      const fp = p as unknown as { fling?: number };
+      if ((fp.fling ?? -1) === i) {
+        const pulse = 0.5 + 0.5 * Math.sin(clock * 12);
+        front.circle(lx, ly, K.core * 0.9 + 6 * pulse).stroke({ color: GB.flameHot, width: 3, alpha: 0.9 });
+        const ax = p.lureAimX;
+        const ay = p.lureAimY;
+        const a0 = FLING.arrow0;
+        const a1 = FLING.arrow1;
+        front
+          .moveTo(lx + ax * a0, ly + ay * a0)
+          .lineTo(lx + ax * a1, ly + ay * a1)
+          .stroke({ color: GB.flameHot, width: 5, alpha: 0.95, cap: 'round' });
+        const hx = lx + ax * (a1 + 4);
+        const hy = ly + ay * (a1 + 4);
+        front
+          .poly([hx + ax * 14, hy + ay * 14, hx - ay * 9, hy + ax * 9, hx + ay * 9, hy - ax * 9])
+          .fill({ color: GB.flameHot, alpha: 0.95 });
+        const arc = p.lureArc;
+        const n = arc.length >> 1;
+        for (let k = 1; k < n; k++)
+          front
+            .circle(arc[k * 2] as number, arc[k * 2 + 1] as number, 3.5)
+            .fill({ color: GB.flameHot, alpha: 0.85 * (1 - (0.5 * k) / n) });
+        if (n > 1)
+          front
+            .circle(arc[(n - 1) * 2] as number, arc[(n - 1) * 2 + 1] as number, 12)
+            .stroke({ color: GB.flameHot, width: 2, alpha: 0.8 });
       }
       // Held: the beats it takes, as pips over the flame (over her), and where the last beat would
       // throw her: the sim's own aim (`lureAimX, lureAimY`: the held direction; the radius when none).

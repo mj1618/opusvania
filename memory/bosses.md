@@ -40,6 +40,7 @@ shared pieces, `index.ts` the framework, `weaver.ts` the Weaver, `data.ts` the r
 - Debug jumps: `jumpBoss(state, scene, t, n, events)` / `__game.boss({phase: n})`.
 
 ## The Weaver: phases, timings, tells (60 Hz; numbers in `tuning.weaverBoss`)
+**Stale since the fling (2026-10-18, memory/lures.md): lamps no longer catch, so the heart's core never holds her and P1's bite never comes (the bot still wins, hitless). The fight wants a rethink around the fling.**
 | phase | exam | what | tell -> live | open |
 |---|---|---|---|---|
 | P1 the ring | glide, climb | snuff 5 ring flames (3 on a retry: rings 2-4); each drops its spoke and heals 1; spokes are a gentle Caught (4 beats) | caught in the heart's core: eyes count 60 f -> bite 10 f, 1 dmg | none (it sits on the heart; every cut glances) |

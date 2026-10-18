@@ -10,8 +10,9 @@ import { AUDIO } from './tuning';
 import { BowlVoice } from './voices/bowl';
 import { ChordVoice } from './voices/chord';
 import { GlassAirVoice, PoolVoice, SteamVoice } from './voices/forest';
-import { HushVoice } from './voices/hush';
+import { LampVoice } from './voices/lamp';
 import { OneShots } from './voices/oneshots';
+import { aim } from './voices/util';
 import { WindVoice } from './voices/wind';
 import { WingsVoice } from './voices/wings';
 
@@ -20,7 +21,7 @@ type Voice = { apply(L: Layers, when: number, tau: number): void };
 /**
  * Voices only some places need, made the first frame they are asked for (each costs the renderer
  * every frame it exists, sounding or not): her glide's air, the pool, the steam, the violet air, the
- * lantern bowls, the carried-light chord.
+ * lantern bowls, the carried-light chord, the lamps' hum.
  */
 const LAZY: Array<{ need: (L: Layers) => boolean; make: (g: AudioGraph, b: Baked) => Voice }> = [
   { need: (L) => L.air > 0, make: (g, b) => new WingsVoice(g, b) },
@@ -29,6 +30,7 @@ const LAZY: Array<{ need: (L: Layers) => boolean; make: (g: AudioGraph, b: Baked
   { need: (L) => L.glass > 1e-5, make: (g, b) => new GlassAirVoice(g, b) },
   { need: (L) => L.rub > 0 || L.hum > 0, make: (g, b) => new BowlVoice(g, b) },
   { need: (L) => L.chord.some((x) => x > 0), make: (g, b) => new ChordVoice(g, b) },
+  { need: (L) => L.lamp > 0 || L.aim > 0, make: (g, b) => new LampVoice(g, b) },
 ];
 
 export class AudioEngine {
@@ -36,6 +38,7 @@ export class AudioEngine {
   private readonly shots: OneShots;
   private readonly voices: Voice[];
   private readonly lazy: Array<Voice | null> = LAZY.map(() => null);
+  private muffled = 20000;
 
   constructor(
     ctx: BaseAudioContext,
@@ -44,7 +47,7 @@ export class AudioEngine {
   ) {
     this.graph = new AudioGraph(ctx, baked, out);
     this.shots = new OneShots(this.graph, baked);
-    this.voices = [new WindVoice(this.graph, baked), new HushVoice(this.graph, baked)];
+    this.voices = [new WindVoice(this.graph, baked)];
   }
 
   play(cue: Cue, when: number, cam: AudioCam): void {
@@ -52,6 +55,10 @@ export class AudioEngine {
   }
 
   apply(L: Layers, when: number): void {
+    // Held moments duck the bed; her hurt closes the mix quickly and opens it slower.
+    aim(this.graph.duck.gain, L.duck, when, 0.12);
+    aim(this.graph.muffle.frequency, L.muffleHz, when, L.muffleHz < this.muffled ? 0.02 : 0.15);
+    this.muffled = L.muffleHz;
     for (const v of this.voices) v.apply(L, when, AUDIO.layerTau);
     LAZY.forEach((z, i) => {
       if (!this.lazy[i] && z.need(L)) this.lazy[i] = z.make(this.graph, this.baked);

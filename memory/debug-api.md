@@ -40,12 +40,13 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `state()` the sim state (`src/sim/state.ts`); `hash()`; `info()` (mode, frame, clock, `view` = the logical view `{w, h, left, top, scale}` and `safe`, canvas size, GPU);
   `scene()` the scene data; `events()` events of the last `step()` call, `events(n)` of the last n frames
   (each with `f`, the frame).
-- `input('R30 R+J12 .5')` queues scripted input: `R L U D`, `J` jump, `X` dash, `A` attack, `O` offer, `.` nothing, `+` combines,
+- `input('R30 R+J12 .5')` queues scripted input: `R L U D`, `J` jump, `X` dash, `A` attack, `O` offer, `B` lamp (the fling), `.` nothing, `+` combines,
   number = frames; a re-press needs a gap (`J1 .1 J1`). Long form `right+jump*12` also works. `clearInput()`.
 - `pickups()` → `{count, taken, worth, list: [{id, kind, x, y, state: waiting|flying|taken}]}`; the count is
   also `state().pickups.count`. Dev handle `window.__pickups` (renderer, `cfg`, `cpuMs`): pickups.md.
-- `lures()` → `{snuffed, freed, total, caught: {id, frames, beats, of, out} | null, pullX, grace: {id, frames} | null,
-  list: [{id, kind, x, y, spin, state: burning|out, hp, hpMax, radius, core, moths, outFrame}]}` (memory/lures.md).
+- `lures()` → `{snuffed, freed, total, fling: {id, frames, of, aimX, aimY, arc} | null (aiming), reach: id | null (in
+  fling reach now), pullX, list: [{id, kind, x, y, spin, state: burning|out, hp, hpMax, radius, core, fling, moths,
+  outFrame}]}` (memory/lures.md).
   `debug.labels(on?)` (also the G key): a greybox room's labels and notes (memory/greybox.md). `debug.shake(on?)`: screen
   shake and the camera kick on / off (the accessibility toggle, remembered; `?shake=off` / `?noshake`; memory/feel.md). `?room=lab-lamps` is the
   lamp lab (greybox, every ability).

@@ -18,7 +18,27 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   reason `dash`) and its lunge / hang. The combo timer keeps running through a dash.
 - A press is good for 8 frames (`bufferFrames`, its own included).
 
+## Round 7: the attack's feel (Matt: "the attack feels average and not satisfying")
+HK's nail as the reference: one even rhythm, a crisp hold on contact, the enemy visibly batted, kills that pop.
+- **One rhythm**: every step starts 1 frame after the press, is live 6 frames, ends at 14, and the next can start
+  at 18 (was 17 / 19 / 27: a slow finisher broke the beat). The finisher keeps power 2, its wider area, a harder
+  shove and +3 hitstop.
+- **The hold**: a creature hit holds 5 frames (was 4), a kill 6 more (was 3), a pogo 3 (was 2).
+- **The bat**: a cut shoves a burrback ~43 px (knockback 7 x 1.25; was 32); her recoil off a creature 5 px/f (was 4).
+  A pogo barely shoves it (`burrback.knockVertical` 0.25), so bounce after bounce stays on its back.
+- **No mush**: after a blow lands a creature takes no other for `enemies.hitInvulnFrames` 8 (a down cut onto it then
+  is a glance: the pogo still bounces her).
+- **Fodder dies in 2-3 cuts**: the burrback 3 hp (was 5; a scene's own `hp` wins: R4's is 4). Lampwings stay 3.
+- **What render reads** (`slashHit`): `weight` (`light` fodder / `medium` body / `heavy` boss), `kill`, `hpLeft`,
+  `shove` (px/f).
+- Kept on purpose: reach (the rig's blade is drawn to it: character-vesper.test.ts), the pogo's height 15.5 (the
+  levels' pogo lines), the lunge (it brings her into reach), down / up slash areas. The air hang is 3 frames (was 4).
+- **Before / after, frames**: startup 1 / 1; live 1-6 / 1-6 (finisher 3-10 / 1-6); end 14 / 14 (finisher 20 / 14);
+  cooldown 17, 19, 27 / 18, 18, 18; creature hitstop 4 / 5, kill +3 / +6, pogo 2 / 3; burrback 5 hp / 3.
+- Hunters and the lamp: `hawker.huntCaught` is off (the lamp's hold becomes a fling's slowed aim, sim agent).
+
 ## The three-step combo
+(Numbers before round 7; see the round 7 section above for what changed.)
 | | step 1: cut | step 2: return cut | step 3: finisher |
 |---|---|---|---|
 | hit area live (frames from the press) | 1-6 | 1-6 | 3-10 |
@@ -95,7 +115,7 @@ Tests: `tests/unit/combat.test.ts`, `tests/unit/pods-pilot.test.ts`.
   the enemy's kind) and a down slash pogos off them; unlike pods they need a clear line (enemies.md).
 - `impact {x, y, dir, facing, step, power, hits}`: once per blow that hits anything, on its first hit
   frame, for camera and screen effects. The sim shakes nothing.
-- **The throw-cut** (area 1 plan r5, item 2; no new button): a slash *started* during a lamp throw's launch (`player.thrown`
+- **The throw-cut** (area 1 plan r5, item 2; no new button): a slash *started* during a fling's launch (`player.thrown`
   and `lureThrow > 0`) is heavy: `player.attackHeavy`, `slash.heavy`, a `throwCut` event, `attack.throwCutPower` 3 x its
   power on every target (a lantern goes out on one) and `throwCutHitstop` 4 more hitstop. What it does to each creature
   is the creature's rule (`KindRules.heavy`, the creatures agent's); they should read `attackHeavy` (decided at the

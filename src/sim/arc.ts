@@ -1,8 +1,7 @@
 /**
- * The throw's arc while she is caught (director's area 1: "while she's caught, show the throw's arc";
- * Ori's Bash preview). Each caught step, the flight the last beat would give her from where she is now,
- * with the direction she holds now: the real controller on a copy of the state (walls, other lures' pull,
- * the launch), a body-centre point every `lures.arcEvery` frames, until she lands, is caught again or
+ * The fling's arc while she aims (memory/lures.md; Ori's Bash preview): each aiming step, the flight a release
+ * now would give her with the direction she holds now: the real controller on a copy of the state (walls, the
+ * launch, the flame going out), a body-centre point every `lures.arcEvery` frames, until she lands or
  * `lures.arcFrames` pass. Pure and deterministic (memory/sim-architecture.md); render reads `player.lureArc`.
  */
 import type { SimEvent } from './events';
@@ -17,21 +16,14 @@ import type { Tuning } from './tuning';
 const SCRATCH: SimEvent[] = [];
 const DIRS = ActionBit.left | ActionBit.right | ActionBit.up | ActionBit.down;
 
-/** The predicted flight as flat `[x0, y0, x1, y1, ...]` body-centre points (empty when not caught by a lure). */
+/** The predicted flight as flat `[x0, y0, x1, y1, ...]` body-centre points (empty when she is not aiming). */
 export function lureArc(state: GameState, scene: Scene, t: Tuning, P: MoveParams, input: number): number[] {
-  const p = state.player;
-  if (p.lure < 0 || p.grab >= 0) return [];
+  if (state.player.fling < 0) return [];
   const g = cloneState(state);
   const q = g.player;
+  // Lamp let go now, the stick as it is: the release step is the real one (the launch, then the rest of it).
   const held = input & DIRS;
-  // The last beat pressed now: the same code path as a real one (queued until `lureCd` lets it count, the
-  // throw, then the rest of that step), so the arc ends exactly where the throw lands.
-  q.lureBeats = Math.max(0, Math.round(t.lures.beats) - 1);
-  q.lurePend = 1;
-  q.dashBuf = 0;
-  q.jumpBuf = 0;
-  q.attackBuf = 0;
-  g.prevInput = held;
+  g.prevInput = held | ActionBit.lamp;
   // (Called at the end of a step, before its frame count moves on: the copy starts at the next step's frame.)
   g.frame = state.frame + 1;
   const every = Math.max(1, Math.round(t.lures.arcEvery));
@@ -45,7 +37,7 @@ export function lureArc(state: GameState, scene: Scene, t: Tuning, P: MoveParams
     const cx = Math.round(q.x + q.w / 2);
     const cy = Math.round(q.y + q.h / 2);
     if (f % every === 0) out.push(cx, cy);
-    if (f > 0 && (q.grounded || q.lure >= 0 || q.hp <= 0)) {
+    if (f > 0 && (q.grounded || q.fling >= 0 || q.hp <= 0)) {
       if (f % every !== 0) out.push(cx, cy);
       break;
     }

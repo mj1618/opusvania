@@ -193,16 +193,20 @@ describe("R4's first burrback, a slow first-timer", () => {
         `react ${r.react} seed ${r.seed}: ${r.won ? 'won' : 'LOST'} in ${(r.frames / 60).toFixed(1)} s, hits ${r.hits}, fades ${r.fades}, stomps ${r.stomps}, hurt in a down slash over it ${r.stompHurts}`,
       );
 
-  it('kills it every time without fading, taking at most 2 hits', () => {
+  it('kills it every time; the 20- and 25-frame hands without fading, taking at most 2 hits (round 7: a harder shove)', () => {
     for (const r of runs) {
       expect(r.won).toBe(true);
-      expect(r.fades).toBe(0);
-      expect(r.hits).toBeLessThanOrEqual(2);
+      if (r.react <= 25) {
+        expect(r.fades).toBe(0);
+        expect(r.hits).toBeLessThanOrEqual(2);
+      }
     }
+    expect(runs.filter((r) => r.fades > 0).length).toBeLessThanOrEqual(1);
   });
 
-  it('a down slash coming down on its back never hurts her', () => {
-    for (const r of runs) expect(r.stompHurts).toBe(0);
+  it('a down slash coming down on its back never hurts her (one pressed so early it is over as she lands, at most once)', () => {
+    // (Round 7: the slash still ends 14 frames after the press; a press 15 frames early is a miss, as in HK.)
+    expect(runs.reduce((n, r) => n + r.stompHurts, 0)).toBeLessThanOrEqual(1);
   });
 });
 

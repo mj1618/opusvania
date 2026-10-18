@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import labCreaturesJson from '../../content/rooms/lab-creatures.json' with { type: 'json' };
+import labFeelJson from '../../content/rooms/lab-feel.json' with { type: 'json' };
 import labKitJson from '../../content/rooms/lab-kit.json' with { type: 'json' };
 import labLampsJson from '../../content/rooms/lab-lamps.json' with { type: 'json' };
 import labWeaverJson from '../../content/rooms/lab-weaver.json' with { type: 'json' };
@@ -135,6 +136,7 @@ const SceneSchema = z
             spin: z.union([z.literal(-1), z.literal(1)]).optional(),
             swing: SWING,
             after: z.string().min(1).optional(),
+            relight: int.min(30).max(3600).optional(),
           })
           .strict(),
       )
@@ -620,6 +622,7 @@ const FILES: readonly unknown[] = [
   labWorldCJson,
   testGroveJson,
   labLampsJson,
+  labFeelJson,
   labKitJson,
   labCreaturesJson,
   labWeaverJson,

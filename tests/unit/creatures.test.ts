@@ -403,7 +403,8 @@ describe('the old burrback', () => {
     const pogo = s.run('D+A1 .3');
     expect(of(pogo, 'enemyHit')[0]).toMatchObject({ slash: 'down', hpLeft: T.oldBurrback.hp - 1 });
     expect(['windup', 'feint', 'charge']).toContain(o.mode);
-    // Again in the same brace: it glances (she still bounces).
+    // Again in the same brace: it glances (she still bounces). (After its `hitInvulnFrames`.)
+    s.run(`.${T.enemies.hitInvulnFrames}`);
     s.place(o.x + o.w / 2, o.y - 30);
     s.state.player.attackCd = 0;
     const again = s.run('D+A1 .3');
@@ -825,78 +826,7 @@ describe("the director's three predators (wood-area1-director.md)", () => {
   });
 });
 
-describe('the hawker hunts the caught', () => {
-  // A wick she is caught by, the hawker 300 px off (beyond its plain sight of the floor, inside its leash).
-  const scene = () =>
-    room(
-      [{ id: 'h', kind: 'hawker', x: 2300, y: 300, facing: -1, guards: 'far' }],
-      [wick('w', 2000, 500), wick('far', 3700, 200)],
-    );
-  const H = T.hawker;
-
-  /** Steps one frame at a time: the frame of each first event of these types. */
-  const frameOf = (s: Sim, n: number, script = '.1') => {
-    const at: Record<string, number> = {};
-    for (let f = 0; f < n; f++) for (const e of s.run(script)) at[e.type] ??= f;
-    return at;
-  };
-
-  it('a moth held in the orbit is told and struck at the flame; held through it, she is hit', () => {
-    const s = newSim(scene());
-    // Into the core: caught.
-    s.place(2000, 540);
-    const at = frameOf(s, 200);
-    expect(at.lureCaught).toBeDefined();
-    const dive = of(s.events, 'enemyDive')[0];
-    expect(dive?.tx).toBeCloseTo(2000, 0);
-    expect(dive?.ty).toBeCloseTo(500, 0);
-    expect((at.hurt ?? -1) - (at.enemyNotice ?? 0)).toBeGreaterThanOrEqual(
-      H.curiousFrames + H.diveWindupFrames,
-    );
-  });
-
-  it('struck out of the orbit, she flies along the throw she was aiming (a predictable line), not wherever the blow sent her', () => {
-    for (const [hold, sign] of [
-      ['R', 1],
-      ['L', -1],
-    ] as const) {
-      const s = newSim(scene());
-      s.place(2000, 540);
-      let ev: SimEvent[] = [];
-      for (let i = 0; i < 200 && !types(ev).includes('hurt'); i++) ev = s.run(`${hold}1`);
-      expect(of(ev, 'hurt')[0]?.source?.kind).toBe('hawker');
-      const x0 = s.state.player.x;
-      s.run('.20');
-      expect((s.state.player.x - x0) * sign).toBeGreaterThan(60);
-    }
-  });
-
-  it('a hawker resting far off is woken by a moth caught in its leash', () => {
-    const s = newSim(scene());
-    const h = enemy(s, 'h');
-    h.mode = 'return';
-    s.place(2000, 540);
-    const at = frameOf(s, 60);
-    expect(at.enemyNotice).toBeDefined();
-  });
-
-  it('fair: a slow player (reacting 20-30 frames after the tell, presses off by a few) beats free out of its lane and is never struck', () => {
-    for (const react of [20, 25, 30])
-      for (const gap of [6, 8, 10]) {
-        const s = newSim(scene());
-        s.place(2000, 540);
-        let ev: SimEvent[] = [];
-        for (let i = 0; i < 120 && !types(ev).includes('enemyNotice'); i++) ev = s.run('.1');
-        // Away from it (it comes from the east): hold left as she beats.
-        const beats = `L+J1 L${gap} L+J1 L${gap} L+J1`;
-        const after = s.run(`.${react} ${beats} L30 .120`);
-        expect(types(after)).toContain('lureFree');
-        expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
-      }
-  });
-});
-
-describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not race it', () => {
+describe('the hawker on a rhythm (area1-plan-r3 §4.3)', () => {
   const H = T.hawker;
   // The throw wick and its hawker, perched to the east.
   const scene = () =>
@@ -928,83 +858,6 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
     expect((ev.find((x) => x.e.type === 'enemyDive')?.f ?? 0) - notice).toBe(H.passTellFrames);
   });
 
-  it('caught as it passes, she is struck straight down, out of the pull, with 2 s before that lamp can take her again (round 5)', () => {
-    const s = newSim(scene());
-    s.place(1400, FLOOR);
-    // Wait for a pass to begin, then into the core in the middle of it.
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 400 && !types(ev).includes('enemyDive'); i++) ev = s.run('.1');
-    s.run('.8');
-    s.place(2000, 540);
-    const hurt: SimEvent[] = [];
-    for (let i = 0; i < 40 && !types(hurt).includes('hurt'); i++) hurt.push(...s.run('.1'));
-    expect(of(hurt, 'hurt')[0]?.source).toEqual({ kind: 'hawker', id: 'h' });
-    expect(types(hurt)).toContain('lureFree');
-    const p = s.state.player;
-    expect(p.vx).toBe(0);
-    expect(p.vy).toBeGreaterThan(0);
-    expect(p.lure).toBe(-1);
-    expect(p.lureGraceFrames).toBeGreaterThanOrEqual(H.passGraceFrames - 2);
-    // Never twice in one pass.
-    const rest = s.run(`.${H.passFrames}`);
-    expect(of(rest, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
-  });
-
-  it('caught just after a pass, a slow player (beats 6-10 frames apart, 20-30 frames to start) is free long before the next', () => {
-    for (const react of [20, 25, 30])
-      for (const gap of [6, 8, 10]) {
-        const s = newSim(scene());
-        s.place(1400, FLOOR);
-        let ev: SimEvent[] = [];
-        for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
-        for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
-        s.place(2000, 540);
-        const after = s.run(`.${react} R+J1 R${gap} R+J1 R${gap} R+J1 R40 .200`);
-        expect(types(after)).toContain('lureFree');
-        expect(of(after, 'hurt').filter((e) => e.source?.kind === 'hawker')).toEqual([]);
-      }
-  });
-
-  it('round 5: it never starts a pass while she is caught in its orbit: its tell holds until she is free', () => {
-    const s = newSim(scene());
-    s.place(1400, FLOOR);
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 600 && !types(ev).includes('enemySnatch'); i++) ev = s.run('.1');
-    for (let i = 0; i < 60 && s.state.enemies[0]?.mode === 'dive'; i++) s.run('.1');
-    s.run(`.${H.passRestFrames + 2}`);
-    // Caught and held there (no beats) through where its next pass would have come.
-    s.place(2000, 540);
-    const held = s.run(`.${H.passPeriod + 40}`);
-    expect(s.state.player.lure).toBeGreaterThanOrEqual(0);
-    expect(types(held)).not.toContain('enemyDive');
-    expect(of(held, 'hurt')).toEqual([]);
-    // Free, the pass comes.
-    const free = s.run('J1 .6 J1 .6 J1 .60');
-    expect(types(free)).toContain('lureFree');
-    expect(types(free)).toContain('enemyDive');
-  });
-
-  it('round 4: a rim (spawn) sends her toward it, up and over, whatever struck her', () => {
-    const s = newSim(
-      room(
-        [{ id: 'h', kind: 'hawker', x: 2260, y: 350, facing: -1, orbit: 'w', guards: 'w', rim: 2600 }],
-        [wick('w', 2000, 500)],
-      ),
-    );
-    s.place(1400, FLOOR);
-    let ev: SimEvent[] = [];
-    for (let i = 0; i < 400 && !types(ev).includes('enemyDive'); i++) ev = s.run('.1');
-    s.run('.8');
-    s.place(2000, 540);
-    const x0 = s.state.player.x;
-    let hit = false;
-    for (let i = 0; i < 60 && !hit; i++) hit = types(s.run('.1')).includes('hurt');
-    expect(hit).toBe(true);
-    expect(s.state.player.vy).toBeLessThan(0);
-    s.run('.20');
-    expect(s.state.player.x).toBeGreaterThan(x0 + 100);
-  });
-
   it("round 4: a finale (a `finale` trigger's held release) sends it away; so does its `until` flag", () => {
     const s = newSim(
       room(
@@ -1031,32 +884,6 @@ describe('the hawker on a rhythm (area1-plan-r3 §4.3): time the catch, do not r
     expect(types(u.run('.5'))).not.toContain('enemyDisperse');
     u.state.save.flags.push('crown');
     expect(of(u.run('.2'), 'enemyDisperse')[0]?.id).toBe('h');
-  });
-});
-
-describe('round 4: nothing arrives from off-screen while she is helpless', () => {
-  it('a dangler off her screen when a lamp caught her does not drop on her until she is free', () => {
-    // A dangler over a wick far from where she stands (off her screen); she is caught by that wick (thrown
-    // there, say): it waits until she is free.
-    const s = newSim(
-      room([{ id: 'd', kind: 'dangler', x: 2000, y: 300, facing: 1 }], [wick('w', 2000, 600)], {
-        solids: [
-          { tag: 'ground', x: 0, y: FLOOR, w: 4000, h: 200 },
-          { tag: 'trunk', x: 1800, y: 240, w: 400, h: 60 },
-        ],
-      }),
-    );
-    s.place(300, FLOOR);
-    s.run('.2');
-    s.place(2000, 600);
-    const ev = s.run('.60');
-    const caught = ev.findIndex((e) => e.type === 'lureCaught');
-    expect(caught).toBeGreaterThanOrEqual(0);
-    expect(enemy(s, 'd').catchSeen).toBe(0);
-    const held = ev.slice(caught);
-    const free = held.findIndex((e) => e.type === 'lureFree');
-    const tell = held.findIndex((e) => e.type === 'enemyWindup');
-    expect(tell === -1 || (free >= 0 && tell > free)).toBe(true);
   });
 });
 
@@ -1265,7 +1092,10 @@ describe('round 5: the throw-cut, the creature side (area1-plan-r5 §2.2)', () =
   };
 
   it('a braced beetle is flipped belly-up from the front, and the blow lands', () => {
-    const s = newSim(room([{ id: 'b', kind: 'burrback', x: 2000, y: FLOOR, facing: -1, radius: 400 }]));
+    // (6 hp: a throw-cut hits 3x, and round 7's fodder has 3.)
+    const s = newSim(
+      room([{ id: 'b', kind: 'burrback', x: 2000, y: FLOOR, facing: -1, radius: 400, hp: 6 }]),
+    );
     const b = enemy(s, 'b');
     b.mode = 'walk';
     s.place(b.x - 100, FLOOR);
@@ -1409,6 +1239,45 @@ describe('round 5: the carriers (ants)', () => {
     snuff(s, 0);
     s.run(`.${Math.ceil(300 / C.speed) + C.underFrames + 10}`);
     expect(enemy(s, 'a1').gone).toBe(true);
+  });
+});
+
+describe('the fling (round 7): nothing strikes her while she aims; sharp wings cut in the launch', () => {
+  it('a ram that reaches her while she aims a fling does not hurt her', () => {
+    const s = newSim(
+      room(
+        [{ id: 'b', kind: 'burrback', x: 2400, y: FLOOR, facing: -1, radius: 600 }],
+        [wick('w', 2000, 700)],
+      ),
+    );
+    s.place(2000, FLOOR);
+    s.run('B1');
+    expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+    // Its ram, right on her as she holds the moment.
+    const b = enemy(s, 'b');
+    b.mode = 'charge';
+    b.chargeLeft = 400;
+    b.x = s.state.player.x + 10;
+    b.facing = -1;
+    const ev = s.run('B20');
+    expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+    expect(of(ev, 'hurt')).toEqual([]);
+  });
+
+  it('sharp wings: her body in the launch cuts what it meets (once a flight); without them it does not', () => {
+    for (const owned of [true, false]) {
+      // A lampwing hanging just right of the wick, in the line of a fling to the right.
+      const s = newSim(
+        room([{ id: 'l', kind: 'lampwing', x: 2140, y: 690, facing: -1 }], [wick('w', 2000, 700)]),
+      );
+      if (owned) s.state.save.flags.push('upgrade:sharpWings');
+      s.place(1990, 760);
+      s.run('R+B1 R+B3');
+      expect(s.state.player.fling).toBeGreaterThanOrEqual(0);
+      const ev = s.run('R1 R20');
+      const cut = [...of(ev, 'enemyHit'), ...of(ev, 'enemyDie')].filter((e) => e.id === 'l');
+      expect(cut.length, `owned ${owned}`).toBe(owned ? 1 : 0);
+    }
   });
 });
 
