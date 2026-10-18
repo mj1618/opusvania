@@ -83,6 +83,13 @@ test grove keeps its old lantern / giving sounds.
   before (5 dB lower than milestone 1), drips, the far owl; per room `BEDS`: offsets, hiss band, drip rate, owl or
   not (airy in the hatch and canopy, hushed in the hollow, the well and the roots, no owl underground).
 
+## Lanternroot (2026-10-18, memory/lanternroot-art.md "Sound")
+`bake-lr.ts` / `route-lr.ts` (called first in `route`): her light is glass and air (glow chime up the chord by fill,
+a bell when full, kindle swell, gutter ticks quickening, frost, fan, moss shimmer once per step, gust whump), the
+cap's chime pitched per ring and its muffled knock, the answer's chord, the signs' phrase (`signNotes` in `ambient`,
+on the sim clock, agreeing with render's `phraseLit`), mend drawn in / landing. `AUDIO.lr` levels, `BEDS['lr-*']`.
+Moonwicks are left out of `snap.lures` (no lamp hum). A hall fight: -24.9 LUFS, -4.2 dBTP.
+
 ## Review clips and levels (2026-10-18)
 Made from `lab-feel` (the fling toy room) with a closed-loop probe in the sim (a scratch script that steps
 `getRoom('lab-feel')` from the same `--at` and prints the DSL), so the page replays it exactly:
