@@ -480,7 +480,10 @@ export class Hud {
     // One layout (playtest 4: with the lights away while she rested the corner had two): whenever
     // the count or the pips are up, the lights are up too, each in its own fixed place.
     const pipsUp = this.pips.root.visible && this.pips.root.alpha > 0.003;
-    H.update(dt, clock, sim, quiet, this.hold > 0 || pipsUp);
+    // A glow room (Lanternroot) keeps its glow beads up the whole time, so health stays up beside them:
+    // a combat level built on Mend must always show what Mend is for (review proto-1 r1, B1).
+    const glowRoom = (sim.scene as { glow?: boolean }).glow === true;
+    H.update(dt, clock, sim, quiet, this.hold > 0 || pipsUp || glowRoom);
     this.glowMeter.update(dt, clock, sim);
     this.shake.position.set(view.left + H.shakeX, view.top + H.shakeY);
 

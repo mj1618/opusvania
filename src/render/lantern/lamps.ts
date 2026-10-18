@@ -16,7 +16,7 @@
  *
  * Render only: reads `sim.lures`, `sim.player`, events.
  */
-import type { Graphics } from 'pixi.js';
+import type { Container, Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { flameAt } from '../../sim/lures';
 import type { Lure } from '../../sim/scene';
@@ -26,6 +26,7 @@ import type { LightRegistry } from '../lights';
 import { mix } from '../scene/lib/look';
 import { hash01, LR } from './config';
 import type { GlowPool } from './glow';
+import { MothClouds, mothCount } from './moths';
 
 const AT = { x: 0, y: 0 };
 
@@ -187,6 +188,7 @@ export class Lamps {
   private readonly lit = new Map<number, number>();
   /** Point light ids this module registered last frame. */
   private readonly lightIds = new Set<string>();
+  private readonly clouds: MothClouds;
 
   constructor(
     private readonly scene: SimView['scene'],
@@ -225,6 +227,25 @@ export class Lamps {
               : LR.lamp.mothsWick,
       });
     }
+    // The clouds: every warm lamp's moths on the GPU (the firefly's own lamp draws the biggest).
+    this.clouds = new MothClouds(
+      lures.map((l, i) => {
+        const inf = this.info[i] as LampInfo;
+        const firefly = l.id.includes('firefly');
+        return {
+          x: l.x,
+          y: l.y,
+          size: firefly ? 70 : inf.size,
+          count: inf.moonwick ? 0 : mothCount(firefly ? 70 : inf.size, firefly ? 1.6 : 1),
+        };
+      }),
+      7,
+    );
+  }
+
+  /** The moth clouds' meshes: behind the lamps in `back` (at `index`), in front of her in `front`. */
+  attachClouds(back: Container, front: Container, index: number): void {
+    this.clouds.attach(back, front, index);
   }
 
   onEvents(events: readonly SimEvent[], sim: SimView): void {
@@ -359,6 +380,7 @@ export class Lamps {
       if (Math.abs(x - cam.x) > halfW + 400 || Math.abs(y - cam.y) > halfH + 400) continue;
       const hp = sim.lures.hp[i] ?? 0;
       const burning = hp > 0;
+      if (!info.moonwick) this.clouds.set(i, x, y, burning && !this.embers.has(i), dt);
       const s = info.size;
       const flick = 1 + 0.07 * Math.sin(clock * 9.1 + i * 1.7) + 0.05 * Math.sin(clock * 23.3 + i);
       if (info.moonwick) {
@@ -374,7 +396,6 @@ export class Lamps {
         this.drawFirefly(i, x, y, burning, this.embers.has(i), clock, back, glow, mid);
         if (burning) {
           cands.push({ i, d: 0, x, y, r: 520, c: LR.lamp.lightColor, k: flick });
-          this.moths(i, x, y, { ...info, size: 70, moths: 24 }, clock, back, front);
         }
         if (fling === i) this.aim(x, y, 60, clock, sim, front, glowFront);
         continue;
@@ -430,7 +451,6 @@ export class Lamps {
           c: LR.lamp.lightColor,
           k: flick,
         });
-        this.moths(i, x, y, info, clock, back, front);
       } else if (ember) {
         const fk = 0.6 + 0.4 * Math.sin(clock * 11 + i) * Math.sin(clock * 3.1 + i);
         back.poly(calyx(x, y, s, squash, 0)).fill({ color: 0x24120c });
@@ -467,6 +487,7 @@ export class Lamps {
       // Aiming off this flame: the painted aim.
       if (fling === i) this.aim(x, y, s, clock, sim, front, glowFront);
     }
+    this.clouds.update(clock);
     this.light(cands);
     this.drawFx(dt, front, glowFront);
     this.drawFreed(dt, clock, front, glowFront);
@@ -526,6 +547,10 @@ export class Lamps {
       back.ellipse(x - s * 0.17, y - s * 0.12, 1.6, s * 0.22).fill({ color: 0xffffff, alpha: 0.6 });
       glow.add(x, y, s * 3.4 * flick + b * 120, W.halo, 0.5 * flick + b * 0.5);
       glow.add(x, y, s * 1.1, W.flame, 0.55 * flick);
+      // Its silver light as a filled pool over its whole reach (the shield she stands in), brightest near the bud
+      // and fading to nothing at the edge: never a ring.
+      glow.add(x, y, W.light * 0.95, W.halo, 0.07 * flick + b * 0.08);
+      glow.add(x, y, W.light * 0.55, W.halo, 0.1 * flick + b * 0.1);
       cands.push({
         i,
         d: Math.hypot(x - cam.x, y - cam.y),
@@ -533,7 +558,7 @@ export class Lamps {
         y,
         r: W.light,
         c: W.lightColor,
-        k: flick * (1 + b),
+        k: W.lightK * flick * (1 + b),
       });
       if (burn < 0) {
         // Burning for good: a slow, steady breath.
@@ -617,37 +642,6 @@ export class Lamps {
       x - W * 0.3,
       y + H * 0.5 + 16,
     ]).fill(0x1a120c);
-  }
-
-  /** The circling moths of a burning lamp: small wings catching its light, on wandering loops. */
-  private moths(
-    i: number,
-    x: number,
-    y: number,
-    info: LampInfo,
-    clock: number,
-    back: Graphics,
-    front: Graphics,
-  ): void {
-    const s = info.size;
-    for (let k = 0; k < info.moths; k++) {
-      const seed = i * 97 + k;
-      const rx = s * (1.3 + 2.2 * hash01('m', seed));
-      const ry = rx * (0.5 + 0.4 * hash01('n', seed));
-      const sp = (0.8 + 1.4 * hash01('s', seed)) * (hash01('d', seed) < 0.5 ? -1 : 1);
-      const a = clock * sp + hash01('p', seed) * 6.283;
-      const mx = x + Math.cos(a) * rx + Math.sin(clock * 3.1 + seed) * 6;
-      const my = y + Math.sin(a) * ry + Math.sin(clock * 2.3 + seed * 1.7) * 8 - s * 0.2;
-      // Behind the lamp on the far half of the loop: drawn behind, dimmer.
-      const far = Math.sin(a) < 0;
-      const g = far ? back : front;
-      const flap = Math.abs(Math.sin(clock * (26 + 10 * hash01('f', seed)) + seed));
-      const w = 4.5 + 2.5 * hash01('w', seed);
-      const dir = Math.cos(a) * sp > 0 ? 1 : -1;
-      const near = Math.max(0, 1 - Math.hypot(mx - x, my - y) / (s * 4));
-      const col = mix(LR.lamp.moth, LR.lamp.mothLit, 0.35 + 0.65 * near);
-      moth(g, mx, my, w, flap, dir, col, far ? 0.6 : 0.95);
-    }
   }
 
   /** Point lights for the nearest lamps (the playfield is lit through post's light map: ≤ 12 on screen). */
@@ -825,5 +819,6 @@ export class Lamps {
   /** Forgets this module's lights (the room is going). */
   destroy(): void {
     for (const id of this.lightIds) this.lights.remove(id);
+    this.clouds.destroy();
   }
 }

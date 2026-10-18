@@ -22,7 +22,7 @@ export const LR_FLORA = {
   /** Px of top per tuft (lower = denser). */
   tuftGap: { night: 22, hall: 26, roots: 30, cache: 40 },
   /** Fungus / glow cap clusters: px between clusters. */
-  capGap: { night: 9999, hall: 420, roots: 520, cache: 520 },
+  capGap: { night: 9999, hall: 420, roots: 230, cache: 520 },
   /** Hanging things under undersides: px between them. */
   hangGap: { night: 70, hall: 90, roots: 60, cache: 140 },
   /** Glowworm threads (roots): px between them, length range. */
@@ -126,9 +126,13 @@ function fern(b: FloraBuilder, r: Rng, x: number, y: number, size: number, band:
   }
 }
 
+/** The roots' rare accent cap. */
+const VIOLET = { cap: 0xd2a8ff, gill: 0x4a2a6a, stem: 0x6a5a8a, glow: 0xc58bff };
+
 /** A cluster of glow caps on a top: stems, caps lit from inside, a faint halo each. */
 function caps(g: Garden, r: Rng, x: number, y: number, band: Band): void {
-  const C = CAPS[band];
+  // In the roots one cluster in four is the rare violet (art direction: the one magenta-violet accent).
+  const C = band === 'roots' && r() < 0.25 ? VIOLET : CAPS[band];
   const n = 2 + Math.floor(r() * 4);
   for (let i = 0; i < n; i++) {
     const px = x + range(r, -18, 18);
@@ -158,7 +162,14 @@ function caps(g: Garden, r: Rng, x: number, y: number, band: Band): void {
     g.back.fan(px + lean, y - h, w, w * 0.25, 0, Math.PI, C.gill, () => C.gill, 1, 6);
     g.back.glow = 0;
     g.back.sync(g.halo);
-    g.halo.halo(px + lean, y - h - 1, w * 3.2, C.glow, band === 'roots' ? 0.22 : 0.16, 1);
+    g.halo.halo(
+      px + lean,
+      y - h - 1,
+      w * (band === 'roots' ? 4.5 : 3.2),
+      C.glow,
+      band === 'roots' ? 0.36 : 0.16,
+      1,
+    );
   }
 }
 

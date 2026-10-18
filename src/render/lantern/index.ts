@@ -23,6 +23,7 @@ import { Fx } from './fx';
 import { GlowPool } from './glow';
 import { Kit } from './kit';
 import { Lamps } from './lamps';
+import { Moonlight } from './moonlight';
 import { Vista } from './vista';
 import { RootWater } from './water';
 
@@ -34,6 +35,7 @@ export class LanternPieces implements EnvModule {
   private water: RootWater | null = null;
   private depth: InteriorDepth | null = null;
   private vista: Vista | null = null;
+  private moon: Moonlight | null = null;
   private readonly back = new Graphics();
   private readonly front = new Graphics();
   private readonly glowBack = new GlowPool('lr-glow-back');
@@ -49,6 +51,7 @@ export class LanternPieces implements EnvModule {
       | undefined;
     const v = marks?.landmarks?.find((l) => l.kind === 'vista');
     if (v && LOOK.band === 'night') this.vista = new Vista(ctx.layers, v);
+    if (isInterior() && LOOK.band) this.moon = new Moonlight(ctx.scene, ctx.layers, ctx.lights, LOOK.band);
     if (isInterior() && LOOK.band)
       this.depth = new InteriorDepth(ctx.renderer, ctx.layers, LOOK.band, ctx.scene.width, LOOK.seed);
     if (LOOK.band === 'roots') {
@@ -61,6 +64,8 @@ export class LanternPieces implements EnvModule {
     const goal = ctx.layers.get('goal');
     goal.addChild(this.glowBack.container, this.back, this.glowMid.container);
     ctx.layers.air.addChild(this.front, this.glowFront.container);
+    // The moth clouds: behind the lamp bodies, and over her (before the sparks' glow).
+    this.lamps.attachClouds(goal, ctx.layers.air, goal.getChildIndex(this.back));
     void Container;
   }
 
@@ -69,6 +74,7 @@ export class LanternPieces implements EnvModule {
     this.lamps.onEvents(sim.events, sim);
     this.kit.onEvents(sim.events, sim);
     this.fx.onEvents(sim.events, sim);
+    this.moon?.onEvents(sim.events);
     this.water?.onEvents(sim.events, sim);
     this.back.clear();
     this.front.clear();
@@ -89,6 +95,7 @@ export class LanternPieces implements EnvModule {
     );
     this.creatures.draw(dt, clock, sim, camera, this.back, this.front, this.glowMid);
     this.fx.draw(dt, clock, sim, this.front, this.glowFront);
+    this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
     this.vista?.update(camera, clock);
     if (this.depth && LOOK.band) {
@@ -105,5 +112,6 @@ export class LanternPieces implements EnvModule {
     this.fx?.destroy();
     this.depth?.destroy();
     this.vista?.destroy();
+    this.moon?.destroy();
   }
 }

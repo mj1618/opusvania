@@ -120,7 +120,7 @@ export class RootWater {
       g.ellipse(r.x, r.y + 1, rad, rad * 0.14).stroke({
         color: W.line,
         width: 1.2,
-        alpha: 0.5 * (1 - u) * r.k,
+        alpha: 0.32 * (1 - u) * r.k,
       });
     }
   }

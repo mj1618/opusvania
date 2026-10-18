@@ -104,7 +104,7 @@ const MATS: Record<LanternBand, Material> = {
     body: 0x10151a,
     bodyDeep: 0x06080b,
     grain: 0x05070a,
-    grainLit: 0x26343f,
+    grainLit: 0x30475a,
     top: 0x1b3236,
     topLit: 0x467074,
     under: 0x030405,
@@ -187,6 +187,8 @@ class Grid {
     readonly width: number,
     readonly height: number,
     solids: readonly SolidRect[],
+    /** Inside the giant the wood goes on above the room: a solid along the top has no lit top. */
+    private readonly roofed = false,
   ) {
     this.nx = Math.ceil(width / G);
     this.ny = Math.ceil(height / G);
@@ -201,7 +203,7 @@ class Grid {
   }
   /** Out of the room counts as solid below its bottom and beside it (the edges are walls), open above. */
   at(i: number, j: number): boolean {
-    if (j < 0) return false;
+    if (j < 0) return this.roofed && i >= 0 && i < this.nx && this.cells[i] === 1;
     if (i < 0 || i >= this.nx || j >= this.ny) return true;
     return this.cells[j * this.nx + i] === 1;
   }
@@ -258,6 +260,44 @@ function findRuns(g: Grid): { tops: Run[]; unders: Run[]; faces: Run[] } {
   return { tops, unders, faces };
 }
 
+/** Per grid cell: how many cells to the nearest open cell (4-neighbour), capped; 0 for open cells. */
+function distanceField(g: Grid): Uint16Array {
+  const n = g.nx * g.ny;
+  const d = new Uint16Array(n).fill(65535);
+  const q = new Int32Array(n);
+  let head = 0;
+  let tail = 0;
+  for (let j = 0; j < g.ny; j++)
+    for (let i = 0; i < g.nx; i++)
+      if (!g.at(i, j)) {
+        d[j * g.nx + i] = 0;
+        q[tail++] = j * g.nx + i;
+      }
+  while (head < tail) {
+    const c = q[head++] as number;
+    const i = c % g.nx;
+    const j = (c - i) / g.nx;
+    const v = (d[c] as number) + 1;
+    if (v > 60) continue;
+    for (const [di, dj] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const ii = i + di;
+      const jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= g.nx || jj >= g.ny) continue;
+      const cc = jj * g.nx + ii;
+      if ((d[cc] as number) > v) {
+        d[cc] = v;
+        q[tail++] = cc;
+      }
+    }
+  }
+  return d;
+}
+
 /** How far a rounded corner of radius `r` sits in from the square corner, `t` px along the edge from it. */
 function inset(r: number, t: number): number {
   if (r <= 0 || t >= r) return 0;
@@ -285,7 +325,8 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   const step = 6;
   // Corners: rounded where both edges meet open air and the cell off the corner is open too.
   const rT = Math.min(7, s.w / 4, s.h / 4);
-  const rB = Math.min(44, s.w / 3, s.h / 2);
+  // A narrow solid hanging free (a column of root or heartwood ending in the air) ends rounded, not cut.
+  const rB = s.w <= 160 && s.h >= 200 ? Math.min(s.w / 2 - 1, s.h / 2) : Math.min(44, s.w / 3, s.h / 2);
   const tl = open(x0 - 2, y0 + 2) && open(x0 + 2, y0 - 2) && open(x0 - 2, y0 - 2) ? rT : 0;
   const tr = open(x1 + 2, y0 + 2) && open(x1 - 2, y0 - 2) && open(x1 + 2, y0 - 2) ? rT : 0;
   const br = open(x1 + 2, y1 - 2) && open(x1 - 2, y1 + 2) && open(x1 + 2, y1 + 2) ? rB : 0;
@@ -294,12 +335,17 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   // seem to stand inside the paint: -rf .. +4 px).
   // A face that takes no wall kick (she only ever falls past it) may wander much further in: bulges, hollows,
   // a sheer face of roots or bark that is not a ruler. A climbable face stays close (she slides on it).
-  const sheer = s.kick === false;
-  const amp = sheer ? 2.6 : 1;
-  const face = (y: number, sd: number): number => {
-    const lip = Math.exp(-(((y - y0) / 26) ** 2));
+  // Per face: `kick: 'east'` climbs only on its east face, so its west face is sheer (and the other way).
+  const sheerE = s.kick === false || s.kick === 'west';
+  const sheerW = s.kick === false || s.kick === 'east';
+  const face = (y: number, sd: number, sheer: boolean): number => {
+    const amp = sheer ? 3 : 1;
+    // The lip: the top overhangs its face a little (a rounded nose), then the face undercuts under it.
+    const lip = Math.exp(-(((y - y0) / 22) ** 2));
     const wob = 0.6 * wobble(y, sd, 210) + 0.28 * wobble(y, sd + 3, 60) + 0.12 * wobble(y, sd + 9, 18);
-    return lip * 5 + (1 - lip) * (wob * rf * 0.6 * amp - rf * 0.4 * amp);
+    // Burls on a sheer face: slow swellings out and hollows in, so a long face is never a ruler.
+    const burl = sheer ? rf * 0.9 * Math.max(0, wobble(y, sd + 51, 140)) ** 2 : 0;
+    return lip * 8 + (1 - lip) * (wob * rf * 0.6 * amp - rf * 0.4 * amp + burl);
   };
   // Top edge, west to east.
   for (let x = x0; x < x1; x += step) {
@@ -310,7 +356,7 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   // East face, top to bottom.
   for (let y = y0; y < y1; y += step) {
     const o = open(x1 + 2, y + 1);
-    const d = o ? face(y, seed + 11) : cover;
+    const d = o ? face(y, seed + 11, sheerE) : cover;
     out.push(x1 + d - inset(tr, y - y0) - inset(br, y1 - y), y);
   }
   // Underside, east to west: lumps and sags.
@@ -325,7 +371,7 @@ function rectOutline(s: SolidRect, g: Grid, m: Material, seed: number, W: number
   // West face, bottom to top.
   for (let y = y1; y > y0; y -= step) {
     const o = open(x0 - 2, y - 1);
-    const d = o ? face(y, seed + 37) : cover;
+    const d = o ? face(y, seed + 37, sheerW) : cover;
     out.push(x0 - d + inset(tl, y - y0) + inset(bl, y1 - y), y);
   }
   return chaikin(out, 1);
@@ -552,7 +598,8 @@ function hangers(
 /** The room's exposed tops (static solids), for the pieces that lie on them (the roots' water). */
 export function lanternTops(room: Room): Run[] {
   const solids = room.solids.filter((s) => s.tag !== 'pool');
-  return findRuns(new Grid(room.width, room.height, solids)).tops;
+  const band = (room.art?.band ?? 'night') as LanternBand;
+  return findRuns(new Grid(room.width, room.height, solids, band !== 'night')).tops;
 }
 
 /** Paints the room. Returns the paint for the bake, the playfield's info and the plan the rim / growth / pieces read. */
@@ -566,7 +613,7 @@ export function paintLanternTerrain(
   const H = room.height;
   const p = new Paint(W, H);
   const solids = room.solids.filter((s) => s.tag !== 'pool');
-  const g = new Grid(W, H, solids);
+  const g = new Grid(W, H, solids, band !== 'night');
   const runs = findRuns(g);
   // Long tops roll a hair (render only): never a ruler, always within ~2 px of the collision.
   const topAt = (run: Run, x: number): number => run.y - 1 - 1.2 * Math.abs(wobble(x, seed + run.y, 130));
@@ -596,18 +643,25 @@ export function paintLanternTerrain(
     p.solid(pts, m.body, m.h, { bark: m.bark * 0.6 });
   });
 
-  // 2. Depth: away from the open edges the body sinks into the dark (HK's caves: the silhouette is the
-  // shape, the material lives in a band along the edges). Stepped soft insets toward the deep colour.
-  for (const s of solids) {
-    if (isolated.has(s)) continue;
-    for (let k = 1; k <= 4; k++) {
-      const inset = 26 * k;
-      if (s.w <= inset * 2 + 8 || s.h <= inset * 2 + 8) break;
-      const x0 = s.x <= 0 ? -200 : s.x + inset;
-      const x1 = s.x + s.w >= W ? W + 200 : s.x + s.w - inset;
-      const y0 = s.y + inset;
-      const y1 = s.y + s.h >= H ? H + 200 : s.y + s.h - inset;
-      p.tint([x0, y0, x1, y0, x1, y1, x0, y1], m.bodyDeep, 0.2);
+  // 2. Depth: away from the open edges the body sinks into the dark (HK's caves: the silhouette is the shape, the
+  // material lives in a band along the edges). Organic, not stepped: soft blobs of the deep colour laid where the
+  // grid says the body is far from open air, deeper the farther in.
+  {
+    const dist = distanceField(g);
+    const r = rngFor(seed, 77);
+    for (let j = 0; j < g.ny; j += 3) {
+      for (let i = 0; i < g.nx; i += 3) {
+        const d = dist[j * g.nx + i] as number;
+        if (d < 5) continue;
+        const k = Math.min(1, (d * G - 36) / 150);
+        const x = i * G + range(r, -8, 8);
+        const y = j * G + range(r, -8, 8);
+        p.tint(
+          blob(x, y, range(r, 18, 30), range(r, 16, 28), seed + i * 7 + j, 0.35, 10),
+          m.bodyDeep,
+          0.3 * k,
+        );
+      }
     }
   }
 
@@ -864,6 +918,120 @@ export function paintLanternTerrain(
           bark: m.bark,
         },
       );
+    }
+  }
+
+  // 6. Breakup at the silhouette (review proto-1 r1: blocks still read as rects from afar). Decor only, never a
+  // ledge: thin, hanging, back in relief.
+  //  - A column ending in the air ends in a tangle of roots and torn fibre hanging below it.
+  //  - Every exposed corner where a top meets a long open face has roots spilling over it and down the face.
+  //  - Long undersides (the vault) hang fibre and root tails at irregular spacing.
+  const tendril = (
+    x: number,
+    y: number,
+    len: number,
+    w: number,
+    sd: number,
+    lean: number,
+    col: number,
+  ): void => {
+    const r = rngFor(sd, 3);
+    const line: number[] = [];
+    let px = x;
+    let py = y;
+    let a = Math.PI / 2 + lean;
+    for (let s0 = 0; s0 < len; s0 += 10) {
+      line.push(px, py);
+      a += range(r, -0.16, 0.16);
+      a = a * 0.85 + (Math.PI / 2) * 0.15;
+      px += Math.cos(a) * 10;
+      py += Math.sin(a) * 10;
+    }
+    if (line.length < 6) return;
+    const nn = line.length / 2;
+    const left: number[] = [];
+    const right: number[] = [];
+    for (let i2 = 0; i2 < nn; i2++) {
+      const t = i2 / (nn - 1);
+      const ww = (w * (1 - t) ** 0.9 + 0.8) / 2;
+      const ax = line[Math.max(0, i2 - 1) * 2] as number;
+      const ay = line[Math.max(0, i2 - 1) * 2 + 1] as number;
+      const bx = line[Math.min(nn - 1, i2 + 1) * 2] as number;
+      const by = line[Math.min(nn - 1, i2 + 1) * 2 + 1] as number;
+      const l = Math.hypot(bx - ax, by - ay) || 1;
+      left.push(
+        (line[i2 * 2] as number) - ((by - ay) / l) * ww,
+        (line[i2 * 2 + 1] as number) + ((bx - ax) / l) * ww,
+      );
+      right.unshift(
+        (line[i2 * 2] as number) + ((by - ay) / l) * ww,
+        (line[i2 * 2 + 1] as number) - ((bx - ax) / l) * ww,
+      );
+    }
+    p.solid([...left, ...right], col, m.h - 0.12, { bark: m.bark }, 0.95);
+  };
+  for (const run of runs.unders) {
+    const len = run.x1 - run.x0;
+    if (len < 16) continue;
+    const mid = (run.x0 + run.x1) / 2;
+    const hanging = len <= 160 && g.solidAt(mid, run.y - 120) && g.solidAt(mid, run.y - 200);
+    const sd = seed + run.x0 * 17 + run.y * 3;
+    const r = rngFor(sd, 5);
+    if (hanging) {
+      const n = 4 + Math.floor(len / 18);
+      for (let k = 0; k < n; k++) {
+        const x = run.x0 + len * (0.1 + 0.8 * (k / Math.max(1, n - 1))) + range(r, -6, 6);
+        const centre = 1 - Math.abs((x - mid) / (len / 2));
+        tendril(
+          x,
+          run.y - 14,
+          range(r, 30, 70) + 110 * centre * range(r, 0.4, 1),
+          range(r, 5, 12) * (0.6 + centre),
+          sd + k,
+          range(r, -0.25, 0.25),
+          r() < 0.3 ? m.grain : m.body,
+        );
+      }
+    } else if (len > 200) {
+      for (let x = run.x0 + range(r, 30, 120); x < run.x1 - 30; x += range(r, 60, 220)) {
+        const n = 1 + Math.floor(r() * 3);
+        for (let k = 0; k < n; k++)
+          tendril(
+            x + range(r, -14, 14),
+            run.y - 8,
+            // The roots' vault hangs real roots: one thick and long in each clump, the rest rootlets.
+            band === 'roots' ? range(r, 40, k === 0 ? 260 : 120) : range(r, 24, 90),
+            band === 'roots' ? range(r, 6, k === 0 ? 22 : 10) : range(r, 3, 8),
+            sd + Math.round(x) + k,
+            range(r, -0.3, 0.3),
+            m.body,
+          );
+      }
+    }
+  }
+  for (const run of runs.tops) {
+    if (run.x1 - run.x0 < 48) continue;
+    for (const [cx, dir] of [
+      [run.x0, -1],
+      [run.x1, 1],
+    ] as const) {
+      // A long open face under this end of the top?
+      if (g.solidAt(cx + dir * 6, run.y + 4) || g.solidAt(cx + dir * 6, run.y + 120)) continue;
+      const sd = seed + Math.round(cx) * 13 + run.y;
+      const r = rngFor(sd, 6);
+      const n = 2 + Math.floor(r() * 3);
+      for (let k = 0; k < n; k++) {
+        const x = cx - dir * range(r, 2, 26);
+        tendril(
+          x,
+          run.y + range(r, 4, 14),
+          range(r, 50, 190),
+          range(r, 4, 10),
+          sd + k,
+          dir * range(r, 0.05, 0.35),
+          r() < 0.35 ? m.grainLit : m.body,
+        );
+      }
     }
   }
 

@@ -44,6 +44,8 @@ export const LR = {
     silk: 0x9aa8b8,
     light: 420,
     lightColor: 0xb4ccf0,
+    /** Its point light's strength: the floor and walls in its reach turn silver. */
+    lightK: 1.5,
     /** Frames of the gutter (the sim's `moonwick.gutter`, proto-1 §3: the last 2 s flicker). */
     gutterFrames: 120,
   },

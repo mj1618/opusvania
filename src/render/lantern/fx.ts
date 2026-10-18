@@ -72,7 +72,6 @@ export class Fx {
   private aura = -1;
   private readonly lightId = 'lr-aura';
   /** Seconds since the moon-hole opened in this fight (-1: shut). */
-  private moonflood = -1;
 
   /** The arena's moon-hole (the room's `moonholes` mark nearest the boss's hub). */
   private moonholeOf(sim: SimView): { x: number; y: number } {
@@ -97,11 +96,6 @@ export class Fx {
 
   onEvents(events: readonly SimEvent[], sim: SimView): void {
     const p = sim.player;
-    if (
-      events.some((e) => e.type === 'roomEnter') ||
-      events.some((e) => (e as { type: string }).type === 'bossUnlock')
-    )
-      this.moonflood = -1;
     for (const e of events) {
       const ev = e as unknown as Record<string, unknown> & { type: string };
       switch (ev.type) {
@@ -575,7 +569,6 @@ export class Fx {
           if (ev.set !== 'p3') break;
           if (ev.cue === 'moonhole') {
             // The plug falls out of the moon-hole: bark rains down, and the moon floods the arena (kept).
-            this.moonflood = 0;
             const mh = this.moonholeOf(sim);
             for (let k = 0; k < 24; k++)
               this.add({
@@ -711,28 +704,7 @@ export class Fx {
     // In silver light (a burning moonwick near): a faint cold halo about her, the light that shields her.
     const moonlit = (p as unknown as { moonlit?: number }).moonlit ?? 0;
     if (moonlit > 0) glow.add(p.cx, p.cy - 6, 70, FX.silver, 0.1 * Math.min(1, moonlit));
-    // The moon-hole open (P3's set, and for good once the Gloamweaver is down): a shaft of moonlight to the floor.
-    const spec = sim.scene.boss;
-    if (spec) {
-      const down = sim.save.flags.includes(spec.flag);
-      if (this.moonflood >= 0) this.moonflood += dt;
-      const k = down ? 1 : this.moonflood >= 0 ? Math.min(1, this.moonflood / 1.2) : 0;
-      if (k > 0) {
-        const mh = this.moonholeOf(sim);
-        const floor = (spec as { floor?: number }).floor ?? spec.arena.y + spec.arena.h;
-        const len = floor - mh.y;
-        const breathe = 0.9 + 0.1 * Math.sin(clock * 0.7);
-        glow.add(mh.x, mh.y + len / 2, 130, 0xb8d0f0, 0.22 * k * breathe, len * 0.55);
-        glow.add(mh.x, mh.y + len / 2, 60, 0xdce8ff, 0.18 * k * breathe, len * 0.5);
-        glow.add(mh.x, floor - 6, 220, 0xdce8ff, 0.25 * k, 22);
-        for (let j = 0; j < 14; j++) {
-          const t = (clock * (0.04 + 0.03 * ((j * 7) % 5)) + j / 14) % 1;
-          front
-            .circle(mh.x + Math.sin(j * 2.1 + clock * 0.3) * 90, floor - t * len, 1.4)
-            .fill({ color: 0xe8f0ff, alpha: 0.5 * k * Math.sin(Math.PI * t) });
-        }
-      }
-    }
+    // The moon-hole's shaft once open (P3's set, and for good after): lantern/moonlight.ts.
     // Mending: motes of light drawn into her from round about.
     if ((loose.mend ?? 0) > 0) {
       const k = Math.min(1, (loose.mend ?? 0) / 36);
