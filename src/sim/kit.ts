@@ -463,12 +463,15 @@ export function updateKit(
       }
     }
   }
-  // A creature whose death opens the way (`sets`: the old burrback's root gate, wood.md R10).
+  // A creature whose death opens the way (`sets`: the old burrback's plug, wood.md R10). Only a real death
+  // (killed: `dead`, or removed with no health left): a creature sent away without being killed (a finale's
+  // dispersal, its lamp snuffed, an `until` flag, any later rule) never sets it.
   const spawns = scene.enemies ?? [];
   for (let i = 0; i < spawns.length; i++) {
     const sp = spawns[i];
     const e = state.enemies[i];
-    if (!sp?.sets || !e || save.flags.includes(sp.sets) || (e.mode !== 'dead' && !e.gone)) continue;
+    if (!sp?.sets || !e || save.flags.includes(sp.sets)) continue;
+    if (e.mode !== 'dead' && !(e.gone && e.hp <= 0)) continue;
     save.flags.push(sp.sets);
     events.push({ type: 'flagSet', flag: sp.sets, by: sp.id, x: e.x + e.w / 2, y: e.y + e.h });
   }

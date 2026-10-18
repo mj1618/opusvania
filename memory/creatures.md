@@ -43,6 +43,11 @@ Same ram, second beat, pogo curl, drop dodge, lips, fair placement (enemies.md);
 lab walk into its ram once each (1 hit) and pass.
 
 ## The old burrback (`kind: 'oldBurrback'`, row `tuning.oldBurrback` = the burrback's + overrides)
+- **Its `sets` flag (`wood-old-burrback-down`: the plug, the claws) fires only on a real death** (2026-10-18:
+  `dead`, or gone with no health left; it used to fire on `gone` too, so any rule that sent it away unkilled
+  would have opened the den). `sets-death.test.ts`. No room uses a "set on gone" flag; add a separate field if one
+  ever needs it. (The harness saw two runs pass the boss unkilled on b62eab5; 9 human-like runs of that build,
+  `--tree`, did not reproduce it: all 8 that got through killed it.)
 First mini-boss (False Knight standard). Round 1 (impatient first-timer: 1 hit landed in 3 attempts) made it readable;
 round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is") made the window earned and the body big.
 - **160 x 96** (2x: she is 40 x 80), 12 hp, `sense` always, asleep until she is down on its floor (`enemyWake` 60 f).
