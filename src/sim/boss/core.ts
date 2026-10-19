@@ -5,10 +5,13 @@
  *
  * Pure: plain data, + - * / floor round min max abs.
  */
+
+import { normalizeAbilities } from '../abilities';
 import type { SimEvent } from '../events';
 import type { Scene } from '../scene';
 import type { BossState, GameState } from '../state';
 import type { Tuning } from '../tuning';
+import { upgradeFlag } from '../upgrades';
 import type { BossSpec } from './data';
 
 /** What a boss's rules are handed each step. */
@@ -160,6 +163,27 @@ export function defeat(c: BossCtx): void {
     c.events.push({ type: 'bossUnlock', id: boss.id, x: p.x, y: p.y, how: 'defeat' });
   }
   c.events.push({ type: 'bossDefeat', id: boss.id, x: p.x, y: p.y, flag: spec.flag, moths, time: boss.time });
+  // The final blow holds (the boss rush: the world stops on it for a beat), and a win may teach her something.
+  if (spec.grant) {
+    const hold = Math.max(0, Math.round(c.t.bossRush.finalHold));
+    state.player.hitstop = Math.max(state.player.hitstop, hold);
+    const e = state.enemies[enemyIndex(scene, spec.creature)];
+    if (e) e.hitstop = Math.max(e.hitstop, hold);
+    boss.hitW = 0;
+    const g = spec.grant;
+    if (g.ability && !save.abilities.includes(g.ability))
+      save.abilities = normalizeAbilities([...save.abilities, g.ability]);
+    if (g.upgrade && !save.flags.includes(upgradeFlag(g.upgrade))) save.flags.push(upgradeFlag(g.upgrade));
+    c.events.push({
+      type: 'bossGrant',
+      id: boss.id,
+      x: p.x,
+      y: p.y,
+      ability: g.ability ?? '',
+      upgrade: g.upgrade ?? '',
+      text: g.text,
+    });
+  }
   boss.stage = 'end';
   boss.tell = '';
   startCues(c, 'defeat');

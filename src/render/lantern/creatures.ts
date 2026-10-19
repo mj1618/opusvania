@@ -17,6 +17,8 @@ import type { Graphics } from 'pixi.js';
 import { cycleSine } from '../../sim/paths';
 import type { EnemyState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
+import { drawHub } from '../bossrush/hub';
+import { MantisPainter } from '../bossrush/mantis';
 import type { CameraView, SimView } from '../contract';
 import { mix } from '../scene/lib/look';
 import type { GlowPool } from './glow';
@@ -48,6 +50,9 @@ export const SPIDER = {
   rimReach: 760,
   rimK: 1.1,
 } as const;
+
+/** The Weaver, painted (the boss rush): its size against a dangler's body, how pale, its eyes and halo. */
+const WEAVER = { size: 2.7, pale: 0.12, eye: 0xffd890, halo: 0xffb060 } as const;
 
 interface Pose {
   /** 0 legs gathered .. 1 splayed. */
@@ -211,6 +216,119 @@ function spider(
 export class Creatures {
   /** Per enemy: the last tell seen and render time since it began (the eyes kindle over it). */
   private readonly tellT = new Map<number, number>();
+  /** The boss rush's Mantis (src/render/bossrush/mantis.ts). */
+  private readonly mantis = new MantisPainter();
+
+  /**
+   * The Weaver, painted (the boss rush's first boss; its greybox look is render/greybox/boss.ts): the spider's body
+   * warm brown with a gold pattern, the size of the Gloamweaver's. Its tells as the greybox draws them, in silk and
+   * ember: P2's whole swing as an arc and a band on the floor, P3's lunge and drop as a band where they land.
+   */
+  private weaver(
+    e: EnemyState,
+    clock: number,
+    sim: SimView,
+    g: Graphics,
+    front: Graphics,
+    glow: GlowPool,
+  ): void {
+    const b = sim.boss;
+    const spec = sim.scene.boss;
+    if (!b || !spec || b.stage === 'down' || e.gone) return;
+    const ex = e.x + e.w / 2;
+    const ey = e.y + e.h / 2;
+    const s = 13 * WEAVER.size;
+    const floor = spec.floor ?? spec.arena.y + spec.arena.h;
+    const W = tuning.weaverBoss;
+    if (b.thread) {
+      g.moveTo(b.pivotX, b.pivotY).lineTo(ex, e.y);
+      g.stroke({ color: SPIDER.silk, width: 2.2, alpha: 0.65 });
+    }
+    let tell = 0;
+    if (b.tell === 'swing' || b.tell === 'drop' || b.tell === 'lunge' || b.tell === 'bite') {
+      const of =
+        b.tell === 'swing'
+          ? W.tellFrames + W.dropFrames
+          : b.tell === 'lunge'
+            ? W.lungeTell
+            : b.tell === 'drop'
+              ? W.dropTell
+              : W.biteCount;
+      tell = Math.max(0, Math.min(1, 1 - b.tellFrames / Math.max(1, of)));
+      if (b.tell === 'swing') {
+        const n = 28;
+        for (let k = 0; k <= n; k++) {
+          const u = 0.25 + (0.5 * k) / n;
+          const dx = b.side * b.reach * cycleSine(u);
+          const x = b.pivotX + dx;
+          const y = b.pivotY + Math.sqrt(Math.max(0, b.len * b.len - dx * dx));
+          if (k === 0) front.moveTo(x, y);
+          else front.lineTo(x, y);
+          if (k % 4 === 0) glow.add(x, y, 10, SPIDER.dew, 0.2 + 0.3 * tell);
+        }
+        front.stroke({ color: SPIDER.silk, width: 2, alpha: 0.2 + 0.35 * tell });
+      }
+      // The floor it will cross: an ember wash that quickens to the strike.
+      const beat = 0.5 + 0.5 * Math.sin(clock * (8 + 22 * tell));
+      const x0 = b.tellX0;
+      const x1 = b.tellX1;
+      for (let k = 0; k < 6; k++) {
+        const x = x0 + ((x1 - x0) * (k + 0.5)) / 6;
+        glow.add(x, floor - 6, (x1 - x0) / 6, SPIDER.hunt, (0.1 + 0.25 * tell) * (0.7 + 0.3 * beat), 18);
+      }
+      front.moveTo(x0, floor - 2).lineTo(x1, floor - 2);
+      front.stroke({ color: SPIDER.hunt, width: 3, alpha: 0.25 + 0.45 * tell * beat });
+    }
+    const pose = P;
+    pose.tell = tell;
+    pose.flip = 0;
+    pose.walk = 0;
+    pose.rot = 0;
+    pose.spread = 0.55;
+    pose.dark = 0;
+    pose.ink = 0;
+    const m = e.mode;
+    const side = e.facing || 1;
+    if (m === 'sit' || m === 'bite') pose.spread = 0.35 + 0.05 * Math.sin(clock * 2);
+    else if (m === 'perch') pose.spread = 0.4;
+    else if (m === 'climb') pose.walk = clock * 12;
+    else if (m === 'dive' || m === 'swing') {
+      pose.spread = 0.95;
+      pose.rot = b.thread ? Math.atan2(ex - b.pivotX, e.y - b.pivotY) * -0.8 : 0;
+    } else if (m === 'recover' && b.thread) {
+      pose.spread = 0.75 + 0.05 * Math.sin(clock * 3);
+      pose.rot = Math.sin(clock * 1.4) * 0.12;
+    } else if (m === 'recover') {
+      pose.flip = 1;
+      pose.walk = clock * 12;
+    } else if (m === 'fall') {
+      pose.spread = 1;
+      pose.rot = Math.sin(clock * 6) * 0.6;
+    } else if (m === 'hunt' || m === 'windup') {
+      // On the floor, facing her, rearing as the tell runs.
+      pose.rot = side * (1.2 - 0.5 * tell);
+      pose.spread = 0.6 + 0.4 * tell;
+      if (m === 'windup') pose.rot += Math.sin(clock * 40) * 0.04 * tell;
+    } else if (m === 'charge' || m === 'skitter' || m === 'flee') {
+      pose.rot = side * 1.45;
+      pose.spread = 1;
+      pose.walk = clock * 30;
+    }
+    spider(g, glow, ex, ey, s, pose, WEAVER.pale, clock, 3, [], WEAVER.eye, 1.6);
+    // Its pattern glows gold on the warm hall's dark (it reads as the Weaver from across the arena).
+    glow.add(ex, ey - s * 0.3, s * 1.3, WEAVER.halo, 0.1 + 0.05 * Math.sin(clock * 2));
+    if (m === 'recover') glow.add(ex, ey, s * 1.6, SPIDER.open, 0.2 + 0.08 * Math.sin(clock * 6));
+    if (b.locked) {
+      for (const d of spec.lock) {
+        for (let k = 0; k < Math.max(6, d.w / 6); k++) {
+          const x = d.x + (k * d.w) / Math.max(6, d.w / 6);
+          g.moveTo(x, d.y).lineTo(x + Math.sin(clock + k) * 3, d.y + d.h);
+        }
+        g.stroke({ color: SPIDER.silk, width: 1, alpha: 0.45 });
+        g.rect(d.x, d.y, d.w, d.h).fill({ color: SPIDER.silk, alpha: 0.12 });
+      }
+    }
+  }
 
   draw(
     dt: number,
@@ -225,6 +343,8 @@ export class Creatures {
     const spawns = sim.scene.enemies ?? [];
     const hw = cam.w / 2 / cam.zoom + 300;
     const hh = cam.h / 2 / cam.zoom + 300;
+    if (sim.scene.boss) this.mantis.flashes(dt, sim, front, glow);
+    drawHub(sim, clock, back, glow);
     // Webs first: the spiders walk on them.
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
@@ -240,6 +360,8 @@ export class Creatures {
       if (Math.abs(ex - cam.x) > hw || Math.abs(ey - cam.y) > hh) continue;
       if (e.kind === 'dangler') this.dangler(i, e, dt, clock, sim, back, glow);
       else if ((e.kind as string) === 'gloamweaver') this.gloam(e, clock, sim, back, front, glow);
+      else if (e.kind === 'weaverBoss') this.weaver(e, clock, sim, back, front, glow);
+      else if ((e.kind as string) === 'mantis') this.mantis.draw(e, dt, clock, sim, back, front, glow);
     }
   }
 

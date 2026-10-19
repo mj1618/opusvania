@@ -26,12 +26,17 @@ import type { Tuning } from '../tuning';
 import { at, type BossCtx, type BossRules, lureIndex, runCues, startCues } from './core';
 import type { BossSpec } from './data';
 import { gloamRules } from './gloam';
+import { mantisRules } from './mantis';
 import { weaverRules } from './weaver';
 
 export type { BossCtx, BossRules, PhaseRow } from './core';
 export { defeat, enemyIndex, lureIndex, setPhase, shift, startCues } from './core';
 
-const RULES: Record<BossSpec['kind'], BossRules> = { weaver: weaverRules, gloamweaver: gloamRules };
+const RULES: Record<BossSpec['kind'], BossRules> = {
+  weaver: weaverRules,
+  gloamweaver: gloamRules,
+  mantis: mantisRules,
+};
 
 /** The rules of a kind of boss. */
 export function bossRules(kind: BossSpec['kind']): BossRules {
@@ -72,6 +77,18 @@ function freshBoss(spec: BossSpec): BossState {
     exposed: 0,
     throws: 0,
     lunge: 0,
+    move: '',
+    moves: 0,
+    pressed: 0,
+    chain: 0,
+    hitX: 0,
+    hitY: 0,
+    hitW: 0,
+    hitH: 0,
+    dodged: -999,
+    waveX: 0,
+    waveDir: 1,
+    waveT: 0,
   };
 }
 
@@ -140,6 +157,9 @@ export function updateBoss(state: GameState, scene: Scene, t: Tuning, events: Si
     boss.attempt++;
     boss.time = 0;
     if (!state.save.flags.includes(spec.met)) state.save.flags.push(spec.met);
+    // (The boss rush: the patch by the door is where a fade re-forms her, whole: the retry is seconds away.)
+    if (spec.checkpoint && (scene.patches ?? []).some((pt) => pt.id === spec.checkpoint))
+      state.save.patch = { room: scene.id, id: spec.checkpoint };
     const q = at(c);
     events.push({ type: 'bossLock', id: boss.id, x: q.x, y: q.y, retry: boss.retry, attempt: boss.attempt });
     boss.stage = 'intro';

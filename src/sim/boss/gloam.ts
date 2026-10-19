@@ -102,6 +102,7 @@ function open(c: BossCtx, e: EnemyState, n: number, how: 'winded' | 'stunned'): 
 
 /** It lets go and falls to the floor. */
 function drop(c: BossCtx, e: EnemyState): void {
+  c.boss.move = '';
   c.boss.thread = false;
   c.boss.tell = '';
   setMode(e, 'fall', 0);
@@ -209,7 +210,13 @@ function hunt(c: BossCtx, e: EnemyState, W: G): { cornered: boolean } {
   // Which way round is toward her (the cross product's sign), unless it is there already.
   const cross = b.ux * ty - b.uy * tx;
   const dot = b.ux * tx + b.uy * ty;
-  if (dot < 0.999) {
+  // (Back on its orb inside silver light, after a dazzle: it climbs out of the light the higher way first. In
+  // Lanternroot the wick would gutter; the boss rush's burn for good, and it sat there for ever.)
+  if (silver(c, cx(e), cy(e))) {
+    const up = a.y < z.y ? a : z;
+    b.ux = up.x;
+    b.uy = up.y;
+  } else if (dot < 0.999) {
     const want = cross >= 0 ? a : z;
     const lit = cross >= 0 ? litA : litZ;
     if (!lit) {
@@ -373,7 +380,13 @@ function stepP1(c: BossCtx, e: EnemyState, W: G): void {
       drop(c, e);
       return;
     }
-    if (there) setMode(e, 'stall', frames(W.lungeRest, 1));
+    if (there) {
+      // (The boss rush: no one kindles there, so the rest after a lunge is its window.)
+      if (c.spec.rush) {
+        open(c, e, frames(W.rushOpen, 1), 'winded');
+        b.move = 'rest';
+      } else setMode(e, 'stall', frames(W.lungeRest, 1));
+    }
     return;
   }
   if (e.mode === 'stall') {
@@ -386,7 +399,8 @@ function stepP1(c: BossCtx, e: EnemyState, W: G): void {
   }
   if (e.mode === 'recover') {
     const cuts = e.taken - e.hp;
-    if (--e.timer <= 0 || cuts >= W.exposeCuts) {
+    if (--e.timer <= 0 || cuts >= (b.move === 'rest' ? W.rushCuts : W.exposeCuts)) {
+      b.move = '';
       e.stunned = false;
       backToOrb(c, e);
     }
@@ -476,7 +490,8 @@ function stepP2(c: BossCtx, e: EnemyState, W: G): boolean {
       nx = F.x;
       ny = F.y;
     }
-    if (silver(c, nx, ny)) {
+    // (The boss rush's wicks burn for good: there the swing runs whole, or it would always hang out of reach.)
+    if (!c.spec.rush && silver(c, nx, ny)) {
       // (The light is a wall to it: it stops short, hanging, winded.)
       open(c, e, frames(W.windedFrames, 1), 'winded');
       return false;
@@ -670,8 +685,9 @@ export const gloamRules: BossRules = {
     } else if (set === 'p2end' && cue === 'next') {
       setPhase(c, 3);
       c.boss.throws = 0;
+      c.boss.lunge = frames(W.rushP3Every / 2, 1);
       if (e) {
-        e.hp = frames(W.p3Hp, 1);
+        e.hp = frames(c.spec.rush ? W.rushP3Hp : W.p3Hp, 1);
         e.hpMax = e.hp;
         e.span = 3;
         e.stunned = false;
@@ -731,7 +747,7 @@ export const gloamweaver: KindRules = {
       const g = ground(c);
       if (b.phase === 1 && e.mode === 'climb') climbTo(e, cx(e), g.canopy + e.h / 2, W.climbSpeed);
       else if (e.mode === 'fall' && falling(c, e, W)) setMode(e, 'recover', 0);
-    } else if (b.phase === 1) stepP1(c, e, W);
+    } else if (b.phase === 1) stepP1(c, e, c.spec.rush ? { ...W, lungeEvery: W.rushEvery } : W);
     else if (b.phase === 2) {
       // A cut through its thread while it hangs (the Weaver's rule): it falls, and lies stunned.
       if (
@@ -741,7 +757,10 @@ export const gloamweaver: KindRules = {
         info.events.push({ type: 'bossThreadCut', id: b.id, x: cx(e), y: e.y });
         drop(c, e);
       } else live = stepP2(c, e, W);
-    } else if (b.phase === 3) stepP3(c, e, W);
+    } else if (b.phase === 3 && c.spec.rush)
+      // (The boss rush: P3 hunts again, quicker, and its lamp dies with it.)
+      stepP1(c, e, { ...W, lungeEvery: W.rushP3Every, lungeTell: W.rushP3Tell });
+    else if (b.phase === 3) stepP3(c, e, W);
     e.vx = e.x - x0;
     e.vy = e.y - y0;
     // (A thread cut in P2: her blade across the line from the pivot to its back while it hangs.)
@@ -787,7 +806,7 @@ export const gloamweaver: KindRules = {
   harmless(e, info) {
     const b = info.state.boss;
     if (b?.stage !== 'fight') return true;
-    if (b.phase === 1) return e.mode !== 'dive';
+    if (b.phase === 1 || (b.phase === 3 && info.scene.boss?.rush)) return e.mode !== 'dive';
     return !(b.phase === 2 && (e.mode === 'dive' || e.mode === 'swing'));
   },
 };

@@ -9,6 +9,9 @@
  * Every position is in room px.
  */
 
+import type { AbilityId } from '../abilities';
+import type { UpgradeId } from '../upgrades';
+
 export interface BossRect {
   x: number;
   y: number;
@@ -23,7 +26,7 @@ export interface BossDoor extends BossRect {
 export interface BossSpec {
   /** Unique in the room (a route node: `routes` may name it; the world check reaches its flag through it). */
   id: string;
-  kind: 'weaver' | 'gloamweaver';
+  kind: 'weaver' | 'gloamweaver' | 'mantis';
   /** The name card. */
   name: string;
   /** The fight's rect: the lock closes once her whole box is inside it. */
@@ -62,6 +65,15 @@ export interface BossSpec {
   orbR?: number;
   wicks?: string[];
   high?: string[];
+  /**
+   * The boss rush (docs/design/demos/bossrush.md): the Gloamweaver fought on its own (`rush`: the rest after a
+   * lunge leaves it open, P3 hunts again instead of wrapping its lamp), and what a win teaches her (`grant`: an
+   * ability into `save.abilities`, an upgrade's flag, the line the card shows).
+   */
+  rush?: boolean;
+  /** A moon patch of the room the lock makes her re-form point (the boss rush: a fade is back at the door at once). */
+  checkpoint?: string;
+  grant?: { ability?: AbilityId; upgrade?: UpgradeId; text: string };
 }
 
 /** Is lure `id` part of this room's boss (its heart, a ring flame)? Those are saved when it is beaten, not when snuffed. */

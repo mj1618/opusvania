@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import brGloamJson from '../../content/rooms/br-gloam.json' with { type: 'json' };
+import brHubJson from '../../content/rooms/br-hub.json' with { type: 'json' };
+import brMantisJson from '../../content/rooms/br-mantis.json' with { type: 'json' };
+import brWeaverJson from '../../content/rooms/br-weaver.json' with { type: 'json' };
 import labCreaturesJson from '../../content/rooms/lab-creatures.json' with { type: 'json' };
 import labFeelJson from '../../content/rooms/lab-feel.json' with { type: 'json' };
 import labKitJson from '../../content/rooms/lab-kit.json' with { type: 'json' };
@@ -26,6 +30,7 @@ import woodSilkJson from '../../content/rooms/wood-silk.json' with { type: 'json
 import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
+import bossrushJson from '../../content/worlds/demo-bossrush.json' with { type: 'json' };
 import proto1Json from '../../content/worlds/proto-1.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
@@ -147,6 +152,7 @@ const SceneSchema = z
             relight: int.min(30).max(3600).optional(),
             // Lanternroot: a moonwick that burns for good once kindled; a lamp whose going out sets a flag.
             keep: z.boolean().optional(),
+            lit: z.boolean().optional(),
             sets: z.string().min(1).optional(),
             moths: int.min(0).max(500).optional(),
             burn: int.min(60).max(3600).optional(),
@@ -697,6 +703,11 @@ const FILES: readonly unknown[] = [
   lrHallJson,
   lrRootsJson,
   lrCacheJson,
+  // The boss rush demo (docs/design/demos/bossrush.md): its own world, content/worlds/demo-bossrush.json.
+  brHubJson,
+  brWeaverJson,
+  brGloamJson,
+  brMantisJson,
 ];
 
 /** Every room, by id. */
@@ -737,6 +748,7 @@ export type WorldFile = z.infer<typeof WorldSchema>;
 export const WORLD_FILES: Readonly<Record<string, WorldFile>> = {
   game: WORLD,
   'proto-1': WorldSchema.parse(proto1Json),
+  'demo-bossrush': WorldSchema.parse(bossrushJson),
 };
 for (const [wid, w] of Object.entries(WORLD_FILES))
   for (const id of [w.start, ...w.rooms.map((r) => r.id), ...w.tests])

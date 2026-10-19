@@ -5,7 +5,7 @@
  */
 
 /** What a tell warns of: P2's swing (the arc), P3's lunge and drop, P1's bite at the heart. */
-export type BossAttack = 'swing' | 'lunge' | 'drop' | 'bite';
+export type BossAttack = 'swing' | 'lunge' | 'drop' | 'bite' | 'strike' | 'leap' | 'flurry' | 'riposte';
 
 export type BossEvent =
   /** Her whole box is in the arena: the doors seal (`retry`: the save had `met`; `attempt` this visit). */
@@ -51,4 +51,10 @@ export type BossEvent =
   /** She faded in the fight: it starts over (`retry` next time; the rings that will burn). */
   | { type: 'bossReset'; id: string; x: number; y: number; retry: boolean; rings: number }
   /** The firefly relit lure `lure` (a husk until now) after the fight. */
-  | { type: 'bossRelight'; id: string; x: number; y: number; lure: string };
+  | { type: 'bossRelight'; id: string; x: number; y: number; lure: string }
+  /** The win taught her something (`spec.grant`): an ability, an upgrade, and the card's line. */
+  | { type: 'bossGrant'; id: string; x: number; y: number; ability: string; upgrade: string; text: string }
+  /** Its guard caught her blade (the Mantis): a riposte follows. */
+  | { type: 'bossParry'; id: string; x: number; y: number }
+  /** Her dash went through a live blow unhurt (the Moonstep upgrade). */
+  | { type: 'bossDodge'; id: string; x: number; y: number };

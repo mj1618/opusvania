@@ -31,6 +31,7 @@ const LIGHT = new Set([
   'bossAttack',
   'bossOpen',
   'bossThreadCut',
+  'bossDodge',
   'bossDefeat',
   'glowGain',
   'mendStart',
@@ -50,9 +51,10 @@ const LIGHT = new Set([
   'bellAnswer',
 ]);
 
-/** A room whose boss is the Gloamweaver. */
+/** A room whose boss is the Gloamweaver, or any boss of the boss rush (its three fights share these sounds). */
 function isGloam(ctx: RouteContext): boolean {
-  return (ctx.scene as { boss?: { kind?: string } }).boss?.kind === 'gloamweaver';
+  const s = ctx.scene as { boss?: { kind?: string }; region?: string };
+  return s.boss?.kind === 'gloamweaver' || s.region === 'bossrush';
 }
 
 export function routeLantern(
@@ -114,7 +116,7 @@ export function routeLantern(
     case 'bossTell': {
       // Its tells you can hear: a hiss as it rears for a lunge, silk drawn taut before a drop.
       const t = ev as { attack?: string; frames?: number };
-      if (t.attack === 'lunge')
+      if (t.attack === 'lunge' || t.attack === 'strike' || t.attack === 'riposte')
         return [
           placed('creatures', 'hiss', B.hissDb, { priority: 8 }),
           placed('creatures', 'rear', B.rearDb, { cents: -500, priority: 7 }, 1),
@@ -123,7 +125,7 @@ export function routeLantern(
     }
     case 'bossAttack': {
       const t = ev as { attack?: string };
-      return t.attack === 'lunge'
+      return t.attack === 'lunge' || t.attack === 'strike'
         ? [
             placed('creatures', 'dive', B.diveDb, { cents: -900, priority: 8 }),
             placed('creatures', 'rumble', B.rumbleDb, { cents: -500, priority: 6 }, 1),
@@ -136,6 +138,9 @@ export function routeLantern(
         placed('creatures', 'rear', B.rearDb + 2, { cents: 400, priority: 8 }),
         placed('creatures', 'slam', B.slamDb - 3, { priority: 7 }, 1),
       ];
+    case 'bossDodge':
+      // The Moonstep through a blow: a cold flare.
+      return [placed('lantern', 'kindle', L.kindleDb, { priority: 7, cents: 1200 })];
     case 'bossThreadCut':
       return [placed('creatures', 'silkSnap', B.silkDb + 4, { cents: -500, priority: 8 })];
     case 'bossDefeat':

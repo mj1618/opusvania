@@ -96,7 +96,8 @@ export type EnemyKind =
   | 'dangler'
   | 'juvenileBurrback'
   | 'carrier'
-  | 'gloamweaver';
+  | 'gloamweaver'
+  | 'mantis';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
@@ -243,6 +244,8 @@ export interface Lure {
    * `opened`): a route light.
    */
   keep?: boolean;
+  /** A moonwick burning for good from the start (the boss rush: silver light no one has to kindle). */
+  lit?: boolean;
   /** A lamp-held gate (Lanternroot): this story flag is set when it goes out (cut, flung or gusted). */
   sets?: string;
   /** The moths it holds, if not its kind's (the cache's firefly-lamp: the level's biggest release). */

@@ -1,0 +1,253 @@
+{
+  "id": "br-gloam",
+  "title": "Boss rush: the Gloamweaver",
+  "region": "bossrush",
+  "edgeKick": false,
+  "senses": "lamp",
+  "abilities": ["glide", "wallJump", "doubleJump", "dash"],
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "roots",
+    "seed": 503
+  },
+  "width": 3840,
+  "height": 1536,
+  "spawn": {
+    "x": 240,
+    "y": 1300
+  },
+  "solids": [
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1300,
+      "w": 1920,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 240,
+      "w": 64,
+      "h": 1060,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1920,
+      "y": 0,
+      "w": 1920,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 1920,
+      "y": 1300,
+      "w": 1920,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1920,
+      "y": 240,
+      "w": 64,
+      "h": 820,
+      "kick": "east"
+    },
+    {
+      "tag": "root",
+      "x": 3776,
+      "y": 240,
+      "w": 64,
+      "h": 1060,
+      "kick": "west"
+    },
+    {
+      "tag": "root",
+      "x": 2040,
+      "y": 1060,
+      "w": 200,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3520,
+      "y": 1060,
+      "w": 200,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 2440,
+      "y": 610,
+      "w": 160,
+      "h": 30,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 3160,
+      "y": 610,
+      "w": 160,
+      "h": 30,
+      "kick": false
+    }
+  ],
+  "oneWays": [],
+  "pickups": [],
+  "pods": [],
+  "enemies": [
+    {
+      "id": "orb",
+      "kind": "web",
+      "x": 2880,
+      "y": 640,
+      "facing": 1,
+      "grab": false,
+      "orb": {
+        "r": 520,
+        "spokes": 12,
+        "rings": 4
+      }
+    },
+    {
+      "id": "gloamweaver",
+      "kind": "gloamweaver",
+      "x": 2880,
+      "y": 640,
+      "facing": 1
+    }
+  ],
+  "lures": [
+    {
+      "id": "m-w1",
+      "kind": "moonwick",
+      "x": 2140,
+      "y": 1010,
+      "lit": true
+    },
+    {
+      "id": "m-w4",
+      "kind": "moonwick",
+      "x": 3620,
+      "y": 1010,
+      "lit": true
+    },
+    {
+      "id": "gloam-lamp",
+      "kind": "great",
+      "x": 2880,
+      "y": 640
+    }
+  ],
+  "doors": [
+    {
+      "id": "from-hub",
+      "x": 240,
+      "y": 1300,
+      "to": "br-hub#to-gloam"
+    }
+  ],
+  "patches": [
+    {
+      "id": "p-gate",
+      "x": 1640,
+      "y": 1300
+    }
+  ],
+  "marks": {
+    "moonholes": [
+      {
+        "x": 2880,
+        "y": 240
+      }
+    ]
+  },
+  "boss": {
+    "id": "gloam",
+    "kind": "gloamweaver",
+    "name": "The Gloamweaver",
+    "arena": {
+      "x": 1984,
+      "y": 300,
+      "w": 1792,
+      "h": 1000
+    },
+    "lock": [
+      {
+        "id": "door-w",
+        "x": 1920,
+        "y": 1060,
+        "w": 64,
+        "h": 240
+      }
+    ],
+    "flag": "br-gloam-down",
+    "met": "br-gloam-met",
+    "creature": "gloamweaver",
+    "heart": "gloam-lamp",
+    "rings": [],
+    "retryOut": [],
+    "drops": [2300, 3460, 2880],
+    "canopy": 300,
+    "floor": 1300,
+    "hub": {
+      "x": 2880,
+      "y": 640
+    },
+    "orbR": 520,
+    "wicks": ["m-w1", "m-w4"],
+    "high": [],
+    "rush": true,
+    "checkpoint": "p-gate",
+    "grant": {
+      "upgrade": "moonstep",
+      "text": "Moonstep: your dash passes through blows unharmed."
+    }
+  },
+  "camera": {
+    "zones": [
+      {
+        "id": "arena",
+        "x": 1984,
+        "y": 300,
+        "w": 1792,
+        "h": 1080,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "corridor",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "b",
+        "x": 1920,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  }
+}

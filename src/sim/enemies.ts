@@ -20,6 +20,7 @@
  */
 
 import { gloamweaver } from './boss/gloam';
+import { mantis } from './boss/mantis';
 import { weaverBoss } from './boss/weaver';
 import { burrback, juvenileBurrback, oldBurrback } from './enemies/burrback';
 import { carrier } from './enemies/carrier';
@@ -56,6 +57,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   juvenileBurrback,
   carrier,
   gloamweaver,
+  mantis,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -69,6 +71,7 @@ const KIND_LIST: EnemyKind[] = [
   'juvenileBurrback',
   'carrier',
   'gloamweaver',
+  'mantis',
 ];
 
 /**
@@ -107,7 +110,8 @@ function wingCuts(state: GameState, scene: Scene, t: Tuning, events: SimEvent[])
 
 /** How heavy a blow on it reads (round 7: `slashHit.weight`, render's shake and sound): fodder, a body, a boss. */
 export function weightOf(kind: EnemyKind): 'light' | 'medium' | 'heavy' {
-  if (kind === 'oldBurrback' || kind === 'weaverBoss' || kind === 'gloamweaver') return 'heavy';
+  if (kind === 'oldBurrback' || kind === 'weaverBoss' || kind === 'gloamweaver' || kind === 'mantis')
+    return 'heavy';
   if (kind === 'burrback' || kind === 'hawker' || kind === 'weaver' || kind === 'web') return 'medium';
   return 'light';
 }
@@ -207,6 +211,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
         spawn.kind === 'weaver' ||
         spawn.kind === 'weaverBoss' ||
         spawn.kind === 'gloamweaver' ||
+        spawn.kind === 'mantis' ||
         spawn.kind === 'juvenileBurrback' ||
         spawn.kind === 'carrier'
           ? 'always'

@@ -93,7 +93,9 @@ export interface AudioSnap {
 function bossSnap(state: GameState): AudioSnap['boss'] {
   const b = (state as { boss?: { stage?: string; phase?: number; phaseTime?: number; id?: string } }).boss;
   if (!b?.stage) return undefined;
-  const e = state.enemies.find((x) => x.kind === 'gloamweaver' || x.kind === 'weaverBoss');
+  const e = state.enemies.find(
+    (x) => x.kind === 'gloamweaver' || x.kind === 'weaverBoss' || x.kind === 'mantis',
+  );
   const p = state.player;
   return {
     stage: b.stage,
