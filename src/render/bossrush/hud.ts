@@ -79,6 +79,8 @@ export class BossHud {
   private readonly phase: Line;
   private readonly win: Line;
   private readonly winSub: Line;
+  /** The hub's line of keys. */
+  private readonly hint: Line;
   private barA = 0;
   private flashK = 0;
   /** The bar's fill as drawn (it eases down after a hit) and the hit's afterglow. */
@@ -91,6 +93,7 @@ export class BossHud {
     this.phase = new Line(text(40, 0xf6e2c0, 4), BOSS_HUD.phase);
     this.win = new Line(text(64, 0xfff6e6, 8), BOSS_HUD.win);
     this.winSub = new Line(text(30, 0xe8ecf6, 1), BOSS_HUD.win);
+    this.hint = new Line(text(24, 0xc8d4e8, 1), { in: 0.6, hold: 8, out: 1.5 });
     this.root.addChild(
       this.flash,
       this.bar,
@@ -100,6 +103,7 @@ export class BossHud {
       this.phase.text,
       this.win.text,
       this.winSub.text,
+      this.hint.text,
     );
   }
 
@@ -113,6 +117,11 @@ export class BossHud {
       const all = ['br-weaver-down', 'br-gloam-down', 'br-mantis-down'].every((f) =>
         sim.save.flags.includes(f),
       );
+      // (Otherwise, on the way in: the keys, once a visit.)
+      if (!all && sim.events.some((e) => e.type === 'roomEnter' || e.type === 'spawn'))
+        this.hint.show(
+          'Three doors: \u2191 to enter.   Z jump   C cut   \u2193 C in the air: a pogo   X dash, once learned',
+        );
       if (all && sim.events.some((e) => e.type === 'roomEnter')) {
         this.win.show('The rush is done');
         this.winSub.show(`three have fallen  \u00b7  ${fightTime(sim.save.time)} in all`);
@@ -124,8 +133,12 @@ export class BossHud {
       this.winSub.text.position.set(cx, SAFE_H * 0.28 + 66);
       this.win.update(dt);
       this.winSub.update(dt);
+      this.hint.text.position.set(cx, view.top + view.h - 70);
+      this.hint.update(dt);
       return;
     }
+    this.hint.t = 1e6;
+    this.hint.text.alpha = 0;
     this.root.visible = !!b && !!spec && painted;
     if (!b || !spec || !painted) return;
     for (const e of sim.events) {

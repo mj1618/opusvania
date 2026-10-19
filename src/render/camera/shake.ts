@@ -121,6 +121,18 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'slashTerrain':
         add += B.terrain;
         break;
+      case 'bossDefeat':
+        add += B.bossFall;
+        break;
+      case 'bossPhase':
+        if (e.phase > 1) add += B.bossPhase;
+        break;
+      case 'bossOpen':
+        if (e.how === 'stunned') add += B.bossOpen;
+        break;
+      case 'bossCue':
+        if (e.set === 'leap' && e.cue === 'land') add += B.bossLand;
+        break;
     }
   }
   return add;
