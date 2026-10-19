@@ -1,0 +1,307 @@
+<meta charset="utf-8">
+<title>Five Woods</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* One moonlit night: a column of five map cards, each a map that plays its first-timer run beside its pitch. */
+:root {
+  color-scheme: dark;
+  --bg: #0c1120;
+  --panel: #131a2c;
+  --line: #24304a;
+  --fg: #dfe5f0;
+  --muted: #8e99b3;
+  --moon: #ece5c6;
+  --amber: #f0a54a;
+  --quiet: #3f6189;
+  --tense: #8a5a3e;
+  --wonder: #3c8a80;
+  --intense: #a3434f;
+  --secret: #6a57a0;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+html, body { background: var(--bg); color: var(--fg); }
+body {
+  font-family: var(--body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+main { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+header h1 { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 5vw, 52px); line-height: 1.05; margin: 0; color: var(--moon); text-wrap: balance; }
+header p { margin: 10px 0 0; color: var(--muted); max-width: 68ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 14px; }
+nav a:hover, nav a:focus-visible { border-color: var(--moon); outline: none; }
+nav b { font-family: var(--mono); color: var(--amber); font-weight: 500; margin-right: 6px; }
+
+.sk { border-top: 1px solid var(--line); padding-top: 28px; display: flex; flex-direction: column; gap: 20px; scroll-margin-top: 16px; }
+.sk-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.num { font-family: var(--mono); color: var(--amber); font-size: 15px; letter-spacing: .04em; }
+.sk-head h2 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 3.6vw, 38px); margin: 0; color: var(--moon); line-height: 1.1; }
+.lens { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+
+.mapbox { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.mapwrap { overflow-x: auto; border-radius: 10px; }
+.map { display: block; max-width: none; background: #0a0f1c; border: 1px solid var(--line); border-radius: 10px; }
+.map text { font-family: var(--body); }
+.controls { display: flex; align-items: center; gap: 12px; }
+.controls button { font: 500 14px var(--body); color: var(--bg); background: var(--moon); border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer; min-width: 84px; }
+.controls button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.controls input { flex: 1; min-width: 0; accent-color: var(--amber); }
+.clock { font-family: var(--mono); font-size: 13px; color: var(--amber); min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.beat { min-height: 3em; font-size: 15px; color: var(--fg); border-left: 2px solid var(--amber); padding-left: 12px; }
+
+.info { min-width: 0; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px 32px; align-items: start; }
+.info > .col { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 860px) { .info { grid-template-columns: minmax(0, 1fr); } }
+.pitch { font-size: 16px; margin: 0; }
+.through { margin: 0; color: var(--moon); font-style: italic; }
+dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; font-size: 14px; }
+dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding-top: 2px; }
+dd { margin: 0; }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+details ol { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+.doc { font-size: 14px; max-width: 70ch; }
+.doc h1, .doc h2, .doc h3 { font-family: var(--display); font-weight: 400; color: var(--moon); margin: 14px 0 4px; font-size: 20px; }
+.doc p, .doc ul { margin: 6px 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main>
+  <header>
+    <h1>Five Woods</h1>
+    <p>Five whole-level skeletons for the wood, the game's opening area, from Wing's hatching to the first boss. Each card plays a first-timer's run across its map (about 30 seconds). Pick the one that makes you most want to play it; we build rooms only after that.</p>
+    <div class="legend" id="legend"></div>
+  </header>
+  <nav id="nav"></nav>
+  <div id="list" style="display:flex;flex-direction:column;gap:40px"></div>
+</main>
+
+<script>
+const SKELETONS = /*__DATA__*/[];
+const MOODS = { quiet: '--quiet', tense: '--tense', wonder: '--wonder', intense: '--intense', secret: '--secret' };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const SX = 160, SY = 90; // one 16:9 screen in SVG units
+const NS = 'http://www.w3.org/2000/svg';
+const RUN_SECONDS = 30;
+const PX = 0.72; // screen pixels per map unit (one game screen = 115 px)
+const fit = (t, units, size) => { const n = Math.max(3, Math.floor(units / (size * 0.56))); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+const short = t => String(t).replace(/\s*\(.*$/, '');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function h(tag, attrs = {}, html) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function md(src) {
+  const out = []; let list = false;
+  for (const raw of String(src || '').split('\n')) {
+    const line = raw.trimEnd();
+    const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>').replace(/`(.+?)`/g, '<code>$1</code>');
+    const m = line.match(/^(#{1,3})\s+(.*)/);
+    const li = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)/);
+    if (li) { if (!list) { out.push('<ul>'); list = true; } out.push('<li>' + inline(li[1]) + '</li>'); continue; }
+    if (list) { out.push('</ul>'); list = false; }
+    if (m) out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);
+    else if (line.trim()) out.push('<p>' + inline(line) + '</p>');
+  }
+  if (list) out.push('</ul>');
+  return out.join('');
+}
+
+function legend() {
+  const L = document.getElementById('legend');
+  for (const [k, v] of Object.entries(MOODS)) L.insertAdjacentHTML('beforeend', `<span><i class="sw" style="background:var(${v})"></i>${k}</span>`);
+  L.insertAdjacentHTML('beforeend', `<span>◆ ability</span><span>★ landmark</span><span>? secret</span><span>✕ boss</span><span>– – gate</span><span>··· shortcut</span>`);
+}
+
+function drawMap(sk) {
+  const W = sk.size.w * SX, H = sk.size.h * SY, pad = 24;
+  const k = 1.25; // label size in screen units; the map is drawn at a fixed scale and scrolls sideways when wide
+  const svg = el('svg', { viewBox: `${-pad} ${-pad} ${W + pad * 2} ${H + pad * 2}`, width: Math.round((W + pad * 2) * PX), height: Math.round((H + pad * 2) * PX), class: 'map', role: 'img', 'aria-label': `Map of ${sk.title}` });
+  const regions = Object.fromEntries((sk.regions || []).map(r => [r.id, r]));
+  const centre = id => { const r = regions[id]; return r ? [(r.x + r.w / 2) * SX, (r.y + r.h / 2) * SY] : null; };
+  // screen grid
+  const grid = el('g', { stroke: css('--line'), 'stroke-width': 0.6, opacity: 0.5 }, svg);
+  for (let x = 0; x <= sk.size.w; x++) el('line', { x1: x * SX, y1: 0, x2: x * SX, y2: H }, grid);
+  for (let y = 0; y <= sk.size.h; y++) el('line', { x1: 0, y1: y * SY, x2: W, y2: y * SY }, grid);
+  // sightlines
+  for (const lm of sk.landmarks || []) for (const id of lm.seenFrom || []) {
+    const c = centre(id); if (!c) continue;
+    el('line', { x1: lm.x * SX, y1: lm.y * SY, x2: c[0], y2: c[1], stroke: css('--moon'), 'stroke-width': 1, opacity: 0.18, 'stroke-dasharray': '2 6' }, svg);
+  }
+  // regions
+  for (const r of sk.regions || []) {
+    const g = el('g', {}, svg);
+    const col = css(MOODS[r.mood] || '--quiet');
+    el('rect', { x: r.x * SX + 3, y: r.y * SY + 3, width: r.w * SX - 6, height: r.h * SY - 6, rx: 10, fill: col, 'fill-opacity': 0.42, stroke: col, 'stroke-width': 2 }, g);
+    const t = el('text', { x: r.x * SX + 12, y: r.y * SY + 24, fill: css('--fg'), 'font-size': 15 * k, 'font-weight': 600 }, g);
+    t.textContent = fit(r.name, r.w * SX - 18, 15 * k);
+    el('title', {}, g).textContent = `${r.name} (${r.mood})\n${r.note || ''}`;
+  }
+  // links
+  for (const l of sk.links || []) {
+    const a = centre(l.from), b = centre(l.to); if (!a || !b) continue;
+    const style = { open: [css('--fg'), '', 0.55], gate: [css('--amber'), '10 7', 0.95], shortcut: [css('--moon'), '2 6', 0.9], oneway: [css('--fg'), '', 0.75], secret: [css('--secret'), '4 5', 0.9] }[l.kind] || [css('--fg'), '', 0.5];
+    const ln = el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: style[0], 'stroke-width': l.kind === 'open' ? 2 : 2.6, 'stroke-dasharray': style[1], opacity: style[2] }, svg);
+    if (l.kind === 'oneway') ln.setAttribute('marker-end', 'url(#arrow)');
+    if (l.requires) {
+      const t = el('text', { x: (a[0] + b[0]) / 2 + 4, y: (a[1] + b[1]) / 2 - 5, fill: css('--amber'), 'font-size': 12 * k }, svg);
+      t.textContent = '⟂ ' + l.requires;
+    }
+    el('title', {}, ln).textContent = `${l.kind}${l.requires ? ' (needs ' + l.requires + ')' : ''}: ${l.note || ''}`;
+  }
+  const defs = el('defs', {}, svg);
+  const mk = el('marker', { id: 'arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: css('--fg') }, mk);
+  // landmarks
+  for (const lm of sk.landmarks || []) {
+    const t = el('text', { x: lm.x * SX, y: lm.y * SY, fill: css('--moon'), 'font-size': 24 * k, 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, svg);
+    t.textContent = '★';
+    const n = el('text', { x: lm.x * SX, y: lm.y * SY + 22, fill: css('--moon'), 'font-size': 12 * k, 'text-anchor': 'middle' }, svg);
+    n.textContent = fit(lm.name, 2.2 * SX, 12 * k);
+  }
+  // abilities
+  for (const ab of sk.abilities || []) {
+    const c = centre(ab.region); if (!c) continue;
+    const t = el('text', { x: c[0], y: c[1] + 4, fill: css('--amber'), 'font-size': 14 * k, 'text-anchor': 'middle' }, svg);
+    t.textContent = `◆ ${short(ab.name)}` + (ab.minute != null ? ` · ${ab.minute}′` : '');
+  }
+  // secrets
+  for (const s of sk.secrets || []) {
+    const g = el('g', {}, svg);
+    el('circle', { cx: s.x * SX, cy: s.y * SY, r: 9, fill: css('--bg'), stroke: css('--secret'), 'stroke-width': 2 }, g);
+    const t = el('text', { x: s.x * SX, y: s.y * SY + 4.5, fill: css('--fg'), 'font-size': 13 * k, 'text-anchor': 'middle', 'font-weight': 600 }, g);
+    t.textContent = '?';
+    el('title', {}, g).textContent = `${s.name}: ${s.tell}`;
+  }
+  // boss
+  if (sk.boss) {
+    const c = centre(sk.boss.region);
+    if (c) {
+      const t = el('text', { x: c[0], y: c[1] + 26, fill: css('--intense'), 'font-size': 16 * k, 'text-anchor': 'middle', 'font-weight': 600 }, svg);
+      t.textContent = `✕ ${sk.boss.name}`;
+    }
+  }
+  // run
+  const pts = (sk.run || []).map(p => [p.x * SX, p.y * SY]);
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  el('path', { d, fill: 'none', stroke: css('--amber'), 'stroke-width': 1.2, opacity: 0.25 }, svg);
+  const trail = el('path', { d, fill: 'none', stroke: css('--amber'), 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.9 }, svg);
+  const glow = el('circle', { r: 16, fill: css('--amber'), opacity: 0.25 }, svg);
+  const dot = el('circle', { r: 7, fill: css('--moon') }, svg);
+  return { svg, trail, dot, glow };
+}
+
+function card(sk, i) {
+  const sec = h('section', { class: 'sk', id: 'sk' + (i + 1) });
+  sec.appendChild(h('div', { class: 'sk-head' }, `<span class="num">No. ${i + 1}</span><h2>${esc(sk.title)}</h2><span class="lens">${esc(short(sk.lens).split(":")[0])}</span>`));
+  const box = h('div', { class: 'mapbox' });
+  const { svg, trail, dot, glow } = drawMap(sk);
+  const wrap = h('div', { class: 'mapwrap' });
+  wrap.appendChild(svg);
+  box.appendChild(wrap);
+  const ctr = h('div', { class: 'controls' });
+  const btn = h('button', { type: 'button', id: `play${i}` }, 'Play run');
+  const scrub = h('input', { type: 'range', min: 0, max: 1000, value: 0, id: `scrub${i}`, 'aria-label': 'Run position' });
+  const clock = h('span', { class: 'clock' }, '0′');
+  ctr.append(btn, scrub, clock);
+  const beat = h('div', { class: 'beat', 'aria-live': 'polite' });
+  box.append(ctr, beat);
+  sec.appendChild(box);
+
+  const info = h('div', { class: 'info' });
+  const colA = h('div', { class: 'col' }), colB = h('div', { class: 'col' });
+  info.append(colA, colB);
+  colA.appendChild(h('p', { class: 'through' }, esc(sk.throughline)));
+  colA.appendChild(h('p', { class: 'pitch' }, esc(sk.pitch)));
+  const ab = (sk.abilities || []).map(a => `${esc(a.name)}${a.minute != null ? ` <span style="color:var(--muted)">(${a.minute}′)</span>` : ''}`).join(', ');
+  const total = Math.max(...(sk.run || [{ minute: 0 }]).map(p => p.minute || 0));
+  colB.appendChild(h('dl', {}, `
+    <dt>Size</dt><dd>${(sk.regions || []).reduce((s, r) => s + r.w * r.h, 0)} screens in ${(sk.regions || []).length} places</dd>
+    <dt>Length</dt><dd>about ${total} min on the main path</dd>
+    <dt>Finds</dt><dd>${ab || '—'}</dd>
+    <dt>Boss</dt><dd>${sk.boss ? `<b>${esc(sk.boss.name)}</b>: ${esc(sk.boss.idea)}` : '—'}</dd>
+    <dt>Secrets</dt><dd>${(sk.secrets || []).length}: ${(sk.secrets || []).map(s => esc(s.name)).join(', ')}</dd>`));
+  const mm = h('details', {}, `<summary>Minute by minute</summary><ol>${(sk.minuteByMinute || []).map(m => `<li>${esc(m)}</li>`).join('')}</ol>`);
+  colB.appendChild(mm);
+  if (sk.doc) colB.appendChild(h('details', {}, `<summary>The designer's notes</summary><div class="doc">${md(sk.doc)}</div>`));
+  sec.appendChild(info);
+
+  // run animation
+  const len = trail.getTotalLength();
+  const run = sk.run || [];
+  const segLens = []; let acc = 0;
+  for (let k = 0; k < run.length; k++) {
+    if (k) acc += Math.hypot((run[k].x - run[k - 1].x) * SX, (run[k].y - run[k - 1].y) * SY);
+    segLens.push(acc);
+  }
+  // time follows the minutes, so slow stretches of play read as slow
+  const tMax = Math.max(1, run.length ? run[run.length - 1].minute : 1);
+  function at(f) {
+    const minute = f * tMax;
+    let k = 0; while (k < run.length - 1 && run[k + 1].minute <= minute) k++;
+    const a = run[k], b = run[Math.min(k + 1, run.length - 1)];
+    const span = Math.max(0.0001, b.minute - a.minute);
+    const u = b === a ? 0 : Math.min(1, Math.max(0, (minute - a.minute) / span));
+    const L = segLens[k] + (segLens[Math.min(k + 1, run.length - 1)] - segLens[k]) * u;
+    return { L, k, minute };
+  }
+  function show(f) {
+    if (!run.length) return;
+    const { L, k, minute } = at(f);
+    trail.setAttribute('stroke-dasharray', `${L} ${len}`);
+    const p = trail.getPointAtLength(Math.min(L, len));
+    dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y);
+    glow.setAttribute('cx', p.x); glow.setAttribute('cy', p.y);
+    if (playing) { const x = (p.x + 24) * PX; if (x < wrap.scrollLeft + 80 || x > wrap.scrollLeft + wrap.clientWidth - 80) wrap.scrollLeft = x - wrap.clientWidth / 2; }
+    clock.textContent = Math.floor(minute) + '′';
+    beat.textContent = run[k].beat;
+    scrub.value = Math.round(f * 1000);
+  }
+  let playing = false, f = 0, last = 0;
+  function tick(t) {
+    if (!playing) return;
+    const dt = last ? (t - last) / 1000 : 0; last = t;
+    f = Math.min(1, f + dt / RUN_SECONDS);
+    show(f);
+    if (f >= 1) { playing = false; btn.textContent = 'Replay'; return; }
+    requestAnimationFrame(tick);
+  }
+  btn.addEventListener('click', () => {
+    if (playing) { playing = false; btn.textContent = 'Play run'; return; }
+    if (f >= 1) f = 0;
+    if (reduced) { f = 1; show(f); btn.textContent = 'Replay'; return; }
+    playing = true; last = 0; btn.textContent = 'Pause'; requestAnimationFrame(tick);
+  });
+  scrub.addEventListener('input', () => { playing = false; btn.textContent = 'Play run'; f = scrub.value / 1000; show(f); });
+  show(reduced ? 1 : 0.0001);
+  return sec;
+}
+
+legend();
+const nav = document.getElementById('nav');
+const list = document.getElementById('list');
+SKELETONS.forEach((sk, i) => {
+  nav.insertAdjacentHTML('beforeend', `<a href="#sk${i + 1}"><b>${i + 1}</b>${esc(sk.title)}</a>`);
+  list.appendChild(card(sk, i));
+});
+</script>

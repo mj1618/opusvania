@@ -1,0 +1,154 @@
+{
+  "id": "2-moonstair",
+  "title": "The Moonstair",
+  "lens": "one great vertical place: one enormous tree climbed from roots to crown, toward the moon",
+  "pitch": "The whole area is one giant mountain ash, eleven screens tall, the last firefly's first lamp-tree. Wing hatches on a twig at its very top, sees the tail of her swarm swerve into the firefly's great lamp in the crown, leaps after the rest and falls: the Lampfall, a 20-second steerable plunge down the outside of the tree that shows her every tier she will climb (the crown's web, a warm light moving behind the bark, the moonlit knothole of the hub) before she lands in a drift of dead moths at its foot. Then she climbs it. Height is progress: claws at the bottom, glide at the hollow heart, a fling road out along the great west limb and up the bare outside face, the Weaver in the crown, Gust at her own empty cocoon. Then the second Lampfall: she dives the whole tree down its opened core, and falling now is mastery, gusting out lamps in alcoves only a falling moth can see, and if she never opens her wings she punches through the floor she started on into a den the moon has never reached. Every tier is its own ecology stacked on one food chain (the lamps kill moths, the wings rain down, every predator feeds at its own height), so every screen has a creature, a flame, something to cut and something to find, and the goal, the moon over the crown lamp, is up there the whole time.",
+  "throughline": "She fell from the top of the tree, and she wants back up: the stragglers of her swarm are circling the false lamp in its crown, and above it is the moon her kind fly by.",
+  "size": { "w": 12, "h": 14 },
+  "regions": [
+    {
+      "id": "hatch", "name": "The Hatching Twig", "x": 6, "y": 2, "w": 3, "h": 1, "mood": "wonder",
+      "note": "The highest twig of the crown, open sky. The row of split cocoons, hers still shut, Tatter beside it. The swarm streams past the moon; its tail swerves into the crown lamp's light just west of her and starts to circle. West is a wall of glittering web (the Weaver's, sealed until the fight). Control at 8 s; she runs east along the twig after the swarm and leaps off its end. Comes back at 21:30 as Gust's glade: the moon on her own empty cocoon."
+    },
+    {
+      "id": "crown", "name": "The Crown Web", "x": 4, "y": 1, "w": 2, "h": 2, "mood": "intense",
+      "note": "The boss arena: a bowl of the topmost limbs with the firefly's great lamp (a chandelier of stolen glow-caps) hung at its top and the Weaver's funnel web under it in tiers. Silk-wrapped moths hang in bundles all round it. Its floor is the silk plug's top: when the Weaver falls, the floor web goes slack and opens the chimney. A moon patch on the face's last ledge, just under its rim."
+    },
+    {
+      "id": "chimney", "name": "The Moon Chimney", "x": 5, "y": 3, "w": 1, "h": 4, "mood": "secret",
+      "note": "The hollow core of the upper trunk, choked with the Weaver's silk until the fight: seen before then only through cracks (a white mass with moths wrapped in it, eggs, the Weaver's larder). After the fight it is the Dive: a four-screen fall with the moon column now pouring down it, its walls lined with alcoves that face inward (wicks behind thorn rings for Gust, silk bundles, a firefly sign) that only a falling, gliding moth can see. Afterwards the hub's shortcut up to the crown (kick up its faces)."
+    },
+    {
+      "id": "face", "name": "The Stringybark Face", "x": 4, "y": 3, "w": 1, "h": 4, "mood": "tense",
+      "note": "The bare outside of the trunk above the west limb, four screens of vertical climb in the open night: claw kicks up between bark plates, long ribbons of peeling stringybark to cut (they fall away and show kickable wood, or drop as debris on what's below), wicks to fling up between ledges, a bombardier on a shelf spitting arcs down the face, a hawker crossing it, silk bundles to cut moths free. A miss drops her one ledge, never a tier. The best height view in the area: the whole wood below, the crown lamp above."
+    },
+    {
+      "id": "galleries", "name": "The Silk Galleries", "x": 6, "y": 4, "w": 2, "h": 3, "mood": "tense",
+      "note": "Optional and the densest place in the tree: the heartwood east of the chimney, bored into rooms by old beetle galleries and taken over by spiders. Danglers over every ledge, a small orb web and its weaver across one gallery, silk bundles everywhere (cut a moth free), wicks the firefly hung in the dark, cracks onto the chimney's silk plug. A strand dusted gold with glow-cap powder leads up to one flame out of line: the hard, hidden fling chain to the loft."
+    },
+    {
+      "id": "loft", "name": "The Firefly's Loft", "x": 7, "y": 3, "w": 1, "h": 1, "mood": "secret",
+      "note": "The firefly's workshop under the hatching twig: glow-caps strung but not hung, a ring of lights laid out in its flash pattern, a half-built chandelier for the crown. A moon-drop (+1 max health) and a firefly sign. A bark panel in its roof opens onto the hatching twig: an alternative way up for explorers, and a loop back down from the crown afterwards."
+    },
+    {
+      "id": "hollow", "name": "The Hollow", "x": 5, "y": 7, "w": 2, "h": 2, "mood": "quiet",
+      "note": "The hub, where the trunk forks: a tall dark chamber with a hole in its floor (the scar below) and a white silk plug in its ceiling (the chimney above). Moonlight comes in sideways through one big knothole and lies in a pool on the floor: the glade (glide). Tatter is already here, having walked down the bark, sitting under the plug and looking up. Moon patch, the moth-stone behind a pale bark wall, no creatures (the area's deliberate silence). Five ways: down, west limb, east bridge, the gallery crack, and up (choked)."
+    },
+    {
+      "id": "bough", "name": "The Hawker Limb", "x": 1, "y": 7, "w": 4, "h": 1, "mood": "intense",
+      "note": "The great west limb, out over a ten-screen drop in open air: the flow high. Out along its top: glide gaps between bark humps, hawkers hunting the moths that circle the lanterns the firefly hung under it, bark ribbons to cut. At the tip the second vista. Back along its underside: a fling chain of swinging lanterns over the void, with a catch bough below. Below that, optional and hard, the lantern ladder down to a moonlit knothole on the limb's underside, seen only when you fall."
+    },
+    {
+      "id": "bridge", "name": "The Bridge Limb", "x": 7, "y": 8, "w": 2, "h": 1, "mood": "quiet",
+      "note": "A lower east limb that rests on the crown of a fallen neighbour and leads east to the valley: the area's exit. Its near half is explorable from the first hub visit (a wick, a view of the valley lamps). Its far half is wrapped in a curtain of the Weaver's silk, which goes slack when the Weaver dies."
+    },
+    {
+      "id": "scar", "name": "The Lightning Scar", "x": 5, "y": 9, "w": 1, "h": 3, "mood": "tense",
+      "note": "The first climb: the lightning-split heart of the lower trunk, pale bare wood inside black bark, three screens up. Claw kicks between the split's faces, wick pairs to fling across the gap between them, a dangler over each rest ledge, shelf fungus to pogo or cut down, a rotten panel that opens onto the scar window (a find). Dead moths drift down past her the whole way. Coming down it later from above, its downward-facing ledges hold what climbing never showed."
+    },
+    {
+      "id": "scarfoot", "name": "The Scar Foot", "x": 5, "y": 12, "w": 1, "h": 1, "mood": "quiet",
+      "note": "The first glade, inside the split at the trunk's foot: a thread of moonlight falls the whole height of the scar onto a floor crusted with wings. She basks: claws. The crust is cracked and sags, and under it something big breathes slowly (heard, never seen): the den, opened only by a fall from the very top."
+    },
+    {
+      "id": "litter", "name": "The Wingfall", "x": 6, "y": 12, "w": 4, "h": 1, "mood": "tense",
+      "note": "The floor under the tree: a drift of dead moth wings, and more falling like snow from the lamps above. Juvenile beetles feeding on them (fodder, first cuts), adult beetles in the light of the glow-cap wicks the firefly planted between the buttress roots, the first fling over a root wall, fern fronds and puffballs to cut, picked glow-cap stumps (firefly sign 1), a wrong-way stump wick east of the landing. A gap in the canopy over every screen keeps the crown lamp and the moon in sight straight up."
+    },
+    {
+      "id": "taproot", "name": "The Taproot Den", "x": 4, "y": 13, "w": 3, "h": 1, "mood": "secret",
+      "note": "Under everything, where years of falling moths have fed the old burrback until it is huge and blind. Reached only by the plunge: a fall from the crown down the opened chimney, through the hub's floor hole and the scar, without opening her wings, smashes the scar foot's crust. The moon column follows her down and lights the den for the first time; the beetle wakes in it. Optional mini-boss (slam, roll, taproot rams), a moon-drop, then claw back up the scar to the hub."
+    }
+  ],
+  "links": [
+    { "from": "hatch", "to": "litter", "kind": "oneway", "note": "The Lampfall: the opening fall down the tree's east side, steerable, ~20 s, through three glimpses of the tiers above" },
+    { "from": "litter", "to": "scarfoot", "kind": "open", "note": "West along the floor into the split at the trunk's foot" },
+    { "from": "scarfoot", "to": "scar", "kind": "gate", "requires": "claws", "note": "The split's faces: kicks slide before the glade, hold after" },
+    { "from": "scar", "to": "hollow", "kind": "open", "note": "Up through the hole in the hub's floor; the hole stays open, a drop back down" },
+    { "from": "hollow", "to": "bough", "kind": "open", "note": "The west door onto the great limb" },
+    { "from": "bough", "to": "face", "kind": "gate", "requires": "glide", "note": "The limb's top route home is glide gaps; its root meets the outside face" },
+    { "from": "face", "to": "crown", "kind": "open", "note": "The crown's rim; moon patch on the last ledge before it" },
+    { "from": "hollow", "to": "galleries", "kind": "open", "note": "A crack in the hub's ceiling east of the plug, kicked up into the heartwood (optional)" },
+    { "from": "galleries", "to": "loft", "kind": "secret", "note": "A hidden fling chain in the dark; its last flame hangs out of line, a gold-dusted strand points to it" },
+    { "from": "loft", "to": "hatch", "kind": "shortcut", "note": "A bark panel in the loft's roof, cut open from either side: an explorer's alternative way up, and a loop down from the crown" },
+    { "from": "crown", "to": "hatch", "kind": "gate", "requires": "weaverDown", "note": "The web wall west of the cocoons goes slack with the Weaver" },
+    { "from": "crown", "to": "chimney", "kind": "shortcut", "requires": "weaverDown", "note": "The Dive down; afterwards a kick-climb back up: hub to crown in under a minute" },
+    { "from": "chimney", "to": "hollow", "kind": "open", "note": "Open wings in the moon column and glide out onto the hub's ledge" },
+    { "from": "chimney", "to": "taproot", "kind": "secret", "requires": "weaverDown", "note": "The plunge: never open your wings, fall through the hub's hole and the scar, and the scar foot's cracked crust gives way" },
+    { "from": "taproot", "to": "scarfoot", "kind": "oneway", "note": "Out through the broken crust in the moon column, then claw up the scar to the hub" },
+    { "from": "galleries", "to": "chimney", "kind": "shortcut", "requires": "weaverDown", "note": "Before the fight, cracks you look through onto the silk plug; after, a gallery window opens into the chimney" },
+    { "from": "hollow", "to": "bridge", "kind": "open", "note": "East onto the lower limb; its far half, the way to the valley, is silk-curtained until the Weaver is down" }
+  ],
+  "landmarks": [
+    { "name": "The Moon", "x": 8.0, "y": 0.4, "seenFrom": ["hatch", "litter", "hollow", "bough", "face", "crown", "chimney", "bridge"] },
+    { "name": "The Crown Lamp", "x": 5.0, "y": 1.4, "seenFrom": ["hatch", "litter", "bough", "face", "bridge", "scarfoot"] },
+    { "name": "The Weaver's Funnel Web", "x": 4.8, "y": 2.4, "seenFrom": ["hatch", "face", "galleries"] },
+    { "name": "The Silk Plug", "x": 5.5, "y": 5.0, "seenFrom": ["hollow", "galleries", "face"] },
+    { "name": "The Hub's Knothole", "x": 6.6, "y": 7.3, "seenFrom": ["bridge", "hollow", "litter"] },
+    { "name": "The Lightning Scar", "x": 5.5, "y": 10.5, "seenFrom": ["litter", "scarfoot", "bough"] },
+    { "name": "The Valley Lamps", "x": 11.4, "y": 9.5, "seenFrom": ["hatch", "bough", "bridge", "face"] },
+    { "name": "The Mountain under the Moon", "x": 11.0, "y": 1.2, "seenFrom": ["hatch", "bough", "crown"] }
+  ],
+  "abilities": [
+    { "id": "claws", "name": "Claws (wall kick)", "region": "scarfoot", "minute": 5 },
+    { "id": "glide", "name": "Glide", "region": "hollow", "minute": 10.5 },
+    { "id": "gust", "name": "Gust", "region": "hatch", "minute": 21.5 }
+  ],
+  "secrets": [
+    { "name": "The Taproot Den (old burrback, moon-drop)", "x": 5.5, "y": 13.5, "tell": "At the claws glade the wing-crust floor is cracked and sags, and something under it breathes slowly; a fall of a single screen never breaks it, so the player files it away until the tree's full height is open above it" },
+    { "name": "The Firefly's Loft (moon-drop, firefly sign)", "x": 7.5, "y": 3.5, "tell": "In the opening fall a warm light moves behind a split in the bark at that height; in the galleries one silk strand is dusted gold and leads up to a single flame hung where no route goes" },
+    { "name": "The limb's underside knothole (moonlit hollow: long breath)", "x": 2.4, "y": 7.9, "tell": "Visible only while falling off the limb: a silver glow in a knothole on its underside; the catch bough under it holds the first swinging lantern of a hard chain back up" },
+    { "name": "The moth-stone", "x": 5.2, "y": 8.6, "tell": "One bark wall in the hub is paler than the rest and rings hollow when hit; no glow, no whisper" },
+    { "name": "The scar window", "x": 5.9, "y": 10.2, "tell": "Halfway up the scar a sliver of moonlight and the sound of wind come through a rotten panel; cut it and a ledge outside looks straight down the trunk to the wing drift, with a wick on it" },
+    { "name": "The chimney's inner alcoves", "x": 5.5, "y": 4.6, "tell": "None before the fight: they face the core and are walled by silk. In the Dive they pass at eye level in the moonlight, wicks behind thorn rings, the first things Gust is for" },
+    { "name": "The wrong-way stump", "x": 9.8, "y": 12.5, "tell": "East of the landing, away from the tree, a hollow stump glows: the first ten seconds of going the wrong way pay a wick and its moths" }
+  ],
+  "boss": {
+    "region": "crown",
+    "name": "The Crown Weaver",
+    "idea": "A giant orb-weaver that has strung a funnel web in tiers up the crown under the firefly's great lamp, feeding on the moths it pulls in: a vertical fight that climbs, so height is progress inside the boss too. P1, the ring (fling): five anchor wicks hold the web's lowest tier round the arena's walls; she flings flame to flame while the Weaver runs the strands to wherever she lands (it hunts by vibration: the strand she touches shivers, then it comes), and each snuff drops a section and heals 1. When the last falls the floor web drops away and the camera rises. P2, the climb (claws, reading drops): two great limbs form a two-screen chimney; she kicks up between them while the Weaver drops on silk from above along a drawn arc and swings across (the danglers taught this all climb long); cut its thread in the swing and it falls stunned onto a ledge for 2-3 cuts. A fall costs height, not health: she drops back to the chimney's foot and climbs again. P3, the lamp (pogo, glide): at the top the Weaver guards the great lamp from the hub of its last web; it lunges, lies winded with its abdomen up, and only a pogo lands; between lunges she glides the open bowl. Three pogos and it flees up into the dark; the great lamp goes out flame by flame under the blade. The moon floods the crown, the stragglers and every moth she freed in the tree lift past it together, and the web wall to her cocoon goes slack. Retry from the patch under the rim in under 15 s; on a retry P1 starts with three anchors."
+  },
+  "run": [
+    { "x": 6.6, "y": 2.6, "minute": 0, "beat": "The cocoon breaks. The swarm streams past the moon; its tail swerves into the crown lamp and starts to circle. Tatter watches" },
+    { "x": 8.8, "y": 2.6, "minute": 0.4, "beat": "She runs east along the twig after the rest of them and leaps off its end. Wet wings fail" },
+    { "x": 9.5, "y": 5.0, "minute": 0.6, "beat": "The Lampfall, steerable: past the galleries' bark a warm light moves behind a split" },
+    { "x": 9.0, "y": 8.5, "minute": 0.8, "beat": "Clips the bridge limb's tip and tumbles; a glimpse through the knothole of moonlight inside the trunk" },
+    { "x": 9.3, "y": 12.6, "minute": 1.0, "beat": "Lands in the Wingfall. Dead moths drift down like snow. Far up, the crown lamp and the moon over it" },
+    { "x": 9.8, "y": 12.5, "minute": 1.5, "beat": "The wrong way first: the stump wick. The first fling, the first moths spiralling up the trunk" },
+    { "x": 8.5, "y": 12.6, "minute": 2.5, "beat": "Juvenile beetles feeding on wings: the first cuts. Fling over a buttress root" },
+    { "x": 7.2, "y": 12.6, "minute": 3.8, "beat": "Beetles in a wick pair's light: snuff one from the air and they sleep. Picked glow-cap stumps" },
+    { "x": 5.5, "y": 12.6, "minute": 5.0, "beat": "The Scar Foot: moonlight down the split. CLAWS. The floor breathes" },
+    { "x": 5.5, "y": 11.0, "minute": 6.5, "beat": "The scar climb: kicks between pale faces, wick flings across, a dangler over the rest ledge" },
+    { "x": 5.6, "y": 9.4, "minute": 8.5, "beat": "Shelf fungus to pogo, the rotten panel and its window (find), up through the hole in the floor" },
+    { "x": 5.8, "y": 8.4, "minute": 9.5, "beat": "The Hollow: silence. Tatter is already here, looking up at the silk plug. Patch, the moth-stone" },
+    { "x": 6.4, "y": 8.5, "minute": 10.5, "beat": "The pool of moonlight from the knothole: GLIDE" },
+    { "x": 4.6, "y": 7.4, "minute": 11.0, "beat": "West onto the Hawker Limb: glide gaps along its top, hawkers over the lanterns hung below" },
+    { "x": 1.4, "y": 7.4, "minute": 12.8, "beat": "The tip: the second vista. The valley's lamps with the swarm in knots, the mountain under the moon" },
+    { "x": 3.0, "y": 7.8, "minute": 14.0, "beat": "Home along the underside: a swinging-lantern fling chain over the void" },
+    { "x": 4.5, "y": 6.2, "minute": 15.0, "beat": "The Stringybark Face: claws up the outside, a bombardier spitting down, ribbons to cut, bundles to free" },
+    { "x": 4.5, "y": 4.4, "minute": 17.0, "beat": "A hawker crosses the face; a miss costs one ledge. The last fling to the crown's rim" },
+    { "x": 4.6, "y": 3.2, "minute": 18.0, "beat": "Moon patch under the rim. The crown lamp's glow fills the sky" },
+    { "x": 5.0, "y": 2.6, "minute": 18.5, "beat": "The Weaver, P1: fling the anchor ring while it runs the strands" },
+    { "x": 5.2, "y": 1.4, "minute": 20.5, "beat": "P2 up the limb chimney under its drops, P3 the pogo at the top; the great lamp goes out" },
+    { "x": 6.6, "y": 2.5, "minute": 21.5, "beat": "The moon floods the crown; her moths lift past it. At her own empty cocoon: GUST" },
+    { "x": 5.5, "y": 2.9, "minute": 22.0, "beat": "Back into the crown and over the slack floor web: the Dive" },
+    { "x": 5.5, "y": 4.8, "minute": 22.3, "beat": "Down the moon chimney: gust wicks in alcoves seen only from inside, cut bundles on the way past" },
+    { "x": 6.0, "y": 7.6, "minute": 22.8, "beat": "Wings open, out onto the hub ledge (or never open them, and plunge to the Taproot Den). The firefly darts down past her and relights a wick" },
+    { "x": 6.6, "y": 7.4, "minute": 23.3, "beat": "Gust the relit wick out of reach. Tatter starts up the opened chimney in the moon column" },
+    { "x": 8.7, "y": 8.5, "minute": 24.0, "beat": "The bridge limb's curtain hangs slack: east toward the valley" }
+  ],
+  "minuteByMinute": [
+    "0–1: The hatch on the crown twig, the swarm past the moon, the stragglers caught by the crown lamp; the leap and the Lampfall down the tree's east side, steerable, three glimpses of what is above",
+    "1–3: The Wingfall. Snowing wings, the goal straight up. The wrong-way stump wick (first fling), juvenile beetles to cut, a fling over a buttress root",
+    "3–5: Beetles under a wick pair (snuff from the air, they sleep), puffballs and fronds to cut, firefly sign 1; into the split: moonlight, claws, the breathing floor",
+    "5–9: The Lightning Scar, three screens up: kick between faces, fling across, wait out danglers, pogo the shelf fungus; the scar window off to the side; dead moths falling past her all the way",
+    "9–11: The Hollow. The first silence: Tatter, the patch, the plug overhead, the moth-stone for whoever hits the pale wall; glide in the knothole's moonlight. Five ways, three open",
+    "11–14: The Hawker Limb, the flow high: out along the top in glides under hawker dives, the vista at the tip, home along the underside on swinging lanterns over the void (a fall shows the hidden knothole)",
+    "14–18: The Stringybark Face, four screens of open-air climb: bombardier arcs, a hawker's pass, ribbons, silk bundles, wicks; the wood shrinking below, the crown lamp growing above",
+    "(optional, 9–18) The Silk Galleries: the densest tier, danglers and a small orb web, bundles everywhere; the gold strand and the hidden chain to the Firefly's Loft and its moon-drop; out onto the hatching twig",
+    "18–21: The patch under the rim, then the Crown Weaver: the ring, the climb, the lamp. The moon floods the crown and every freed moth leaves past it",
+    "21–22: Gust at her empty cocoon. Back into the crown and over the edge of the slack web",
+    "22–23: The Dive, four screens down the opened core in the moon column, gusting out the inner alcoves; glide out to the hub, or plunge on through the floor into the Taproot Den",
+    "23–24: The firefly's relight in the Hollow, gusted out; Tatter climbs toward the moon; the bridge limb's curtain is slack and the valley is east",
+    "(optional, after) The Taproot Den: the old burrback wakes in the first moonlight it has ever seen; a moon-drop; claw back up the scar. The limb's underside chain to long breath. The chimney as a one-minute stair to the crown"
+  ]
+}
