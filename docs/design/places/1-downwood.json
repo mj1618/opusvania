@@ -1,0 +1,1060 @@
+{
+  "id": "1-downwood",
+  "title": "The Downwood (design 1: the descent)",
+  "start": "hatch",
+  "abilities": [
+    "claws",
+    "glide"
+  ],
+  "rooms": [
+    {
+      "id": "hatch",
+      "name": "The Hatching Bough",
+      "x": 12,
+      "y": 1,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "landmark",
+        "npc"
+      ],
+      "note": "START. The cocoon splits, Tatter tries a hop and fails, the swarm crosses the moon. In reach: the first wick at the bough tip with 5 stragglers (the first snuff), leaves to cut, the drop under the bough to the Cocoon Row. The vista west: the Split Oak's crown, the wood falling away in steps, the valley's lamps far below. Two locks in the first 10 seconds: the Moon Perch's caged lantern overhead (double jump) and the Lone Limb past a snapped gap (dash). Return (after glide): she lands here from the High Crown, home."
+    },
+    {
+      "id": "moonperch",
+      "name": "The Moon Perch",
+      "x": 13,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "health"
+      ],
+      "note": "Dead end over the hatch, seen at 0:05: a moon-drop (one more light for good) glowing in a caged lantern. Double jump (the valley, ~1:10)."
+    },
+    {
+      "id": "lone-limb",
+      "name": "The Lone Limb",
+      "x": 15,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "energy"
+      ],
+      "note": "Dead end past the snapped gap east of the hatch: a moonlit hollow (wide throw). Dash (the marsh). Seen from the start."
+    },
+    {
+      "id": "far-crown",
+      "name": "The High Crown",
+      "x": 14,
+      "y": 0,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "lore",
+        "currency"
+      ],
+      "note": "The glide's first landing from the Lookout. In reach: a firefly sign (a ring of glow-caps that flashes its rhythm), a wick with a hawker over it, leaves; the drop onto the hatch closes the loop home."
+    },
+    {
+      "id": "lookout",
+      "name": "The Owl's Lookout",
+      "x": 16,
+      "y": 0,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "ability:glide",
+        "bench",
+        "landmark"
+      ],
+      "note": "Top of the Rain Chimney, the wood's highest point: a moonlit glade (moon patch) where her wings harden: GLIDE. The second vista: the Gorge below, the valley, the mountain under the moon. The chimney lip breaks behind her: the only ways off are glides, west to the High Crown or out over the Gorge."
+    },
+    {
+      "id": "scar",
+      "name": "The Lightning Scar",
+      "x": 8,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key",
+        "lore"
+      ],
+      "note": "Dead end up the hub's charred west tine (claws): a moonseed and a firefly sign (a pattern scratched in light). Seen from the hub's patch from 0:02."
+    },
+    {
+      "id": "windbreak",
+      "name": "The Windbreak",
+      "x": 5,
+      "y": 1,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Claws up the hub's west tine. Wind-snapped crown boughs where the firefly hung new lanterns while she was below (the crown wakes): a lantern with a hawker, a wick chain to fling west, bark to cut. Off it: the Hawkers' Nest, the Snapped Crown (glide), the drop to the West Boughs."
+    },
+    {
+      "id": "nest",
+      "name": "The Hawkers' Nest",
+      "x": 6,
+      "y": 0,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "challenge",
+        "health"
+      ],
+      "note": "Dead end above the Windbreak: two hawkers on a rhythm around one lantern over a thorn bowl. Snuff it from the dark side or fight the pair; behind it a moon-drop (one more light for good)."
+    },
+    {
+      "id": "map",
+      "name": "The Moth-Stone",
+      "x": 12,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "map",
+        "lore"
+      ],
+      "note": "Dead end on the fork's east tine, one room from the start: the moth-stone draws the wood on the map (unvisited rooms faint) and its lamp count, so at 0:03 she knows how much is down there; the carving shows the old migration."
+    },
+    {
+      "id": "vault",
+      "name": "The Heartwood",
+      "x": 9,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "energy",
+        "health"
+      ],
+      "note": "Dead end in the oak's heart under the fork: a knot with 5 sockets, seen from the hub from 0:01 (a third kind of lock in the first rooms). All 5 moonseeds open it: a moonlit hollow (keen blade) and a moon-drop."
+    },
+    {
+      "id": "glass-crack",
+      "name": "The Glass Crack",
+      "x": 11,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Claws up from the Brook into a lightning crack in the oak's east flank: a wick inside the glass, and a root flap at the top kicked open into the hub (its second shortcut)."
+    },
+    {
+      "id": "hub",
+      "name": "The Split Oak",
+      "x": 9,
+      "y": 0,
+      "w": 3,
+      "h": 4,
+      "items": [
+        "bench",
+        "landmark"
+      ],
+      "note": "THE HUB: the fork of a lightning-split oak, 3 x 4 screens, crown to boughs. A moon patch in the fork. Through the charred grate in its floor, the great lamp's glow far below (the goal, sealed). Ten ways: the hatch (E), the Moth-Stone (E tine), the West Boughs (W), the Lampwalk (E, low), the grate down the Hollow and the Glass Crack (two shortcuts that open from below), the west tine to the Windbreak (claws), the Lightning Scar (claws), the Bark Stair up the west flank (claws), the Heartwood (5 moonseeds). In reach: a wick in the fork, a juvenile beetle on the root step, seed-cases to pogo. Changed on each return: after claws a lantern and a hawker (the firefly came through); after glide the moths she freed spiral up out of the fork; after the Weaver the grate glows cold."
+    },
+    {
+      "id": "west-boughs",
+      "name": "The West Boughs",
+      "x": 6,
+      "y": 2,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "First fights: a juvenile beetle (2 cuts), a wick over a gap to fling off, leaves; the Bark Stair's ledge in view below (claws); the drop into the West Fall. Return: the wick relit and a dangler over it."
+    },
+    {
+      "id": "owl-hole",
+      "name": "The Owl Hole",
+      "x": 4,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Claws up the West Fall's upper wall (or the drop from the Snapped Crown): a caged lantern of 20 moths in an owl's old hole, guarded by a dangler."
+    },
+    {
+      "id": "westfall",
+      "name": "The West Fall",
+      "x": 5,
+      "y": 2,
+      "w": 1,
+      "h": 7,
+      "items": [],
+      "note": "JUNCTION SHAFT 1, 7 screens: the drop. Ledges off it to the Silk Loft, the Fern Hollow, the Fernfloor and the Root Tangle; up its wall the Owl Hole (claws); over the thorns at its foot the Root Well (glide). In reach on the way down: wicks on the walls to fling from, falling bark, a dangler. The top lip overhangs, so it is a fall, never a climb. Return (after claws): every ledge's wick relit with a dangler on a thread under it, so the same fall is a gauntlet of drops between threads."
+    },
+    {
+      "id": "loft",
+      "name": "The Silk Loft",
+      "x": 6,
+      "y": 3,
+      "w": 2,
+      "h": 2,
+      "items": [
+        "key"
+      ],
+      "note": "Dead end off the Fall's first ledge: a dangler's nest over a lit wick, and a moonseed under it. Snuff and the dangler climbs away, or cut it on its swing."
+    },
+    {
+      "id": "bark-stair",
+      "name": "The Bark Stair",
+      "x": 8,
+      "y": 3,
+      "w": 1,
+      "h": 2,
+      "items": [
+        "currency"
+      ],
+      "note": "A pocket off the Fernfloor with a wick and seed-cases under the oak's west flank; with claws the bark face climbs into the hub's root door (the west loop home)."
+    },
+    {
+      "id": "cocoon-row",
+      "name": "The Cocoon Row",
+      "x": 13,
+      "y": 2,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "lore"
+      ],
+      "note": "Under the hatch: the row of split cocoons (all empty), a firefly sign (a half-strung chandelier of glow-caps), a wick; drops onto the Lampwalk."
+    },
+    {
+      "id": "east-boughs",
+      "name": "The Lampwalk",
+      "x": 12,
+      "y": 3,
+      "w": 5,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Three wicks in a row over a long fall (a fling chain), a burrback in the second pool of light, a dangler over the third; at its end the Rain Chimney's lip up a rain-slick wall (claws). Return: the firefly re-hangs the chain one wick further apart."
+    },
+    {
+      "id": "chimney",
+      "name": "The Rain Chimney",
+      "x": 17,
+      "y": 1,
+      "w": 1,
+      "h": 7,
+      "items": [],
+      "note": "JUNCTION SHAFT 3, 7 screens: a hollow trunk the rain runs down. From the Lampwalk (claws) it drops to the Brook, the Drowned Roots and a crack onto the Gorge Floor; climbed (claws) it tops out at the Lookout, and its lip breaks behind her. Wicks inside to fling up between kicks, the Rain Ledge behind bark."
+    },
+    {
+      "id": "rain-ledge",
+      "name": "The Rain Ledge",
+      "x": 16,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "energy"
+      ],
+      "note": "Dead end half-way up the chimney behind rotten bark: a moonlit hollow (quick wings: beat free in 2)."
+    },
+    {
+      "id": "fern-rest",
+      "name": "The Fern Hollow",
+      "x": 4,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "bench"
+      ],
+      "note": "Dead end: a dark, quiet hollow with a moon patch. Tatter is already resting here."
+    },
+    {
+      "id": "floor-west",
+      "name": "The Fernfloor",
+      "x": 6,
+      "y": 5,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "The wood floor, west: a burrback under a lantern, ferns to cut, a rotten-bark floor (to the Ant Road), the Hollow's side door (the Seed Door below), the Bark Stair's foot. Return: carriers march here along a trail of fallen moths."
+    },
+    {
+      "id": "hollow",
+      "name": "The Charred Hollow",
+      "x": 10,
+      "y": 4,
+      "w": 1,
+      "h": 5,
+      "items": [
+        "landmark"
+      ],
+      "note": "JUNCTION SHAFT 2, 5 screens: the inside of the Split Oak, glassed by lightning, lit from below by the great lamp. Down: the Seed Door. West: the Fernfloor and the Ant Road. Up: claws, and she bursts through the hub's grate (the shortcut). East: across the Black Pool (glide)."
+    },
+    {
+      "id": "floor-east",
+      "name": "The Brook",
+      "x": 11,
+      "y": 5,
+      "w": 6,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "The wood floor, east: two wicks on swinging lures over a brook, a hawker, carriers on the bank; the chimney at its end, the Warm Spring off it, the Black Pool under it."
+    },
+    {
+      "id": "spring",
+      "name": "The Warm Spring",
+      "x": 16,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "bench"
+      ],
+      "note": "A steaming spring between the Brook and the Black Pool: a moon patch, dark and safe."
+    },
+    {
+      "id": "bark-floor",
+      "name": "The Rotten Floor",
+      "x": 9,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Under the Fernfloor: three down-cuts break the rotten bark floor (each bounces her); a wick; the hole drops to the Ant Road."
+    },
+    {
+      "id": "black-pool",
+      "name": "The Black Pool",
+      "x": 11,
+      "y": 6,
+      "w": 5,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Black water under the oak's east roots, reflecting a lantern on a root isle with stragglers circling it; the Hollow's east door across the water (glide); the Drowned Roots below, the spring at its end."
+    },
+    {
+      "id": "roots-west",
+      "name": "The Root Tangle",
+      "x": 6,
+      "y": 6,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Roots to cut, a wick in a root cage, a juvenile beetle; the drop into the den (the old burrback's breathing heard first); the Ant Road east."
+    },
+    {
+      "id": "den",
+      "name": "The Old Den",
+      "x": 6,
+      "y": 7,
+      "w": 2,
+      "h": 2,
+      "items": [
+        "ability:claws",
+        "challenge"
+      ],
+      "note": "A pit: the old burrback (mini-boss: slam, roll, taproot). Its death breaks the plug, and the moonlit glade behind it gives CLAWS. She can only leave by climbing: the den's east wall into the Ant Road, and the Hollow is one room on. A cracked floor (secret) to the Taproot."
+    },
+    {
+      "id": "taproot",
+      "name": "The Taproot",
+      "x": 6,
+      "y": 9,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "energy"
+      ],
+      "note": "Secret dead end under the den, found by a down-cut where the old burrback's taproot phase cracked the floor: a moonlit hollow (night eyes)."
+    },
+    {
+      "id": "ant-road",
+      "name": "The Ant Road",
+      "x": 8,
+      "y": 7,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Carriers on rails between the Root Tangle and the Hollow, a trail of fallen moths, a wick over the crack."
+    },
+    {
+      "id": "carrier-crack",
+      "name": "The Ant Crack",
+      "x": 9,
+      "y": 8,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "The ants' larder, a lit crack full of stunned moths: snuff the wick, cut the carriers, free 20. The crack is a crawl down to the Seed Door."
+    },
+    {
+      "id": "root-well",
+      "name": "The Root Well",
+      "x": 4,
+      "y": 8,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key"
+      ],
+      "note": "Dead end across the thorns at the Fall's foot (glide): a moonseed in a dripping well, a dangler over the landing."
+    },
+    {
+      "id": "roots-east",
+      "name": "The Drowned Roots",
+      "x": 12,
+      "y": 7,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "Roots in black water: a burrback under a lantern, a swinging wick; the Sunk Stair down, the Beetle Burrow below, the chimney's foot east."
+    },
+    {
+      "id": "sunk-stair",
+      "name": "The Sunk Stair",
+      "x": 16,
+      "y": 7,
+      "w": 1,
+      "h": 3,
+      "items": [],
+      "note": "A short wet shaft from the Drowned Roots to the Drowned Hall: dark, a rest between two lit rooms."
+    },
+    {
+      "id": "drowned-hall",
+      "name": "The Drowned Hall",
+      "x": 12,
+      "y": 9,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "A long low hall under the roots: danglers over the water, a lantern; its west wall climbs (claws) into the Seed Door."
+    },
+    {
+      "id": "beetle-burrow",
+      "name": "The Burrow",
+      "x": 13,
+      "y": 8,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "challenge"
+      ],
+      "note": "Dead end, a challenge: a burrback's burrow with no lamp, an adult and three juveniles that wake one by one and only see her when she cuts the caged lantern at the back (30 moths: with the path's lamps, the first health milestone at 60)."
+    },
+    {
+      "id": "gorge",
+      "name": "The Gorge",
+      "x": 18,
+      "y": 0,
+      "w": 4,
+      "h": 4,
+      "items": [
+        "landmark",
+        "currency"
+      ],
+      "note": "SET PIECE, 4 x 4: the open gorge east of the wood, entered only on the wing from the Lookout. Lanterns hung across it to fling between, hawkers on the lanes, a waterfall; the Swallows' Ledge on the far cliff; land on the Gorge Floor."
+    },
+    {
+      "id": "gorge-floor",
+      "name": "The Gorge Floor",
+      "x": 18,
+      "y": 4,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ],
+      "note": "The gorge's foot, reached early from the chimney's bottom: look up at the Lookout's ledge (the glide seen before it is had). The waterfall, carriers, a lantern; the Thorn Run east (glide)."
+    },
+    {
+      "id": "far-ledge",
+      "name": "The Swallows' Ledge",
+      "x": 22,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key"
+      ],
+      "note": "Dead end on the gorge's far cliff, a glide target in the set piece: a moonseed in an old swallow nest."
+    },
+    {
+      "id": "crown-tip",
+      "name": "The Snapped Crown",
+      "x": 4,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key"
+      ],
+      "note": "Glide west off the Windbreak's broken end, over nothing: a moonseed on the last twig. The only way on is the drop into the Owl Hole."
+    },
+    {
+      "id": "gorge-shelf",
+      "name": "The Thorn Run",
+      "x": 22,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "challenge",
+        "health"
+      ],
+      "note": "Dead end: a glide-and-pogo run over thorns along the gorge foot (seed-cases, a swinging wick). At its end a moon-drop (one more light for good)."
+    },
+    {
+      "id": "antechamber",
+      "name": "The Seed Door",
+      "x": 9,
+      "y": 9,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "bench",
+        "lore"
+      ],
+      "note": "The bottom of the Hollow, open from 0:06: a moon patch and the Seed Door, a root knot with 3 empty sockets. Through the knot she sees the Weaver mending its web around the great lamp: the goal and its boss, sealed. Also: the crawl up to the Ant Crack, and east the Drowned Hall (claws)."
+    },
+    {
+      "id": "weaver",
+      "name": "The Weaver's Hollow",
+      "x": 9,
+      "y": 10,
+      "w": 3,
+      "h": 2,
+      "items": [
+        "boss"
+      ],
+      "note": "Under the oak's roots, the brightest place in the wood: the Weaver's web strung between five wicks around the great lamp (lab-weaver). P1 rings, P2 drops, P3 floor, P4 the heart. Then the firefly's first relight."
+    },
+    {
+      "id": "valley-mouth",
+      "name": "The Valley Mouth",
+      "x": 12,
+      "y": 10,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "goal"
+      ],
+      "note": "Dead end past the fallen web: the roots open onto the valley of lamps. The area's exit."
+    }
+  ],
+  "links": [
+    {
+      "a": "hatch",
+      "b": "hub",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "the bough runs into the fork"
+    },
+    {
+      "a": "hatch",
+      "b": "moonperch",
+      "requires": "doubleJump",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the caged lantern overhead, seen at 0:05"
+    },
+    {
+      "a": "hatch",
+      "b": "lone-limb",
+      "requires": "dash",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the snapped gap"
+    },
+    {
+      "a": "hatch",
+      "b": "cocoon-row",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "drop under the bough"
+    },
+    {
+      "a": "far-crown",
+      "b": "hatch",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "drop home"
+    },
+    {
+      "a": "lookout",
+      "b": "far-crown",
+      "requires": "glide",
+      "oneway": true,
+      "shortcut": false,
+      "note": "glide west over the hatch"
+    },
+    {
+      "a": "lookout",
+      "b": "gorge",
+      "requires": "glide",
+      "oneway": true,
+      "shortcut": false,
+      "note": "glide out over the gorge"
+    },
+    {
+      "a": "chimney",
+      "b": "lookout",
+      "requires": "claws",
+      "oneway": true,
+      "shortcut": false,
+      "note": "the lip breaks behind her"
+    },
+    {
+      "a": "hub",
+      "b": "scar",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the charred west tine"
+    },
+    {
+      "a": "hub",
+      "b": "windbreak",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "kick up the fork"
+    },
+    {
+      "a": "windbreak",
+      "b": "nest",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "windbreak",
+      "b": "crown-tip",
+      "requires": "glide",
+      "oneway": true,
+      "shortcut": false,
+      "note": "the snapped crown gap"
+    },
+    {
+      "a": "crown-tip",
+      "b": "owl-hole",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "drop"
+    },
+    {
+      "a": "windbreak",
+      "b": "west-boughs",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "drop"
+    },
+    {
+      "a": "hub",
+      "b": "west-boughs",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "hub",
+      "b": "hollow",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": true,
+      "note": "the grate: climbed and kicked open from the Hollow"
+    },
+    {
+      "a": "hub",
+      "b": "east-boughs",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "hub",
+      "b": "vault",
+      "requires": "keys:5",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the Heartwood knot: all 5 moonseeds"
+    },
+    {
+      "a": "hub",
+      "b": "glass-crack",
+      "requires": null,
+      "oneway": false,
+      "shortcut": true,
+      "note": "the root flap, kicked open from the crack"
+    },
+    {
+      "a": "floor-east",
+      "b": "glass-crack",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "up the glassed crack"
+    },
+    {
+      "a": "west-boughs",
+      "b": "westfall",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "the overhanging lip: a fall"
+    },
+    {
+      "a": "hub",
+      "b": "bark-stair",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the bark face up the west flank"
+    },
+    {
+      "a": "hub",
+      "b": "map",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "the east tine"
+    },
+    {
+      "a": "westfall",
+      "b": "owl-hole",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "up the upper wall"
+    },
+    {
+      "a": "westfall",
+      "b": "loft",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "westfall",
+      "b": "fern-rest",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "westfall",
+      "b": "floor-west",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "westfall",
+      "b": "roots-west",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "westfall",
+      "b": "root-well",
+      "requires": "glide",
+      "oneway": false,
+      "shortcut": false,
+      "note": "over the thorns at the foot"
+    },
+    {
+      "a": "den",
+      "b": "ant-road",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the only way out of the den"
+    },
+    {
+      "a": "bark-stair",
+      "b": "floor-west",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "cocoon-row",
+      "b": "east-boughs",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "east-boughs",
+      "b": "chimney",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the rain-slick wall to the chimney lip"
+    },
+    {
+      "a": "floor-west",
+      "b": "hollow",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "the side door"
+    },
+    {
+      "a": "floor-west",
+      "b": "bark-floor",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "bark-floor",
+      "b": "ant-road",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "the cut floor"
+    },
+    {
+      "a": "hollow",
+      "b": "black-pool",
+      "requires": "glide",
+      "oneway": false,
+      "shortcut": false,
+      "note": "across the black water"
+    },
+    {
+      "a": "black-pool",
+      "b": "floor-east",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "black-pool",
+      "b": "roots-east",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "black-pool",
+      "b": "spring",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "floor-east",
+      "b": "chimney",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "floor-east",
+      "b": "spring",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "chimney",
+      "b": "sunk-stair",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "chimney",
+      "b": "gorge-floor",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "a crack onto the gorge foot"
+    },
+    {
+      "a": "chimney",
+      "b": "rain-ledge",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "behind rotten bark"
+    },
+    {
+      "a": "roots-west",
+      "b": "den",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "drop into the pit"
+    },
+    {
+      "a": "roots-west",
+      "b": "ant-road",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "den",
+      "b": "taproot",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "secret: the cracked floor"
+    },
+    {
+      "a": "ant-road",
+      "b": "hollow",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "ant-road",
+      "b": "carrier-crack",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "carrier-crack",
+      "b": "antechamber",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": "a crawl down to the Seed Door"
+    },
+    {
+      "a": "roots-east",
+      "b": "sunk-stair",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "sunk-stair",
+      "b": "drowned-hall",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "drowned-hall",
+      "b": "antechamber",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the west wall"
+    },
+    {
+      "a": "roots-east",
+      "b": "beetle-burrow",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "gorge",
+      "b": "gorge-floor",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false,
+      "note": "landing"
+    },
+    {
+      "a": "gorge",
+      "b": "far-ledge",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "gorge-floor",
+      "b": "gorge-shelf",
+      "requires": "glide",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the thorn run"
+    },
+    {
+      "a": "hollow",
+      "b": "antechamber",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false,
+      "note": ""
+    },
+    {
+      "a": "antechamber",
+      "b": "weaver",
+      "requires": "keys:3",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the Seed Door: 3 of the 5 moonseeds"
+    },
+    {
+      "a": "weaver",
+      "b": "valley-mouth",
+      "requires": "boss",
+      "oneway": false,
+      "shortcut": false,
+      "note": "the web falls"
+    }
+  ]
+}

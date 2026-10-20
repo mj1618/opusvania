@@ -157,7 +157,7 @@ export function score(L) {
   const areas = L.rooms.map(area).sort((a, b) => a - b);
   const median = areas[Math.floor(areas.length / 2)];
   const pockets = L.rooms.filter((r) => r.w <= 1 && r.h <= 1).length;
-  const shafts = L.rooms.filter((r) => r.h >= 2.5 && r.h >= r.w).length;
+  const shafts = L.rooms.filter((r) => r.h >= 2.5 && r.h > r.w).length;
   const halls = L.rooms.filter((r) => r.w >= 2.5 && r.h < 2).length;
   check('pockets (1×1)', pockets / n >= 0.2, `${pockets} (${Math.round((pockets / n) * 100)}%)`, '≥ 20%');
   check('tall shafts', shafts >= 2, shafts, '≥ 2');
