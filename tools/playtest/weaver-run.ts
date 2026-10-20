@@ -5,9 +5,11 @@
  * Weaver every 10 frames.
  */
 import { Game } from '../../src/game';
-import { getRoom } from '../../src/scene/index';
-import { GAME_WORLD } from '../../src/scene/world';
+import { getRoom, worldIdOf } from '../../src/scene/index';
+import { GAME_WORLD, getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
+import type { Scene } from '../../src/sim/scene';
+import type { GameState } from '../../src/sim/state';
 import { newSave } from '../../src/sim/state';
 import { cloneTuning, defaultTuning, type Tuning } from '../../src/sim/tuning';
 import { WeaverBot } from './weaver-bot';
@@ -27,23 +29,69 @@ export interface FightResult {
   game: Game;
 }
 
+/** The state and scene moved by (-ox, -oy): what the bot would see in lab-weaver. */
+function labView(st: GameState, sc: Scene, ox: number, oy: number): [GameState, Scene] {
+  const mv = <T extends { x: number; y: number }>(o: T): T => ({ ...o, x: o.x - ox, y: o.y - oy });
+  const b = st.boss;
+  const view = {
+    ...st,
+    player: mv(st.player),
+    enemies: st.enemies.map(mv),
+    boss: b
+      ? {
+          ...b,
+          tellX0: b.tellX0 - ox,
+          tellX1: b.tellX1 - ox,
+          safeX: b.safeX >= 0 ? b.safeX - ox : b.safeX,
+          landX: b.landX - ox,
+        }
+      : b,
+  } as GameState;
+  const spec = sc.boss;
+  const scene = {
+    ...sc,
+    lures: (sc.lures ?? []).map(mv),
+    boss: spec
+      ? {
+          ...spec,
+          arena: mv(spec.arena),
+          ...(spec.floor !== undefined ? { floor: spec.floor - oy } : {}),
+          ...(spec.canopy !== undefined ? { canopy: spec.canopy - oy } : {}),
+        }
+      : spec,
+  } as Scene;
+  return [view, scene];
+}
+
 export function runFight(
-  opts: { seconds?: number; retry?: boolean; trace?: boolean; tuning?: Tuning; bot?: WeaverBot } = {},
+  opts: {
+    seconds?: number;
+    retry?: boolean;
+    trace?: boolean;
+    tuning?: Tuning;
+    bot?: WeaverBot;
+    room?: string;
+  } = {},
 ): FightResult {
   const t = opts.tuning ?? cloneTuning(defaultTuning);
-  const room = getRoom('lab-weaver');
+  // (Another room with the same arena, the Downwood's `dw-weaver`, runs in its own world.)
+  const room = getRoom(opts.room ?? 'lab-weaver');
+  const world = opts.room ? getWorld(worldIdOf(opts.room)) : GAME_WORLD;
   // A retry: the save has met it (and rests at the boss door's patch, where a fade re-forms her).
   const save = newSave(room.abilities ?? []);
   save.patch = { room: room.id, id: room.patches?.[0]?.id ?? '' };
   save.visited.push(room.id);
   if (opts.retry && room.boss) save.flags.push(room.boss.met);
-  const g = new Game(t, room, 1, () => 0, null, { world: GAME_WORLD, save });
+  const g = new Game(t, room, 1, () => 0, null, { world, save });
   g.mode = 'manual';
   let ev: readonly SimEvent[] = [];
   g.afterStep.add((e) => {
     ev = e;
   });
   const bot = opts.bot ?? new WeaverBot();
+  // (The bot knows lab-weaver's coordinates: another room with the same arena is shown to it moved back.)
+  const ox = (room.boss?.arena.x ?? 128) - 128;
+  const oy = (room.boss?.canopy ?? 1088) - 1088;
   const events: Array<SimEvent & { f: number }> = [];
   const log: string[] = [];
   const phaseAt: Record<number, number> = {};
@@ -54,7 +102,9 @@ export function runFight(
   const max = Math.round((opts.seconds ?? 300) * 60);
   let won = false;
   for (let f = 0; f < max; f++) {
-    g.queueInput([bot.decide(g.state, g.scene)]);
+    g.queueInput([
+      ox || oy ? bot.decide(...labView(g.state, g.scene, ox, oy)) : bot.decide(g.state, g.scene),
+    ]);
     g.stepOnce();
     const st = g.state;
     const at = lockF >= 0 ? f - lockF : -1;
@@ -101,7 +151,13 @@ export function runFight(
 if (process.argv[1]?.endsWith('weaver-run.ts') && !process.argv.includes('--first')) {
   const arg = (k: string) => process.argv.includes(k);
   const sec = Number(process.argv[process.argv.indexOf('--seconds') + 1]) || 300;
-  const r = runFight({ seconds: sec, retry: arg('--retry'), trace: arg('--trace') });
+  const ri = process.argv.indexOf('--room');
+  const r = runFight({
+    seconds: sec,
+    retry: arg('--retry'),
+    trace: arg('--trace'),
+    ...(ri >= 0 ? { room: process.argv[ri + 1] as string } : {}),
+  });
   console.log(r.log.join('\n'));
   console.log(
     JSON.stringify({

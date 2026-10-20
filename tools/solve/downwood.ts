@@ -30,7 +30,7 @@ import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';
 import { DEN_DOWN, WEAVER_DOWN } from '../levels/downwood';
 import { exportDownwood, type Layout } from '../levels/downwood-export';
-import { explore, feet } from './explore';
+import { explore, feet, glideClimbMacros } from './explore';
 
 const W = getWorld('downwood');
 const T = cloneTuning(defaultTuning);
@@ -218,6 +218,7 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
       maxNodes,
       keepLamps: lamps === 'kept',
       allExits: 4,
+      more: glideClimbMacros(),
     });
     if (r.truncated) res.truncated.push(`${room.id} (${key})`);
     const next = new Set<string>();

@@ -109,6 +109,8 @@ export interface ExploreOpts {
   goalExit?: string;
   /** Keep up to this many crossings of each exit (`exitsAll`), not just the first. */
   allExits?: number;
+  /** More macros for every node (the Downwood's `glideClimbMacros`). */
+  more?: Macro[];
 }
 
 /** Her feet. */
@@ -250,6 +252,30 @@ export function baseMacros(): Macro[] {
   }
   // Down through a one-way.
   out.push({ name: 'drop', max: 200, prog: air((_s, k) => (k < 2 ? D | J : 0)) });
+  return out;
+}
+
+/**
+ * Glide that way to a face, then climb it (the Downwood's Gorge: snag to snag). Opt-in (`more`): the proven
+ * Lanternroot lines and skip hunts predate it.
+ */
+export function glideClimbMacros(): Macro[] {
+  const out: Macro[] = [];
+  for (const d of [-1, 1]) {
+    const h = dirBit(d);
+    const tag = d > 0 ? 'R' : 'L';
+    out.push({
+      name: `glideclimb${tag}`,
+      max: 900,
+      prog: (s, k, prev) => {
+        const p = s.player;
+        if (k > 20 && p.grounded) return -1;
+        if (p.mode === 'wallSlide') return h | (!(prev & J) ? J : 0);
+        if (k < 24) return h | J;
+        return h | (p.vy > 0 ? J : prev & J && p.vy < 0 && p.kick > 0 ? J : 0);
+      },
+    });
+  }
   return out;
 }
 
@@ -705,6 +731,7 @@ export function explore(o: ExploreOpts): ExploreResult {
     const owns = (a: string) => (s.save.abilities as readonly string[]).includes(a);
     const list: Macro[] = [...base, ...pogos];
     if (owns('dash')) list.push(...dashes);
+    if (o.more) list.push(...o.more);
     const S = withShortcuts(scene, s.save);
     // (A tap of Lamp by a cold moonwick is a kindle, not a gust: only the kindle macro may spend her glow.)
     if (owns('gust') && scene.glow)

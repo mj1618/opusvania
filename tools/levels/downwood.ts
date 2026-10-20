@@ -101,13 +101,13 @@ const ATX: Record<string, [number, number]> = {
   'hatch|moonperch': [25600, 256],
   'hatch|cocoon-row': [28040, 300],
   'far-crown|hatch': [27200, 400],
-  'chimney|lookout': [33320, 320],
+  'chimney|lookout': [33540, 320],
   'windbreak|nest': [12600, 320],
   'crown-tip|owl-hole': [8080, 320],
   'windbreak|west-boughs': [15000, 400],
-  'hub|hollow': [19840, 320],
+  'hub|hollow': [20160, 320],
   'hub|vault': [18080, 320],
-  'hub|glass-crack': [21760, 320],
+  'hub|glass-crack': [21520, 320],
   'floor-east|glass-crack': [21520, 320],
   'bark-stair|floor-west': [15920, 320],
   'cocoon-row|east-boughs': [25560, 320],
@@ -118,7 +118,7 @@ const ATX: Record<string, [number, number]> = {
   'floor-east|spring': [31320, 320],
   'roots-west|den': [13120, 400],
   'roots-west|ant-road': [16360, 320],
-  'den|taproot': [13920, 320],
+  'den|taproot': [14620, 320],
   'ant-road|carrier-crack': [17560, 320],
   'carrier-crack|antechamber': [18580, 320],
   'roots-east|beetle-burrow': [25600, 320],
@@ -529,9 +529,9 @@ BUILD.lookout = (m) => {
   const ch = m.e('chimney');
   const P = 520;
   shell(m, { sky: true });
-  // The platform, west tip at 700 and east tip at 3100; solid crown under it except the chimney's throat.
+  // The platform, west tip at 700 and east tip at 3300; solid crown under it except the chimney's throat.
   m.s(700, P, ch.from - 700, m.H - P, ch.from - 700 > 0 ? 'east' : false, 'branch');
-  m.s(ch.to, P, 3100 - ch.to, m.H - P, 'west', 'branch');
+  m.s(ch.to, P, 3300 - ch.to, m.H - P, 'west', 'branch');
   m.o(ch.from, P, ch.to - ch.from, true);
   // The throat's faces take kicks (the chimney's climb goes on to the lip).
   m.s(ch.from - 40, P + 40, 40, m.H - P - 40, 'east', 'trunk');
@@ -539,8 +539,8 @@ BUILD.lookout = (m) => {
   // The pits under the tips: thorns (back to the platform).
   m.s(T, 960, 700 - T, m.H - 960, false, 'branch');
   m.thorns('t-west', T, 920, 700 - T);
-  m.s(3100, 960, m.W - T - 3100, m.H - 960, false, 'branch');
-  m.thorns('t-east', 3100, 920, m.W - T - 3100);
+  m.s(3300, 960, m.W - T - 3300, m.H - 960, false, 'branch');
+  m.thorns('t-east', 3300, 920, m.W - T - 3300);
   m.add('glades', { id: 'glade-glide', x: 1500, y: P - 260, w: 500, h: 260, ability: 'glide' });
   m.patch('p-lookout', 2200, P);
   m.spawn(2200, P);
@@ -637,11 +637,15 @@ BUILD.hub = (m) => {
   const TF = 4100;
   const FORK = 2040;
   shell(m, { sky: true });
-  // West tine: the top (the Scar's sill at 700), the corridor to the Windbreak (1244..1500), down to the fork.
-  m.s(T, 700, 1200 - T, 1244 - 700, 'east', 'trunk');
-  m.s(T, 1500, 1200 - T, FORK + 160 - 1500, 'east', 'trunk');
-  // The fork floor (the crotch), a drop at its west end (1200..1600) and the rungs' hole at its east (4000..4400).
-  m.s(1600, FORK, 4000 - 1600, 160, false, 'branch');
+  // West tine: one claw face (x 1200) from the fork floor to its top (the Scar's sill at 700). The Windbreak's
+  // corridor (1244..1500) runs into the tine from the west to a shaft (600..900) that opens on the tine's top.
+  m.s(T, 700, 600 - T, 1244 - 700, 'east', 'trunk');
+  m.s(900, 700, 300, FORK + 160 - 700, true, 'trunk');
+  m.s(T, 1500, 900 - T, FORK + 160 - 1500, false, 'trunk');
+  // The fork floor (the crotch) from the tine's foot, a drop (1500..1800) to the West Boughs' ledge, the rungs'
+  // one-way at its east (4000..4400).
+  m.s(1200, FORK, 1500 - 1200, 160, false, 'branch');
+  m.s(1800, FORK, 4000 - 1800, 160, false, 'branch');
   // (The rungs come up through a one-way of root over the east hole: she walks over it from the hatch.)
   m.o(4000, FORK, 400);
   // East tine: over the hatch's corridor (its top the Moth-Stone's sill at 960); the corridor's floor.
@@ -657,7 +661,7 @@ BUILD.hub = (m) => {
   m.s(T, FORK + 160, TW - T, wb.from - FORK - 160, false, 'trunk');
   m.s(T, wb.to, TW - T, 3444 - wb.to, false, 'trunk');
   m.s(T, 3700, TW - T, TF - 3700, 'east', 'trunk');
-  m.s(TW, wb.to, 1400 - TW, 40, false, 'branch');
+  m.s(TW, wb.to, 1900 - TW, 40, false, 'branch');
   m.s(TW, 3380, 1060 - TW, 64, false, 'trunk');
   m.s(TE, FORK + 160, W - T - TE, lw.from - FORK - 160, false, 'trunk');
   floor(m, TF, T, W - T, 'trunk');
@@ -700,7 +704,7 @@ BUILD.hub = (m) => {
     wakes: WAKE,
   });
   m.glints('g-trunk-', 1600, 3400, 3900, 120, 8);
-  m.pod('pod-hub', 3200, TF);
+  m.pod('pod-hub', 3700, TF);
   m.landmark('split-oak', 'landmark', 2800, 1000);
   m.mark('moonholes', { x: 2800, y: 0 });
   m.spawn(W - 400, FORK);
@@ -749,17 +753,16 @@ BUILD.westfall = (m) => {
   // west to the Root Well (a glide), rungs up the east side back to the 5280 doors.
   const W = m.W;
   shell(m, { noSill: ['west-boughs'] });
-  // Upper west wall takes kicks (the climb to the Owl Hole).
-  m.s(T, 520, 40, 1100, 'east', 'trunk');
-  m.s(T, 500, 300, 40, false, 'branch');
+  // The upper west wall's bark block takes kicks (the climb to the Owl Hole): its top is the door's floor.
+  m.s(T, 500, 300, 1120, 'east', 'trunk');
   // Ledge doors.
   m.s(W - T - 300, 1780, 300, 40, false, 'branch');
   m.s(W - T - 320, 4200, 320, 40, false, 'branch');
   m.s(T, 5280, 300, 40, false, 'branch');
   m.s(W - T - 300, 5280, 300, 40, false, 'branch');
   // Ledges to stop on: a branch under the lip with a pod and glints, a bark shelf, branches.
-  m.o(420, 1300, 320);
-  m.pod('pod-lip', 580, 1300);
+  m.o(560, 1300, 320);
+  m.pod('pod-lip', 720, 1300);
   m.glints('g-lip-', 900, 1500, 1500, 120, 6);
   m.add('bark', { id: 'bark-fall', x: 700, y: 2600, w: 280, h: 40, floor: true, kick: false });
   m.o(1100, 3300, 260);
@@ -822,8 +825,7 @@ BUILD['bark-stair'] = (m) => {
   m.s(e.to, F, m.W - T - e.to, m.H - F, false, 'trunk');
   m.ladder(e.from + 10, 140, F - 10, m.H + 40, 190, 120);
   // The bark face up to the alcove: the west wall takes kicks from the landing to the door.
-  m.s(T, 460, 260, 40, false, 'branch');
-  m.s(T, 500, 40, F - 500, 'east', 'trunk');
+  m.s(T, 460, 300, F - 460, 'east', 'trunk');
   m.wick('w-bs', 1300, 1400);
   m.add('seedCases', { id: 'sc-bs1', x: 900, y: 1500 });
   m.pod('pod-bs', 1500, F);
@@ -854,9 +856,8 @@ BUILD['east-boughs'] = (m) => {
   // The rain-slick wall.
   const ch = m.e('chimney');
   m.s(m.W - T - 300, ch.floor as number, 300, F - (ch.floor as number), 'west', 'trunk');
-  // The fling chain over a thorn bed (the burrback guards the far end).
-  m.s(4600, F - 20, 1600, 20, false, 'branch');
-  m.thorns('t-lamp', 4600, F - 60, 1600);
+  // The fling chain over a thorn patch (a running jump clears it; the burrback guards the far end).
+  m.thorns('t-lamp', 4900, F - 40, 340);
   m.wick('w-lw1', 4400, 560);
   m.wick('w-lw2', 5100, 480);
   m.wick('w-lw3', 5800, 560);
@@ -871,44 +872,35 @@ BUILD['east-boughs'] = (m) => {
 };
 
 BUILD.chimney = (m) => {
-  // The Rain Chimney (1920 x 7560): a hollow trunk on the east edge, a climb (claws) to the Lookout. Doors:
-  // the Rain Ledge (1780 W, behind rotten bark), the Lampwalk (2620 W), the Gorge Floor (4200 E), the Brook
-  // (5280 W), the Sunk Stair (7440 W, the foot). Wicks to fling up between kicks; rotten bark.
+  // The Rain Chimney (1920 x 7560): a hollow trunk on the east edge, a climb (claws) to the Lookout. Its spine (a
+  // column of rain-black heartwood, 900..1020, both faces take kicks) runs from the floor to under the Lookout's
+  // opening (its top at 280: a jump off it goes up through). Doors on its walls, each with a ledge reaching to
+  // within a jump of the spine: the Rain Ledge (1780 W, behind rotten bark), the Lampwalk (2620 W), the Gorge
+  // Floor (4200 E), the Brook (5280 W), the Sunk Stair (7440 W, the foot). Wicks to fling up between kicks.
   const W = m.W;
   shell(m, {});
-  // Ledges at the doors.
+  m.s(900, 280, 120, 7440 - 280, true, 'trunk');
   for (const to of ['rain-ledge', 'east-boughs', 'floor-east']) {
     const e = m.e(to);
-    m.s(T, e.floor as number, 260, 40, false, 'branch');
+    m.s(T, e.floor as number, 360, 40, false, 'branch');
   }
   {
     const e = m.e('gorge-floor');
-    m.s(W - T - 260, e.floor as number, 260, 40, false, 'branch');
+    m.s(W - T - 360, e.floor as number, 360, 40, false, 'branch');
   }
-  // The faces that take kicks: both inner walls, top to bottom (the climb), open at the doors.
-  const doorsW = ['rain-ledge', 'east-boughs', 'floor-east', 'sunk-stair'].map((t) => m.e(t));
-  let y = CEIL;
-  for (const e of doorsW.sort((a, b) => a.from - b.from)) {
-    m.s(T, y, 40, e.from - y, 'east', 'trunk');
-    y = e.to;
-  }
-  m.s(T, y, 40, m.H - y, 'east', 'trunk');
-  const g = m.e('gorge-floor');
-  m.s(W - T - 40, CEIL, 40, g.from - CEIL, 'west', 'trunk');
-  m.s(W - T - 40, g.to, 40, m.H - g.to, 'west', 'trunk');
   floor(m, 7440);
   // The rain ledge's bark.
   m.add('bark', { id: 'bark-rain', x: T, y: 1524, w: 60, h: 256, kick: false });
   // Wicks between kicks, ledges to rest on.
-  m.wick('w-ch1', 960, 6400);
-  m.wick('w-ch2', 960, 5000);
-  m.wick('w-ch3', 960, 3400);
-  m.wick('w-ch4', 960, 1400);
-  m.o(700, 6000, 200);
-  m.o(1100, 3900, 200);
-  m.o(800, 2200, 200);
+  m.wick('w-ch1', 1400, 6400);
+  m.wick('w-ch2', 500, 5000);
+  m.wick('w-ch3', 1400, 3400);
+  m.wick('w-ch4', 500, 1200);
+  m.o(1200, 6000, 200);
+  m.o(1250, 3900, 200);
+  m.o(600, 2200, 200);
   m.add('bark', { id: 'bark-ch', x: 1300, y: 4700, w: 240, h: 40, floor: true, kick: false });
-  m.glints('g-ch-', 800, 1200, 7380, 80, 4);
+  m.glints('g-ch-', 1150, 1650, 7380, 80, 4);
   m.spawn(500, 7440);
 };
 
@@ -935,26 +927,29 @@ BUILD['crown-tip'] = (m) => {
 };
 
 BUILD.gorge = (m) => {
-  // The Gorge (7680 x 4320): open air east of the wood, entered only on the wing (in high from the Lookout).
-  // Lanterns to fling across, hawkers in the lanes, the Swallows' Ledge on the far wall (1680), the floor below.
+  // The Gorge (7680 x 4320): open air east of the wood, entered only on the wing (in high from the Lookout, through
+  // an opening nothing inside reaches back up to). Two dead snags stand in it: she glides to a snag's face, climbs
+  // it (claws), glides on; from the second the far wall's ledge (the Swallows' Ledge, 1680) is in a glide's reach.
+  // Lanterns between them (hawkers in the lanes) are the quicker, riskier way across. Every miss falls to the floor.
   shell(m, { sky: true });
-  m.s(T, 520, 600, 3800, false, 'trunk');
-  m.s(m.W - T - 300, 1680, 300, 2640, false, 'trunk');
+  for (const [i, x] of [2600, 5400].entries()) {
+    m.s(x, 900, 160, m.H - 900, true, 'trunk');
+    m.pod(`pod-snag${i + 1}`, x + 80, 900);
+  }
   for (const [i, [x, y]] of (
     [
-      [2200, 1300],
-      [3300, 1100],
-      [4400, 1200],
-      [5500, 1100],
-      [6400, 1400],
+      [1500, 1500],
+      [3600, 1500],
+      [4500, 1300],
+      [6400, 1300],
     ] as const
   ).entries())
     m.lantern(`l-g${i + 1}`, x, y);
-  m.enemy({ id: 'hawk-g1', kind: 'hawker', x: 3300, y: 900, guards: 'l-g2', orbit: 'l-g2' });
-  m.enemy({ id: 'hawk-g2', kind: 'hawker', x: 5500, y: 900, guards: 'l-g4', orbit: 'l-g4' });
-  m.glints('g-gorge-', 2400, 6200, 1000, 200, 12);
+  m.enemy({ id: 'hawk-g1', kind: 'hawker', x: 3600, y: 1300, guards: 'l-g2', orbit: 'l-g2' });
+  m.enemy({ id: 'hawk-g2', kind: 'hawker', x: 6400, y: 1100, guards: 'l-g4', orbit: 'l-g4' });
+  m.glints('g-gorge-', 3000, 5200, 1100, 200, 10);
   m.landmark('waterfall', 'landmark', 6800, 2200);
-  m.spawn(400, 520);
+  m.spawn(2680, 900);
 };
 
 BUILD['gorge-floor'] = (m) => {
@@ -1019,19 +1014,16 @@ BUILD.vault = (m) => {
 };
 
 BUILD['glass-crack'] = (m) => {
-  // The Glass Crack (1920 x 1080): a lightning crack in the oak's east flank, climbed from the Brook (claws):
-  // a wick inside the glass; at the top the root flap into the hub.
+  // The Glass Crack (1920 x 1080): a lightning crack in the oak's east flank, climbed from the Brook (claws) up one
+  // face (its west side, x 360..400, the same line as the Brook's root and the flap's throat in the hub); a wick
+  // inside the glass; at the top the root flap into the hub.
   const lo = m.e('floor-east');
-  const hi = m.e('hub');
   shell(m, {});
-  // Walls that take kicks from the bottom hole up to the flap's throat.
-  m.s(T, CEIL, lo.from - T, m.H - CEIL, false, 'trunk');
-  m.s(hi.to + 300, CEIL, m.W - T - hi.to - 300, m.H - CEIL, false, 'trunk');
-  m.s(lo.from - 40, CEIL, 40, m.H - CEIL, 'east', 'trunk');
-  m.s(hi.to + 260, CEIL, 40, m.H - CEIL, 'west', 'trunk');
-  m.o(hi.to + 60, 500, 180);
-  m.wick('w-glass', 1000, 620);
-  m.spawn(800, 500);
+  m.s(T, CEIL, lo.from - T, m.H - CEIL, 'east', 'trunk');
+  m.s(1100, CEIL, m.W - T - 1100, m.H - CEIL, 'west', 'trunk');
+  m.o(800, 520, 200);
+  m.wick('w-glass', 900, 300);
+  m.spawn(900, 520);
 };
 
 BUILD['fern-rest'] = (m) => {
@@ -1067,31 +1059,22 @@ BUILD['floor-west'] = (m) => {
 };
 
 BUILD.hollow = (m) => {
-  // The Charred Hollow (1920 x 5400): the lightning-glassed inside of the oak. In from the Fernfloor (2040 W)
-  // she drops past the Black Pool's door (2860 E) and the Ant Road's ledge (4200 W) to the floor (5280) and the
-  // drop to the Seed Door. Rungs from the floor up to the Ant Road's ledge; above it the climb (claws) to the
-  // grate under the hub. No wick: nothing lifts her up the glass but the claws.
+  // The Charred Hollow (1920 x 5400): the lightning-glassed inside of the oak. In from the Fernfloor (2040 W) she
+  // drops past the Black Pool's door (2860 E) and the Ant Road's ledge (4200 W) to the floor (5280) and the drop to
+  // the Seed Door. Rungs from the floor up to the Ant Road's ledge. The climb (claws): the glass spine (1060..1180,
+  // from 4400 up to 300) under the grate's opening; a jump off its top goes up into the hub's throat. No wick: nothing
+  // lifts her up the glass but the claws.
   const W = m.W;
   shell(m, {});
-  // Faces that take kicks above the Ant Road's ledge (the climb).
-  const fw = m.e('floor-west');
-  const bp = m.e('black-pool');
   const ar = m.e('ant-road');
-  m.s(T, CEIL, 40, fw.from - CEIL, 'east', 'trunk');
-  m.s(T, fw.to, 40, ar.from - fw.to, 'east', 'trunk');
-  m.s(W - T - 40, CEIL, 40, bp.from - CEIL, 'west', 'trunk');
-  m.s(W - T - 40, bp.to, 40, 4000 - bp.to, 'west', 'trunk');
-  // Ledges at the doors.
-  m.s(T, fw.floor as number, 260, 40, false, 'branch');
-  m.s(W - T - 260, bp.floor as number, 260, 40, false, 'branch');
+  m.s(1060, 300, 120, 4400 - 300, true, 'trunk');
   m.s(T, ar.floor as number, 400, 40, false, 'branch');
-  // The grate's throat at the top (the hub's floor).
   floor(m, 5280);
-  // Rungs from the floor up to the Ant Road's ledge.
-  m.ladder(560, 220, (ar.floor as number) + 10, 5280, 200, 200);
+  m.ladder(580, 220, (ar.floor as number) + 10, 5280, 200, 0);
   m.landmark('glow', 'landmark', 960, 5000);
-  m.glints('g-hol-', 1200, 1600, 5200, 60, 4);
-  m.spawn(1400, 5280);
+  m.glints('g-hol-', 1300, 1700, 5200, 60, 4);
+  void W;
+  m.spawn(1500, 5280);
 };
 
 BUILD['floor-east'] = (m) => {
@@ -1099,12 +1082,14 @@ BUILD['floor-east'] = (m) => {
   // Glass Crack overhead at the west end (claws); holes down to the Black Pool and the Warm Spring.
   const F = 960;
   shell(m, {});
-  // The floor, the brook's channel (a catch) the swinging wicks carry her over, the floor on east.
+  // The floor, the brook's channel (a catch) with three root isles to hop (the swinging wicks over it are the
+  // quick way), the floor on east.
   floor(m, F, 0, 5200, 'ground');
-  m.s(5200, 1040, 1800, 40, false, 'ground');
-  floor(m, F, 7000, m.W, 'ground');
-  m.add('catches', { id: 'c-brook-w', x: 5200, y: 1000, w: 900, h: 40, back: { x: 5100, y: F } });
-  m.add('catches', { id: 'c-brook-e', x: 6100, y: 1000, w: 900, h: 40, back: { x: 7100, y: F } });
+  m.s(5200, 1040, 1600, 40, false, 'ground');
+  for (const x of [5500, 5900, 6300]) m.s(x, F - 20, 150, 1040 - F + 20, false, 'root');
+  floor(m, F, 6800, m.W, 'ground');
+  m.add('catches', { id: 'c-brook-w', x: 5200, y: 1000, w: 800, h: 40, back: { x: 5100, y: F } });
+  m.add('catches', { id: 'c-brook-e', x: 6000, y: 1000, w: 800, h: 40, back: { x: 6900, y: F } });
   m.wick('w-br1', 5700, 500, { swing: { length: 300, reach: 260, period: 200 } });
   m.wick('w-br2', 6500, 500, { swing: { length: 300, reach: 260, period: 200, phase: 0.5 } });
   m.enemy({ id: 'hawk-br', kind: 'hawker', x: 6100, y: 300, guards: 'w-br1' });
@@ -1119,6 +1104,11 @@ BUILD['floor-east'] = (m) => {
     phase: 0.5,
     guards: 'l-brook',
   });
+  // A root down from the Glass Crack (its east face takes kicks: the climb starts on the Brook's floor).
+  {
+    const gc = m.e('glass-crack');
+    m.s(gc.from - 40, CEIL, 40, F - CEIL, 'east', 'root');
+  }
   m.glints('g-br-', 1600, 2600, 900, 80, 7);
   m.pod('pod-br', 3200, F);
   m.spawn(1400, F);
@@ -1206,11 +1196,10 @@ BUILD.den = (m) => {
   m.add('bark', { id: 'bark-crack', x: tp.from, y: F, w: tp.to - tp.from, h: 60, floor: true, kick: false });
   // The ceiling round the drop: thick, sheer.
   m.s(T, CEIL, 1400, 300, false, 'root');
-  m.s(2100, CEIL, 1600, 300, false, 'root');
+  m.s(2100, CEIL, 1100, 300, false, 'root');
   // The east wall's climb (claws) up to the Ant Road's door.
   const ar = m.e('ant-road');
-  m.s(m.W - T - 40, (ar.floor as number) + 40, 40, F - (ar.floor as number) - 40, 'west', 'trunk');
-  m.s(m.W - T - 300, ar.floor as number, 300, 40, false, 'branch');
+  m.s(m.W - T - 300, ar.floor as number, 300, F - (ar.floor as number), 'west', 'trunk');
   // The taproot column.
   m.s(2900, 1500, 96, F - 88 - 1500, false, 'root');
   m.enemy({
@@ -1436,10 +1425,12 @@ BUILD.weaver = (m) => {
   // The entry shaft's landing.
   m.patch('p-weaver', 1100, F);
   // The arena: its trunks (doors at floor level), columns, branches, lamps, web.
+  // (lab-weaver's trunks exactly: the west one climbable inside, a door at its foot; the east one with its window.)
   m.s(WX, C, 128, F - 160 - C, 'east', 'trunk');
-  m.s(WX + 2048, C, 128, F - 160 - C, 'west', 'trunk');
-  m.s(WX + 576, C, 96, 640, false, 'trunk');
-  m.s(WX + 1504, C, 96, 640, false, 'trunk');
+  m.s(WX + 2048, C, 128, 256, true, 'trunk');
+  m.s(WX + 2048, C + 512, 128, 416, true, 'trunk');
+  m.s(WX + 576, C, 96, 640, true, 'trunk');
+  m.s(WX + 1504, C, 96, 640, true, 'trunk');
   for (const o of lab.oneWays) m.o(o.x + WX, o.y + WY, o.w);
   for (const l of lab.lures) {
     if (l.id === 'wick-relit') continue;
