@@ -61,7 +61,8 @@ export function initWicks(lures: LuresState, scene: Scene, save: SaveState): voi
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     if (l?.kind !== 'moonwick') continue;
-    const kept = save.opened.includes(key(scene, l.id));
+    // (`lit`: a wick that burns for good from the start: the boss rush's arenas, where no one kindles.)
+    const kept = l.lit === true || save.opened.includes(key(scene, l.id));
     lures.hp[i] = kept ? 1 : 0;
     lures.out[i] = 0;
     lures.burn[i] = kept ? -1 : 0;

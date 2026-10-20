@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { ABILITIES } from '../sim/abilities';
+import { UPGRADE_IDS } from '../sim/upgrades';
 
 /**
  * A boss fight's room data (memory/bosses.md): the Zod shape of a room's `boss` block and its checks
@@ -13,7 +15,7 @@ const rect = z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).
 export const BOSS = z
   .object({
     id,
-    kind: z.enum(['weaver', 'gloamweaver']),
+    kind: z.enum(['weaver', 'gloamweaver', 'mantis']),
     name: z.string().min(1),
     arena: rect,
     lock: z.array(z.object({ id, x: int, y: int, w: int.positive(), h: int.positive() }).strict()),
@@ -34,6 +36,17 @@ export const BOSS = z
     orbR: int.min(64).max(1600).optional(),
     wicks: z.array(id).optional(),
     high: z.array(id).optional(),
+    // The boss rush (src/sim/boss/data.ts): a standalone Gloamweaver; what a win teaches her.
+    rush: z.boolean().optional(),
+    checkpoint: id.optional(),
+    grant: z
+      .object({
+        ability: z.enum(ABILITIES).optional(),
+        upgrade: z.enum(UPGRADE_IDS).optional(),
+        text: z.string(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .optional();
@@ -96,6 +109,13 @@ export function checkBoss(s: BossRoom, seen: Set<string>): void {
     return l;
   };
   const heart = lure(b.heart, ['great'], 'heart');
+  if (b.kind === 'mantis') {
+    // The Mantis: its creature on the floor under its lamp (the heart, shielded: the brightest lamp).
+    const cr = s.enemies.find((e) => e.id === b.creature);
+    if (cr?.kind !== 'mantis') throw new Error(`${where}: its creature "${b.creature}" must be a mantis`);
+    if (b.floor === undefined) throw new Error(`${where}: the Mantis needs its floor`);
+    return;
+  }
   if (b.kind === 'gloamweaver') {
     // The Gloamweaver: its creature, its moonwicks; it starts on its orb (no rings).
     const cr = s.enemies.find((e) => e.id === b.creature);

@@ -100,6 +100,11 @@ export const cameraTuning = {
       /** A cut into rotten bark: the crunch (first-timer r3: it gave no feedback). */
       barkHit: 0.16,
       terrain: 0.05,
+      /** Boss fights (the boss rush): its fall, a new phase's cry, a dive's landing, a guard broken open. */
+      bossFall: 0.9,
+      bossPhase: 0.4,
+      bossLand: 0.35,
+      bossOpen: 0.25,
     },
   },
   /**

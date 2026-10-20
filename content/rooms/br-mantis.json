@@ -1,0 +1,195 @@
+{
+  "id": "br-mantis",
+  "title": "Boss rush: the Mantis",
+  "region": "bossrush",
+  "edgeKick": false,
+  "senses": "lamp",
+  "abilities": ["glide", "wallJump", "doubleJump", "dash"],
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "cache",
+    "seed": 504
+  },
+  "width": 3840,
+  "height": 1536,
+  "spawn": {
+    "x": 240,
+    "y": 1300
+  },
+  "solids": [
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 200,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1300,
+      "w": 1920,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 200,
+      "w": 64,
+      "h": 1100,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1920,
+      "y": 0,
+      "w": 1920,
+      "h": 200,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 1920,
+      "y": 1300,
+      "w": 1920,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1920,
+      "y": 200,
+      "w": 64,
+      "h": 860,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 3776,
+      "y": 200,
+      "w": 64,
+      "h": 1100,
+      "kick": "west"
+    }
+  ],
+  "oneWays": [
+    {
+      "tag": "branch",
+      "x": 2220,
+      "y": 1000,
+      "w": 260
+    },
+    {
+      "tag": "branch",
+      "x": 3280,
+      "y": 1000,
+      "w": 260
+    }
+  ],
+  "pickups": [],
+  "pods": [],
+  "enemies": [
+    {
+      "id": "mantis",
+      "kind": "mantis",
+      "x": 3420,
+      "y": 1300,
+      "facing": -1
+    }
+  ],
+  "lures": [
+    {
+      "id": "l-c1",
+      "kind": "wick",
+      "x": 900,
+      "y": 520
+    },
+    {
+      "id": "firefly-lamp",
+      "kind": "great",
+      "x": 2880,
+      "y": 520
+    }
+  ],
+  "doors": [
+    {
+      "id": "from-hub",
+      "x": 240,
+      "y": 1300,
+      "to": "br-hub#to-mantis"
+    }
+  ],
+  "patches": [
+    {
+      "id": "p-gate",
+      "x": 1640,
+      "y": 1300
+    }
+  ],
+  "marks": {
+    "landmarks": [
+      {
+        "id": "centrepiece",
+        "kind": "centrepiece",
+        "x": 2880,
+        "y": 560
+      }
+    ]
+  },
+  "boss": {
+    "id": "the-mantis",
+    "kind": "mantis",
+    "name": "The Mantis",
+    "arena": {
+      "x": 1984,
+      "y": 200,
+      "w": 1792,
+      "h": 1100
+    },
+    "lock": [
+      {
+        "id": "door-w",
+        "x": 1920,
+        "y": 1060,
+        "w": 64,
+        "h": 240
+      }
+    ],
+    "flag": "br-mantis-down",
+    "met": "br-mantis-met",
+    "creature": "mantis",
+    "heart": "firefly-lamp",
+    "rings": [],
+    "retryOut": [],
+    "floor": 1300,
+    "checkpoint": "p-gate",
+    "grant": {
+      "text": "The brightest lamp is out. Its moths are free."
+    }
+  },
+  "camera": {
+    "zones": [
+      {
+        "id": "arena",
+        "x": 1920,
+        "y": 290,
+        "w": 1920,
+        "h": 1080,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "corridor",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  }
+}

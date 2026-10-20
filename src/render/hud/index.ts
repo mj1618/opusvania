@@ -12,6 +12,7 @@
 import { CanvasSource, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import { lampCost, lanternCost } from '../../sim/goal';
 import { tuning } from '../../sim/tuning';
+import { BossHud } from '../bossrush/hud';
 import { STAGE_HOLD } from '../camera/stage-cam';
 import { type CameraView, SAFE_VIEW, type SimView, type ViewSize } from '../contract';
 import { GOAL } from '../goal/config';
@@ -152,6 +153,8 @@ export class Hud {
   private readonly moths = new MothCount(HUD.family);
   /** A grant's line, in screen space (item-line.ts). */
   private readonly itemLine = new ItemLine(HUD.family);
+  /** A boss fight's name card, health bar and victory card (the boss rush: render/bossrush/hud.ts). */
+  private readonly bossHud = new BossHud();
   private readonly drops: Drop[] = [];
   private dropAt = 0;
   private refuseT = -1;
@@ -225,6 +228,7 @@ export class Hud {
       this.shake,
       this.moths.root,
       this.itemLine.root,
+      this.bossHud.root,
       this.summary.root,
     );
     for (let i = 0; i < 16; i++) this.drops.push({ life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0, lost: false });
@@ -542,6 +546,7 @@ export class Hud {
     this.summary.update(dt, clock, sim);
     this.prompts.update(dt, clock, sim);
     this.itemLine.update(dt, sim);
+    this.bossHud.update(dt, sim, view);
     // The moth count sits under the lights (and under the glint count when that is up).
     const camView = cam ?? { x: sim.player.cx, y: sim.player.cy, zoom: 1, w: view.w, h: view.h };
     this.moths.update(dt, clock, sim, view, camView, this.group.visible ? 56 : 0);

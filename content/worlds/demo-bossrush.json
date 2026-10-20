@@ -1,0 +1,32 @@
+{
+  "start": "br-hub",
+  "rooms": [
+    {
+      "id": "br-hub",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": "br-weaver",
+      "x": 2400,
+      "y": 0
+    },
+    {
+      "id": "br-gloam",
+      "x": 7000,
+      "y": 0
+    },
+    {
+      "id": "br-mantis",
+      "x": 11200,
+      "y": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "bossrush",
+      "rooms": ["br-hub", "br-weaver", "br-gloam", "br-mantis"]
+    }
+  ],
+  "tests": []
+}

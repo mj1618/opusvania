@@ -314,9 +314,16 @@ export interface GameDebugApi {
    * (where it is now, its row and radius, hp, guarded) and the ring flames. `boss({phase: n})` first sets
    * the fight up as phase n begins (debug: the doors seal, earlier phases are done).
    */
+  /**
+   * The boss rush (`?world=demo-bossrush`, memory/bossrush.md): `rush(n)` puts her at boss n's door (1 the Weaver,
+   * 2 the Gloamweaver, 3 the Mantis; 0 the hub) with what the bosses before it would have taught her (their flags
+   * set, the dash, the Moonstep), at full health. Returns the room's id.
+   */
+  rush(n: number): string;
   boss(set?: { phase?: number }): {
     id: string;
     name: string;
+    move: string;
     stage: string;
     phase: number;
     phaseName: string;
@@ -979,6 +986,33 @@ export function installDebugApi(deps: {
         })),
       };
     },
+    rush(n) {
+      const order: Array<[string, string, (s: GameState['save']) => void]> = [
+        ['br-weaver', 'br-weaver-down', (s) => s.abilities.includes('dash') || s.abilities.push('dash')],
+        [
+          'br-gloam',
+          'br-gloam-down',
+          (s) => s.flags.includes('upgrade:moonstep') || s.flags.push('upgrade:moonstep'),
+        ],
+        ['br-mantis', 'br-mantis-down', () => {}],
+      ];
+      const save = game.state.save;
+      const k = Math.max(0, Math.min(3, Math.round(n)));
+      for (let i = 0; i < k - 1; i++) {
+        const [, flag, grant] = order[i] as (typeof order)[number];
+        if (!save.flags.includes(flag)) save.flags.push(flag);
+        grant(save);
+      }
+      game.setAbilities([...save.abilities]);
+      const room = k === 0 ? 'br-hub' : (order[k - 1] as (typeof order)[number])[0];
+      const r = ROOMS[room];
+      if (!r) throw new Error(`rush: no room "${room}"`);
+      const patch = r.patches?.find((p) => p.id === 'p-gate');
+      game.goto(room, patch ? patch.x : r.spawn.x, patch ? patch.y : r.spawn.y);
+      game.state.player.hp = game.state.player.hpMax;
+      redraw();
+      return room;
+    },
     boss(set) {
       const spec = game.scene.boss;
       if (!spec || !game.state.boss) return null;
@@ -1000,6 +1034,7 @@ export function installDebugApi(deps: {
       return {
         id: b.id,
         name: spec.name,
+        move: b.move,
         stage: b.stage,
         phase: b.phase,
         phaseName: names[b.phase - 1] ?? '',

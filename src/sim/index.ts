@@ -16,7 +16,7 @@ import { afterCatch, catchHold, updateKit } from './kit';
 import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
 import { dropGlints, updateDrops, updatePickups } from './pickups';
-import { resolveParams } from './player/params';
+import { type MoveParams, resolveParams } from './player/params';
 import {
   createPlayer,
   freshStart,
@@ -34,7 +34,7 @@ import type { RoomDoor, RoomExit, Scene } from './scene';
 import { markSeen } from './seen';
 import { cloneSave, type GameState, newSave, type SaveState } from './state';
 import type { Tuning } from './tuning';
-import { withUpgrades } from './upgrades';
+import { upgradeFlag, withUpgrades } from './upgrades';
 import { createLocal, enterRoom, remember, type World, withShortcuts } from './world';
 
 export const SIM_HZ = 60;
@@ -531,7 +531,12 @@ export function step(
   if (!slowed) updateBoss(state, S, t, events);
   const touch = slowed ? -1 : updateEnemies(state, S, t, events, first);
   const p = state.player;
-  const e = touch >= 0 && !aiming ? state.enemies[touch] : undefined;
+  const e0 = touch >= 0 && !aiming ? state.enemies[touch] : undefined;
+  // (The Moonstep: her dash goes through a creature's touch unhurt.)
+  const e =
+    e0 && p.invuln === 0 && p.hp > 0 && moonstepped(state, t, e0.x + e0.w / 2, e0.y + e0.h / 2, events)
+      ? undefined
+      : e0;
   if (e && p.invuln === 0 && p.hp > 0 && !state.goal.gathered) {
     const pc = p.x + p.w / 2;
     const ec = e.x + e.w / 2;
@@ -556,6 +561,8 @@ export function step(
     }
     enemyTouched(state, S, touch, dir, t, events);
   }
+  // A boss's blade (the Mantis: its strike, its cuts, a ripple): its own box, not its body.
+  bossBlade(state, S, P, t, slowed || aiming, events);
   // On safe ground after a fling chain: its embers go out for good, or burn again if she landed back where the
   // chain began (a miss); faded, they burn again.
   if (ran && trackSafeGround(state, S, P) && hasEmbers(state)) {
@@ -710,3 +717,44 @@ export { cloneSave, cloneState, newSave } from './state';
 export { isUpgrade, UPGRADE_IDS, type UpgradeId, upgradeFlag, upgradesOwned, withUpgrades } from './upgrades';
 export type { Entry, ExitLink, World, WorldRoom } from './world';
 export { enterRoom, exitSegment, linkWorld, mirrorOf, withShortcuts } from './world';
+
+/**
+ * The Moonstep (the boss rush's upgrade): in a dash she goes through a blow unhurt. True = this blow is dodged
+ * (`bossDodge`, once in `bossRush.dodgeGap` frames, at `x`, `y`).
+ */
+function moonstepped(state: GameState, t: Tuning, x: number, y: number, events: SimEvent[]): boolean {
+  const p = state.player;
+  if (p.mode !== 'dash' || !state.save.flags.includes(upgradeFlag('moonstep'))) return false;
+  const b = state.boss;
+  if (b && state.frame - b.dodged > Math.max(1, Math.round(t.bossRush.dodgeGap))) {
+    b.dodged = state.frame;
+    events.push({ type: 'bossDodge', id: b.id, x: Math.round(x), y: Math.round(y) });
+  }
+  return true;
+}
+
+/** A boss's live blade box (`boss.hit*`, src/sim/boss/mantis.ts) meets her: a hurt, unless she Moonsteps through. */
+function bossBlade(
+  state: GameState,
+  S: Scene,
+  P: MoveParams,
+  t: Tuning,
+  held: boolean,
+  events: SimEvent[],
+): void {
+  const b = state.boss;
+  const p = state.player;
+  if (!b || b.hitW <= 0 || held || b.stage !== 'fight') return;
+  if (p.invuln > 0 || p.hp <= 0 || p.faded > 0 || state.goal.gathered) return;
+  if (!(p.x < b.hitX + b.hitW && b.hitX < p.x + p.w && p.y < b.hitY + b.hitH && b.hitY < p.y + p.h)) return;
+  const hitX = (Math.max(p.x, b.hitX) + Math.min(p.x + p.w, b.hitX + b.hitW)) / 2;
+  const hitY = (Math.max(p.y, b.hitY) + Math.min(p.y + p.h, b.hitY + b.hitH)) / 2;
+  if (moonstepped(state, t, hitX, hitY, events)) return;
+  const id = S.boss?.creature ?? b.id;
+  const e = state.enemies.find((q) => q.id === id);
+  const ec = e ? e.x + e.w / 2 : b.hitX + b.hitW / 2;
+  const pc = p.x + p.w / 2;
+  const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
+  hurtPlayer(state, P, dir, 1, { kind: e?.kind ?? 'mantis', id }, hitX, hitY, events);
+  if (e) e.hitstop = Math.max(e.hitstop, state.player.hitstop);
+}

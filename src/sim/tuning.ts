@@ -1367,6 +1367,92 @@ export const defaultTuning = withVariants({
       p2end: { fall: 0, next: 120 },
       defeat: { lampOut: 0, moths: 20, moonhole: 30, glade: 90, done: 200 },
     },
+    /**
+     * The boss rush's Gloamweaver (`boss.rush`, docs/design/demos/bossrush.md): no one kindles there, so the rest
+     * after a lunge is its window (`rushOpen` frames, at most `rushCuts` cuts), lunges come every `rushEvery`;
+     * P3 hunts again, quicker (`rushP3Every`, tell `rushP3Tell`) and its lamp dies with it.
+     */
+    rushOpen: 70,
+    rushCuts: 2,
+    rushEvery: 200,
+    rushP3Every: 140,
+    rushP3Tell: 30,
+    rushP3Hp: 6,
+  },
+  /** The boss rush (docs/design/demos/bossrush.md): what every rush boss shares. */
+  bossRush: {
+    /** The final blow: she and the boss hold this many frames before the defeat plays on. */
+    finalHold: 30,
+    /** A Moonstep dash that goes through a blow: no second `bossDodge` within this many frames. */
+    dodgeGap: 20,
+  },
+  /**
+   * The Mantis (the boss rush's third boss, src/sim/boss/mantis.ts): a duellist on the floor under the brightest lamp.
+   * Lists of three are by phase (P1 the threat, P2 the guard, P3 the frenzy). Every attack has a tell (`bossTell`)
+   * and a window after it; its body only hurts in a strike's dash and a dive (`hit*`: its blade's own box).
+   */
+  mantis: {
+    width: 60,
+    height: 136,
+    /** Its height crouched (the strike's dash, the leap's crouch): she clears it with a jump. */
+    crouch: 76,
+    contactDamage: 1,
+    hurtFrames: 6,
+    hurtSafeFrames: 6,
+    deadFrames: 240,
+    hp: [10, 10, 9],
+    /** Stalking between moves: px/f toward the range it likes, frames before the next move. */
+    walkSpeed: 3.4,
+    backSpeed: 4.2,
+    range: 330,
+    near: 200,
+    stalk: [54, 40, 26],
+    /** The strike: a dash along the floor through where she stands and `over` past (at least `min`). */
+    strikeTell: [36, 30, 24],
+    strikeSpeed: 22,
+    strikeOver: 170,
+    strikeMin: 380,
+    strikeReach: 72,
+    strikeRecover: [44, 36, 30],
+    /** The leap: a crouch, a rise to over her, a hang (where it will land shown), a dive; stuck after. */
+    leapTell: [28, 24, 20],
+    leapRise: 30,
+    leapHeight: 560,
+    leapHang: [22, 18, 16],
+    diveSpeed: 26,
+    diveBand: 100,
+    diveStall: [50, 40, 34],
+    /** P3: the dive's landing sends a ripple along the floor each way (jump it). */
+    rippleSpeed: 12,
+    rippleFrames: 34,
+    rippleH: 36,
+    /** The guard: forelegs crossed. A cut from the front glances and it ripostes; from above or behind, it breaks. */
+    guardFrames: [80, 90, 70],
+    ripTell: 12,
+    ripLive: 10,
+    ripReach: 190,
+    ripRecover: 30,
+    guardBroken: 100,
+    /** The flurry (P2 on): two quick cuts ahead, a step each, when she is near. */
+    flurryTell: [26, 22, 18],
+    flurryLive: 8,
+    flurryGap: 8,
+    flurryReach: 160,
+    flurryStep: 30,
+    flurryRecover: [40, 32, 28],
+    /** Crowded: this many blows outside its windows and it hops back out of reach. */
+    pressHits: 3,
+    hopFrames: 28,
+    hopHeight: 150,
+    hopDist: 360,
+    /** P3: a combo's second move starts this many frames after the first ends. */
+    chainGap: 10,
+    cues: {
+      intro: { name: 20, start: 90, nameOut: 170 },
+      p1end: { rear: 0, next: 100 },
+      p2end: { rear: 0, next: 100 },
+      defeat: { fall: 0, lampOut: 40, done: 220 },
+    },
   },
   /** Collectibles (src/sim/pickups.ts). Distances are from the pickup to the nearest point of the body box. */
   pickups: {

@@ -94,3 +94,6 @@ table: it said the Weaver's "the ring".) Defeat: `gloam-down` (the east door's g
 out (60 moths). A fade re-forms her at
 the hall's patch over the seal (glow rooms keep the saved patch anywhere). The winning bot (tools/solve/drivers.ts
 `gloam`, the solver's proof) wins in ~66 s with every creature in, its glow earned in the fight.
+
+## The boss rush (2026-10-19)
+The Mantis (src/sim/boss/mantis.ts), the rush Gloamweaver, grants, checkpoints and blade boxes: memory/bossrush.md.

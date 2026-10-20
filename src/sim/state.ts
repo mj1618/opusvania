@@ -964,6 +964,24 @@ export interface BossState {
   exposed: number;
   throws: number;
   lunge: number;
+  /**
+   * The Mantis (src/sim/boss/mantis.ts): the move under way and the moves made (its pattern), the blows taken
+   * since its last attack, the chain left in a combo, and its blade's live box (`hitW` 0 = none; any boss may
+   * set one: src/sim/index.ts hurts her with it). `dodged`: the frame her Moonstep last went through a blow.
+   */
+  move: string;
+  moves: number;
+  pressed: number;
+  chain: number;
+  hitX: number;
+  hitY: number;
+  hitW: number;
+  hitH: number;
+  dodged: number;
+  /** The Mantis's P3 ripple along the floor: where it is, its way, frames left (0 = none). */
+  waveX: number;
+  waveDir: number;
+  waveT: number;
 }
 
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */

@@ -1,0 +1,160 @@
+{
+  "id": "br-hub",
+  "title": "Boss rush: the moonlit clearing",
+  "region": "bossrush",
+  "edgeKick": false,
+  "senses": "lamp",
+  "abilities": ["glide", "wallJump", "doubleJump"],
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "night",
+    "seed": 501
+  },
+  "width": 1920,
+  "height": 1536,
+  "spawn": {
+    "x": 760,
+    "y": 1300
+  },
+  "solids": [
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1300,
+      "w": 1920,
+      "h": 236,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 1300,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1856,
+      "y": 0,
+      "w": 64,
+      "h": 1300,
+      "kick": "west"
+    },
+    {
+      "tag": "root",
+      "x": 1040,
+      "y": 1140,
+      "w": 340,
+      "h": 160,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1560,
+      "y": 900,
+      "w": 296,
+      "h": 60,
+      "kick": false
+    }
+  ],
+  "oneWays": [],
+  "pickups": [],
+  "pods": [],
+  "enemies": [],
+  "lures": [
+    {
+      "id": "w-weaver",
+      "kind": "moonwick",
+      "x": 470,
+      "y": 1250,
+      "lit": true
+    },
+    {
+      "id": "w-gloam",
+      "kind": "moonwick",
+      "x": 1320,
+      "y": 1090,
+      "lit": true
+    },
+    {
+      "id": "w-mantis",
+      "kind": "moonwick",
+      "x": 1620,
+      "y": 850,
+      "lit": true
+    }
+  ],
+  "ceilingY": 0,
+  "patches": [
+    {
+      "id": "p-hub",
+      "x": 760,
+      "y": 1300
+    }
+  ],
+  "doors": [
+    {
+      "id": "to-weaver",
+      "x": 360,
+      "y": 1300,
+      "to": "br-weaver#from-hub"
+    },
+    {
+      "id": "to-gloam",
+      "x": 1210,
+      "y": 1140,
+      "to": "br-gloam#from-hub"
+    },
+    {
+      "id": "to-mantis",
+      "x": 1730,
+      "y": 900,
+      "to": "br-mantis#from-hub"
+    }
+  ],
+  "gates": [
+    {
+      "id": "gate-gloam",
+      "x": 1162,
+      "y": 980,
+      "w": 96,
+      "h": 160,
+      "flag": "br-weaver-down",
+      "kick": false
+    },
+    {
+      "id": "gate-mantis",
+      "x": 1682,
+      "y": 740,
+      "w": 96,
+      "h": 160,
+      "flag": "br-gloam-down",
+      "kick": false
+    }
+  ],
+  "marks": {
+    "landmarks": [
+      {
+        "id": "vista",
+        "kind": "vista",
+        "x": 960,
+        "y": 700
+      }
+    ]
+  },
+  "camera": {
+    "zones": [
+      {
+        "id": "hub",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  }
+}

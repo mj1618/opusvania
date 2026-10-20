@@ -1,0 +1,265 @@
+{
+  "id": "br-weaver",
+  "title": "Boss rush: the Weaver",
+  "region": "bossrush",
+  "edgeKick": false,
+  "senses": "lamp",
+  "abilities": ["glide", "wallJump", "doubleJump"],
+  "art": {
+    "mode": "painted",
+    "kit": "lanternroot",
+    "band": "hall",
+    "seed": 502
+  },
+  "width": 4096,
+  "height": 1536,
+  "spawn": {
+    "x": 240,
+    "y": 1328
+  },
+  "solids": [
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 0,
+      "y": 1328,
+      "w": 1920,
+      "h": 208,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 0,
+      "y": 240,
+      "w": 64,
+      "h": 1088,
+      "kick": false
+    },
+    {
+      "tag": "root",
+      "x": 1920,
+      "y": 0,
+      "w": 2176,
+      "h": 240,
+      "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 1920,
+      "y": 1328,
+      "w": 2176,
+      "h": 208,
+      "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 1920,
+      "y": 240,
+      "w": 128,
+      "h": 928,
+      "kick": "east"
+    },
+    {
+      "tag": "trunk",
+      "x": 3968,
+      "y": 240,
+      "w": 128,
+      "h": 1088,
+      "kick": "west"
+    },
+    {
+      "tag": "trunk",
+      "x": 2496,
+      "y": 240,
+      "w": 96,
+      "h": 640
+    },
+    {
+      "tag": "trunk",
+      "x": 3424,
+      "y": 240,
+      "w": 96,
+      "h": 640
+    }
+  ],
+  "oneWays": [
+    {
+      "tag": "branch",
+      "x": 2368,
+      "y": 1072,
+      "w": 352
+    },
+    {
+      "tag": "branch",
+      "x": 3296,
+      "y": 1072,
+      "w": 352
+    }
+  ],
+  "pickups": [],
+  "pods": [],
+  "enemies": [
+    {
+      "id": "spokes",
+      "kind": "web",
+      "x": 3008,
+      "y": 688,
+      "facing": 1,
+      "strands": [
+        [3008, 688, 2240, 944],
+        [3008, 688, 2752, 560],
+        [3008, 688, 3008, 368],
+        [3008, 688, 3264, 560],
+        [3008, 688, 3776, 944]
+      ],
+      "anchors": [[3008, 688]]
+    },
+    {
+      "id": "weaver",
+      "kind": "weaverBoss",
+      "x": 3008,
+      "y": 688,
+      "facing": 1
+    }
+  ],
+  "lures": [
+    {
+      "id": "l-c1",
+      "kind": "wick",
+      "x": 700,
+      "y": 620
+    },
+    {
+      "id": "l-c2",
+      "kind": "wick",
+      "x": 1180,
+      "y": 760
+    },
+    {
+      "id": "heart",
+      "kind": "great",
+      "x": 3008,
+      "y": 688,
+      "spin": 1
+    },
+    {
+      "id": "ring-1",
+      "kind": "ring",
+      "x": 2240,
+      "y": 944,
+      "spin": 1
+    },
+    {
+      "id": "ring-2",
+      "kind": "ring",
+      "x": 2752,
+      "y": 560,
+      "spin": 1
+    },
+    {
+      "id": "ring-3",
+      "kind": "ring",
+      "x": 3008,
+      "y": 368,
+      "spin": 1
+    },
+    {
+      "id": "ring-4",
+      "kind": "ring",
+      "x": 3264,
+      "y": 560,
+      "spin": -1
+    },
+    {
+      "id": "ring-5",
+      "kind": "ring",
+      "x": 3776,
+      "y": 944,
+      "spin": -1
+    }
+  ],
+  "doors": [
+    {
+      "id": "from-hub",
+      "x": 240,
+      "y": 1328,
+      "to": "br-hub#to-weaver"
+    }
+  ],
+  "patches": [
+    {
+      "id": "p-gate",
+      "x": 1640,
+      "y": 1328
+    }
+  ],
+  "boss": {
+    "id": "the-weaver",
+    "kind": "weaver",
+    "name": "The Weaver",
+    "arena": {
+      "x": 2048,
+      "y": 240,
+      "w": 1920,
+      "h": 1088
+    },
+    "lock": [
+      {
+        "id": "door-w",
+        "x": 1920,
+        "y": 1168,
+        "w": 128,
+        "h": 160
+      }
+    ],
+    "flag": "br-weaver-down",
+    "met": "br-weaver-met",
+    "creature": "weaver",
+    "heart": "heart",
+    "rings": ["ring-1", "ring-2", "ring-3", "ring-4", "ring-5"],
+    "retryOut": ["ring-1", "ring-5"],
+    "web": "spokes",
+    "drops": [2584, 3432, 3008],
+    "canopy": 240,
+    "floor": 1328,
+    "lowered": {
+      "x": 3008,
+      "y": 944
+    },
+    "checkpoint": "p-gate",
+    "grant": {
+      "ability": "dash",
+      "text": "The Weaver’s silk: you can dash. Press X or Shift."
+    }
+  },
+  "camera": {
+    "zones": [
+      {
+        "id": "arena",
+        "x": 1920,
+        "y": 240,
+        "w": 2176,
+        "h": 1216,
+        "fit": true,
+        "lock": true,
+        "frames": 20
+      },
+      {
+        "id": "corridor",
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1536,
+        "lock": true,
+        "frames": 20
+      }
+    ]
+  }
+}

@@ -20,6 +20,7 @@ export const UPGRADE_IDS = [
   'glowVessel',
   'brightKindle',
   'moonDrop',
+  'moonstep',
 ] as const;
 export type UpgradeId = (typeof UPGRADE_IDS)[number];
 
@@ -56,6 +57,9 @@ const APPLY: Record<UpgradeId, (t: Tuning) => Tuning> = {
   }),
   // A moon-drop is one more light per hollow that gave one (its flag is `moonDrop:<room>:<hollow>`, counted below).
   moonDrop: (t) => t,
+  // Moonstep (the boss rush, the Gloamweaver's reward): her dash goes through blows unhurt. No number: the hurt
+  // checks read the flag (src/sim/index.ts `moonstepping`).
+  moonstep: (t) => t,
 };
 
 export function isUpgrade(id: string): id is UpgradeId {

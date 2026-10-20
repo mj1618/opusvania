@@ -125,6 +125,8 @@ export const ENEMIES = z
       z.object({ ...base, kind: z.literal('weaverBoss') }).strict(),
       // The Gloamweaver (Lanternroot's mini-boss, src/sim/boss/gloam.ts): its fight is the room's `boss` block.
       z.object({ ...base, kind: z.literal('gloamweaver') }).strict(),
+      // The Mantis (the boss rush's duellist, src/sim/boss/mantis.ts): its fight is the room's `boss` block.
+      z.object({ ...base, kind: z.literal('mantis') }).strict(),
       // The dangler (memory/creatures.md): `x`, `y` = where its thread is tied; `drop` = its longest drop.
       z.object({ ...base, kind: z.literal('dangler'), drop: int.min(80).max(1200).optional() }).strict(),
       // The carriers (ants, src/sim/enemies/carrier.ts): `x`, `y` = the trail's start (feet); `trail` = the rest
