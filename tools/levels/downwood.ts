@@ -528,10 +528,11 @@ BUILD.lookout = (m) => {
   // only ways off are glides from the two tips, over thorn pits, into openings a jump never reaches.
   const ch = m.e('chimney');
   const P = 520;
-  shell(m, { sky: true });
-  // The platform, west tip at 700 and east tip at 3300; solid crown under it except the chimney's throat.
+  // (No sill under the two glide openings: nothing to stand on beside them.)
+  shell(m, { sky: true, noSill: ['far-crown', 'gorge'] });
+  // The platform, west tip at 700 and east tip at 3200; solid crown under it except the chimney's throat.
   m.s(700, P, ch.from - 700, m.H - P, ch.from - 700 > 0 ? 'east' : false, 'branch');
-  m.s(ch.to, P, 3300 - ch.to, m.H - P, 'west', 'branch');
+  m.s(ch.to, P, 3200 - ch.to, m.H - P, 'west', 'branch');
   m.o(ch.from, P, ch.to - ch.from, true);
   // The throat's faces take kicks (the chimney's climb goes on to the lip).
   m.s(ch.from - 40, P + 40, 40, m.H - P - 40, 'east', 'trunk');
@@ -539,8 +540,8 @@ BUILD.lookout = (m) => {
   // The pits under the tips: thorns (back to the platform).
   m.s(T, 960, 700 - T, m.H - 960, false, 'branch');
   m.thorns('t-west', T, 920, 700 - T);
-  m.s(3300, 960, m.W - T - 3300, m.H - 960, false, 'branch');
-  m.thorns('t-east', 3300, 920, m.W - T - 3300);
+  m.s(3200, 960, m.W - T - 3200, m.H - 960, false, 'branch');
+  m.thorns('t-east', 3200, 920, m.W - T - 3200);
   m.add('glades', { id: 'glade-glide', x: 1500, y: P - 260, w: 500, h: 260, ability: 'glide' });
   m.patch('p-lookout', 2200, P);
   m.spawn(2200, P);
@@ -754,7 +755,7 @@ BUILD.westfall = (m) => {
   const W = m.W;
   shell(m, { noSill: ['west-boughs'] });
   // The upper west wall's bark block takes kicks (the climb to the Owl Hole): its top is the door's floor.
-  m.s(T, 500, 300, 1120, 'east', 'trunk');
+  m.s(T, 500, 300, 3100, 'east', 'trunk');
   // Ledge doors.
   m.s(W - T - 300, 1780, 300, 40, false, 'branch');
   m.s(W - T - 320, 4200, 320, 40, false, 'branch');

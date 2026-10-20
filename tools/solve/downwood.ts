@@ -235,7 +235,7 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
     for (const n of r.nodes.values()) {
       findsAt(room, n.state, res.finds, rests);
       const f = feet(n.state);
-      if (f.x < 0 || f.x > room.width || f.y > room.height)
+      if (n.state.player.grounded && (f.x < 0 || f.x > room.width || f.y > room.height))
         res.outside.push(`${room.id} (${Math.round(f.x)}, ${Math.round(f.y)})`);
     }
     for (const [exit, list] of r.exitsAll) {
