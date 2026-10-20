@@ -89,7 +89,8 @@ export function updateFinds(state: GameState, scene: Scene, t: Tuning, events: S
   // n up to it, so a gate on `seeds:3` opens at the third.
   const half = F.seedSize / 2;
   for (const sd of scene.moonseeds ?? []) {
-    if (p.x >= sd.x + half || p.x + p.w <= sd.x - half || p.y >= sd.y + half || p.y + p.h <= sd.y - half) continue;
+    if (p.x >= sd.x + half || p.x + p.w <= sd.x - half || p.y >= sd.y + half || p.y + p.h <= sd.y - half)
+      continue;
     if (!remember(save.taken, key(sd.id))) continue;
     remember(save.flags, `seed:${key(sd.id)}`);
     let count = 0;

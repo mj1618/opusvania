@@ -15,13 +15,14 @@
  * climb. Glide: a jump + glide carries ~830 px over a gap at the same height, a jump alone 470. A fling off a
  * wick rises up to ~365 and carries ~640: no wick near a lock it could cheat.
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { type Json, RoomBuilder } from './lib';
 
 const SW = 1920;
 const SH = 1080;
 /** Side wall thickness, ceiling thickness, the default floor's thickness. */
-const T = 96;
+const T = 160;
 const CEIL = 120;
 const FLOOR = 120;
 /** The side door's opening height (4 tiles). */
@@ -130,21 +131,69 @@ const ATX: Record<string, [number, number]> = {
 type Band = 'night' | 'hall' | 'roots' | 'cache';
 const BAND: Record<string, Band> = {};
 for (const id of [
-  'hatch', 'moonperch', 'lone-limb', 'far-crown', 'lookout', 'scar', 'windbreak', 'nest', 'map', 'hub',
-  'west-boughs', 'owl-hole', 'westfall', 'loft', 'cocoon-row', 'east-boughs', 'chimney', 'rain-ledge',
-  'crown-tip', 'gorge', 'gorge-floor', 'far-ledge', 'gorge-shelf',
+  'hatch',
+  'moonperch',
+  'lone-limb',
+  'far-crown',
+  'lookout',
+  'scar',
+  'windbreak',
+  'nest',
+  'map',
+  'west-boughs',
+  'owl-hole',
+  'westfall',
+  'loft',
+  'cocoon-row',
+  'east-boughs',
+  'chimney',
+  'rain-ledge',
+  'crown-tip',
+  'gorge',
+  'gorge-floor',
+  'far-ledge',
+  'gorge-shelf',
 ])
   BAND[id] = 'night';
-for (const id of ['vault', 'glass-crack', 'bark-stair', 'fern-rest', 'floor-west', 'hollow', 'floor-east', 'spring', 'bark-floor', 'black-pool'])
+for (const id of [
+  'hub',
+  'vault',
+  'glass-crack',
+  'bark-stair',
+  'fern-rest',
+  'floor-west',
+  'hollow',
+  'floor-east',
+  'spring',
+  'bark-floor',
+  'black-pool',
+])
   BAND[id] = 'hall';
-for (const id of ['roots-west', 'den', 'taproot', 'ant-road', 'carrier-crack', 'root-well', 'roots-east', 'sunk-stair', 'drowned-hall', 'beetle-burrow'])
+for (const id of [
+  'roots-west',
+  'den',
+  'taproot',
+  'ant-road',
+  'carrier-crack',
+  'root-well',
+  'roots-east',
+  'sunk-stair',
+  'drowned-hall',
+  'beetle-burrow',
+])
   BAND[id] = 'roots';
 for (const id of ['antechamber', 'weaver', 'valley-mouth']) BAND[id] = 'cache';
 
 /** The kit she has when she first gets to each room (the design's order: claws, then glide): dev boots. */
 const KIT: Record<string, string[]> = {};
-const STAGE0 = 'hatch hub cocoon-row west-boughs east-boughs map westfall loft fern-rest floor-west roots-west bark-stair hollow bark-floor den ant-road antechamber taproot carrier-crack'.split(' ');
-const STAGE1 = 'scar windbreak nest chimney owl-hole lookout floor-east sunk-stair gorge-floor rain-ledge glass-crack black-pool spring roots-east drowned-hall beetle-burrow'.split(' ');
+const STAGE0 =
+  'hatch hub cocoon-row west-boughs east-boughs map westfall loft fern-rest floor-west roots-west bark-stair hollow bark-floor den ant-road antechamber taproot carrier-crack'.split(
+    ' ',
+  );
+const STAGE1 =
+  'scar windbreak nest chimney owl-hole lookout floor-east sunk-stair gorge-floor rain-ledge glass-crack black-pool spring roots-east drowned-hall beetle-burrow'.split(
+    ' ',
+  );
 for (const r of DESIGN.rooms)
   KIT[r.id] = STAGE0.includes(r.id) ? [] : STAGE1.includes(r.id) ? ['wallJump'] : ['wallJump', 'glide'];
 
@@ -192,7 +241,14 @@ for (const l of DESIGN.links) {
       [east, 'w'],
     ] as const) {
       const oy = room.y * SH;
-      const e: Exit = { id: room === a ? l.b : l.a, edge, from: y0 - oy, to: y1 - oy, link: l, floor: y1 - oy };
+      const e: Exit = {
+        id: room === a ? l.b : l.a,
+        edge,
+        from: y0 - oy,
+        to: y1 - oy,
+        link: l,
+        floor: y1 - oy,
+      };
       if (l.oneway && room === a) e.oneWay = true;
       (EXITS.get(room.id) as Exit[]).push(e);
     }
@@ -232,7 +288,12 @@ class Room {
       edgeKick: false,
       senses: 'lamp',
       abilities: KIT[d.id],
-      art: { mode: 'painted', kit: 'lanternroot', band: BAND[d.id] ?? 'night', seed: 7000 + DESIGN.rooms.indexOf(d) },
+      art: {
+        mode: 'painted',
+        kit: 'lanternroot',
+        band: BAND[d.id] ?? 'night',
+        seed: 7000 + DESIGN.rooms.indexOf(d),
+      },
     });
   }
   /** The exit to a neighbour (throws if there is none). */
@@ -242,7 +303,14 @@ class Room {
     return x;
   }
   /** A solid. Faces take no kicks unless `kick` says. */
-  s(x: number, y: number, w: number, h: number, kick: boolean | 'east' | 'west' = false, tag = 'ground'): this {
+  s(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    kick: boolean | 'east' | 'west' = false,
+    tag = 'ground',
+  ): this {
     this.r.solid(Math.round(x), Math.round(y), Math.round(w), Math.round(h), tag as never, kick);
     return this;
   }
@@ -356,14 +424,6 @@ function floor(m: Room, y: number, x0 = 0, x1 = m.W, tag = 'ground'): void {
   if (x < x1) m.s(x, y, x1 - x, m.H - y, false, tag);
 }
 
-/** A side door's sill ledge inside the room: `len` px from the wall, at the door's floor. */
-function sill(m: Room, to: string, len = 260, thick = 40): void {
-  const e = m.e(to);
-  const y = e.floor as number;
-  if (e.edge === 'w') m.s(T, y, len, thick, false, 'branch');
-  else m.s(m.W - T - len, y, len, thick, false, 'branch');
-}
-
 /** A ladder of rungs up to a top exit (two-way vertical links): from `bottom` to just under the opening. */
 function climbTo(m: Room, to: string, bottom: number, side: 'l' | 'r' = 'l'): void {
   const e = m.e(to);
@@ -447,7 +507,16 @@ BUILD['far-crown'] = (m) => {
   m.s(1700, 760, 900, 140, false, 'branch');
   m.sign('sign-crown', 2100, 760, '-..-');
   m.wick('w-crown', 1500, 560);
-  m.enemy({ id: 'hawk-crown', kind: 'hawker', x: 1500, y: 360, facing: 1, guards: 'w-crown', orbit: 'w-crown', radius: 160 });
+  m.enemy({
+    id: 'hawk-crown',
+    kind: 'hawker',
+    x: 1500,
+    y: 360,
+    facing: 1,
+    guards: 'w-crown',
+    orbit: 'w-crown',
+    radius: 160,
+  });
   m.pod('pod-fc', 2400, 760);
   m.glints('g-fc-', 2700, 3500, 860, 80, 6);
   m.spawn(3300, 900);
@@ -507,7 +576,15 @@ BUILD.windbreak = (m) => {
   void nest;
   // The lantern with its hawker (the crown woke: the firefly hung it while she was below).
   m.lantern('l-wind', 6400, 300, { after: WAKE });
-  m.enemy({ id: 'hawk-wind1', kind: 'hawker', x: 6400, y: 160, guards: 'l-wind', orbit: 'l-wind', wakes: WAKE });
+  m.enemy({
+    id: 'hawk-wind1',
+    kind: 'hawker',
+    x: 6400,
+    y: 160,
+    guards: 'l-wind',
+    orbit: 'l-wind',
+    wakes: WAKE,
+  });
   m.enemy({ id: 'hawk-wind2', kind: 'hawker', x: 5600, y: 220, facing: -1, guards: 'l-wind', wakes: WAKE });
   // A wick chain to fling west along the boughs (ending far from the snapped tip).
   m.wick('w-wb1', 4800, 380);
@@ -533,7 +610,16 @@ BUILD.nest = (m) => {
   m.o(2560, 760, 240);
   m.lantern('l-nest', 2350, 560);
   m.enemy({ id: 'hawk-n1', kind: 'hawker', x: 2050, y: 380, guards: 'l-nest', orbit: 'l-nest', period: 240 });
-  m.enemy({ id: 'hawk-n2', kind: 'hawker', x: 2650, y: 380, facing: -1, guards: 'l-nest', orbit: 'l-nest', period: 240 });
+  m.enemy({
+    id: 'hawk-n2',
+    kind: 'hawker',
+    x: 2650,
+    y: 380,
+    facing: -1,
+    guards: 'l-nest',
+    orbit: 'l-nest',
+    period: 240,
+  });
   m.hollow('h-nest', 3400, F, 'moonDrop');
   m.landmark('nest', 'challenge', 2350, 700);
   m.spawn(1240, F);
@@ -556,14 +642,24 @@ BUILD.hub = (m) => {
   m.s(T, 1500, 1200 - T, FORK + 160 - 1500, 'east', 'trunk');
   // The fork floor (the crotch), a drop at its west end (1200..1600) and the rungs' hole at its east (4000..4400).
   m.s(1600, FORK, 4000 - 1600, 160, false, 'branch');
+  // (The rungs come up through a one-way of root over the east hole: she walks over it from the hatch.)
+  m.o(4000, FORK, 400);
   // East tine: over the hatch's corridor (its top the Moth-Stone's sill at 960); the corridor's floor.
   m.s(4400, 960, W - T - 4400, 1784 - 960, false, 'trunk');
   m.s(4400, FORK, W - T - 4400, 160, false, 'branch');
   for (const [i, y] of [1860, 1680, 1500, 1320, 1140].entries()) m.o(i % 2 === 0 ? 4140 : 4220, y, 200);
-  // The trunk: the West Boughs' ledge, the Bark Stair's alcove (sill 3700, lintel 3380..3444), the floor.
-  m.s(T, 3120, 1400 - T, 40, false, 'branch');
-  m.s(T, 3380, 760 - T, 64, false, 'trunk');
-  m.s(T, 3700, 400 - T, TF - 3700, 'east', 'trunk');
+  // The trunk: thick bark sides (the oak's walls), tunnels through them: the West Boughs (3120), the Bark Stair's
+  // alcove (3444..3700, a claw climb up its face, a lintel over its mouth so no drop lands in it), the Lampwalk.
+  const TW = 700;
+  const TE = 4900;
+  const wb = m.e('west-boughs');
+  const lw = m.e('east-boughs');
+  m.s(T, FORK + 160, TW - T, wb.from - FORK - 160, false, 'trunk');
+  m.s(T, wb.to, TW - T, 3444 - wb.to, false, 'trunk');
+  m.s(T, 3700, TW - T, TF - 3700, 'east', 'trunk');
+  m.s(TW, wb.to, 1400 - TW, 40, false, 'branch');
+  m.s(TW, 3380, 1060 - TW, 64, false, 'trunk');
+  m.s(TE, FORK + 160, W - T - TE, lw.from - FORK - 160, false, 'trunk');
   floor(m, TF, T, W - T, 'trunk');
   // Rungs up the trunk's east side to the fork's east hole.
   m.ladder(4060, 220, FORK + 200, TF, 200, 120);
@@ -571,7 +667,15 @@ BUILD.hub = (m) => {
   const vault = m.e('vault');
   const grate = m.e('hollow');
   const flap = m.e('glass-crack');
-  m.add('gates', { id: 'knot', x: vault.from, y: TF, w: vault.to - vault.from, h: 60, flag: 'seeds:5', kick: false });
+  m.add('gates', {
+    id: 'knot',
+    x: vault.from,
+    y: TF,
+    w: vault.to - vault.from,
+    h: 60,
+    flag: 'seeds:5',
+    kick: false,
+  });
   m.add('shortcuts', { id: 'grate', x: grate.from, y: TF, w: grate.to - grate.from, h: 60, opens: 's' });
   m.add('shortcuts', { id: 'flap', x: flap.from, y: TF, w: flap.to - flap.from, h: 60, opens: 's' });
   // (The throats under them take kicks: she climbs up into them from the rooms below.)
@@ -581,12 +685,20 @@ BUILD.hub = (m) => {
   }
   m.patch('p-hub', 2800, FORK);
   m.wick('w-fork', 2200, 1800);
-  m.enemy({ id: 'juv-hub', kind: 'juvenileBurrback', x: 3500, y: FORK, radius: 260, senses: 'always' });
+  m.enemy({ id: 'juv-hub', kind: 'juvenileBurrback', x: 3700, y: FORK, radius: 200, senses: 'always' });
   m.add('seedCases', { id: 'sc-hub1', x: 1500, y: 3000 });
   m.add('seedCases', { id: 'sc-hub2', x: 2400, y: 3600 });
   // After claws: the firefly's lantern in the fork and a hawker hunting it.
   m.lantern('l-fork', 2800, 1500, { after: WAKE });
-  m.enemy({ id: 'hawk-hub', kind: 'hawker', x: 2800, y: 1300, guards: 'l-fork', orbit: 'l-fork', wakes: WAKE });
+  m.enemy({
+    id: 'hawk-hub',
+    kind: 'hawker',
+    x: 2800,
+    y: 1300,
+    guards: 'l-fork',
+    orbit: 'l-fork',
+    wakes: WAKE,
+  });
   m.glints('g-trunk-', 1600, 3400, 3900, 120, 8);
   m.pod('pod-hub', 3200, TF);
   m.landmark('split-oak', 'landmark', 2800, 1000);
@@ -599,7 +711,15 @@ BUILD['west-boughs'] = (m) => {
   const F = 960;
   shell(m, {});
   floor(m, F, 0, m.W, 'branch');
-  m.enemy({ id: 'juv-wb', kind: 'juvenileBurrback', x: 3000, y: F, facing: -1, radius: 500, senses: 'always' });
+  m.enemy({
+    id: 'juv-wb',
+    kind: 'juvenileBurrback',
+    x: 3000,
+    y: F,
+    facing: -1,
+    radius: 500,
+    senses: 'always',
+  });
   m.s(1500, 700, 500, 40, false, 'branch');
   m.wick('w-gap', 2200, 600);
   m.pod('pod-wb1', 1700, 700);
@@ -637,7 +757,10 @@ BUILD.westfall = (m) => {
   m.s(W - T - 320, 4200, 320, 40, false, 'branch');
   m.s(T, 5280, 300, 40, false, 'branch');
   m.s(W - T - 300, 5280, 300, 40, false, 'branch');
-  // Ledges to stop on: a bark shelf, branches.
+  // Ledges to stop on: a branch under the lip with a pod and glints, a bark shelf, branches.
+  m.o(420, 1300, 320);
+  m.pod('pod-lip', 580, 1300);
+  m.glints('g-lip-', 900, 1500, 1500, 120, 6);
   m.add('bark', { id: 'bark-fall', x: 700, y: 2600, w: 280, h: 40, floor: true, kick: false });
   m.o(1100, 3300, 260);
   m.o(500, 3800, 240);
@@ -648,11 +771,13 @@ BUILD.westfall = (m) => {
   m.wick('w-fall3', 1300, 4900);
   m.wick('w-fall4', 700, 6200);
   m.enemy({ id: 'dang-fall1', kind: 'dangler', x: 1100, y: 3320, guards: 'w-fall1' });
-  for (const [i, [x, y, g]] of ([
-    [500, 3820, 'w-fall2'],
-    [1000, 4720, 'w-fall3'],
-    [600, 5930, 'w-fall4'],
-  ] as const).entries())
+  for (const [i, [x, y, g]] of (
+    [
+      [500, 3820, 'w-fall2'],
+      [1000, 4720, 'w-fall3'],
+      [600, 5930, 'w-fall4'],
+    ] as const
+  ).entries())
     m.enemy({ id: `dang-wake${i + 1}`, kind: 'dangler', x, y, guards: g, wakes: WAKE });
   m.s(400, 5880, 400, 30, false, 'branch');
   // The foot: floor east, the roof over the thorn gap, the Root Well's sill.
@@ -815,13 +940,15 @@ BUILD.gorge = (m) => {
   shell(m, { sky: true });
   m.s(T, 520, 600, 3800, false, 'trunk');
   m.s(m.W - T - 300, 1680, 300, 2640, false, 'trunk');
-  for (const [i, [x, y]] of ([
-    [2200, 1300],
-    [3300, 1100],
-    [4400, 1200],
-    [5500, 1100],
-    [6400, 1400],
-  ] as const).entries())
+  for (const [i, [x, y]] of (
+    [
+      [2200, 1300],
+      [3300, 1100],
+      [4400, 1200],
+      [5500, 1100],
+      [6400, 1400],
+    ] as const
+  ).entries())
     m.lantern(`l-g${i + 1}`, x, y);
   m.enemy({ id: 'hawk-g1', kind: 'hawker', x: 3300, y: 900, guards: 'l-g2', orbit: 'l-g2' });
   m.enemy({ id: 'hawk-g2', kind: 'hawker', x: 5500, y: 900, guards: 'l-g4', orbit: 'l-g4' });
@@ -983,7 +1110,15 @@ BUILD['floor-east'] = (m) => {
   m.enemy({ id: 'hawk-br', kind: 'hawker', x: 6100, y: 300, guards: 'w-br1' });
   m.lantern('l-brook', 9000, 560);
   m.enemy({ id: 'ant-br1', kind: 'carrier', x: 8400, y: F, trail: [[9600, F]], guards: 'l-brook' });
-  m.enemy({ id: 'ant-br2', kind: 'carrier', x: 8400, y: F, follow: 'ant-br1', phase: 0.5, guards: 'l-brook' });
+  m.enemy({
+    id: 'ant-br2',
+    kind: 'carrier',
+    x: 8400,
+    y: F,
+    follow: 'ant-br1',
+    phase: 0.5,
+    guards: 'l-brook',
+  });
   m.glints('g-br-', 1600, 2600, 900, 80, 7);
   m.pod('pod-br', 3200, F);
   m.spawn(1400, F);
@@ -1046,7 +1181,15 @@ BUILD['roots-west'] = (m) => {
   m.wick('w-cage', 3600, 640);
   m.thorns('t-cage-l', 3440, 520, 40, 260);
   m.thorns('t-cage-r', 3720, 520, 40, 260);
-  m.enemy({ id: 'juv-rt', kind: 'juvenileBurrback', x: 4300, y: F, facing: -1, radius: 300, senses: 'always' });
+  m.enemy({
+    id: 'juv-rt',
+    kind: 'juvenileBurrback',
+    x: 4300,
+    y: F,
+    facing: -1,
+    radius: 300,
+    senses: 'always',
+  });
   m.glints('g-rt-', 600, 1200, 900, 60, 5);
   m.pod('pod-rt', 2200, CEIL, 'hang');
   m.spawn(400, F);
@@ -1081,7 +1224,15 @@ BUILD.den = (m) => {
     taproot: [2900, 2996],
     crack: 'dw-den-cracked',
   });
-  m.add('glades', { id: 'glade-claws', x: 1000, y: F - 256, w: 900, h: 256, ability: 'wallJump', when: DEN_DOWN });
+  m.add('glades', {
+    id: 'glade-claws',
+    x: 1000,
+    y: F - 256,
+    w: 900,
+    h: 256,
+    ability: 'wallJump',
+    when: DEN_DOWN,
+  });
   m.landmark('den', 'challenge', 1600, 1700);
   m.mark('moonholes', { x: 1800, y: 0 });
   m.r.set('camera', {
@@ -1126,7 +1277,12 @@ BUILD['carrier-crack'] = (m) => {
   floor(m, F);
   climbTo(m, 'ant-road', F, 'l');
   m.r.data.pickups.push(
-    ...Array.from({ length: 20 }, (_, i) => ({ id: `g-moth${i + 1}`, kind: 'glint', x: 900 + (i % 10) * 60, y: 860 - Math.floor(i / 10) * 60 })),
+    ...Array.from({ length: 20 }, (_, i) => ({
+      id: `g-moth${i + 1}`,
+      kind: 'glint',
+      x: 900 + (i % 10) * 60,
+      y: 860 - Math.floor(i / 10) * 60,
+    })),
   );
   m.enemy({ id: 'ant-cc1', kind: 'carrier', x: 800, y: F, trail: [[1500, F]] });
   m.enemy({ id: 'ant-cc2', kind: 'carrier', x: 800, y: F, follow: 'ant-cc1', phase: 0.5 });
@@ -1174,7 +1330,15 @@ BUILD['beetle-burrow'] = (m) => {
   m.lantern('l-burrow', 1300, 600, { moths: 30 });
   m.enemy({ id: 'burr-bur', kind: 'burrback', x: 1300, y: F, facing: -1, radius: 380, guards: 'l-burrow' });
   for (const [i, x] of [1000, 1500, 1700].entries())
-    m.enemy({ id: `juv-bur${i + 1}`, kind: 'juvenileBurrback', x, y: F, facing: i % 2 ? 1 : -1, radius: 200, senses: 'always' });
+    m.enemy({
+      id: `juv-bur${i + 1}`,
+      kind: 'juvenileBurrback',
+      x,
+      y: F,
+      facing: i % 2 ? 1 : -1,
+      radius: 200,
+      senses: 'always',
+    });
   m.landmark('burrow', 'challenge', 1300, 700);
   m.spawn(500, F);
 };
@@ -1228,7 +1392,15 @@ BUILD.antechamber = (m) => {
   climbTo(m, 'carrier-crack', F, 'l');
   climbTo(m, 'hollow', F, 'r');
   const door = m.e('weaver');
-  m.add('gates', { id: 'seed-door', x: door.from, y: F, w: door.to - door.from, h: 60, flag: 'seeds:3', kick: false });
+  m.add('gates', {
+    id: 'seed-door',
+    x: door.from,
+    y: F,
+    w: door.to - door.from,
+    h: 60,
+    flag: 'seeds:3',
+    kick: false,
+  });
   m.patch('p-seed', 1500, F);
   m.landmark('seed-door', 'landmark', (door.from + door.to) / 2, F - 100);
   m.sign('sign-door', 2200, F, '...');
@@ -1244,7 +1416,15 @@ BUILD.weaver = (m) => {
   // fight's checkpoint), the arena (lab-weaver's), the east corridor rises to the Valley Mouth.
   const lab = JSON.parse(readFileSync('content/rooms/lab-weaver.json', 'utf8')) as {
     lures: Array<{ id: string; kind: string; x: number; y: number; spin?: number }>;
-    enemies: Array<{ id: string; kind: string; x: number; y: number; facing: number; strands?: number[][]; anchors?: number[][] }>;
+    enemies: Array<{
+      id: string;
+      kind: string;
+      x: number;
+      y: number;
+      facing: number;
+      strands?: number[][];
+      anchors?: number[][];
+    }>;
     oneWays: Array<{ x: number; y: number; w: number }>;
     boss: { drops: number[]; lowered: { x: number; y: number } };
   };
@@ -1267,7 +1447,13 @@ BUILD.weaver = (m) => {
   }
   for (const e of lab.enemies) {
     const o: Json = { id: e.id, kind: e.kind, x: e.x + WX, y: e.y + WY, facing: e.facing };
-    if (e.strands) o.strands = e.strands.map(([a, b, c, d]) => [(a as number) + WX, (b as number) + WY, (c as number) + WX, (d as number) + WY]);
+    if (e.strands)
+      o.strands = e.strands.map(([a, b, c, d]) => [
+        (a as number) + WX,
+        (b as number) + WY,
+        (c as number) + WX,
+        (d as number) + WY,
+      ]);
     if (e.anchors) o.anchors = e.anchors.map(([a, b]) => [(a as number) + WX, (b as number) + WY]);
     m.r.enemy(o);
   }
@@ -1322,7 +1508,12 @@ BUILD['valley-mouth'] = (m) => {
 // Routes (the world check's claims, proven by tools/solve/downwood.ts): inside every room each node reaches a
 // middle place; a locked link's exit needs its ability, flags or shortcut.
 // ---------------------------------------------------------------------------------------------------------------
-const ABILITY: Record<string, string> = { claws: 'wallJump', glide: 'glide', doubleJump: 'doubleJump', dash: 'dash' };
+const ABILITY: Record<string, string> = {
+  claws: 'wallJump',
+  glide: 'glide',
+  doubleJump: 'doubleJump',
+  dash: 'dash',
+};
 
 function routes(m: Room): void {
   const d = m.r.data as Json & Record<string, unknown>;
@@ -1379,9 +1570,9 @@ export function buildAll(): Json[] {
   return out;
 }
 
-if (process.argv[1]?.endsWith('downwood.ts')) {
+if (process.argv[1]?.endsWith('levels/downwood.ts')) {
   const rooms = buildAll();
-  writeFileSync('content/worlds/downwood-rooms.json', `${JSON.stringify(rooms)}\n`);
+  writeFileSync('content/worlds/downwood-rooms.json', `${JSON.stringify(rooms, null, 2)}\n`);
   console.log(`wrote content/worlds/downwood-rooms.json (${rooms.length} rooms)`);
   writeFileSync(
     'content/worlds/downwood.json',
@@ -1397,4 +1588,10 @@ if (process.argv[1]?.endsWith('downwood.ts')) {
     )}\n`,
   );
   console.log('wrote content/worlds/downwood.json');
+  // (The repo's JSON style: Biome formats what was written.)
+  execFileSync(
+    'npx',
+    ['biome', 'format', '--write', 'content/worlds/downwood-rooms.json', 'content/worlds/downwood.json'],
+    { stdio: 'ignore' },
+  );
 }

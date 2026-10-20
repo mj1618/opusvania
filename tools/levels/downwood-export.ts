@@ -22,7 +22,12 @@ import { WEAVER_DOWN } from './downwood';
 
 const SW = 1920;
 const SH = 1080;
-const ABILITY: Record<string, string> = { wallJump: 'claws', glide: 'glide', doubleJump: 'doubleJump', dash: 'dash' };
+const ABILITY: Record<string, string> = {
+  wallJump: 'claws',
+  glide: 'glide',
+  doubleJump: 'doubleJump',
+  dash: 'dash',
+};
 
 export interface Layout {
   id: string;
@@ -87,13 +92,20 @@ export function exportDownwood(): Layout {
       const link = w.links[`${r.id}#${e.id}`];
       // Arrival-only (the far side of a drop) is listed from the side she leaves by.
       const other = link ?? null;
-      const to = other?.to ?? placed.find((q) => (q.scene.exits ?? []).some((x) => w.links[`${q.id}#${x.id}`]?.to === r.id && w.links[`${q.id}#${x.id}`]?.exit === e.id))?.id;
+      const to =
+        other?.to ??
+        placed.find((q) =>
+          (q.scene.exits ?? []).some(
+            (x) => w.links[`${q.id}#${x.id}`]?.to === r.id && w.links[`${q.id}#${x.id}`]?.exit === e.id,
+          ),
+        )?.id;
       if (!to) continue;
       const pair = [r.id, to].sort().join('|');
       if (seen.has(pair)) continue;
       seen.add(pair);
       const toRoom = w.rooms[to]?.scene as Room;
-      const toExit = other?.exit ?? (toRoom.exits ?? []).find((x) => w.links[`${to}#${x.id}`]?.to === r.id)?.id ?? '';
+      const toExit =
+        other?.exit ?? (toRoom.exits ?? []).find((x) => w.links[`${to}#${x.id}`]?.to === r.id)?.id ?? '';
       const oneHere = !!e.oneWay;
       const oneThere = !!(toRoom.exits ?? []).find((x) => x.id === toExit)?.oneWay;
       // a = the side she leaves a drop by; the room with the shortcut's door (it opens from the other room).
@@ -135,7 +147,11 @@ if (process.argv[1]?.endsWith('downwood-export.ts')) {
   writeFileSync(file, `${JSON.stringify(L, null, 2)}\n`);
   const { out } = score(L) as { out: Array<{ name: string; ok: boolean; got: unknown; want: string }> };
   const fails = out.filter((c) => !c.ok).length;
-  console.log(`\n${L.title}  (${file}): ${out.length - fails}/${out.length} pass  (${L.rooms.length} rooms, ${L.links.length} links)`);
+  console.log(
+    `\n${L.title}  (${file}): ${out.length - fails}/${out.length} pass  (${L.rooms.length} rooms, ${L.links.length} links)`,
+  );
   for (const c of out)
-    console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.name.padEnd(38)} ${String(c.got).padEnd(28)} want ${c.want}`);
+    console.log(
+      `  ${c.ok ? 'PASS' : 'FAIL'}  ${c.name.padEnd(38)} ${String(c.got).padEnd(28)} want ${c.want}`,
+    );
 }

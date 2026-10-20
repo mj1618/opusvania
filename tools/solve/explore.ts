@@ -61,6 +61,8 @@ export interface ExploreResult {
   nodes: Map<string, ExploreNode>;
   /** Exits she left by: exit id -> the node she left from, the macro and its frames up to the crossing. */
   exits: Map<string, { from: ExploreNode; macro: string; tape: number[] }>;
+  /** With `allExits`: up to `allExits` crossings of each exit, from different nodes (the Downwood's world search). */
+  exitsAll: Map<string, Array<{ from: ExploreNode; macro: string; tape: number[] }>>;
   /** Nodes whose search stopped early (the node budget). */
   truncated: boolean;
   steps: number;
@@ -105,6 +107,8 @@ export interface ExploreOpts {
   kindle?: boolean;
   /** Stop as soon as she leaves by this exit (an edge proof to an exit). */
   goalExit?: string;
+  /** Keep up to this many crossings of each exit (`exitsAll`), not just the first. */
+  allExits?: number;
 }
 
 /** Her feet. */
@@ -246,6 +250,24 @@ export function baseMacros(): Macro[] {
   }
   // Down through a one-way.
   out.push({ name: 'drop', max: 200, prog: air((_s, k) => (k < 2 ? D | J : 0)) });
+  return out;
+}
+
+/** Dashes (only with the dash owned): a run and a dash, a jump and a dash at its top, each way. */
+export function dashMacros(): Macro[] {
+  const X = ActionBit.dash;
+  const out: Macro[] = [];
+  for (const d of [-1, 1]) {
+    const h = dirBit(d);
+    const tag = d > 0 ? 'R' : 'L';
+    out.push({ name: `dash${tag}`, max: 200, prog: air((_s, k) => h | (k >= 4 && k < 6 ? X : 0)) });
+    out.push({ name: `walkdash${tag}`, max: 240, prog: air((_s, k) => h | (k >= 14 && k < 16 ? X : 0)) });
+    out.push({
+      name: `jdash${tag}`,
+      max: 240,
+      prog: air((_s, k) => h | (k < 14 ? J : 0) | (k >= 16 && k < 18 ? X : 0)),
+    });
+  }
   return out;
 }
 
@@ -636,7 +658,9 @@ export function explore(o: ExploreOpts): ExploreResult {
   const t = o.tuning;
   const nodes = new Map<string, ExploreNode>();
   const exits = new Map<string, { from: ExploreNode; macro: string; tape: number[] }>();
+  const exitsAll = new Map<string, Array<{ from: ExploreNode; macro: string; tape: number[] }>>();
   const queue: ExploreNode[] = [];
+  const dashes = dashMacros();
   const base = baseMacros();
   const flings = o.flings === false ? [] : flingMacros();
   const pogos = o.pogo === false ? [] : [...pogoMacros(), ...cutMacros()];
@@ -676,10 +700,11 @@ export function explore(o: ExploreOpts): ExploreResult {
       if (done.has(n.key)) continue;
       done.add(n.key);
     } else n = queue.shift() as ExploreNode;
-    if (o.goal?.(n.state)) return { nodes, exits, truncated, steps };
+    if (o.goal?.(n.state)) return { nodes, exits, exitsAll, truncated, steps };
     const s = n.state;
     const owns = (a: string) => (s.save.abilities as readonly string[]).includes(a);
     const list: Macro[] = [...base, ...pogos];
+    if (owns('dash')) list.push(...dashes);
     const S = withShortcuts(scene, s.save);
     // (A tap of Lamp by a cold moonwick is a kindle, not a gust: only the kindle macro may spend her glow.)
     if (owns('gust') && scene.glow)
@@ -711,7 +736,12 @@ export function explore(o: ExploreOpts): ExploreResult {
       if (keep) relight(r.state, s, scene);
       if (r.outcome === 'exit' && r.exit) {
         if (!exits.has(r.exit)) exits.set(r.exit, { from: n, macro: m.name, tape: r.tape });
-        if (r.exit === o.goalExit) return { nodes, exits, truncated, steps };
+        if (o.allExits) {
+          const all = exitsAll.get(r.exit) ?? [];
+          if (all.length < o.allExits) all.push({ from: n, macro: m.name, tape: r.tape });
+          exitsAll.set(r.exit, all);
+        }
+        if (r.exit === o.goalExit) return { nodes, exits, exitsAll, truncated, steps };
         continue;
       }
       if (r.outcome !== 'stand') continue;
@@ -731,15 +761,15 @@ export function explore(o: ExploreOpts): ExploreResult {
         frames,
       };
       nodes.set(key, node);
-      if (o.goal?.(r.state)) return { nodes, exits, truncated, steps };
+      if (o.goal?.(r.state)) return { nodes, exits, exitsAll, truncated, steps };
       if (nodes.size >= maxNodes) {
         truncated = true;
-        return { nodes, exits, truncated, steps };
+        return { nodes, exits, exitsAll, truncated, steps };
       }
       queue.push(node);
     }
   }
-  return { nodes, exits, truncated, steps };
+  return { nodes, exits, exitsAll, truncated, steps };
 }
 
 /** The macro chain (names) from a start to `node`, and its whole input tape. */

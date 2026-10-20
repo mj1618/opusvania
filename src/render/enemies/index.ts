@@ -25,13 +25,22 @@ import { Painter, type RGB, type Shade } from './paint';
 const MAX_P = 160;
 /** Kinds drawn on the burrback's rig (the juvenile only in Lanternroot), and on the lampwing's (the hawker). */
 function isBeetle(kind: string): boolean {
-  return kind === 'burrback' || (kind === 'juvenileBurrback' && isLantern());
+  return kind === 'burrback' || (isLantern() && kind in BEETLE_SCALE);
 }
 function isMoth(kind: string): boolean {
   return kind === 'lampwing' || (kind === 'hawker' && isLantern());
 }
 /** The juvenile beetle drawn on the burrback's rig at this size (its box is 38 x 26 against 52 x 34). */
 const BURR_JUVENILE = 0.72;
+/**
+ * Painted rooms (Lanternroot's kit: the Downwood too) draw these kinds on the burrback's rig, scaled about its feet:
+ * the juvenile small, the old burrback (256 x 154 against 52 x 34) huge, the carriers (30 x 14) as ants.
+ */
+const BEETLE_SCALE: Record<string, number> = {
+  juvenileBurrback: BURR_JUVENILE,
+  oldBurrback: 4.4,
+  carrier: 0.5,
+};
 const K_FRAG = 1;
 const K_MOTE = 2;
 const K_DUST = 3;
@@ -640,8 +649,11 @@ export class EnemyRenderer {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
       }
-      const small = lantern && e.kind === 'juvenileBurrback';
+      const scale = lantern ? (BEETLE_SCALE[e.kind] ?? 1) : 1;
+      const small = scale !== 1;
       if (e.kind !== 'burrback' && !small) continue;
+      // (A carrier in its crack is no one's: not drawn.)
+      if (e.kind === 'carrier' && e.mode === 'under') continue;
       let rig = this.rigs[i];
       if (!rig) {
         rig = new BurrRig(i);
@@ -890,8 +902,8 @@ export class EnemyRenderer {
       const f0 = pf.vertexCount;
       if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
       if (small) {
-        p.scaleFrom(v0, rig.x, rig.y, BURR_JUVENILE);
-        pf.scaleFrom(f0, rig.x, rig.y, BURR_JUVENILE);
+        p.scaleFrom(v0, rig.x, rig.y, scale);
+        pf.scaleFrom(f0, rig.x, rig.y, scale);
       }
       if (rig.topNew) {
         rig.topNew = false;

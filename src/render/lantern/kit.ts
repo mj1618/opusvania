@@ -53,6 +53,8 @@ export const KIT = {
   },
   moon: { beam: 0xb8d0f0, pool: 0xdce8ff, mote: 0xe8f0ff },
   moss: { scar: 0x8aa8a0, lit: 0xa8d8cc, body: 0x24403c, glow: 0x88c8c0 },
+  /** The Downwood's moonseeds and the sockets of the doors that count them. */
+  seed: { body: 0xf2ecd8, wing: 0xc8d8f0, glow: 0xdfe8ff, rim: 0x8a8070 },
   cap: { top: 0x6a4a6a, topLit: 0xb08ab0, gill: 0x2a1a2a, stalk: 0x8a7a70 },
   /** Seconds a gate takes to fall away, a cover to thin, a cut's shake. */
   gateFall: 0.8,
@@ -320,7 +322,37 @@ export class Kit {
       const fall = open && t !== undefined ? t / KIT.gateFall : 0;
       if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else this.seal(back, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      // A door that counts moonseeds (the Downwood): its sockets in a row over it, one lit for each seed held.
+      if (g.flag.startsWith('seeds:') && !open) {
+        const want = Number(g.flag.slice(6));
+        const held = seedsHeld(sim.save.flags);
+        for (let k = 0; k < want; k++) {
+          const sx = g.x + g.w / 2 + (k - (want - 1) / 2) * 34;
+          const sy = g.y - 18;
+          back.circle(sx, sy, 11).fill(0x0c0a10);
+          back.circle(sx, sy, 11).stroke({ color: KIT.seed.rim, width: 2, alpha: 0.8 });
+          if (k < held) {
+            back.ellipse(sx, sy, 5, 7).fill(KIT.seed.body);
+            glow.add(sx, sy, 26, KIT.seed.glow, 0.5 + 0.1 * Math.sin(clock * 2 + k));
+          }
+        }
+      }
     });
+
+    // Moonseeds (the Downwood's keys): a pale seed with a silver wing, bobbing in its own light until taken.
+    for (const sd of S.moonseeds ?? []) {
+      if (!seen(sd.x - 60, sd.y - 60, 120, 120)) continue;
+      if (sim.save.taken.includes(`${room}:${sd.id}`)) continue;
+      const bob = Math.sin(clock * 1.4 + sd.x * 0.01) * 6;
+      const y = sd.y + bob;
+      glow.add(sd.x, y, 70, KIT.seed.glow, 0.42 + 0.08 * Math.sin(clock * 2.3));
+      glow.add(sd.x, y, 22, KIT.moon.mote, 0.6);
+      const tilt = Math.sin(clock * 0.9) * 0.25;
+      back.ellipse(sd.x - 10 + tilt * 8, y - 8, 14, 5).fill({ color: KIT.seed.wing, alpha: 0.8 });
+      back.ellipse(sd.x, y, 7, 10).fill(KIT.seed.body);
+      back.ellipse(sd.x - 2, y - 3, 3, 4).fill({ color: 0xffffff, alpha: 0.85 });
+      motes(back, sd.x, y + 30, 50, 80, clock, 4, KIT.moon.mote, 0.5);
+    }
 
     // Moonmoss: lichen scars cold; pale lit ledges near a burning moonwick.
     const moss =
@@ -785,6 +817,13 @@ export class Kit {
 }
 
 // --- shape helpers ---------------------------------------------------------------------------------
+
+/** How many moonseeds the save holds (its `seed:` flags). */
+function seedsHeld(flags: readonly string[]): number {
+  let n = 0;
+  for (const f of flags) if (f.startsWith('seed:')) n++;
+  return n;
+}
 
 /** The night's covers: a fallen limb lying over the hidden space (H1's hollow log), not a dark box. */
 const LOG = { bark: 0x0c1218, plate: 0x16202a, lit: 0x6a8aa8, ring: 0x1c2630, moss: 0x2a4a48 } as const;

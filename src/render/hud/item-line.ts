@@ -29,6 +29,11 @@ export function itemLine(key: string): string {
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
 }
 
+/** A moonseed's line: the count she holds (the Seed Door counts three, the Heartwood five). */
+export function seedLine(count: number): string {
+  return `A moonseed. ${count === 1 ? 'One' : count === 2 ? 'Two' : count === 3 ? 'Three' : count === 4 ? 'Four' : 'Five'} held.`;
+}
+
 /** Seconds and placement (safe-area units: y as a share of its height). */
 export const ITEM_LINE = { in: 0.35, hold: 5, out: 0.9, y: 0.8, size: 30, maxW: 0.8, alpha: 0.92 };
 
@@ -74,6 +79,10 @@ export class ItemLine {
               : '';
       if (key) {
         this.text.text = itemLine(key);
+        this.t = 0;
+      } else if (e.type === 'seedTaken') {
+        // A moonseed (the Downwood's keys): how many she holds now.
+        this.text.text = seedLine(e.count);
         this.t = 0;
       } else if (e.type === 'roomEnter' && e.from === 'load') this.t = 1e6;
     }
