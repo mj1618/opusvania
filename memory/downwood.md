@@ -80,3 +80,36 @@ proven, what is in it and what is not.
 - Two tools both ending in `downwood.ts`: the main-module guards must say `levels/` / `solve/`, or importing the
   generator rewrites the rooms.
 - Biome formats the generated JSON (the generator runs `biome format` itself).
+
+## State (2026-10-20, parked)
+**Done**
+- All 46 rooms are built, painted and linked. The built layout scores 25/25 on place-score.
+- The world check passes, except for the two later locks, which the check names on purpose.
+- Solver (last full run, before the dressing pass), lamps spent and kept: each stage's rooms equal the layout's
+  reach, s0 19, s1 35, s2 43, s3 44, later-dash 45. Link check (`downwood-links.ts`): 121 link-ways passed, all 15
+  dead ends entered, all 29 finds reached. Known exceptions:
+  - The double jump also opens the Lone Limb (meant to be dash only).
+  - The Black Pool's glide lock is the water inside the room, not its door. With claws she crosses the Hollow's door
+    to an isolated sill and back.
+  - weaver -> antechamber: a root to climb back up was added after that run, and the run that would prove it was stopped.
+- Both fights work in the built rooms (the old burrback's bots, the Weaver's bot).
+- `npm run check` passes.
+
+**Next**
+1. **The density pass (the coordinator's note: rooms read empty and boxy, especially the hub and the West Fall).**
+   `dress()` and `DRESS` are a start: hummocks, shelves with leaf-pods, glint arcs, hanging pods, a juvenile per
+   stretch. They are only partly in, and the hub still reads as one long floor. Still to do:
+   - every room's "within reach" list from the design's density table, visible on screen;
+   - the shafts (the West Fall, the Rain Chimney, the Hollow) as places to stop: wall wicks, danglers, ledges;
+   - terrain broken up beyond rectangles;
+   - the Split Oak reading as a split giant oak from the outside. The `scar` mark (a lightning seam) and the `glow`
+     mark (the great lamp seen through the hub's grate, the Hollow's foot, the Seed Door) are in, but not judged.
+   Shoot mid-room frames (`__game.goto` + screenshot), not only the spawn stops, and compare them with test-grove.
+2. Re-run the solver after the dressing: `npx tsx tools/solve/downwood.ts --write --max 6000` (~2.5 h for every
+   stage; `--stage s0,s1,s2 --lamps kept` is the lock hunt, ~25 min), then `npx tsx tools/solve/downwood-links.ts`.
+   Dressing keeps clear of the locks (`avoid` ranges, 260 px from exits), but only the solver proves it.
+3. Not built yet:
+   - the hatching (the cocoon) and the swarm;
+   - the Weaver glimpsed through the Seed Door;
+   - the freed moths spiralling out of the fork after glide, and the grate going cold after the Weaver;
+   - water drawn in the hall-band pools.

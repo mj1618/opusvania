@@ -432,6 +432,73 @@ function climbTo(m: Room, to: string, bottom: number, side: 'l' | 'r' = 'l'): vo
   m.ladder(x, w, 60, bottom, 190, side === 'l' ? 120 : -120);
 }
 
+/**
+ * The dressing (density, the test grove's rule: two or three things in reach at every moment): along a stretch of
+ * floor at `y` from `x0` to `x1`, every ~700 px a hummock (it breaks the long flat line; a low one runs over, a taller
+ * one is a hop), every other one a shelf of root or fungus ~230 px up with a leaf-pod on it and glints arcing up to
+ * it, and leaf-pods hanging from the ceiling. Nothing goes within 260 px of an exit, inside `avoid` (the locks: a
+ * shelf beside a climb is a step up it), or onto another solid. Heights stay within a jump of the floor.
+ */
+function dress(
+  m: Room,
+  y: number,
+  x0: number,
+  x1: number,
+  avoid: Array<[number, number]> = [],
+  ceil = true,
+  tag = 'a',
+  critter = true,
+): void {
+  const d = m.r.data;
+  const busy = (a: number, b: number, top: number, bottom: number) =>
+    avoid.some(([p, q]) => a < q && b > p) ||
+    [...m.ex.values()].some((e) =>
+      e.edge === 'n' || e.edge === 's'
+        ? a < e.to + 260 && b > e.from - 260
+        : e.edge === 'w'
+          ? a < 260
+          : b > m.W - 260,
+    ) ||
+    (['pods', 'enemies', 'patches', 'signs', 'mothStones', 'hollows', 'seedCases'] as const).some((k) =>
+      ((d as Record<string, unknown>)[k] as Array<{ x: number }> | undefined)?.some(
+        (o) => o.x > a - 160 && o.x < b + 160,
+      ),
+    ) ||
+    (d.solids as Array<{ x: number; y: number; w: number; h: number }>).some(
+      (q) => a < q.x + q.w && b > q.x && top < q.y + q.h && bottom > q.y && !(q.y >= y && q.y <= y + 2),
+    );
+  let i = 0;
+  for (let x = x0 + 200; x + 300 < x1; x += 700, i++) {
+    const r = ((i * 7919 + m.W) % 97) / 97;
+    const hw = 180 + Math.round(r * 140);
+    const hh = i % 2 === 0 ? 18 : 48;
+    if (!busy(x, x + hw, y - hh, y)) m.s(x, y - hh, hw, hh, false, 'root');
+    if (i % 2 === 1) {
+      const sx = x + 260;
+      const sy = y - 230;
+      if (!busy(sx - 40, sx + 300, sy - 120, sy + 40)) {
+        m.o(sx, sy, 260);
+        m.pod(`pod-dr${tag}${i}`, sx + 130, sy);
+        m.glints(`g-dr${tag}${i}-`, sx - 140, sx + 120, y - 60, 140, 4);
+      }
+    }
+    if (ceil && i % 3 === 2 && !busy(x + 100, x + 140, CEIL, CEIL + 80))
+      m.pod(`pod-dh${tag}${i}`, x + 120, CEIL, 'hang');
+  }
+  // One more creature on the stretch, a juvenile beetle in its middle (never near a patch: `busy` keeps 160 off).
+  const cx = Math.round((x0 + x1) / 2);
+  if (critter && x1 - x0 > 1600 && !busy(cx - 220, cx + 220, y - 60, y - 1))
+    m.enemy({
+      id: `juv-dr${tag}`,
+      kind: 'juvenileBurrback',
+      x: cx,
+      y,
+      facing: -1,
+      radius: 180,
+      senses: 'always',
+    });
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // The rooms, crown to roots.
 // ---------------------------------------------------------------------------------------------------------------
@@ -707,6 +774,9 @@ BUILD.hub = (m) => {
   m.glints('g-trunk-', 1600, 3400, 3900, 120, 8);
   m.pod('pod-hub', 3700, TF);
   m.landmark('split-oak', 'landmark', 2800, 1000);
+  // The lightning seam down the oak's middle; the great lamp's glow rising through the grate.
+  m.mark('landmarks', { id: 'scar', kind: 'scar', x: 2700, y: 0, w: 120, h: FORK });
+  m.landmark('lamp-glow', 'glow', 3040, 4300);
   m.mark('moonholes', { x: 2800, y: 0 });
   m.spawn(W - 400, FORK);
 };
@@ -1072,7 +1142,7 @@ BUILD.hollow = (m) => {
   m.s(T, ar.floor as number, 400, 40, false, 'branch');
   floor(m, 5280);
   m.ladder(580, 220, (ar.floor as number) + 10, 5280, 200, 0);
-  m.landmark('glow', 'landmark', 960, 5000);
+  m.landmark('glow', 'glow', 960, 5300);
   m.glints('g-hol-', 1300, 1700, 5200, 60, 4);
   void W;
   m.spawn(1500, 5280);
@@ -1393,6 +1463,7 @@ BUILD.antechamber = (m) => {
   });
   m.patch('p-seed', 1500, F);
   m.landmark('seed-door', 'landmark', (door.from + door.to) / 2, F - 100);
+  m.landmark('door-glow', 'glow', (door.from + door.to) / 2, m.H);
   m.sign('sign-door', 2200, F, '...');
   m.spawn(1500, F);
 };
@@ -1497,6 +1568,32 @@ BUILD['valley-mouth'] = (m) => {
   m.spawn(400, F);
 };
 
+/** Where each room is dressed: [floor y, x0, x1, keep-out x ranges (locks), has a ceiling]. */
+const DRESS: Record<string, Array<[number, number, number, Array<[number, number]>, boolean]>> = {
+  hatch: [[960, 300, 2500, [], true]],
+  'far-crown': [[900, 400, 2400, [], false]],
+  'cocoon-row': [[960, 1100, 3000, [], true]],
+  'west-boughs': [[960, 500, 5300, [], true]],
+  'east-boughs': [[860, 1000, 8300, [[4700, 5400]], true]],
+  'floor-west': [[960, 600, 7200, [], true]],
+  'floor-east': [
+    [960, 900, 5100, [[0, 900]], true],
+    [960, 7000, 11200, [], true],
+  ],
+  'black-pool': [[960, 2300, 9300, [[4900, 5500]], true]],
+  'roots-west': [[960, 500, 5300, [[2700, 3900]], true]],
+  'roots-east': [[960, 500, 7400, [], true]],
+  'drowned-hall': [[960, 4700, 7400, [], true]],
+  antechamber: [[960, 1700, 4700, [], true]],
+  'gorge-floor': [[960, 700, 6000, [], false]],
+  'ant-road': [[960, 700, 3600, [[0, 700]], true]],
+  loft: [[2040, 900, 3600, [], true]],
+  hub: [
+    [4100, 1700, 4800, [], false],
+    [2040, 2300, 3900, [[2600, 3000]], false],
+  ],
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Routes (the world check's claims, proven by tools/solve/downwood.ts): inside every room each node reaches a
 // middle place; a locked link's exit needs its ability, flags or shortcut.
@@ -1550,6 +1647,8 @@ export function buildAll(): Json[] {
     const fn = BUILD[d.id];
     if (!fn) throw new Error(`no builder for ${d.id}`);
     fn(m);
+    for (const [k, [y, x0, x1, avoid, ceil]] of (DRESS[d.id] ?? []).entries())
+      dress(m, y, x0, x1, avoid, ceil, String.fromCharCode(97 + k));
     // Exits (after the room built itself: `at` may have been set).
     for (const e of m.ex.values()) {
       const x: Json = { id: e.id, edge: e.edge, from: e.from, to: e.to };

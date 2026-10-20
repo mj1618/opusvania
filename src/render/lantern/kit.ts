@@ -53,6 +53,9 @@ export const KIT = {
   },
   moon: { beam: 0xb8d0f0, pool: 0xdce8ff, mote: 0xe8f0ff },
   moss: { scar: 0x8aa8a0, lit: 0xa8d8cc, body: 0x24403c, glow: 0x88c8c0 },
+  /** The Downwood's great lamp seen from above (`glow` marks) and the Split Oak's lightning seam (`scar`). */
+  great: { wash: 0xff9a40, core: 0xffd890 },
+  scar: { char: 0x0a0605, burn: 0x3a2418, seam: 0xdfe8ff, light: 0xb8d0f0 },
   /** The Downwood's moonseeds and the sockets of the doors that count them. */
   seed: { body: 0xf2ecd8, wing: 0xc8d8f0, glow: 0xdfe8ff, rim: 0x8a8070 },
   cap: { top: 0x6a4a6a, topLit: 0xb08ab0, gill: 0x2a1a2a, stalk: 0x8a7a70 },
@@ -338,6 +341,35 @@ export class Kit {
         }
       }
     });
+
+    // The Downwood's marks: the great lamp's warm glow rising through a grate or a shaft (`glow`), and the lightning
+    // split down the Split Oak (`scar`): a jagged seam of moonlight with a charred lip.
+    for (const l of S.marks?.landmarks ?? []) {
+      if (l.kind === 'glow') {
+        if (!seen(l.x - 600, l.y - 600, 1200, 1200)) continue;
+        const b = 0.9 + 0.1 * Math.sin(clock * 0.7);
+        glow.add(l.x, l.y, 560, KIT.great.wash, 0.34 * b, 380);
+        glow.add(l.x, l.y + 40, 260, KIT.great.core, 0.42 * b, 140);
+        motes(back, l.x, l.y + 80, 260, 520, clock, 10, KIT.great.core, 0.7);
+      } else if (l.kind === 'scar') {
+        const h = (l.h ?? 1800) as number;
+        if (!seen(l.x - 300, l.y, 600, h)) continue;
+        const pts: number[] = [];
+        for (let k = 0, y = l.y; y <= l.y + h; k++, y += 70)
+          pts.push(l.x + (hash01(`scar${k}`, 5) - 0.5) * 90, y);
+        back.poly(pts, false).stroke({ color: KIT.scar.char, width: 34, alpha: 0.85 });
+        back.poly(pts, false).stroke({ color: KIT.scar.burn, width: 12, alpha: 0.7 });
+        back.poly(pts, false).stroke({ color: KIT.scar.seam, width: 3, alpha: 0.55 });
+        for (let i = 0; i + 1 < pts.length; i += 2)
+          glow.add(
+            pts[i] as number,
+            pts[i + 1] as number,
+            70,
+            KIT.scar.light,
+            0.12 + 0.05 * Math.sin(clock * 1.1 + i),
+          );
+      }
+    }
 
     // Moonseeds (the Downwood's keys): a pale seed with a silver wing, bobbing in its own light until taken.
     for (const sd of S.moonseeds ?? []) {

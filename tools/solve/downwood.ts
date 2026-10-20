@@ -19,6 +19,7 @@
  *  - every find (seeds, hollows, stones, signs, patches, glades) is reached, every dead end entered;
  *  - no softlock: from every arrival (spent) a moon patch, or the glade of the next ability, can be reached.
  */
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { getRoom } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
@@ -344,7 +345,7 @@ if (process.argv[1]?.endsWith('solve/downwood.ts')) {
         missing,
         arrivals: r.arrivals,
         truncated: r.truncated,
-        outside: [...new Set(r.outside)],
+        outside: [...new Set(r.outside)].slice(0, 20),
       };
     }
   }
@@ -352,7 +353,8 @@ if (process.argv[1]?.endsWith('solve/downwood.ts')) {
     // (Merged into the last report: a run of some stages keeps the others' results.)
     const file = 'tools/solve/downwood-report.json';
     const old = existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>) : {};
-    writeFileSync(file, `${JSON.stringify({ ...old, ...report }, null, 1)}\n`);
+    writeFileSync(file, `${JSON.stringify({ ...old, ...report })}\n`);
+    execFileSync('npx', ['biome', 'format', '--write', file], { stdio: 'ignore' });
     console.log('wrote tools/solve/downwood-report.json');
   }
 }
