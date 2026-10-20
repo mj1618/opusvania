@@ -36,6 +36,10 @@ A room file must also be one import line in `FILES` (`src/scene/index.ts`; tsx t
   room's geometry: once it tunnelled her through C's gate) and inside its span along it, lifted out of solids
   (<= 96 px), safe ground = the ground under her (else the spawn). The room's local state is rebuilt from scene +
   save; `roomEnter {room, from: "A#exit"}` + `spawn`. `Game.stepOnce` swaps `game.scene` when `state.room` changes.
+- **Up through a top edge** (2026-10-20, the Downwood's two-way holes): the hold's 18 frames of rise happen in the
+  old room and are undone when she is placed at the opening, so she came in near her apex and fell back. The crossing
+  keeps her vertical speed (`TransitState.vy`) and an upward entry gets it back: a jump from a rung just under a
+  hole lands her on the floor beside it in the room above (tests/unit/downwood.test.ts).
 - **Seam hysteresis** (2026-10-18, area 1 video r4 #7: a casual run crossed the crown/canopy seam 190 times in
   3.5 min, each a fade): after an edge entry the opening she came in by is shut for `room.seamLockFrames` 60
   (`state.seam`, room-local): an east / west one becomes a wall just outside the edge (she stands `entryInset` inside

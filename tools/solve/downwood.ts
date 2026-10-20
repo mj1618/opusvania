@@ -201,6 +201,8 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
     ms: 0,
   };
   const seen = new Set<string>();
+  /** Per room, the node keys already expanded in this stage (each new arrival searches only what is new). */
+  const known = new Map<string, Set<string>>();
   const queue: Array<{ key: string; state: GameState }> = [];
   const s0 = startState(stage);
   const k0 = arrivalKey(s0, 'start');
@@ -221,9 +223,13 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
       maxNodes,
       keepLamps: lamps === 'kept',
       allExits: 4,
+      known: known.get(room.id) ?? new Set(),
       more: glideClimbMacros(),
     });
     if (r.truncated) res.truncated.push(`${room.id} (${key})`);
+    const k0 = known.get(room.id) ?? new Set<string>();
+    for (const nk of r.nodes.keys()) k0.add(nk);
+    known.set(room.id, k0);
     const next = new Set<string>();
     const rests = new Set<string>();
     for (const n of r.nodes.values()) {

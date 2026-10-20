@@ -111,6 +111,11 @@ export interface ExploreOpts {
   allExits?: number;
   /** More macros for every node (the Downwood's `glideClimbMacros`). */
   more?: Macro[];
+  /**
+   * Node keys an earlier search of this room already expanded: not expanded again (an incremental search from a new
+   * start only adds what is new; the Downwood's world search).
+   */
+  known?: ReadonlySet<string>;
 }
 
 /** Her feet. */
@@ -706,7 +711,7 @@ export function explore(o: ExploreOpts): ExploreResult {
       depth: 0,
       frames: 0,
     };
-    if (!nodes.has(n.key)) {
+    if (!nodes.has(n.key) && !o.known?.has(n.key)) {
       nodes.set(n.key, n);
       queue.push(n);
     }
@@ -776,6 +781,7 @@ export function explore(o: ExploreOpts): ExploreResult {
       void oneWayUnder;
       const key = keyOf(r.state, quant, scene);
       const frames = n.frames + r.tape.length;
+      if (o.known?.has(key)) continue;
       const was = nodes.get(key);
       if (was && (!byTime || was.frames <= frames || done.has(key))) continue;
       const node: ExploreNode = {

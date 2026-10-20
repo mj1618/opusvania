@@ -379,6 +379,9 @@ export function step(
             from,
             events,
           );
+          // (Up through a top edge: the rise she had as she crossed, not what the hold left of it.)
+          if (scene.exits?.find((e) => e.id === ex.id)?.edge === 'n')
+            state.player.vy = Math.min(state.player.vy, ex.vy);
         }
         remember(state.save.crossed, `${there.id}:${ex.toExit}`);
         state.frame++;
@@ -608,6 +611,7 @@ export function step(
         to,
         toExit: link?.exit ?? '',
         door: false,
+        vy: p.vy,
       };
       if (to) remember(state.save.crossed, `${scene.id}:${out.id}`);
       events.push({
@@ -626,7 +630,16 @@ export function step(
     const link = d ? world.doors[`${scene.id}#${d.id}`] : undefined;
     if (d && link) {
       const frames = Math.max(1, Math.round(t.room.transitionFrames));
-      state.exit = { id: d.id, frames: 0, of: frames, input: 0, to: link.to, toExit: link.exit, door: true };
+      state.exit = {
+        id: d.id,
+        frames: 0,
+        of: frames,
+        input: 0,
+        to: link.to,
+        toExit: link.exit,
+        door: true,
+        vy: 0,
+      };
       remember(state.save.crossed, `${scene.id}:${d.id}`);
       events.push({
         type: 'roomExit',

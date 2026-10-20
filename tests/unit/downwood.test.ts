@@ -42,6 +42,25 @@ describe('the Downwood', () => {
     expect(out.filter((c) => !c.ok).map((c) => `${c.name}: ${c.got}`)).toEqual([]);
   });
 
+  it('a jump from the top rung carries her up through a hole onto the floor of the room above', () => {
+    const t = cloneTuning(defaultTuning);
+    const w = getWorld('downwood');
+    let room = getRoom('dw-east-boughs');
+    const s = createState(1, t, room, [], [], newSave([]));
+    const hole = (room.exits ?? []).find((e) => e.id === 'cocoon-row') as { from: number };
+    placePlayer(s, hole.from + 40, 60, t, withShortcuts(room, s.save), []);
+    const ev: SimEvent[] = [];
+    for (let f = 0; f < 90; f++) {
+      ev.length = 0;
+      // Jump held, then drift west over the hole's edge.
+      step(s, (f < 26 ? 16 : 0) | (f > 12 && f < 60 ? 1 : 0), t, room, ev, w);
+      if (s.room !== room.id) room = getRoom(s.room);
+    }
+    expect(s.room).toBe('dw-cocoon-row');
+    expect(s.player.grounded).toBe(true);
+    expect(s.player.y + s.player.h).toBe(960);
+  });
+
   it('counts moonseeds into the flags a seed door opens on', () => {
     const t = cloneTuning(defaultTuning);
     const room = getRoom('dw-scar');

@@ -878,6 +878,12 @@ export interface TransitState {
   toExit: string;
   /** Through a door (she comes out at rest), not an edge (her momentum carries). */
   door: boolean;
+  /**
+   * Her vertical speed as she crossed. Up through a top edge she comes into the room above with it (the hold's own
+   * rise is undone when she is placed at the opening, so its lost speed is given back: a jump carries her up through
+   * a hole onto the floor beside it, the Downwood's two-way holes).
+   */
+  vy: number;
 }
 
 /** Caught after a fall (`scene.catches`): the zone's id and frames since. */
