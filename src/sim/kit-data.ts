@@ -135,3 +135,14 @@ export interface Hollow {
   h: number;
   upgrade: string;
 }
+
+/**
+ * A moonseed (the Downwood, memory/downwood.md): a key. `x`, `y` = its centre in the air. Her box touching it takes
+ * it once ever (`taken` keeps `room:id`); the save then has the flags `seeds:1` .. `seeds:<n>` for the n she holds,
+ * so a door that wants three is a gate on `seeds:3`.
+ */
+export interface Moonseed {
+  id: string;
+  x: number;
+  y: number;
+}

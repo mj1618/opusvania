@@ -1,0 +1,976 @@
+{
+  "id": "downwood-built",
+  "title": "The Downwood, as built",
+  "start": "hatch",
+  "abilities": [
+    "claws",
+    "glide"
+  ],
+  "rooms": [
+    {
+      "id": "hatch",
+      "name": "the Hatching Bough",
+      "x": 12,
+      "y": 1,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "lore",
+        "npc",
+        "currency",
+        "landmark"
+      ]
+    },
+    {
+      "id": "moonperch",
+      "name": "the Moon Perch",
+      "x": 13,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "health"
+      ]
+    },
+    {
+      "id": "lone-limb",
+      "name": "the Lone Limb",
+      "x": 15,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "energy"
+      ]
+    },
+    {
+      "id": "far-crown",
+      "name": "the High Crown",
+      "x": 14,
+      "y": 0,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "lore",
+        "currency"
+      ]
+    },
+    {
+      "id": "lookout",
+      "name": "the Owl's Lookout",
+      "x": 16,
+      "y": 0,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "ability:glide",
+        "bench",
+        "landmark"
+      ]
+    },
+    {
+      "id": "scar",
+      "name": "the Lightning Scar",
+      "x": 8,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key",
+        "lore"
+      ]
+    },
+    {
+      "id": "windbreak",
+      "name": "the Windbreak",
+      "x": 5,
+      "y": 1,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "nest",
+      "name": "the Hawkers' Nest",
+      "x": 6,
+      "y": 0,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "health",
+        "currency",
+        "challenge"
+      ]
+    },
+    {
+      "id": "map",
+      "name": "the Moth-Stone",
+      "x": 12,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "map",
+        "lore",
+        "landmark"
+      ]
+    },
+    {
+      "id": "vault",
+      "name": "the Heartwood",
+      "x": 9,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "energy",
+        "health"
+      ]
+    },
+    {
+      "id": "glass-crack",
+      "name": "the Glass Crack",
+      "x": 11,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "hub",
+      "name": "the Split Oak",
+      "x": 9,
+      "y": 0,
+      "w": 3,
+      "h": 4,
+      "items": [
+        "bench",
+        "currency",
+        "landmark"
+      ]
+    },
+    {
+      "id": "west-boughs",
+      "name": "the West Boughs",
+      "x": 6,
+      "y": 2,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "owl-hole",
+      "name": "the Owl Hole",
+      "x": 4,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "westfall",
+      "name": "the West Fall",
+      "x": 5,
+      "y": 2,
+      "w": 1,
+      "h": 7,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "loft",
+      "name": "the Silk Loft",
+      "x": 6,
+      "y": 3,
+      "w": 2,
+      "h": 2,
+      "items": [
+        "key",
+        "currency"
+      ]
+    },
+    {
+      "id": "bark-stair",
+      "name": "the Bark Stair",
+      "x": 8,
+      "y": 3,
+      "w": 1,
+      "h": 2,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "cocoon-row",
+      "name": "the Cocoon Row",
+      "x": 13,
+      "y": 2,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "lore",
+        "currency",
+        "landmark"
+      ]
+    },
+    {
+      "id": "east-boughs",
+      "name": "the Lampwalk",
+      "x": 12,
+      "y": 3,
+      "w": 5,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "chimney",
+      "name": "the Rain Chimney",
+      "x": 17,
+      "y": 1,
+      "w": 1,
+      "h": 7,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "rain-ledge",
+      "name": "the Rain Ledge",
+      "x": 16,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "energy",
+        "currency"
+      ]
+    },
+    {
+      "id": "fern-rest",
+      "name": "the Fern Hollow",
+      "x": 4,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "bench",
+        "npc"
+      ]
+    },
+    {
+      "id": "floor-west",
+      "name": "the Fernfloor",
+      "x": 6,
+      "y": 5,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "hollow",
+      "name": "the Charred Hollow",
+      "x": 10,
+      "y": 4,
+      "w": 1,
+      "h": 5,
+      "items": [
+        "currency",
+        "landmark"
+      ]
+    },
+    {
+      "id": "floor-east",
+      "name": "the Brook",
+      "x": 11,
+      "y": 5,
+      "w": 6,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "spring",
+      "name": "the Warm Spring",
+      "x": 16,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "bench"
+      ]
+    },
+    {
+      "id": "bark-floor",
+      "name": "the Rotten Floor",
+      "x": 9,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "black-pool",
+      "name": "the Black Pool",
+      "x": 11,
+      "y": 6,
+      "w": 5,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "roots-west",
+      "name": "the Root Tangle",
+      "x": 6,
+      "y": 6,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "den",
+      "name": "the Old Den",
+      "x": 6,
+      "y": 7,
+      "w": 2,
+      "h": 2,
+      "items": [
+        "ability:claws",
+        "challenge"
+      ]
+    },
+    {
+      "id": "taproot",
+      "name": "the Taproot",
+      "x": 6,
+      "y": 9,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "energy",
+        "currency"
+      ]
+    },
+    {
+      "id": "ant-road",
+      "name": "the Ant Road",
+      "x": 8,
+      "y": 7,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "carrier-crack",
+      "name": "the Ant Crack",
+      "x": 9,
+      "y": 8,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "root-well",
+      "name": "the Root Well",
+      "x": 4,
+      "y": 8,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key"
+      ]
+    },
+    {
+      "id": "roots-east",
+      "name": "the Drowned Roots",
+      "x": 12,
+      "y": 7,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "sunk-stair",
+      "name": "the Sunk Stair",
+      "x": 16,
+      "y": 7,
+      "w": 1,
+      "h": 3,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "drowned-hall",
+      "name": "the Drowned Hall",
+      "x": 12,
+      "y": 9,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency"
+      ]
+    },
+    {
+      "id": "beetle-burrow",
+      "name": "the Burrow",
+      "x": 13,
+      "y": 8,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "currency",
+        "challenge"
+      ]
+    },
+    {
+      "id": "gorge",
+      "name": "the Gorge",
+      "x": 18,
+      "y": 0,
+      "w": 4,
+      "h": 4,
+      "items": [
+        "currency",
+        "landmark"
+      ]
+    },
+    {
+      "id": "gorge-floor",
+      "name": "the Gorge Floor",
+      "x": 18,
+      "y": 4,
+      "w": 4,
+      "h": 1,
+      "items": [
+        "currency",
+        "landmark"
+      ]
+    },
+    {
+      "id": "far-ledge",
+      "name": "the Swallows' Ledge",
+      "x": 22,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key"
+      ]
+    },
+    {
+      "id": "crown-tip",
+      "name": "the Snapped Crown",
+      "x": 4,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "key"
+      ]
+    },
+    {
+      "id": "gorge-shelf",
+      "name": "the Thorn Run",
+      "x": 22,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "items": [
+        "health",
+        "currency",
+        "challenge"
+      ]
+    },
+    {
+      "id": "antechamber",
+      "name": "the Seed Door",
+      "x": 9,
+      "y": 9,
+      "w": 3,
+      "h": 1,
+      "items": [
+        "bench",
+        "lore",
+        "landmark"
+      ]
+    },
+    {
+      "id": "weaver",
+      "name": "the Weaver's Hollow",
+      "x": 9,
+      "y": 10,
+      "w": 3,
+      "h": 2,
+      "items": [
+        "bench",
+        "boss"
+      ]
+    },
+    {
+      "id": "valley-mouth",
+      "name": "the Valley Mouth",
+      "x": 12,
+      "y": 10,
+      "w": 2,
+      "h": 1,
+      "items": [
+        "goal"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "a": "hatch",
+      "b": "hub",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hatch",
+      "b": "moonperch",
+      "requires": "doubleJump",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hatch",
+      "b": "lone-limb",
+      "requires": "dash",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hatch",
+      "b": "cocoon-row",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "far-crown",
+      "b": "hatch",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "lookout",
+      "b": "far-crown",
+      "requires": "glide",
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "lookout",
+      "b": "gorge",
+      "requires": "glide",
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "chimney",
+      "b": "lookout",
+      "requires": "claws",
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "scar",
+      "b": "hub",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "windbreak",
+      "b": "hub",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "windbreak",
+      "b": "nest",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "windbreak",
+      "b": "crown-tip",
+      "requires": "glide",
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "windbreak",
+      "b": "west-boughs",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "map",
+      "b": "hub",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "vault",
+      "b": "hub",
+      "requires": "keys:5",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hub",
+      "b": "glass-crack",
+      "requires": null,
+      "oneway": false,
+      "shortcut": true
+    },
+    {
+      "a": "glass-crack",
+      "b": "floor-east",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hub",
+      "b": "west-boughs",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hub",
+      "b": "hollow",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": true
+    },
+    {
+      "a": "hub",
+      "b": "east-boughs",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hub",
+      "b": "bark-stair",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "west-boughs",
+      "b": "westfall",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "crown-tip",
+      "b": "owl-hole",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "owl-hole",
+      "b": "westfall",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "westfall",
+      "b": "loft",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "westfall",
+      "b": "fern-rest",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "westfall",
+      "b": "floor-west",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "westfall",
+      "b": "roots-west",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "westfall",
+      "b": "root-well",
+      "requires": "glide",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "bark-stair",
+      "b": "floor-west",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "cocoon-row",
+      "b": "east-boughs",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "east-boughs",
+      "b": "chimney",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "chimney",
+      "b": "floor-east",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "chimney",
+      "b": "sunk-stair",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "chimney",
+      "b": "gorge-floor",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "chimney",
+      "b": "rain-ledge",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "floor-west",
+      "b": "hollow",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "floor-west",
+      "b": "bark-floor",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hollow",
+      "b": "black-pool",
+      "requires": "glide",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hollow",
+      "b": "ant-road",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "hollow",
+      "b": "antechamber",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "floor-east",
+      "b": "black-pool",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "floor-east",
+      "b": "spring",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "spring",
+      "b": "black-pool",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "bark-floor",
+      "b": "ant-road",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "black-pool",
+      "b": "roots-east",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "roots-west",
+      "b": "den",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "roots-west",
+      "b": "ant-road",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "den",
+      "b": "ant-road",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "den",
+      "b": "taproot",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "ant-road",
+      "b": "carrier-crack",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "carrier-crack",
+      "b": "antechamber",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "roots-east",
+      "b": "sunk-stair",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "roots-east",
+      "b": "beetle-burrow",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "sunk-stair",
+      "b": "drowned-hall",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "drowned-hall",
+      "b": "antechamber",
+      "requires": "claws",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "gorge",
+      "b": "gorge-floor",
+      "requires": null,
+      "oneway": true,
+      "shortcut": false
+    },
+    {
+      "a": "gorge",
+      "b": "far-ledge",
+      "requires": null,
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "gorge-floor",
+      "b": "gorge-shelf",
+      "requires": "glide",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "antechamber",
+      "b": "weaver",
+      "requires": "keys:3",
+      "oneway": false,
+      "shortcut": false
+    },
+    {
+      "a": "weaver",
+      "b": "valley-mouth",
+      "requires": "boss",
+      "oneway": false,
+      "shortcut": false
+    }
+  ]
+}

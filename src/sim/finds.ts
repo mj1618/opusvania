@@ -8,6 +8,8 @@
  *    `finds.signFrames` reads it: its `flag` (if any) is set; `signRead` carries its `rhythm` for render.
  *  - **Moonlit hollow**: her body centre inside the rect grants its upgrade (the flag
  *    `upgrade:<id>`, src/sim/upgrades.ts): `hollowGrant`.
+ *  - **Moonseed** (the Downwood's keys): her box touching it (`finds.seedSize` square round it) takes it:
+ *    `seed:<room>:<id>` and `seeds:1..n` in `flags`, `seedTaken`.
  *
  * Finds never change where she can go (the world check knows: src/scene/world.ts).
  * Pure: + - * / min max abs.
@@ -82,5 +84,17 @@ export function updateFinds(state: GameState, scene: Scene, t: Tuning, events: S
     if (h.upgrade === 'moonDrop') remember(save.flags, `moonDrop:${key(h.id)}`);
     else if (isUpgrade(h.upgrade)) remember(save.flags, upgradeFlag(h.upgrade));
     events.push({ type: 'hollowGrant', id: h.id, upgrade: h.upgrade, x: h.x + h.w / 2, y: h.y + h.h });
+  }
+  // A moonseed: her box touching its box. The count she holds is the number of `seed:` flags; `seeds:<n>` for each
+  // n up to it, so a gate on `seeds:3` opens at the third.
+  const half = F.seedSize / 2;
+  for (const sd of scene.moonseeds ?? []) {
+    if (p.x >= sd.x + half || p.x + p.w <= sd.x - half || p.y >= sd.y + half || p.y + p.h <= sd.y - half) continue;
+    if (!remember(save.taken, key(sd.id))) continue;
+    remember(save.flags, `seed:${key(sd.id)}`);
+    let count = 0;
+    for (let i = 0; i < save.flags.length; i++) if ((save.flags[i] as string).startsWith('seed:')) count++;
+    for (let n = 1; n <= count; n++) remember(save.flags, `seeds:${n}`);
+    events.push({ type: 'seedTaken', id: sd.id, room: scene.id, x: sd.x, y: sd.y, count });
   }
 }

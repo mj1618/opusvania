@@ -7,6 +7,7 @@ import type {
   FlagGate,
   FlagTrigger,
   Hollow,
+  Moonseed,
   MothStone,
   SeedCase,
   Swing,
@@ -450,6 +451,8 @@ export interface Scene {
   mothStones?: MothStone[];
   signs?: FireflySign[];
   hollows?: Hollow[];
+  /** Moonseeds (the Downwood's keys, src/sim/finds.ts): a door that counts them is a gate on `seeds:<n>`. */
+  moonseeds?: Moonseed[];
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).

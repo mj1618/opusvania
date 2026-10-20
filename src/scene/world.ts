@@ -97,6 +97,15 @@ function setFlags(world: World, reached: ReadonlySet<Node>, owned: Set<string>):
       grew = true;
     }
   }
+  // Moonseeds reached: `seeds:1` .. `seeds:<n>` for the n of them (a door that counts them: memory/downwood.md).
+  let seeds = 0;
+  for (const r of Object.values(world.rooms))
+    if (r.placed) for (const sd of r.scene.moonseeds ?? []) if (reached.has(`${r.id}:${sd.id}`)) seeds++;
+  for (let n = 1; n <= seeds; n++)
+    if (!owned.has(flagKey(`seeds:${n}`))) {
+      owned.add(flagKey(`seeds:${n}`));
+      grew = true;
+    }
   return grew;
 }
 
@@ -317,8 +326,10 @@ export function validateWorld(world: World = GAME_WORLD, areas: readonly Area[] 
       if (!seen.has(r.id)) out.push(`room "${r.id}" is not connected to the rest of the world`);
   }
   // Flag gates: every flag a route needs is set by some trigger in the world.
+  const seedCount = placed.reduce((n, r) => n + (r.scene.moonseeds ?? []).length, 0);
   const sources = new Set(
     placed.flatMap((r) => [
+      ...Array.from({ length: seedCount }, (_, i) => `seeds:${i + 1}`),
       ...(r.scene.triggers ?? []).map((t) => t.sets),
       ...(r.scene.boss ? [r.scene.boss.flag] : []),
       ...((r.scene as Room).routes ?? []).flatMap((q) => q.sets ?? []),

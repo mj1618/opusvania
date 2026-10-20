@@ -80,6 +80,7 @@ export const KIT_FIELDS = {
     )
     .optional(),
   hollows: z.array(z.object({ ...rect, upgrade: z.enum(UPGRADE_IDS) }).strict()).optional(),
+  moonseeds: z.array(z.object({ id, x: int, y: int }).strict()).optional(),
   // --- Lanternroot's light pieces (src/sim/light.ts, memory/glow.md).
   moonmoss: z.array(z.object({ ...rect, oneWay: z.boolean().optional() }).strict()).optional(),
   wickSets: z.array(z.object({ id, wicks: z.array(id).min(2), sets: id }).strict()).optional(),
@@ -169,6 +170,7 @@ interface KitRoom {
   mothStones?: Array<{ id: string; x: number; y: number }> | undefined;
   signs?: Array<{ id: string; x: number; y: number }> | undefined;
   hollows?: Array<Box & { id: string }> | undefined;
+  moonseeds?: Array<{ id: string; x: number; y: number }> | undefined;
   moonmoss?: Array<Box & { id: string }> | undefined;
   wickSets?: Array<{ id: string; wicks: string[]; sets: string }> | undefined;
   bells?: Array<{ id: string; x: number; y: number }> | undefined;
@@ -306,15 +308,19 @@ export function kitNodes(s: {
   mothStones?: Array<{ id: string }> | undefined;
   signs?: Array<{ id: string }> | undefined;
   hollows?: Array<{ id: string }> | undefined;
+  moonseeds?: Array<{ id: string }> | undefined;
 }): string[] {
   return [...(s.triggers ?? []).map((t) => t.id), ...findIds(s)];
 }
 
-/** The ids of a room's finds: its moth-stones, firefly signs and moonlit hollows. */
+/** The ids of a room's finds: its moth-stones, firefly signs, moonlit hollows and moonseeds. */
 export function findIds(s: {
   mothStones?: Array<{ id: string }> | undefined;
   signs?: Array<{ id: string }> | undefined;
   hollows?: Array<{ id: string }> | undefined;
+  moonseeds?: Array<{ id: string }> | undefined;
 }): string[] {
-  return [...(s.mothStones ?? []), ...(s.signs ?? []), ...(s.hollows ?? [])].map((f) => f.id);
+  return [...(s.mothStones ?? []), ...(s.signs ?? []), ...(s.hollows ?? []), ...(s.moonseeds ?? [])].map(
+    (f) => f.id,
+  );
 }

@@ -1,0 +1,289 @@
+{
+  "start": "dw-hatch",
+  "rooms": [
+    {
+      "id": "dw-hatch",
+      "x": 23040,
+      "y": 1080
+    },
+    {
+      "id": "dw-moonperch",
+      "x": 24960,
+      "y": 0
+    },
+    {
+      "id": "dw-lone-limb",
+      "x": 28800,
+      "y": 1080
+    },
+    {
+      "id": "dw-far-crown",
+      "x": 26880,
+      "y": 0
+    },
+    {
+      "id": "dw-lookout",
+      "x": 30720,
+      "y": 0
+    },
+    {
+      "id": "dw-scar",
+      "x": 15360,
+      "y": 0
+    },
+    {
+      "id": "dw-windbreak",
+      "x": 9600,
+      "y": 1080
+    },
+    {
+      "id": "dw-nest",
+      "x": 11520,
+      "y": 0
+    },
+    {
+      "id": "dw-map",
+      "x": 23040,
+      "y": 0
+    },
+    {
+      "id": "dw-vault",
+      "x": 17280,
+      "y": 4320
+    },
+    {
+      "id": "dw-glass-crack",
+      "x": 21120,
+      "y": 4320
+    },
+    {
+      "id": "dw-hub",
+      "x": 17280,
+      "y": 0
+    },
+    {
+      "id": "dw-west-boughs",
+      "x": 11520,
+      "y": 2160
+    },
+    {
+      "id": "dw-owl-hole",
+      "x": 7680,
+      "y": 2160
+    },
+    {
+      "id": "dw-westfall",
+      "x": 9600,
+      "y": 2160
+    },
+    {
+      "id": "dw-loft",
+      "x": 11520,
+      "y": 3240
+    },
+    {
+      "id": "dw-bark-stair",
+      "x": 15360,
+      "y": 3240
+    },
+    {
+      "id": "dw-cocoon-row",
+      "x": 24960,
+      "y": 2160
+    },
+    {
+      "id": "dw-east-boughs",
+      "x": 23040,
+      "y": 3240
+    },
+    {
+      "id": "dw-chimney",
+      "x": 32640,
+      "y": 1080
+    },
+    {
+      "id": "dw-rain-ledge",
+      "x": 30720,
+      "y": 2160
+    },
+    {
+      "id": "dw-fern-rest",
+      "x": 7680,
+      "y": 6480
+    },
+    {
+      "id": "dw-floor-west",
+      "x": 11520,
+      "y": 5400
+    },
+    {
+      "id": "dw-hollow",
+      "x": 19200,
+      "y": 4320
+    },
+    {
+      "id": "dw-floor-east",
+      "x": 21120,
+      "y": 5400
+    },
+    {
+      "id": "dw-spring",
+      "x": 30720,
+      "y": 6480
+    },
+    {
+      "id": "dw-bark-floor",
+      "x": 17280,
+      "y": 6480
+    },
+    {
+      "id": "dw-black-pool",
+      "x": 21120,
+      "y": 6480
+    },
+    {
+      "id": "dw-roots-west",
+      "x": 11520,
+      "y": 6480
+    },
+    {
+      "id": "dw-den",
+      "x": 11520,
+      "y": 7560
+    },
+    {
+      "id": "dw-taproot",
+      "x": 11520,
+      "y": 9720
+    },
+    {
+      "id": "dw-ant-road",
+      "x": 15360,
+      "y": 7560
+    },
+    {
+      "id": "dw-carrier-crack",
+      "x": 17280,
+      "y": 8640
+    },
+    {
+      "id": "dw-root-well",
+      "x": 7680,
+      "y": 8640
+    },
+    {
+      "id": "dw-roots-east",
+      "x": 23040,
+      "y": 7560
+    },
+    {
+      "id": "dw-sunk-stair",
+      "x": 30720,
+      "y": 7560
+    },
+    {
+      "id": "dw-drowned-hall",
+      "x": 23040,
+      "y": 9720
+    },
+    {
+      "id": "dw-beetle-burrow",
+      "x": 24960,
+      "y": 8640
+    },
+    {
+      "id": "dw-gorge",
+      "x": 34560,
+      "y": 0
+    },
+    {
+      "id": "dw-gorge-floor",
+      "x": 34560,
+      "y": 4320
+    },
+    {
+      "id": "dw-far-ledge",
+      "x": 42240,
+      "y": 1080
+    },
+    {
+      "id": "dw-crown-tip",
+      "x": 7680,
+      "y": 1080
+    },
+    {
+      "id": "dw-gorge-shelf",
+      "x": 42240,
+      "y": 4320
+    },
+    {
+      "id": "dw-antechamber",
+      "x": 17280,
+      "y": 9720
+    },
+    {
+      "id": "dw-weaver",
+      "x": 17280,
+      "y": 10800
+    },
+    {
+      "id": "dw-valley-mouth",
+      "x": 23040,
+      "y": 10800
+    }
+  ],
+  "areas": [
+    {
+      "id": "downwood",
+      "rooms": [
+        "dw-hatch",
+        "dw-moonperch",
+        "dw-lone-limb",
+        "dw-far-crown",
+        "dw-lookout",
+        "dw-scar",
+        "dw-windbreak",
+        "dw-nest",
+        "dw-map",
+        "dw-vault",
+        "dw-glass-crack",
+        "dw-hub",
+        "dw-west-boughs",
+        "dw-owl-hole",
+        "dw-westfall",
+        "dw-loft",
+        "dw-bark-stair",
+        "dw-cocoon-row",
+        "dw-east-boughs",
+        "dw-chimney",
+        "dw-rain-ledge",
+        "dw-fern-rest",
+        "dw-floor-west",
+        "dw-hollow",
+        "dw-floor-east",
+        "dw-spring",
+        "dw-bark-floor",
+        "dw-black-pool",
+        "dw-roots-west",
+        "dw-den",
+        "dw-taproot",
+        "dw-ant-road",
+        "dw-carrier-crack",
+        "dw-root-well",
+        "dw-roots-east",
+        "dw-sunk-stair",
+        "dw-drowned-hall",
+        "dw-beetle-burrow",
+        "dw-gorge",
+        "dw-gorge-floor",
+        "dw-far-ledge",
+        "dw-crown-tip",
+        "dw-gorge-shelf",
+        "dw-antechamber",
+        "dw-weaver",
+        "dw-valley-mouth"
+      ]
+    }
+  ],
+  "tests": []
+}

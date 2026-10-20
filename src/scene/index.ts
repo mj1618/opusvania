@@ -31,6 +31,8 @@ import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
 import bossrushJson from '../../content/worlds/demo-bossrush.json' with { type: 'json' };
+import downwoodJson from '../../content/worlds/downwood.json' with { type: 'json' };
+import downwoodRoomsJson from '../../content/worlds/downwood-rooms.json' with { type: 'json' };
 import proto1Json from '../../content/worlds/proto-1.json' with { type: 'json' };
 import { ABILITIES } from '../sim/abilities';
 import { defaultTuning } from '../sim/tuning';
@@ -708,6 +710,9 @@ const FILES: readonly unknown[] = [
   brWeaverJson,
   brGloamJson,
   brMantisJson,
+  // The Downwood (docs/design/places/1-downwood.md, memory/downwood.md): its own world, content/worlds/downwood.json;
+  // its 46 rooms are one generated file (tools/levels/downwood.ts).
+  ...(downwoodRoomsJson as unknown[]),
 ];
 
 /** Every room, by id. */
@@ -749,6 +754,7 @@ export const WORLD_FILES: Readonly<Record<string, WorldFile>> = {
   game: WORLD,
   'proto-1': WorldSchema.parse(proto1Json),
   'demo-bossrush': WorldSchema.parse(bossrushJson),
+  downwood: WorldSchema.parse(downwoodJson),
 };
 for (const [wid, w] of Object.entries(WORLD_FILES))
   for (const id of [w.start, ...w.rooms.map((r) => r.id), ...w.tests])

@@ -80,7 +80,9 @@ export type KitEvent =
   /** Finds (src/sim/finds.ts; `x`, `y` = the find's foot / a hollow's floor centre). The save has `room:id` in `taken`. */
   | { type: 'stoneRead'; id: string; room: string; area: string; x: number; y: number }
   | { type: 'signRead'; id: string; room: string; x: number; y: number; flag: string; rhythm: string }
-  | { type: 'hollowGrant'; id: string; upgrade: string; x: number; y: number };
+  | { type: 'hollowGrant'; id: string; upgrade: string; x: number; y: number }
+  /** A moonseed taken (the Downwood's keys): `count` = how many she holds now (the save's `seeds:<n>` flags). */
+  | { type: 'seedTaken'; id: string; room: string; x: number; y: number; count: number };
 
 /** What the kit adds to `slashHit.target.kind`. */
 export type KitTargetKind = 'thorns' | 'seedCase' | 'bark' | 'cap' | 'bell';

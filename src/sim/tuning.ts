@@ -514,7 +514,7 @@ export const defaultTuning = withVariants({
    * over its foot); a firefly sign is read by standing still (grounded, no direction, `signFrames`) inside
    * `signWidth` x `signHeight` over its foot.
    */
-  finds: { stoneWidth: 96, stoneHeight: 160, signWidth: 200, signHeight: 200, signFrames: 40 },
+  finds: { stoneWidth: 96, stoneHeight: 160, signWidth: 200, signHeight: 200, signFrames: 40, seedSize: 72 },
   /**
    * Moonlit hollows' upgrades (src/sim/upgrades.ts; core.md §6), each a number: `quickWings` beats free
    * of a grab in `beats` presses (`grab.beats` without), `keenBlade` grows the flame's hit box by
