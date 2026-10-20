@@ -29,6 +29,11 @@ export function itemLine(key: string): string {
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
 }
 
+/** Lines for story flags that close an area. */
+export const FLAG_LINES: Record<string, string> = {
+  'dw-valley': 'The valley of lamps, below. The end of the Downwood.',
+};
+
 /** A moonseed's line: the count she holds (the Seed Door counts three, the Heartwood five). */
 export function seedLine(count: number): string {
   return `A moonseed. ${count === 1 ? 'One' : count === 2 ? 'Two' : count === 3 ? 'Three' : count === 4 ? 'Four' : 'Five'} held.`;
@@ -79,6 +84,10 @@ export class ItemLine {
               : '';
       if (key) {
         this.text.text = itemLine(key);
+        this.t = 0;
+      } else if (e.type === 'flagSet' && FLAG_LINES[e.flag]) {
+        // A story beat that ends a demo area (the Downwood's valley).
+        this.text.text = FLAG_LINES[e.flag] as string;
         this.t = 0;
       } else if (e.type === 'seedTaken') {
         // A moonseed (the Downwood's keys): how many she holds now.

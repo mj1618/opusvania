@@ -98,7 +98,7 @@ const AT: Record<string, number | [number, number]> = {
 };
 /** Top / bottom links: opening x0 (world) and width. */
 const ATX: Record<string, [number, number]> = {
-  'hatch|moonperch': [25600, 256],
+  'hatch|moonperch': [26240, 256],
   'hatch|cocoon-row': [28040, 300],
   'far-crown|hatch': [27200, 400],
   'chimney|lookout': [33540, 320],
@@ -449,16 +449,16 @@ BUILD.hatch = (m) => {
   // (the snapped gap 5000..5300 is the drop to the Cocoon Row)
   m.s(5300, F, m.W - 5300, m.H - F, false, 'branch');
   // The low tunnel over the gap: the Lone Limb's way, a dash's height.
-  m.s(4700, CEIL, m.W - T - 4700, F - 104 - CEIL, false, 'trunk');
+  m.s(4600, CEIL, m.W - T - 4600, F - 104 - CEIL, false, 'trunk');
   // The Moon Perch's steps and its hole in the canopy (at 160: a double jump from the high step, never a jump).
-  m.o(2300, 780, 220);
-  m.o(2580, 600, 200);
+  m.o(2940, 780, 220);
+  m.o(3220, 600, 200);
   const mp = m.e('moonperch');
   mp.at = 160;
   m.mark('moonholes', { x: (mp.from + mp.to) / 2, y: 0 });
   // The cocoon row and her cocoon; Tatter; the swarm (render: wood-hatch's acting where the kit has it).
-  m.spawn(3300, F);
-  m.r.data.marks = { ...((m.r.data.marks as Json) ?? {}), tatter: { x: 3620, y: F, facing: -1 } };
+  m.spawn(3800, F);
+  m.r.data.marks = { ...((m.r.data.marks as Json) ?? {}), tatter: { x: 4150, y: F, facing: -1 } };
   m.landmark('vista', 'landmark', 1400, 600);
   m.landmark('split-oak', 'vista', 400, 500);
   // The first wick and its stragglers, leaves (pods) to cut, glints along the bough.
@@ -476,7 +476,7 @@ BUILD.moonperch = (m) => {
   floor(m, 1040);
   shell(m, { sky: true });
   m.s(T, 700, 300, 40, false, 'branch');
-  m.hollow('h-moonperch', 1200, 1040, 'moonDrop');
+  m.hollow('h-moonperch', 600, 1040, 'moonDrop');
   m.spawn(e.to + 120, 1040);
   m.mark('moonholes', { x: 1200, y: 0 });
 };

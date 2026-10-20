@@ -159,6 +159,8 @@ export interface StageResult {
   rests: Map<string, Set<string>>;
   arrivals: number;
   truncated: string[];
+  /** Standing spots outside a room's rect (an arrival-only opening walked out of: a bug). */
+  outside: string[];
   ms: number;
 }
 
@@ -195,6 +197,7 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
     rests: new Map(),
     arrivals: 0,
     truncated: [],
+    outside: [],
     ms: 0,
   };
   const seen = new Set<string>();
@@ -223,7 +226,12 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
     if (r.truncated) res.truncated.push(`${room.id} (${key})`);
     const next = new Set<string>();
     const rests = new Set<string>();
-    for (const n of r.nodes.values()) findsAt(room, n.state, res.finds, rests);
+    for (const n of r.nodes.values()) {
+      findsAt(room, n.state, res.finds, rests);
+      const f = feet(n.state);
+      if (f.x < 0 || f.x > room.width || f.y > room.height)
+        res.outside.push(`${room.id} (${Math.round(f.x)}, ${Math.round(f.y)})`);
+    }
     for (const [exit, list] of r.exitsAll) {
       for (const x of list) {
         const s = cross(x.from.state, room, x.tape);
@@ -315,7 +323,8 @@ if (process.argv[1]?.endsWith('solve/downwood.ts')) {
       console.log(
         `${st.id} lamps ${lamps}: ${r.rooms.size} rooms (layout ${want.size}), ${r.arrivals} arrivals, ${Math.round(r.ms / 1000)} s` +
           `${extra.length ? `\n  EXTRA (a lock leaks): ${extra.join(' ')}` : ''}${missing.length ? `\n  MISSING (an edge fails): ${missing.join(' ')}` : ''}` +
-          `${r.truncated.length ? `\n  truncated: ${r.truncated.length}` : ''}`,
+          `${r.truncated.length ? `\n  truncated: ${r.truncated.length}` : ''}` +
+          `${r.outside.length ? `\n  OUTSIDE a room: ${[...new Set(r.outside)].slice(0, 8).join(' ')}` : ''}`,
       );
       report[`${st.id}-${lamps}`] = {
         rooms: [...r.rooms].sort(),
@@ -325,6 +334,7 @@ if (process.argv[1]?.endsWith('solve/downwood.ts')) {
         missing,
         arrivals: r.arrivals,
         truncated: r.truncated,
+        outside: [...new Set(r.outside)],
       };
     }
   }
