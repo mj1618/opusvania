@@ -31,16 +31,19 @@ const crossed = (stage: string, lamps: 'spent' | 'kept', room: string, to: strin
 
 const problems: string[] = [];
 let ok = 0;
+/** The first stage (lamps spent) that reached a room. */
+const reachedAt = (room: string) =>
+  STAGES.findIndex((st) => report[`${st.id}-spent`]?.rooms.includes(dw(room)) ?? false);
 for (const l of L.links) {
-  const k = stageFor(l.requires);
-  const st = STAGES[k];
-  if (!st) {
+  const kReq = stageFor(l.requires);
+  if (kReq < 0) {
     problems.push(`${l.a} -> ${l.b}: no stage has "${l.requires}"`);
     continue;
   }
-  const ways: Array<[string, string, boolean]> = [[l.a, l.b, true]];
-  // (A shortcut's far side opens it: she goes b -> a first; a -> b once it is open, in the same stage.)
-  ways.push([l.b, l.a, !l.oneway]);
+  const ways: Array<[string, string, boolean]> = [
+    [l.a, l.b, true],
+    [l.b, l.a, !l.oneway],
+  ];
   for (const [from, to, claimed] of ways) {
     if (!claimed) {
       const leak = STAGES.find((s) => crossed(s.id, 'kept', from, to));
@@ -48,12 +51,22 @@ for (const l of L.links) {
       else ok++;
       continue;
     }
-    if (!crossed(st.id, 'spent', from, to))
-      problems.push(`${from} -> ${to} (${l.requires ?? 'open'}): not crossed at ${st.id} with lamps spent`);
+    // Passable at the first stage that has the kit and has reached the room she leaves from (a shortcut's near
+    // side: once its far side, where it opens, is reached too).
+    let k = Math.max(kReq, reachedAt(from));
+    if (l.shortcut && from === l.a) k = Math.max(k, reachedAt(l.b));
+    const st = STAGES[k];
+    if (!st || !crossed(st.id, 'spent', from, to))
+      problems.push(
+        `${from} -> ${to} (${l.requires ?? 'open'}): not crossed at ${st?.id ?? '?'} with lamps spent`,
+      );
     else ok++;
-    for (const early of STAGES.slice(0, k))
+    // Locked: never crossed (lamps kept) at a stage without the kit.
+    for (const early of STAGES.slice(0, kReq))
       if (crossed(early.id, 'kept', from, to))
-        problems.push(`${from} -> ${to} (${l.requires}): lock leaks, crossed at ${early.id} (lamps kept)`);
+        problems.push(
+          `${from} -> ${to} (${l.requires}): crossed at ${early.id} (lamps kept), before its kit`,
+        );
   }
 }
 // Dead ends entered, finds reached (the last stages, lamps spent).

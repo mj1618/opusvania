@@ -1423,8 +1423,9 @@ BUILD.weaver = (m) => {
   const door = m.e('antechamber');
   shell(m, { ceil: C });
   floor(m, F, T, m.W - T, 'root');
-  // The entry shaft's landing.
+  // The entry shaft's landing; a root under the Seed Door's west edge takes kicks (back up, claws).
   m.patch('p-weaver', 1100, F);
+  m.s(door.from - 40, 0, 40, F, 'east', 'root');
   // The arena: its trunks (doors at floor level), columns, branches, lamps, web.
   // (lab-weaver's trunks exactly: the west one climbable inside, a door at its foot; the east one with its window.)
   m.s(WX, C, 128, F - 160 - C, 'east', 'trunk');
@@ -1557,6 +1558,9 @@ export function buildAll(): Json[] {
       m.add('exits', x);
     }
     routes(m);
+    // (A camera stop for `npm run shots -- --room dw-<id>`: where she starts in the room.)
+    const sp = m.r.data.spawn as { x: number; y: number };
+    if (!m.r.data.shots) m.r.set('shots', { wide: [{ name: 'spawn', x: sp.x, y: sp.y }] });
     out.push(m.r.data);
   }
   return out;

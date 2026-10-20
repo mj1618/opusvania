@@ -19,7 +19,7 @@
  *  - every find (seeds, hollows, stones, signs, patches, glades) is reached, every dead end entered;
  *  - no softlock: from every arrival (spent) a moon patch, or the glade of the next ability, can be reached.
  */
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { getRoom } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
 import { getWorld } from '../../src/scene/world';
@@ -235,7 +235,11 @@ export function runStage(stage: Stage, lamps: 'spent' | 'kept', maxNodes = 2500,
     for (const n of r.nodes.values()) {
       findsAt(room, n.state, res.finds, rests);
       const f = feet(n.state);
-      if (n.state.player.grounded && (f.x < 0 || f.x > room.width || f.y > room.height))
+      if (
+        n.macro !== 'start' &&
+        n.state.player.grounded &&
+        (f.x < 0 || f.x > room.width || f.y > room.height)
+      )
         res.outside.push(`${room.id} (${Math.round(f.x)}, ${Math.round(f.y)})`);
     }
     for (const [exit, list] of r.exitsAll) {
@@ -345,7 +349,10 @@ if (process.argv[1]?.endsWith('solve/downwood.ts')) {
     }
   }
   if (args.includes('--write')) {
-    writeFileSync('tools/solve/downwood-report.json', `${JSON.stringify(report, null, 1)}\n`);
+    // (Merged into the last report: a run of some stages keeps the others' results.)
+    const file = 'tools/solve/downwood-report.json';
+    const old = existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>) : {};
+    writeFileSync(file, `${JSON.stringify({ ...old, ...report }, null, 1)}\n`);
     console.log('wrote tools/solve/downwood-report.json');
   }
 }

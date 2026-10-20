@@ -308,7 +308,16 @@
         "from": "mid",
         "to": "far-crown"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 3800,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-moonperch",
@@ -423,7 +432,16 @@
         "to": "hatch",
         "needs": ["doubleJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1656,
+          "y": 1040
+        }
+      ]
+    }
   },
   {
     "id": "dw-lone-limb",
@@ -532,7 +550,16 @@
         "to": "hatch",
         "needs": ["dash"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-far-crown",
@@ -721,7 +748,16 @@
         "to": "lookout",
         "needs": ["glide"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 3300,
+          "y": 900
+        }
+      ]
+    }
   },
   {
     "id": "dw-lookout",
@@ -943,7 +979,16 @@
         "to": "chimney",
         "needs": ["wallJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 2200,
+          "y": 520
+        }
+      ]
+    }
   },
   {
     "id": "dw-scar",
@@ -1053,7 +1098,16 @@
         "to": "hub",
         "needs": ["wallJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1500,
+          "y": 700
+        }
+      ]
+    }
   },
   {
     "id": "dw-windbreak",
@@ -1350,7 +1404,16 @@
         "from": "mid",
         "to": "west-boughs"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 7450,
+          "y": 420
+        }
+      ]
+    }
   },
   {
     "id": "dw-nest",
@@ -1524,7 +1587,16 @@
         "from": "mid",
         "to": "windbreak"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1240,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-map",
@@ -1642,7 +1714,16 @@
         "from": "mid",
         "to": "hub"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-vault",
@@ -1794,7 +1875,16 @@
         "to": "hub",
         "flags": ["seeds:5"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-glass-crack",
@@ -1921,7 +2011,16 @@
         "to": "floor-east",
         "needs": ["wallJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 900,
+          "y": 520
+        }
+      ]
+    }
   },
   {
     "id": "dw-hub",
@@ -2566,7 +2665,16 @@
         "from": "mid",
         "to": "map"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 5360,
+          "y": 2040
+        }
+      ]
+    }
   },
   {
     "id": "dw-west-boughs",
@@ -2777,7 +2885,16 @@
         "from": "mid",
         "to": "westfall"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 5360,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-owl-hole",
@@ -2922,7 +3039,16 @@
         "to": "westfall",
         "needs": ["wallJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 600,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-westfall",
@@ -3440,7 +3566,16 @@
         "to": "root-well",
         "needs": ["glide"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1500,
+          "y": 7440
+        }
+      ]
+    }
   },
   {
     "id": "dw-loft",
@@ -3629,7 +3764,16 @@
         "from": "mid",
         "to": "westfall"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 700
+        }
+      ]
+    }
   },
   {
     "id": "dw-bark-stair",
@@ -3797,7 +3941,16 @@
         "from": "mid",
         "to": "floor-west"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1200,
+          "y": 1600
+        }
+      ]
+    }
   },
   {
     "id": "dw-cocoon-row",
@@ -3975,7 +4128,16 @@
         "from": "mid",
         "to": "east-boughs"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 3200,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-east-boughs",
@@ -4247,7 +4409,16 @@
         "to": "chimney",
         "needs": ["wallJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 800,
+          "y": 860
+        }
+      ]
+    }
   },
   {
     "id": "dw-chimney",
@@ -4562,7 +4733,16 @@
         "from": "mid",
         "to": "rain-ledge"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 500,
+          "y": 7440
+        }
+      ]
+    }
   },
   {
     "id": "dw-rain-ledge",
@@ -4689,7 +4869,16 @@
         "from": "mid",
         "to": "chimney"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1500,
+          "y": 700
+        }
+      ]
+    }
   },
   {
     "id": "dw-fern-rest",
@@ -4799,7 +4988,16 @@
         "from": "mid",
         "to": "westfall"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 900,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-floor-west",
@@ -5088,7 +5286,16 @@
         "from": "mid",
         "to": "bark-floor"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-hollow",
@@ -5342,7 +5549,16 @@
         "from": "mid",
         "to": "antechamber"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1500,
+          "y": 5280
+        }
+      ]
+    }
   },
   {
     "id": "dw-floor-east",
@@ -5672,7 +5888,16 @@
         "from": "mid",
         "to": "spring"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-spring",
@@ -5826,7 +6051,16 @@
         "from": "mid",
         "to": "floor-east"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1300,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-bark-floor",
@@ -6005,7 +6239,16 @@
         "from": "mid",
         "to": "ant-road"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 800,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-black-pool",
@@ -6294,7 +6537,16 @@
         "from": "mid",
         "to": "spring"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 2400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-roots-west",
@@ -6507,7 +6759,16 @@
         "from": "mid",
         "to": "ant-road"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-den",
@@ -6735,7 +6996,16 @@
         "from": "mid",
         "to": "taproot"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1700,
+          "y": 2040
+        }
+      ]
+    }
   },
   {
     "id": "dw-taproot",
@@ -6911,7 +7181,16 @@
         "from": "mid",
         "to": "den"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1000,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-ant-road",
@@ -7191,7 +7470,16 @@
         "from": "mid",
         "to": "carrier-crack"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 3400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-carrier-crack",
@@ -7473,7 +7761,16 @@
         "from": "mid",
         "to": "antechamber"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1700,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-root-well",
@@ -7625,7 +7922,16 @@
         "to": "westfall",
         "needs": ["glide"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 300,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-roots-east",
@@ -7853,7 +8159,16 @@
         "from": "mid",
         "to": "beetle-burrow"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 600,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-sunk-stair",
@@ -8091,7 +8406,16 @@
         "from": "mid",
         "to": "drowned-hall"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-drowned-hall",
@@ -8342,7 +8666,16 @@
         "to": "antechamber",
         "needs": ["wallJump"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 6800,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-beetle-burrow",
@@ -8520,7 +8853,16 @@
         "from": "mid",
         "to": "roots-east"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 500,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-gorge",
@@ -8772,7 +9114,16 @@
         "from": "mid",
         "to": "far-ledge"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 2680,
+          "y": 900
+        }
+      ]
+    }
   },
   {
     "id": "dw-gorge-floor",
@@ -8994,7 +9345,16 @@
         "to": "gorge-shelf",
         "needs": ["glide"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 500,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-far-ledge",
@@ -9091,7 +9451,16 @@
         "from": "mid",
         "to": "gorge"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 500,
+          "y": 600
+        }
+      ]
+    }
   },
   {
     "id": "dw-crown-tip",
@@ -9216,7 +9585,16 @@
         "from": "mid",
         "to": "owl-hole"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1400,
+          "y": 1000
+        }
+      ]
+    }
   },
   {
     "id": "dw-gorge-shelf",
@@ -9379,7 +9757,16 @@
         "to": "gorge-floor",
         "needs": ["glide"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 200,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-antechamber",
@@ -9640,7 +10027,16 @@
         "to": "weaver",
         "flags": ["seeds:3"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1500,
+          "y": 960
+        }
+      ]
+    }
   },
   {
     "id": "dw-weaver",
@@ -9709,6 +10105,14 @@
         "w": 5440,
         "h": 672,
         "kick": false
+      },
+      {
+        "tag": "root",
+        "x": 560,
+        "y": 0,
+        "w": 40,
+        "h": 1488,
+        "kick": "east"
       },
       {
         "tag": "trunk",
@@ -9979,7 +10383,16 @@
         "to": "valley-mouth",
         "flags": ["dw-weaver-down"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 1100,
+          "y": 1488
+        }
+      ]
+    }
   },
   {
     "id": "dw-valley-mouth",
@@ -10096,6 +10509,15 @@
         "to": "weaver",
         "flags": ["dw-weaver-down"]
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "spawn",
+          "x": 400,
+          "y": 900
+        }
+      ]
+    }
   }
 ]

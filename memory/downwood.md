@@ -53,7 +53,24 @@ proven, what is in it and what is not.
   (the scene module throws at the first bad room on load). tests/unit/downwood.test.ts: check, design = built, score,
   seeds.
 
+## Fights in the built rooms
+- The old burrback in `dw-den`: `npm run humanplay -- den --room dw-den --skills average,skilled,casual --seeds 1,2 --at
+  1700` brings it down in 5 of 6 (0:47 to 2:29; one casual timed out at 4:00).
+- The Weaver in `dw-weaver`: `npx tsx tools/playtest/weaver-run.ts --room dw-weaver` wins in ~48 s (1 hurt). The bot
+  knows lab-weaver's numbers, so weaver-run shows it the room moved back (`labView`). The arena must be lab-weaver's
+  exactly: its columns take kicks (my helper's `kick: false` default stalled the bot in phase 1) and its east trunk
+  has its window.
+
 ## Gotchas (each cost a try)
+- **A claw face under a door ledge is a dead end**: she climbs into the ledge's underside. Climbs are faces whose top
+  IS the door's floor (a bark block), and a face must reach down to where she stands (the Brook's root ran 200 px
+  short: never met). A climb into an opening above needs a spine standing under that opening (the Hollow's glass,
+  the chimney's heartwood, the Glass Crack's face continuing the hub throat's wall at the same world x).
+- **Up through a top edge** used to drop her back (memory/world.md): fixed in the sim (`TransitState.vy`).
+- **Traversal never needs a lamp** (a flung lamp is out for good): the Lampwalk's thorn bed became a patch a jump
+  clears, the Brook got isles. The solver's spent run is what catches these.
+- A wall top level with a glide opening is a ledge beside it (`noSill`); a tip within ~600 px of a glide opening
+  is crossed by a running coyote jump.
 - **An arrival-only opening is open in the engine** (`edgeOpen` ignores one-way): from inside she can walk out through
   it into nothing. Every arrival-only side opening needs the floor near it more than a jump below its span (far-crown,
   crown-tip, the Gorge's west), a bottom one a `noDrop` one-way lip (the Lookout).
