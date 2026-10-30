@@ -16,7 +16,8 @@
  *             flame in a split seed husk, kept low and steady, the room's one warm light (a point light too).
  *   stones    a map station's hung moth-stones (`MoonPatch.hangs`, the hub's `p-crossing` by the kin's lamp): a crook of
  *             root arching over the kin's husk, each stone she has brought back (`cn-stone-*` flags) hanging from it on a
- *             thread, warm on the flame's side; one just hung (`stoneHung`) swings in and glints.
+ *             thread, warm on the flame's side; one just hung (`stoneHung`) swings in and glints; all swing (less) as
+ *             the station opens the map (`mapStation`).
  *   door      a way out lit from beyond (`door` landmarks, `door-limbs` in the well's hollow; canopy r9b): the open night
  *             past the doorway glows, its moonlight spills down and in across the hollow in a slow breathing beam that
  *             pools on the floor below, and motes drift up out of the hollow along that light and out through it. A
@@ -333,6 +334,9 @@ export class Acts {
         });
       } else if (e.type === 'patchMark') this.flares.push({ x: e.x, y: e.y, t: 0 });
       else if (e.type === 'stoneHung') this.hung.set(e.flag, 0);
+      // The map station opens: every stone on the crook swings (the map unrolls from it: render/map).
+      else if (e.type === 'mapStation')
+        for (const f of sim.save.flags) if ((this.hung.get(f) ?? 1e9) > 0.8) this.hung.set(f, 0.8);
     }
   }
 
