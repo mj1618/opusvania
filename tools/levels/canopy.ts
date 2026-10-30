@@ -1454,6 +1454,8 @@ function fork(): Json {
   // Secret (review r3 #9: a wall, not a floor panel): a rotten wall in the root knoll's west face, a chamber in the
   // knoll, stairs from its floor down west under the fork to the cellar.
   r.hole(1984, 1088, 2816, 1344);
+  // The thorn bed in a shallow pit in front of the claw face (a gap to jump: r5 bots walked into the flat bed).
+  r.hole(2240, 1344, 2432, 1408);
   r.hole(896, 1088, 1600, 1344);
   r.bark('cellar-panel', 1600, 1152, 64, 192);
   r.hole(1664, 1152, 1984, 1344);
@@ -1473,7 +1475,7 @@ function fork(): Json {
   r.cover('shelf-cover', 1728, 576, 384, 256);
   // (Review r4 #2: thorns at the face's foot read as "not this way": the bed is west of it now, the last 256 px before
   // the face clean, the juvenile on the knoll, and a lamp over the face's top: the way on points at a warm light.)
-  r.thorns('thorn-pit', 2240, 1344, 192);
+  r.thorns('thorn-pit', 2240, 1408, 192);
   r.juvenile('juv-e', 1888, 1088, -1, 120);
   r.lamp('wick-fork', 3000, 440);
   r.stone('stone-east', 400, 896, 'cn-east');

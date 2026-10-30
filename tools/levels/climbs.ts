@@ -184,7 +184,7 @@ export const CLIMBS: Climb[] = [
     id: 'well-1',
     room: 'cn-well',
     note: "leg 1 (the claws' first use): up the shaft's east face onto the mouth's floor",
-    xs: [1280, 1344, 1408],
+    xs: [1280, 1344, 1408, 1472, 1500],
     y: 4928,
     goal: { x0: 1500, x1: 2560, y: 3200 },
     plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
