@@ -1139,7 +1139,6 @@ function limbs(): Json {
   r.tree('tall', 2560, 128, 320, 1280, true, 'west');
   r.limb('l3', 2688, 2880, 448, { parent: 'tall', grows: 'east', end: 'burl', h: 80, calm: true });
   r.thorns('thorn-g1', 1056, 1280, 448);
-  r.thorns('thorn-g2', 2336, 1280, 224);
   r.thorns('thorn-g3', 480, 1280, 320);
   r.flyer('lampwing', 'wing-g1', 1280, 520, -1, { radius: 220 });
   r.stone('stone-west', 2100, 320, 'cn-west');
