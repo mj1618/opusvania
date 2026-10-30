@@ -850,6 +850,31 @@ export function linesFor(
         const goal: Goal = { kind: 'surface', surface: to };
         const faceX = m.faceX ?? m.launchX + m.dir * 26;
         const n = `wall climb${wait ? ` after ${wait}f` : ''}`;
+        // A person reads the strips (review r5: the bots chose the face from the map and climbed into its thorns):
+        // thorns up this face between here and the top, a clean face across: that one first.
+        const yLow = topUnder(from, m.launchX);
+        const yHigh = topUnder(to, tx);
+        const thorny = (x: number, w: number) =>
+          (scene.thorns ?? []).some(
+            (t) =>
+              t.h > t.w &&
+              (w > 0 ? Math.abs(t.x + t.w - x) <= 40 : Math.abs(t.x - x) <= 40) &&
+              t.y < yLow &&
+              t.y + t.h > yHigh,
+          );
+        if (thorny(faceX, m.dir)) {
+          const far = opts.faces.find((fc) => {
+            const gap = (fc.x - faceX) * -m.dir;
+            return fc.w === -m.dir && gap >= 120 && gap <= 900 && fc.y0 <= yLow && !thorny(fc.x, fc.w);
+          });
+          if (far) {
+            const nf = `wall climb (the far face: thorns on this one)${wait ? ` after ${wait}f` : ''}`;
+            out.push({
+              name: nf,
+              make: () => climbLine(nf, scene, goal, tx, { faceX: far.x, w: far.w, wait }, hands),
+            });
+          }
+        }
         out.push({ name: n, make: () => climbLine(n, scene, goal, tx, { faceX, w: m.dir, wait }, hands) });
         out.push(...zigCandidates(scene, goal, tx, faceX, m.dir, opts.faces, hands, wait));
         // Across to an opposite face at a few heights (a broken face: slick or thorny higher up).
