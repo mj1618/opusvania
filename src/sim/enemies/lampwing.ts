@@ -215,6 +215,9 @@ function giveUp(e: EnemyState, info: StepInfo, cause: GiveUpCause): void {
   // She went beyond its reach: for a while it tells only at one well inside it (not at every jump
   // at the edge of it).
   if (cause === 'far') e.noticeCd = frames(rowOf(info.t, e).retellFrames);
+  // (One with its own dive count, tired: it lets her pass before it tells again: one pass, one dive.)
+  if ((cause === 'tired' || cause === 'touch') && e.maxDives > 0)
+    e.noticeCd = frames(rowOf(info.t, e).retellFrames);
   info.events.push({
     type: 'enemyGiveUp',
     id: e.id,
@@ -709,6 +712,7 @@ export const lampwing: KindRules = {
     e.mode = 'hover';
     e.radius = Math.max(0, spawn.radius ?? rowOf(t, e).radius);
     e.sight = Math.max(0, spawn.sight ?? 0);
+    e.maxDives = Math.max(0, Math.round(spawn.dives ?? 0));
     e.side = e.facing;
     e.targetX = e.x + e.w / 2;
     e.targetY = e.y + e.h / 2;
@@ -772,6 +776,9 @@ export const lampwing: KindRules = {
     // (it hangs, then flies home) it is no danger either: its dive is its attack, and a body left
     // hanging in the middle of a fight after it has hit her must not hit her again.
     if (e.mode === 'stall' || e.mode === 'rest' || e.mode === 'return') return true;
+    // (One with its own dive count that has spent its pass lets her by: her climb past its hover is no hit either,
+    // the Canopy's leg 3b, review r7 #9.)
+    if (e.maxDives > 0 && e.noticeCd > 0) return true;
     if (e.mode === 'pursue' && e.modeFrames <= rowOf(info.t, e).climbSafeFrames) return true;
     return nearLitLantern(info.state, info.scene, G, e.x + e.w / 2, e.y + e.h / 2);
   },
@@ -946,7 +953,8 @@ export const lampwing: KindRules = {
       const base = (e.sight > 0 ? e.sight : t.noticePx) * seenScale(SEEN, info.t.giving);
       const sight = prey ? Math.max(base, t.leashPx) : base;
       // (For a while after she has left its leash once, only one well inside it.)
-      const margin = e.noticeCd > 0 && !prey ? t.retellMarginPx : 0;
+      // (One with its own dive count that has tired: not at all for a while, one pass, one dive.)
+      const margin = e.noticeCd > 0 && !prey ? (e.maxDives > 0 ? t.leashPx + 1 : t.retellMarginPx) : 0;
       if (sight > 0 && !over && e.calm === 0 && inLeash(e, p, t, margin) && sees(e, p, scene, sight)) {
         e.dives = 0;
         tell(e, info);
@@ -1005,7 +1013,7 @@ export const lampwing: KindRules = {
       if (--e.timer <= 0) {
         if (!lit(p)) giveUp(e, info, 'dark');
         else if (!inLeash(e, p, t)) giveUp(e, info, 'far');
-        else if (e.dives >= frames(t.maxDives, 1)) giveUp(e, info, 'tired');
+        else if (e.dives >= (e.maxDives > 0 ? e.maxDives : frames(t.maxDives, 1))) giveUp(e, info, 'tired');
         else climb(e, info);
       }
     } else if (e.mode === 'pursue') {
@@ -1032,7 +1040,7 @@ export const lampwing: KindRules = {
       const hit = drift(e, scene, t);
       if (cause !== '') giveUp(e, info, cause);
       else if ((arrived || hit !== 0 || e.chase >= frames(t.pursueFrames, 1)) && e.lost === 0) {
-        if (e.dives >= frames(t.maxDives, 1)) giveUp(e, info, 'tired');
+        if (e.dives >= (e.maxDives > 0 ? e.maxDives : frames(t.maxDives, 1))) giveUp(e, info, 'tired');
         else tell(e, info);
       } else if (e.chase >= frames(t.pursueFrames, 1) + frames(t.lostFrames, 1)) giveUp(e, info, 'lost');
     } else if (e.mode === 'rest') {

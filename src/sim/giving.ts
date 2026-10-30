@@ -64,7 +64,7 @@ export function offerTarget(state: GameState, scene: Scene, t: Tuning, lights = 
   let bestD = 0;
   for (let i = 0; i < state.enemies.length && !lights; i++) {
     const e = state.enemies[i];
-    if (!e || e.gone || e.mode === 'dead' || e.gift > 0) continue;
+    if (!e || e.gone || e.arrive > 0 || e.mode === 'dead' || e.gift > 0) continue;
     if (p.giftTo === 'enemy' && p.giftIndex === i && p.giftTimer > 0) continue;
     const d = dist2(px, py, e);
     // (One that is after her she can reach as far as it can see her.)

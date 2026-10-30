@@ -16,7 +16,7 @@ import { createEnemies } from './enemies';
 import type { SimEvent } from './events';
 import { createGoal } from './goal';
 import { createHatch } from './hatch';
-import { createKit, kitSolids } from './kit';
+import { createKit, kitSolids, rearmArenas } from './kit';
 import { createLight, initTaken, initWicks } from './light';
 import { createLures } from './lures';
 import { solidAt } from './physics/aabb';
@@ -293,6 +293,8 @@ export function enterRoom(
   const firstVisit = !state.save.visited.includes(to);
   remember(state.save.visited, to);
   state.room = to;
+  // (An ambush left unfinished plays again from its arrival: `rearm` triggers, review r7 #2.)
+  rearmArenas(scene, state.save);
   Object.assign(state, createLocal(scene, t, state.save, firstVisit));
   // Seam hysteresis: the opening she came in by stays shut behind her for a moment (src/sim/index.ts).
   if (entry.kind === 'edge') state.seam = { exit: entry.exit.id, frames: 0 };

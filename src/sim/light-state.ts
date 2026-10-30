@@ -47,14 +47,19 @@ export interface LightState {
   sets: number[];
 }
 
-export function createLight(scene: Scene, save: { flags: readonly string[] }): LightState {
+export function createLight(
+  scene: Scene,
+  save: { flags: readonly string[]; abilities?: readonly string[] },
+): LightState {
+  // (A creature that waits for a flag starts held out: one set on the first step then arrives, Canopy r8.)
+  const has = (w: string) => save.flags.includes(w) || (save.abilities ?? []).includes(w);
   return {
     gust: null,
     moss: (scene.moonmoss ?? []).map(() => 0),
     bells: (scene.bells ?? []).map(() => ({ n: 0, last: 0, seq: '', hitBy: 0 })),
     regrow: (scene.pods ?? []).map(() => 0),
     respawn: (scene.enemies ?? []).map(() => 0),
-    hidden: (scene.enemies ?? []).map(() => 0),
+    hidden: (scene.enemies ?? []).map((e) => (e.wakes && !has(e.wakes) ? 1 : 0)),
     sets: (scene.wickSets ?? []).map((w) => (save.flags.includes(w.sets) ? 1 : 0)),
   };
 }

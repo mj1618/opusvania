@@ -665,6 +665,15 @@ export const defaultTuning = withVariants({
     releaseStagger: 5,
     releaseStaggerBig: 3,
     bigRelease: 6,
+    /**
+     * An ambush's creatures arrive (`arrive`, review r7 #2: both of the Canopy's spawned on her and hit within 16-40
+     * frames): they show this long after the flag (the gates shut first), then travel in from their `arrive` point
+     * for `arriveFrames`, harmless and out of reach.
+     */
+    arriveDelayFrames: 36,
+    arriveFrames: 48,
+    /** An `arrive` point is taken only this far from her body centre (else the next, else the farthest). */
+    arriveClearPx: 400,
   },
   /** The burrback: a small armoured beetle that trundles along its platform. */
   burrback: {
@@ -1726,6 +1735,8 @@ export const defaultTuning = withVariants({
     width: 128,
     height: 192,
     restFrames: 30,
+    /** Passing through a patch (no stop) makes it her re-form point, no rest (review r7 #4: HK's bench is a stop). */
+    markOnPass: true,
   },
   /**
    * The map (memory/world.md): a lure, exit, door, patch or glade counts as seen once it is within

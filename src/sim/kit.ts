@@ -32,7 +32,7 @@ import type { Bark, BounceCap } from './kit-data';
 import { strikeBell } from './light';
 import type { Box } from './player/attack';
 import type { Scene, SolidRect } from './scene';
-import type { GameState, PlayerState, SaveState } from './state';
+import type { EnemyState, GameState, PlayerState, SaveState } from './state';
 import type { Tuning } from './tuning';
 
 /** The room's kit, as she finds it (room-local: rebuilt on every entry from the scene and the save). */
@@ -72,12 +72,40 @@ export function gateShut(g: { flag: string; shut?: string | undefined }, flags: 
  * A fade while an arena's door is shut re-arms it: its `shut` flag leaves the save (the door stands open behind her
  * as she re-forms, and its trigger shuts it again). Called at the end of a fade, before the creatures go home.
  */
-export function rearmArenas(scene: Scene, save: SaveState): void {
+export function rearmArenas(
+  scene: Scene,
+  save: SaveState,
+  enemies?: readonly (EnemyState | undefined)[],
+): void {
+  const out: string[] = [];
+  const drop = (f: string) => {
+    const k = save.flags.indexOf(f);
+    if (k < 0) return;
+    save.flags.splice(k, 1);
+    out.push(f);
+  };
   for (const g of scene.gates ?? []) {
     if (g.shut === undefined || !gateShut(g, save.flags)) continue;
-    const k = save.flags.indexOf(g.shut);
-    if (k >= 0) save.flags.splice(k, 1);
+    drop(g.shut);
   }
+  // An ambush (`rearm`, review r7 #2) plays again until every creature it wakes is down (its `sets` saved, or killed
+  // now). Called with no creatures (a fresh entry into the room), only the saved flags count.
+  const spawns = scene.enemies ?? [];
+  for (const tr of scene.triggers ?? []) {
+    if (!tr.rearm || !save.flags.includes(tr.sets)) continue;
+    let down = true;
+    for (let i = 0; i < spawns.length && down; i++) {
+      const sp = spawns[i];
+      if (sp?.wakes !== tr.sets) continue;
+      if (sp.sets && save.flags.includes(sp.sets)) continue;
+      if (!enemies || !killed(enemies[i])) down = false;
+    }
+    if (!down) drop(tr.sets);
+  }
+  // (A wave's later beats ride on its first: a beat whose waking flag was taken back takes back the flag it set, so a
+  // fade in beat 2 replays the wave from beat 1, never both beats at once.)
+  for (let k = 0; k < out.length; k++)
+    for (const sp of spawns) if (sp.wakes === out[k] && sp.sets) drop(sp.sets);
 }
 
 /** The save key of a piece of this room. */

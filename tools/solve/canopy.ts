@@ -37,6 +37,8 @@ interface Claim {
   max?: number;
   /** The room's warm lamps burn (flings on). */
   lit?: boolean;
+  /** A lock whose key is the lamp itself (the first fling, r8): not run again lit. */
+  lampKey?: boolean;
 }
 
 const C = 'wallJump';
@@ -49,6 +51,23 @@ const CLAIMS: Claim[] = [
     from: [4950, 1320],
     kit: [],
     reach: ['drop', 'place:pocket'],
+  },
+  // (r8, review r7 #1: the first fling. From the crown's east limb no jump reaches the droop's limb; the lamp over
+  // the gap does, and a miss is caught and set back on the limb.)
+  {
+    room: 'cn-hatch',
+    from: [3460, 892],
+    kit: [],
+    reach: ['place:first-near'],
+    not: ['place:first-far', 'drop', 'place:pocket'],
+    lampKey: true,
+  },
+  {
+    room: 'cn-hatch',
+    from: [3460, 892],
+    kit: [],
+    lit: true,
+    reach: ['place:first-far', 'drop', 'place:pocket'],
   },
   // The Crossing (r6: 8,000 wide, the old hub east of x 3520): from the landing the low west and the fork are open;
   // the high limb, the clump's and the block's secrets (claws), the glide shelf and the door (three seeds) are shut.
@@ -198,11 +217,10 @@ const CLAIMS: Claim[] = [
     room: 'cn-fork',
     from: [400, 1344],
     kit: [],
-    reach: ['hub', 'cellar', 'cn-fork:stone-east'],
-    not: ['grove', 'cn-fork:shelf-1'],
+    reach: ['hub', 'cellar'],
+    not: ['grove'],
   },
-  { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'], not: ['cn-fork:shelf-1'] },
-  { room: 'cn-fork', from: [3000, 576], kit: [C, G], reach: ['cn-fork:shelf-1'] },
+  { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'] },
   // The cellar branch: there and back without the claws; the larder needs them; the tunnel's shortcut and the
   // trapdoor open from below only.
   { room: 'cn-cellar', from: [480, 128], kit: [], reach: ['fork', 'galleries'], not: ['tunnel'] },
@@ -323,8 +341,29 @@ const CLAIMS: Claim[] = [
     room: 'cn-tunnel',
     from: [5440, 1856],
     kit: [C, G],
+    flags: ['cn-tunnel-clear'],
     reach: ['hub', 'den', 'burrow', 'cellar'],
     max: 9000,
+  },
+  // (r8, review r7 #7: the den's warning, a gated wave where the glide lands: the root lid over the drop to the den
+  // holds until it is cleared; the cellar's shortcut stays open off the block.)
+  {
+    room: 'cn-tunnel',
+    from: [7420, 1856],
+    kit: [C, G],
+    reach: ['place:east', 'cellar'],
+    not: ['den', 'place:low'],
+    max: 9000,
+  },
+  // (r8: the nest, the hall's lower floor: down the shaft by the pile, back up it or round by the burrow.)
+  { room: 'cn-tunnel', from: [900, 1856], kit: [], reach: ['nest'], max: 9000 },
+  { room: 'cn-burrow', from: [1200, 1216], kit: [C], reach: ['hall', 'tunnel', 'cn-burrow:stone-deep'] },
+  {
+    room: 'cn-burrow',
+    from: [1200, 1216],
+    kit: [],
+    reach: ['cn-burrow:stone-deep'],
+    not: ['hall', 'tunnel'],
   },
   // (r7: the west hall grown under the hub, over its bramble run to the pile at its end and back.)
   {
@@ -454,7 +493,7 @@ const t0 = Date.now();
 const hasWick = (id: string) =>
   (getRoom(id).lures ?? []).some((l) => l.kind === 'wick' && !(l as { after?: string }).after);
 const runs = CLAIMS.flatMap((c) =>
-  c.not?.length && !c.lit && hasWick(c.room) ? [c, { ...c, lit: true }] : [c],
+  c.not?.length && !c.lit && !c.lampKey && hasWick(c.room) ? [c, { ...c, lit: true }] : [c],
 );
 for (const c of runs) {
   if (only.length && !only.includes(c.room)) continue;

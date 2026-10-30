@@ -41,6 +41,7 @@ export const KIT_FIELDS = {
           hold: int.min(1).max(600).optional(),
           finale: z.boolean().optional(),
           endSets: id.optional(),
+          rearm: z.boolean().optional(),
         })
         .strict()
         // journey.md's rule: a held beat is at most 3 s, except the one marked `finale`.

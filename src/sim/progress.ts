@@ -35,6 +35,20 @@ function patchUnder(state: GameState, scene: Scene, t: Tuning): number {
   return -1;
 }
 
+/** Index of the patch her feet centre is inside (grounded or not), -1 if none. */
+function patchThrough(state: GameState, scene: Scene, t: Tuning): number {
+  const list = scene.patches;
+  if (!list) return -1;
+  const p = state.player;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  for (let i = 0; i < list.length; i++) {
+    const b = patchBox(list[i] as MoonPatch, t);
+    if (fx >= b.x && fx < b.x + b.w && fy > b.y && fy <= b.y + b.h + 1) return i;
+  }
+  return -1;
+}
+
 /** She rests at patch `i`: whole again, saved, her re-form point. */
 export function restAt(state: GameState, scene: Scene, i: number, events: SimEvent[]): void {
   const patch = scene.patches?.[i];
@@ -59,6 +73,17 @@ export function updatePatches(
   events: SimEvent[],
 ): void {
   const i = state.player.faded > 0 || state.player.hp <= 0 ? -1 : patchUnder(state, scene, t);
+  // Passing through one (review r7 #4: a runner crossed the hollow's save and faded in the ambush two legs back) makes
+  // it her re-form point, saved, without a rest: no health. In the air too (a hop over it counts).
+  if (t.patch.markOnPass && state.player.faded === 0 && state.player.hp > 0) {
+    const k = patchThrough(state, scene, t);
+    const q = scene.patches?.[k];
+    const cur = state.save.patch;
+    if (q && (cur?.room !== scene.id || cur.id !== q.id)) {
+      state.save.patch = { room: scene.id, id: q.id };
+      events.push({ type: 'patchMark', id: q.id, room: scene.id, x: q.x, y: q.y });
+    }
+  }
   const r = state.rest;
   if (i !== r.at) {
     r.at = i;

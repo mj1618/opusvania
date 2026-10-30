@@ -1,6 +1,6 @@
 /**
  * The Canopy's set-piece climbs are fair (review r4 #1: they passed only frame-perfect): each passes with a reaction
- * delay of 0, 6 and 10 frames before every kick, from three start x on its rest, with every thorn strip grown 64 px
+ * delay of 0, 6, 10 and 16 frames (r8, review r7 #9: a relaxed hand) before every kick, from three start x on its rest, with every thorn strip grown 64 px
  * at both ends; one face alone runs into thorns; a thorn hit puts her back on the rest the climb started from.
  * A plan that takes a reward off the line (review r5 #2: glints over a strip) is a risk: it must pass at 0 and 6
  * with half the margin.
@@ -8,6 +8,7 @@
  * With the creatures in (review r6 #3): the well's leg 3b and its lampwing are a choice, not a toll (`CREATURE_CLIMBS`).
  */
 import { describe, expect, it } from 'vitest';
+import { getRoom } from '../../src/scene/index';
 import {
   CLIMBS,
   type Climb,
@@ -39,6 +40,13 @@ describe('the Canopy climbs are fair', () => {
           }
       expect(bad).toEqual([]);
     }, 60_000);
+});
+
+describe("leg 2's strip reads before she touches it (review r7 #9)", () => {
+  it('thorn-w2 is at least 160 tall', () => {
+    const t = (getRoom('cn-well').thorns ?? []).find((q) => q.id === 'thorn-w2');
+    expect(t?.h ?? 0).toBeGreaterThanOrEqual(160);
+  });
 });
 
 describe('the Canopy climbs with their creatures in', () => {

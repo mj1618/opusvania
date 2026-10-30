@@ -125,14 +125,63 @@ export function spread(a: AreaFile, k: number) {
   };
 }
 
-/** Round 7's bar for the Canopy (review r6 #1): what misses it. v6's totals: 12,000 px of thorns, 1.77 hit + ledges. */
+/**
+ * The critical path in the order it is walked (export-area.ts's `CRITICAL` for the Canopy, with its repeats): review
+ * r7 #7 reads the rhythm along it.
+ */
+const PATH = [
+  'cn-hatch',
+  'cn-hub',
+  'cn-trunk',
+  'cn-well',
+  'cn-limbs',
+  'cn-hub',
+  'cn-fork',
+  'cn-grove',
+  'cn-spire',
+  'cn-bower',
+  'cn-crown',
+  'cn-bower',
+  'cn-gap',
+  'cn-hub',
+  'cn-tunnel',
+  'cn-den',
+  'cn-out',
+];
+
+/**
+ * Round 8's bar for the Canopy (review r7 #7 on top of round 7's, review r6 #1): what misses it. v6's totals: 12,000
+ * px of thorns, 1.77 hit + ledges. Two peaks (rooms at >= 4x the median), a quiet path room (<= 0.8) between the hub
+ * and the Grove, no three path rooms in a row within 20% of each other. Quiet rooms >= 5 (r7: 6; the burrow, a closed
+ * hole counted quiet, became the nest, review r7 #7).
+ */
 export function check(a: AreaFile): string[] {
   const f = furniture(a, 1);
   const d = roomDensity(a).map((r) => r.density);
   const s = spread(a, 1);
   const bad: string[] = [];
   if (s.densityCV < 0.8) bad.push(`room density CV ${s.densityCV} < 0.8`);
-  if (d.filter((x) => x < 0.5).length < 6) bad.push(`${s.quietRooms} rooms under 0.5 a screen (want >= 6)`);
+  if (d.filter((x) => x < 0.5).length < 5) bad.push(`${s.quietRooms} rooms under 0.5 a screen (want >= 5)`);
+  const by = new Map(roomDensity(a).map((r) => [r.id, r.density]));
+  const median = s.densityMedian;
+  const peaks = [...by].filter(([, x]) => x >= 4 * median - 1e-9);
+  if (peaks.length < 2)
+    bad.push(
+      `${peaks.length} rooms at >= 4x the median ${median} (want 2: ${peaks.map(([id]) => id).join(', ')})`,
+    );
+  const path = PATH.map((id) => by.get(id) ?? 0);
+  const g = PATH.indexOf('cn-grove');
+  if (!PATH.slice(1, g).some((id) => (by.get(id) ?? 9) <= 0.8))
+    bad.push('no path room before the Grove at <= 0.8 a screen');
+  for (let i = 0; i + 2 < path.length; i++) {
+    const w = path.slice(i, i + 3);
+    const lo = Math.min(...w);
+    const hi = Math.max(...w);
+    if (new Set(PATH.slice(i, i + 3)).size === 3 && hi <= lo * 1.2 * 1.2 && hi > 0)
+      bad.push(
+        `${PATH.slice(i, i + 3).join(' / ')} within 20% of each other (${w.map((x) => x.toFixed(2)).join(' ')})`,
+      );
+  }
   if (s.busiestOverMedian < 5) bad.push(`the busiest room is ${s.busiestOverMedian}x the median (want >= 5)`);
   if (s.longHazardShare < 0.5)
     bad.push(`${s.longHazardShare} of the hazard length in runs >= 640 (want >= 0.5)`);
@@ -161,7 +210,7 @@ if (process.argv[1]?.endsWith('canopy-furniture.ts')) {
       );
   if (process.argv.includes('--check')) {
     const bad = check(ours);
-    console.log(bad.length ? `round 7's bar missed:\n  ${bad.join('\n  ')}` : "round 7's bar met");
+    console.log(bad.length ? `round 8's bar missed:\n  ${bad.join('\n  ')}` : "round 8's bar met");
     process.exitCode = bad.length ? 1 : 0;
   }
 }

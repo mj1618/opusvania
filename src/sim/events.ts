@@ -121,6 +121,11 @@ export type SimEvent =
   | { type: 'roomEnter'; room: string; from: string; x: number; y: number }
   /** She rested at a moon patch (`id`): whole again (`hp`), saved, and her re-form point. `x, y` = its foot. */
   | { type: 'patchRest'; id: string; room: string; x: number; y: number; hp: number }
+  /**
+   * She passed through a moon patch without resting (review r7 #4): it is her re-form point now (saved), but she is
+   * not made whole. `x, y` = its foot.
+   */
+  | { type: 'patchMark'; id: string; room: string; x: number; y: number }
   /** A glade gave her an ability (once ever). `x, y` = the bottom centre of its rect. */
   | { type: 'gladeGrant'; id: string; ability: AbilityId; x: number; y: number }
   /** She opened a shortcut from its open side (`x, y` = its centre): it stays open for good. */

@@ -54,4 +54,18 @@ export type LightEvent =
   | { type: 'bellDull'; id: string; x: number; y: number }
   | { type: 'bellAnswer'; id: string; flag: string; x: number; y: number }
   | { type: 'podRegrow'; id: string; x: number; y: number }
-  | { type: 'enemyRespawn'; id: string; kind: string; x: number; y: number };
+  | { type: 'enemyRespawn'; id: string; kind: string; x: number; y: number }
+  /**
+   * An ambush's creature shows at its `arrive` point (`fromX`, `fromY`: its box centre) and travels to its spawn (`x`,
+   * `y`: box centre) over `frames`, harmless and out of reach (`EnemyState.arrive` counts down; Canopy r8).
+   */
+  | {
+      type: 'enemyArrive';
+      id: string;
+      kind: string;
+      x: number;
+      y: number;
+      fromX: number;
+      fromY: number;
+      frames: number;
+    };
