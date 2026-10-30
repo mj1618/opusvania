@@ -29,7 +29,8 @@ export const INTERIOR = {
   midCover: 0.32,
   /** Spacing of the lights along exposed tops, faces and undersides (px), and the fallback cell. */
   mossEvery: 640,
-  fungusEvery: 560,
+  // (Review r6 #5: at 560 px apart the face fungi read as a dotted line of LEDs: fewer, each a clump.)
+  fungusEvery: 1100,
   wormEvery: 420,
   shaftEvery: 1500,
   cell: { w: 1500, h: 860 },
@@ -336,7 +337,7 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
             kind: sap ? 'sap' : 'fungus',
             x: fx,
             y,
-            s: 18 + 16 * hash1(k + i, seed + 11),
+            s: 30 + 22 * hash1(k + i, seed + 11),
             dir,
             violet: !sap && hash1(k * 3 + i, seed + 13) < (look === 'den' ? 0.35 : 0.18),
             len: 0,
@@ -1094,12 +1095,30 @@ export function paintGlowFlora(p: Paint, plan: InteriorPlan): void {
         );
       }
     } else if (l.kind === 'fungus') {
-      const n = 2 + Math.floor(r() * 3);
+      // A clump (review r6 #5): a cushion of moss on the face, 4-8 shelves of very different sizes crowded on it.
+      for (let k = 0; k < 6; k++)
+        p.solid(
+          chaikin(
+            blob(
+              l.x + l.dir * range(r, 0, 8),
+              l.y + range(r, -1.4, 1.4) * l.s,
+              range(r, 6, 14),
+              range(r, 8, 18),
+              l.seed + k,
+              0.3,
+              10,
+            ),
+            1,
+          ),
+          l.violet ? 0x24183a : 0x16343a,
+          B.walkH + 0.08,
+          { moss: 0.6 },
+        );
+      const n = 4 + Math.floor(r() * 5);
       for (let k = 0; k < n; k++) {
-        const y = l.y + (k - (n - 1) / 2) * l.s * 0.9 + range(r, -6, 6);
-        const w = l.s * range(r, 0.7, 1.2);
-        const x = l.x + l.dir * w * 0.45;
-        // The cap: a half-disc out of the face, the gills a pale band under it.
+        const y = l.y + range(r, -1.5, 1.5) * l.s;
+        const w = l.s * range(r, 0.3, 0.85) * (1 - Math.abs(y - l.y) / (l.s * 2.4));
+        const x = l.x + l.dir * (w * 0.4 + range(r, -4, 8));
         const cap: number[] = [];
         for (let a = 0; a <= 10; a++) {
           const t = (a / 10) * Math.PI;

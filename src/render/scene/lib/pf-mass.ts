@@ -90,6 +90,11 @@ export const MASS = {
   plateLen: [140, 300] as readonly number[],
   pillarMinH: 320,
   flare: 22,
+  /** Sub-masses (canopy r7, review r6 #5): one per cell of this size (px), their half width range, the share of the
+   *  way from the body to the lift of each of the two values. */
+  subCell: [420, 300] as readonly number[],
+  subR: [180, 420] as readonly number[],
+  subLift: [1.0, 1.7] as readonly number[],
   /** Knuckles deep in a big mass (canopy r7): one per this many px² of it, their half width range, px. */
   knuckleArea: 180000,
   knuckleR: [140, 340] as readonly number[],
@@ -115,6 +120,8 @@ export interface MassTone {
   plate: number;
   crust: number;
   crustA: number;
+  /** The two sub-mass values (canopy r7, review r6 #5); absent = `MASS.subLift` of the way from the body to the lift. */
+  sub?: readonly [number, number];
 }
 
 const NIGHT_TONE: MassTone = {
@@ -127,6 +134,8 @@ const NIGHT_TONE: MassTone = {
   plate: 0x12263a,
   crust: 0x23303c,
   crustA: 0,
+  // (The night's lift is so dark that its sub-masses stayed in the body's luma bin: the hub's under-floor.)
+  sub: [0x22404e, 0x2e5468],
 };
 
 /** Per look (lifted: review r4 #4 asks the heartwood rooms' mean luma for 20+, and the lift doubled). */
@@ -610,6 +619,59 @@ export function paintMasses(
     ...tops.map((f) => ({ key: f.key, a: f.a, b: f.b, vertical: false })),
   ];
   const innerK = (x: number, y: number) => (distToRuns(x, y, edgeRuns) > EDGE.inner ? EDGE.innerK : 1);
+
+  // 1c. Sub-masses (canopy review r6 #5: "no single flat plane over 35% of a frame"; HK's Crossroads stacks its rock at
+  // three depths). A big mass is broken into overlapping lobed shapes at two lifted values over the body, each with a
+  // dark seam along its upper arc and a lit lip under that, painted large first: the stack reads, the edge stays the
+  // brightest thing. Colour only (the bake clips it to the body).
+  masses.forEach((r, i) => {
+    if (inTaper.has(i) || !near(r.x, r.y, r.x + r.w, r.y + r.h) || Math.min(r.w, r.h) < 200) return;
+    const rr = rngFor(seed, r.x, r.y, 67);
+    const [cw, ch] = MASS.subCell as [number, number];
+    const shapes: Array<[number, number, number, number, number]> = [];
+    for (let gy = r.y + ch * 0.3; gy < r.y + r.h; gy += ch)
+      for (let gx = r.x + range(rr, 0, cw * 0.5); gx < r.x + r.w; gx += cw * range(rr, 0.7, 1.1)) {
+        const rx = range(rr, MASS.subR[0] as number, MASS.subR[1] as number);
+        shapes.push([
+          gx + range(rr, -cw * 0.3, cw * 0.3),
+          gy + range(rr, -ch * 0.3, ch * 0.3),
+          rx,
+          rx * range(rr, 0.45, 0.8),
+          rr() < 0.55 ? 0 : 1,
+        ]);
+      }
+    shapes.sort((a, b) => b[2] - a[2]);
+    for (const [k, [cx, cy, rx, ry, tier]] of shapes.entries()) {
+      const sd = seed + i * 101 + k * 7;
+      const shape = chaikin(blob(cx, cy, rx, ry, sd, 0.35, 16, range(rr, -0.3, 0.3)), 2);
+      const col = T.sub ? (T.sub[tier] as number) : lerp3(T.body, T.lift, MASS.subLift[tier] as number);
+      p.tint(shape, col, range(rr, 0.85, 1));
+      // The seam over its upper arc and the lip under it (only the upper arc: a full ring read as a coin).
+      const n = shape.length / 2;
+      const arcPts: number[] = [];
+      for (let q = 0; q < n; q++) {
+        const y = shape[q * 2 + 1] as number;
+        if (y < cy - ry * 0.25) arcPts.push(shape[q * 2] as number, y);
+      }
+      if (arcPts.length >= 8) {
+        // (Blob points run round the circle: the upper ones are contiguous but may wrap; sort by x.)
+        const pts: Array<[number, number]> = [];
+        for (let q = 0; q < arcPts.length; q += 2) pts.push([arcPts[q] as number, arcPts[q + 1] as number]);
+        pts.sort((a, b) => a[0] - b[0]);
+        const line = pts.flat();
+        p.tint(strand(line, range(rr, 6, 12), 0.3), T.deep, 0.85);
+        p.tint(
+          strand(
+            line.map((v, j) => (j % 2 ? v + 8 : v)),
+            range(rr, 4, 8),
+            0.35,
+          ),
+          T.veinLit,
+          range(rr, 0.3, 0.5),
+        );
+      }
+    }
+  });
 
   // 2. The deep: dim roots wandering through big masses, a knot now and then.
   masses.forEach((r, i) => {
