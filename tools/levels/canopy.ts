@@ -59,27 +59,28 @@ export const PLACE: Record<string, Box> = {
   'cn-bower': { x: 10752, y: 128, w: 4736, h: 1664 },
   'cn-attic': { x: 15488, y: 352, w: 2560, h: 1440 },
   // The main band (y 1792).
-  'cn-well': { x: -3200, y: 1792, w: 2560, h: 4992 },
-  'cn-limbs': { x: -640, y: 1792, w: 3200, h: 1536 },
-  'cn-hub': { x: 2560, y: 1792, w: 4480, h: 2304 },
+  'cn-well': { x: -6720, y: 1792, w: 2560, h: 4992 },
+  'cn-limbs': { x: -4160, y: 1792, w: 3200, h: 1536 },
+  // (Review r5 #9: the hub widened west by 3,520 into a place, the west rooms moved with it.)
+  'cn-hub': { x: -960, y: 1792, w: 8000, h: 2304 },
   'cn-fork': { x: 7040, y: 1792, w: 3200, h: 1920 },
   'cn-grove': { x: 10240, y: 1792, w: 3840, h: 1920 },
   'cn-spire': { x: 14080, y: 1792, w: 2560, h: 1920 },
   'cn-nook': { x: 16640, y: 1792, w: 2560, h: 1440 },
   'cn-hollowroot': { x: 16640, y: 3232, w: 2560, h: 1440 },
   // Under it.
-  'cn-trunk': { x: -640, y: 3328, w: 3200, h: 1920 },
+  'cn-trunk': { x: -4160, y: 3328, w: 3200, h: 1920 },
   'cn-tunnel': { x: 2560, y: 4096, w: 4480, h: 2176 },
   'cn-cellar': { x: 7040, y: 3712, w: 3200, h: 1920 },
   'cn-galleries': { x: 10240, y: 3712, w: 3840, h: 1920 },
   'cn-larder': { x: 14080, y: 3712, w: 2560, h: 1920 },
-  'cn-rot': { x: -640, y: 5248, w: 3200, h: 1536 },
+  'cn-rot': { x: -4160, y: 5248, w: 3200, h: 1536 },
   'cn-den': { x: 7040, y: 5632, w: 3840, h: 1536 },
   'cn-out': { x: 10880, y: 5632, w: 3840, h: 2432 },
   'cn-burrow': { x: 2560, y: 6272, w: 3200, h: 1440 },
-  'cn-crawl': { x: -640, y: 6784, w: 3200, h: 1440 },
-  'cn-webs': { x: -3200, y: 6784, w: 2560, h: 1440 },
-  'cn-elder': { x: -5760, y: 5568, w: 2560, h: 2656 },
+  'cn-crawl': { x: -4160, y: 6784, w: 3200, h: 1440 },
+  'cn-webs': { x: -6720, y: 6784, w: 2560, h: 1440 },
+  'cn-elder': { x: -9280, y: 5568, w: 2560, h: 2656 },
   'cn-ledge': { x: 8320, y: 7168, w: 2560, h: 1440 },
 };
 
@@ -109,10 +110,10 @@ const LINKS: Link[] = [
   { a: 'cn-gap', b: 'cn-hub', at: 6528, span: 384, one: 'a' },
   // West, and the rot branch.
   { a: 'cn-trunk', b: 'cn-well', at: 4992 },
-  { a: 'cn-trunk', b: 'cn-rot', at: 448, span: 192, one: 'a' },
+  { a: 'cn-trunk', b: 'cn-rot', at: -3072, span: 192, one: 'a' },
   { a: 'cn-limbs', b: 'cn-well', at: 2560 },
   { a: 'cn-rot', b: 'cn-well', at: 6720 },
-  { a: 'cn-rot', b: 'cn-crawl', at: 256, span: 192 },
+  { a: 'cn-rot', b: 'cn-crawl', at: -3264, span: 192 },
   { a: 'cn-crawl', b: 'cn-webs', at: 8064 },
   { a: 'cn-webs', b: 'cn-elder', at: 8064 },
   { a: 'cn-elder', b: 'cn-well', at: 6720 },
@@ -958,80 +959,128 @@ function hatch(): Json {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The Crossing (hub, 4480 x 2304): she falls from the hatch onto the lampoak's west limb over the save, east of the
-// hall's middle. From the landing she sees the seed door in the root floor below (three sockets; a lamp on the
-// lampoak lights for each seed held), the high west block (a sheer face: claws, "up there, later"), and the root
-// floor stepping down west to the fallen giant's mouth, lit by a lamp under the block (the way on, drawn by light
-// and the floor's fall, not a sign). East, a root bank with a hollow behind rotten heartwood (the heart's
-// moth-stone), and the limb on to the fork. Quiet (Dirtmouth): no creature; Tatter keeps the door.
+// The Crossing (hub, 8000 x 2304; review r5 #9: a crossing became a place). She falls from the hatch onto the
+// lampoak's west limb, east of the hall's middle. From the landing she sees the seed door in the root floor below
+// (three sockets; a lamp on the lampoak lights for each seed held) and the root floor running west into a moonlit
+// clearing: the save and the moth kin at its heart, root knuckles and pods in it, no creature (Dirtmouth). Past
+// the clearing the high west block (a sheer face: claws, "up there, later"; a rotten wall high in it: claws again;
+// a shelf off its top only wings reach) and the floor stepping down to the fallen giant's mouth, lit by a lamp under
+// the block. East, a root bank with a hollow behind rotten heartwood (the heart's moth-stone), and the limb on to
+// the fork. (The old hub's content is east of x 3520, moved with it.)
+
+/** The old hub's content sits this far east in the widened hub. */
+const HX = 3520;
 
 function hub(): Json {
-  const r = new Wood('cn-hub', 'The Crossing', [2640, 1152], 7101, {
+  const r = new Wood('cn-hub', 'The Crossing', [2640 + HX, 1152], 7101, {
     mood: 'warm',
     art: { anchorY: 1100, moon: { x: 1500, y: 300, r: 96 }, afterglow: { x: 2900, y: 700, strength: 0.5 } },
   });
-  // The hall over the root floor, open to the sky; the bank east; over the high block and its limb's mouth.
-  r.hole(1024, 0, 3712, 1600);
-  r.hole(3712, 0, 4480, 1344);
+  // The hall over the root floor, open to the sky, the clearing in its west half; the bank east; over the high
+  // block and its limb's mouth.
+  r.hole(1024, 0, 3712 + HX, 1600);
+  r.hole(3712 + HX, 0, 8000, 1344);
   r.hole(0, 0, 1024, 576);
   // The root floor steps down west into the giant's mouth under the high block (its roof bitten).
   r.cave(1024, 1600, 1408, 1792, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.cave(0, 1664, 1024, 1920, { ceil: 96, w: 0, e: 0, corner: 0 });
+  // A shown lock (review r5 #9): a rotten wall high in the block's east face, its sill 320 over the clearing's floor
+  // (out of a running jump from it: the claws), a chamber behind it in the block (review r5 #10: a pocket the size of
+  // a place, 768 x 448).
+  r.hole(192, 832, 960, 1280);
+  r.bark('high-wall', 960, 1088, 64, 192);
+  // A thorn pit in the clearing's floor, under the swing of the walk west (review r5 #3: hazard on the travel).
+  r.hole(3392, 1600, 3712, 1664);
   // The seed door and its shaft into the root tunnel.
-  r.gate('seed-door', 1792, 1600, 256, 64, 'seeds:3');
-  r.hole(1792, 1664, 2048, 2304);
+  r.gate('seed-door', 1792 + HX, 1600, 256, 64, 'seeds:3');
+  r.hole(1792 + HX, 1664, 2048 + HX, 2304);
   // Secret (review r3 #8: it needs the claws, so the giant's wall is the first break): a root clump hung over the
   // east limb's end, a hollow in it behind rotten heartwood high on its west face (the heart's moth-stone). She
-  // climbs the clump's root face from the limb; each kick throws her out, and she cuts as she swings back in.
-  r.bark('bank-wall', 3456, 448, 64, 192);
-  r.back(0, 1600, 4480, 2304);
+  // climbs the clump's root face from the limb; each kick throws her out, and she cuts as she swings back in. (r6:
+  // the hollow grown to 768 x 448, a pod and a ledge in it, review r5 #10.)
+  r.bark('bank-wall', 3456 + HX, 448, 64, 192);
+  r.back(0, 1600, 8000, 2304);
   r.fill();
-  r.mass(3456, 384, 512, 64);
-  r.mass(3456, 640, 64, 448);
-  r.mass(3520, 896, 448, 64);
-  r.mass(3904, 448, 64, 448);
-  r.tree('lampoak', 2880, 288, -500, 1600, false);
-  r.limb('land', 2240, 2880, 1152, { parent: 'lampoak', grows: 'west', end: 'snap', flat: [[2496, 2816]] });
-  r.limb('east', 3168, 3712, 1280, { parent: 'lampoak', grows: 'east', end: 'knee', calm: true });
-  r.oneWay(2368, 1376, 192, 'branch');
-  r.patch('p-crossing', 2640, 1152);
+  r.mass(3456 + HX, 384, 896, 64);
+  r.mass(3456 + HX, 640, 64, 448);
+  r.mass(3520 + HX, 896, 768, 64);
+  r.mass(4288 + HX, 448, 64, 448);
+  r.oneWay(3904 + HX, 704, 160, 'branch');
+  // The glide shelf (a shown lock, review r5 #9): off the high block's top only wings reach it, 1,280 px across the
+  // clearing; sheer underneath, no claws on it.
+  r.mass(2304, 832, 256, 160, false);
+  r.tree('lampoak', 2880 + HX, 288, -500, 1600, false);
+  r.limb('land', 2240 + HX, 2880 + HX, 1152, {
+    parent: 'lampoak',
+    grows: 'west',
+    end: 'snap',
+    flat: [[2496 + HX, 2816 + HX]],
+  });
+  r.limb('east', 3168 + HX, 3712 + HX, 1280, { parent: 'lampoak', grows: 'east', end: 'knee', calm: true });
+  r.oneWay(2368 + HX, 1376, 192, 'branch');
+  // The clearing: root knuckles to stand on (review r5 #3: small ledges, a second line over the floor), pods.
+  r.burl(1792, 1600, 512, 160, 2);
+  r.oneWay(2048, 1376, 128, 'branch');
+  r.oneWay(2752, 1408, 160, 'branch');
+  r.oneWay(3264, 1344, 128, 'branch');
+  r.oneWay(4096, 1408, 160, 'branch');
+  r.burl(4544, 1600, 384, 128, 2);
+  r.thorns('thorn-hub', 3392, 1664, 320);
+  r.patch('p-crossing', 2960, 1600);
   r.set('camera', { anchorY: 0.4 });
   // A lamp on the lampoak for each seed held: the hub changes on every return.
-  r.lamp('socket-1', 2960, 860, { after: 'seeds:1' });
-  r.lamp('socket-2', 3100, 760, { after: 'seeds:2' });
-  r.lamp('socket-3', 3020, 640, { after: 'seeds:3' });
-  // The way west: a lamp in the giant's mouth (warm light under the block, seen from the landing's west end).
+  r.lamp('socket-1', 2960 + HX, 860, { after: 'seeds:1' });
+  r.lamp('socket-2', 3100 + HX, 760, { after: 'seeds:2' });
+  r.lamp('socket-3', 3020 + HX, 640, { after: 'seeds:3' });
+  // The way west: a lamp in the giant's mouth (warm light under the block, seen from the clearing's west end).
   r.lamp('wick-mouth', 520, 1790);
-  r.stone('stone-heart', 3800, 896, 'cn-heart');
-  r.great('bank-great', 3620, 840);
-  r.hoard('bank-', 3700, 820, 80, 40, 2);
-  r.cover('bank-cover', 3456, 384, 512, 576, 'bank-wall');
-  r.set('marks', { ...(r.data.marks as Json), tatter: { x: 2300, y: 1152, facing: -1, want: [1920, 1600] } });
-  r.landmark('seed-door', 'goal', 1920, 1600);
+  r.stone('stone-heart', 3800 + HX, 896, 'cn-heart');
+  r.great('bank-great', 3620 + HX, 840);
+  r.hoard('bank-', 3700 + HX, 820, 80, 40, 2);
+  r.pod('pod-bank', 4100 + HX, 448, 1200, 'hang', 2);
+  r.cover('bank-cover', 3456 + HX, 384, 896, 576, 'bank-wall');
+  r.great('high-great', 320, 1248);
+  r.pod('pod-high', 640, 1280, 1200, 'sit', 2);
+  r.hoard('high-', 420, 1110, 300, 80, 2);
+  r.cover('high-cover', 128, 768, 896, 576, 'high-wall');
+  r.great('shelf-great', 2432, 790);
+  r.pod('pod-clear-1', 2112, 1376, 1200, 'sit');
+  r.pod('pod-clear-2', 4176, 1408, 1200, 'sit');
+  r.pod('pod-clear-3', 2432, 992, 1200, 'hang');
+  r.set('marks', {
+    ...(r.data.marks as Json),
+    tatter: { x: 2780, y: 1600, facing: 1, want: [1920 + HX, 1600] },
+  });
+  r.landmark('seed-door', 'goal', 1920 + HX, 1600);
   r.landmark('mouth', 'way', 400, 1920);
-  r.place('land', 2640, 1152);
-  r.place('floor', 2400, 1600);
+  r.landmark('clearing', 'landmark', 2960, 1600);
+  r.place('land', 2640 + HX, 1152);
+  r.place('floor', 2400 + HX, 1600);
+  r.place('clearing', 2960, 1600);
   r.place('mouth', 300, 1920);
   r.place('high', 500, 576);
-  r.place('east', 4200, 1344);
+  r.place('east', 4200 + HX, 1344);
   r.shotStops([
-    ['landing', 2640, 1152],
-    ['door', 1920, 1600],
+    ['landing', 2640 + HX, 1152],
+    ['door', 1920 + HX, 1600],
+    ['clearing', 2960, 1600],
+    ['shelf', 2200, 1200],
     ['west', 900, 1792],
     ['high', 600, 576],
-    ['east', 3900, 1344],
-    ['clump', 3500, 1280],
+    ['east', 3900 + HX, 1344],
+    ['clump', 3500 + HX, 1280],
   ]);
   r.route('hatch', 'land', { oneWay: true });
   r.route('gap', 'east', { oneWay: true });
   r.route('land', 'floor');
-  r.route('land', 'p-crossing');
-  r.route('floor', 'mouth');
+  r.route('floor', 'clearing');
+  r.route('clearing', 'p-crossing');
+  r.route('clearing', 'mouth');
   r.route('mouth', 'trunk');
   r.route('floor', 'east');
   r.route('east', 'fork');
-  r.route('floor', 'high', { needs: [C] });
-  r.route('high', 'floor', { oneWay: true });
+  r.route('mouth', 'high', { needs: [C] });
+  r.route('high', 'mouth', { oneWay: true });
   r.route('high', 'limbs');
   r.route('floor', 'stone-heart', { needs: [C] });
   r.route('floor', 'door', { flags: ['seeds:3'] });

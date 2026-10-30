@@ -38,25 +38,41 @@ const C = 'wallJump';
 const G = 'glide';
 
 const CLAIMS: Claim[] = [
-  // The Crossing: from the landing the low west and the fork are open; the high limb and the clump's secret (claws)
-  // and the door (three seeds) are shut (r4: the giant's wall is the first break, the clump pays on the return).
+  // The Crossing (r6: 8,000 wide, the old hub east of x 3520): from the landing the low west and the fork are open;
+  // the high limb, the clump's and the block's secrets (claws), the glide shelf and the door (three seeds) are shut.
   {
     room: 'cn-hub',
-    from: [2640, 1152],
+    from: [6160, 1152],
     kit: [],
-    reach: ['trunk', 'fork', 'cn-hub:p-crossing'],
-    not: ['limbs', 'door', 'cn-hub:stone-heart', 'cn-hub:bank-great'],
+    reach: ['trunk', 'fork', 'cn-hub:p-crossing', 'place:clearing'],
+    not: [
+      'limbs',
+      'door',
+      'cn-hub:stone-heart',
+      'cn-hub:bank-great',
+      'cn-hub:high-great',
+      'cn-hub:shelf-great',
+    ],
+    max: 9000,
   },
   {
     room: 'cn-hub',
-    from: [2640, 1152],
+    from: [6160, 1152],
     kit: [C],
-    reach: ['limbs', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:bank-great'],
-    not: ['door'],
+    reach: ['limbs', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:bank-great', 'cn-hub:high-great'],
+    not: ['door', 'cn-hub:shelf-great'],
+    max: 12000,
   },
-  // (Back from the upper limbs onto the high block: down to the floor and on.)
-  { room: 'cn-hub', from: [600, 576], kit: [C], reach: ['trunk', 'fork', 'limbs', 'cn-hub:p-crossing'] },
-  { room: 'cn-hub', from: [2400, 1600], kit: [C, G], flags: ['seeds:3'], reach: ['door'] },
+  // (Back from the upper limbs onto the high block: down to the floor and on; with wings, the glide shelf.)
+  {
+    room: 'cn-hub',
+    from: [600, 576],
+    kit: [C],
+    reach: ['trunk', 'fork', 'limbs', 'cn-hub:p-crossing'],
+    max: 12000,
+  },
+  { room: 'cn-hub', from: [600, 576], kit: [C, G], reach: ['cn-hub:shelf-great'], max: 12000 },
+  { room: 'cn-hub', from: [5920, 1600], kit: [C, G], flags: ['seeds:3'], reach: ['door'] },
   // The fallen giant: in from the hub, through the rotten wall, the seed in the roof, down to the well; no way back
   // up from the low tiers; the rot branch shut until the claws (r5: its wall high in tier 3's east face).
   {
