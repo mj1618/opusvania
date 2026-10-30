@@ -245,6 +245,19 @@ export class RenderStage {
     // Filters borrow scratch textures from Pixi's pool (the post stage's are view-sized, a painted
     // room's bakes are up to 4096 px square): the next room fills it again.
     TexturePool.clear(true);
+    // (Pixi 8.21's filter stack keeps each slot's last input texture between frames and reads its resolution when a
+    // nested filter or alpha mask is pushed, before the slot gets this frame's: a pooled texture destroyed above left a
+    // null source there, and the next room's first frame threw "reading '_resolution'" from AlphaMaskPipe / the post
+    // filter (canopy review r6, seen in a headless playwright-cli page). Forget them with the pool.)
+    const stack = (
+      this.ctx.renderer as unknown as {
+        filter?: { _filterStack?: Array<{ inputTexture: unknown; backTexture: unknown }> };
+      }
+    ).filter?._filterStack;
+    for (const fd of stack ?? []) {
+      fd.inputTexture = null;
+      fd.backTexture = null;
+    }
   }
 
   /** Tears the room's renderers down and builds them for the room now being played. */
