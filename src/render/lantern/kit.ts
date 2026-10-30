@@ -58,6 +58,12 @@ export const KIT = {
     mat: 0x120a0c,
     /** Dead stems off a bed (no barbs: only the strip hurts). */
     stem: 0x5a4a3c,
+    /** A long run (canopy review r7 #10: a hairline of barbs read as a texture): a bed of tangle this tall over the
+     *  strip (px), from runs this long, canes arching off its ends, one warm glint on its barbs per `glintEvery` px. */
+    bed: [48, 96] as readonly number[],
+    bedMin: 640,
+    glintEvery: 200,
+    glint: 0xffd9a0,
   },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
   cover: { body: 0x040302, root: 0x120c08, edge: 0x2a1c12 },
@@ -792,6 +798,69 @@ export class Kit {
       const [px, py] = at(u, -4);
       mat.push(px, py);
     }
+    // A long run's bed: a tall tangle with a thorny silhouette over the strip, canes arching off its ends.
+    const long = len >= T.bedMin;
+    if (long) {
+      const [b0, b1] = T.bed as [number, number];
+      const H = (u: number) =>
+        lerpN(
+          b0,
+          b1,
+          0.5 + 0.35 * Math.sin(u * 0.011 + hash01(id, 300) * 6) + 0.15 * Math.sin(u * 0.037 + 1.3),
+        );
+      const bed: number[] = [];
+      let q = 0;
+      for (let u = -spillA * 0.6; u <= len + spillB * 0.6; u += 9, q++) {
+        const edge = Math.min(1, (u + spillA * 0.6) / 70, (len + spillB * 0.6 - u) / 70);
+        // Spiky: every other point a thorn's tip standing off the tangle, of its own length.
+        const spike = q % 2 ? 6 + 16 * hash01(id, 400 + q) : -4 * hash01(id, 700 + q);
+        const [px, py] = at(u, (H(u) + spike) * Math.max(0.15, edge));
+        bed.push(px, py);
+      }
+      for (let u = len + spillB * 0.6; u >= -spillA * 0.6; u -= 24) {
+        const [px, py] = at(u, -4);
+        bed.push(px, py);
+      }
+      g.poly(bed).fill({ color: T.mat, alpha: 0.97 });
+      // Canes looping through it, lit on top now and then.
+      for (let c = 0; c < Math.round(len / 50); c++) {
+        const u0 = hash01(id, 500 + c) * len;
+        const span = 60 + 120 * hash01(id, 520 + c);
+        const [ax, ay] = at(u0, H(u0) * 0.2);
+        const [bx, by] = at(u0 + span * 0.5, H(u0) * (0.75 + 0.35 * hash01(id, 540 + c)));
+        const [ex, ey] = at(u0 + span, H(u0) * 0.3);
+        g.moveTo(ax, ay).quadraticCurveTo(bx, by, ex, ey);
+        g.stroke({
+          color: c % 4 === 0 ? T.caneLit : T.cane,
+          width: 3 + 3 * hash01(id, 560 + c),
+          cap: 'round',
+        });
+      }
+      // Canes arching up off each end and over, thorned.
+      for (const [end, sgn] of [
+        [-spillA * 0.5, -1],
+        [len + spillB * 0.5, 1],
+      ] as const) {
+        for (let c = 0; c < 2; c++) {
+          const reach = 70 + 110 * hash01(id, 600 + c + (sgn > 0 ? 10 : 0));
+          const tall = H(end) * (1.2 + 0.8 * hash01(id, 620 + c + (sgn > 0 ? 10 : 0)));
+          const [ax, ay] = at(end - sgn * 30, H(end) * 0.3);
+          const [mx, my] = at(end + sgn * reach * 0.35, tall);
+          const [ex, ey] = at(end + sgn * reach, H(end) * 0.25);
+          const sw = wind(ax, clock, c) * 2;
+          g.moveTo(ax, ay).quadraticCurveTo(mx + sw, my, ex + sw, ey);
+          g.stroke({ color: T.cane, width: 5 - c * 1.5, cap: 'round' });
+          for (let q2 = 1; q2 < 5; q2++) {
+            const t = q2 / 5;
+            const qx = (1 - t) ** 2 * ax + 2 * (1 - t) * t * (mx + sw) + t * t * (ex + sw);
+            const qy = (1 - t) ** 2 * ay + 2 * (1 - t) * t * my + t * t * ey;
+            g.moveTo(qx, qy)
+              .lineTo(qx + sgn * 7, qy - 8)
+              .stroke({ color: T.barbDark, width: 2, cap: 'round' });
+          }
+        }
+      }
+    }
     g.poly(mat).fill({ color: T.mat, alpha: 0.95 });
     // A few canes through the mat (lit now and then); a coil's loop over and back.
     const nc = Math.max(2, Math.round(len / (matK === 'thicket' ? 40 : 60)));
@@ -902,6 +971,17 @@ export class Kit {
       } else one((r2 - 0.5) * 0.9, 24 + 16 * r1, 5 + 4 * r2, 0);
       u += (barbK === 'pair' ? 26 : 18) + 16 * hash01(id, k * 5 + 102);
       k++;
+    }
+    // A long run's warm glints on its barbs: the danger reads in the dark.
+    if (long) {
+      const ng = Math.max(2, Math.round(len / T.glintEvery));
+      for (let q = 0; q < ng; q++) {
+        const u = ((q + 0.2 + 0.6 * hash01(id, 800 + q)) * len) / ng;
+        const [gx, gy] = at(u, depth * 0.3 + 18 + 14 * hash01(id, 820 + q));
+        const tw = 0.7 + 0.3 * Math.sin(clock * (1.6 + hash01(id, 840 + q)) + q * 1.7);
+        g.circle(gx, gy, 2.4).fill({ color: T.glint, alpha: 0.95 * tw });
+        glow.add(gx, gy, 26, T.rim, 0.4 * tw);
+      }
     }
     // A faint warm glow along the strip, so it reads against any back.
     const nGlow = Math.max(1, Math.round(len / 120));

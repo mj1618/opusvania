@@ -1422,9 +1422,9 @@ export function drawDeepBack(
         g.poly(strand(line, range(r, 5, 12), 0.6)).fill({ color: T.nearLit, alpha: 0.22 });
       }
     } else {
-      // Strata: long soft lenses across the earth, broken, of uneven thickness (few and faint in the den).
-      const denK = plan.look === 'den' ? 2.6 : 1;
-      for (let y = b.y; y < b.y + b.h; y += range(r, 40, 160) * denK) {
+      // Strata: long soft lenses across the earth, broken, of uneven thickness. (Not in the den: canopy review r7 #10,
+      // its back read as flat fog with lenses; its shapes are in the mid plane.)
+      for (let y = b.y; plan.look !== 'den' && y < b.y + b.h; y += range(r, 40, 160)) {
         let x = b.x - range(r, 0, 300);
         while (x < b.x + b.w) {
           const len = range(r, 400, 1800);
@@ -1868,9 +1868,75 @@ export function drawMidBack(
       }
     } else {
       // The den: roots hanging from the roof, thick, twisting, tapering, and a few rising from the floor and arching
-      // back into it (ribbed shell domes here read as wheels).
+      // back into it (ribbed shell domes here read as wheels). (Canopy review r7 #10: flat grey fog with lenses.) Also
+      // burrow mouths in banks of packed earth and shed half-shells, lit from below by the fungus on the floor.
+      const fung = mixC(lit, DEN_FUNGUS, 0.45);
       while (covered < want && guard++ < 400) {
-        if (r() < 0.75) {
+        const roll = r();
+        if (roll < 0.22) {
+          // A burrow mouth: a broad bank of earth rising from the back's floor, a dark way in low in it, the fungus light
+          // on its lower lip only. (A round mound with a mouth and a lit crescent read as a face.)
+          const cx = b.x + r() * b.w;
+          const cy = b0.y + b0.h * range(r, 0.7, 1.0);
+          const rx = range(r, 220, 440);
+          const ry = rx * range(r, 0.38, 0.55);
+          fill(chaikin(blob(cx, cy, rx, ry, seed + guard, 0.3, 18), 2), col, 0.92, Math.PI * rx * ry * 0.9);
+          const mx = cx + range(r, -0.3, 0.3) * rx;
+          const my = cy + ry * range(r, 0.2, 0.4);
+          const mw = rx * range(r, 0.2, 0.3);
+          const mh = mw * range(r, 0.6, 0.85);
+          g.poly(chaikin(blob(mx, my, mw, mh, seed + guard + 1, 0.3, 16), 2)).fill({
+            color: dark,
+            alpha: 0.97,
+          });
+          const lip: number[] = [];
+          const l0 = range(r, 0.2, 0.35);
+          for (let q = 0; q <= 8; q++) {
+            const t = Math.PI * (l0 + (1 - 2 * l0) * (q / 8));
+            lip.push(mx + Math.cos(t) * mw * 1.04, my + Math.sin(t) * mh * 1.04);
+          }
+          g.poly(strand(lip, range(r, 3, 6), 0.4)).fill({ color: fung, alpha: 0.4 });
+          continue;
+        }
+        if (roll < 0.38) {
+          // A shed half-shell on its side: an open crescent with ribs along its curve (never a whole dome: a wheel), its
+          // underside catching the fungus light.
+          const cx = b.x + r() * b.w;
+          const cy = b0.y + b0.h * range(r, 0.55, 0.95);
+          const R = range(r, 70, 160);
+          const rot = range(r, -0.9, 0.9);
+          const a0 = range(r, 0.05, 0.25) * Math.PI;
+          const a1 = Math.PI - range(r, 0.05, 0.25) * Math.PI;
+          const outer: number[] = [];
+          const inner: number[] = [];
+          for (let q = 0; q <= 14; q++) {
+            const t = lerp(a0, a1, q / 14);
+            const ox = -Math.cos(t) * R;
+            const oy = -Math.sin(t) * R * 0.75;
+            const ix = -Math.cos(t) * R * 0.78;
+            const iy = -Math.sin(t) * R * 0.5 + R * 0.08;
+            outer.push(
+              cx + ox * Math.cos(rot) - oy * Math.sin(rot),
+              cy + ox * Math.sin(rot) + oy * Math.cos(rot),
+            );
+            inner.push(
+              cx + ix * Math.cos(rot) - iy * Math.sin(rot),
+              cy + ix * Math.sin(rot) + iy * Math.cos(rot),
+            );
+          }
+          const shell = [...outer];
+          for (let q = inner.length / 2 - 1; q >= 0; q--)
+            shell.push(inner[q * 2] as number, inner[q * 2 + 1] as number);
+          fill(shell, mixC(col, dark, 0.3), 0.95, R * R * 0.9);
+          g.poly(strand(inner, range(r, 4, 8), 0.3)).fill({ color: fung, alpha: 0.5 });
+          for (let q = 1; q < 4; q++) {
+            const k = q / 4;
+            const rib = outer.map((v, j) => lerp(v, inner[j] as number, k));
+            g.poly(strand(rib, 2.5, 0.4)).fill({ color: dark, alpha: 0.6 });
+          }
+          continue;
+        }
+        if (roll < 0.8) {
           const x = b.x + r() * b.w;
           const len = range(r, 0.25, 0.7) * b0.h;
           const raw: number[] = [];
