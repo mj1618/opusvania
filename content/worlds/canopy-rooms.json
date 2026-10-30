@@ -1974,7 +1974,14 @@
         "h": 48
       }
     ],
-    "oneWays": [],
+    "oneWays": [
+      {
+        "tag": "branch",
+        "x": 1024,
+        "y": 1152,
+        "w": 512
+      }
+    ],
     "pickups": [
       {
         "id": "claw-prize",

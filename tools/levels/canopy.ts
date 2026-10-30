@@ -1077,6 +1077,8 @@ function well(): Json {
   r.fill();
   r.mass(1600, 960, 704, 192);
   r.mass(1792, 704, 384, 48);
+  // A root across the shaft's mouth: she climbs through it from below, and the hollow's floor is whole.
+  r.oneWay(1024, 1152, 512, 'branch');
   r.add('glades', { id: 'glade-claws', x: 1360, y: 4704, w: 216, h: 224, ability: C });
   r.patch('p-well', 1900, 4928);
   r.great('claw-prize', 1090, 3900);
