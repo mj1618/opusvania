@@ -84,6 +84,10 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'barkBreak':
         add += B.barkBreak;
         break;
+      case 'gateShut':
+        // An arena's root gate growing shut behind her (canopy review r7 #8).
+        add += B.gateShut;
+        break;
       case 'land':
         if (e.hard) add += B.hardLand;
         break;
