@@ -11,9 +11,9 @@ export type Look = 'heartwood' | 'shaft' | 'nest' | 'canopy' | 'den';
  * two families). A room's `art.look` wins over this.
  * - heartwood (amber grain, sap): the west's trunk branch, and the hub's giant;
  * - shaft (cold white, one moonbeam): the well and the Elder;
- * - nest (ochre earth, trails): the ants' three rooms;
+ * - nest (ochre earth, trails): the ants' three rooms, and the burrow (the carriers' nest since the Canopy v8);
  * - canopy (green-teal, leaf mats, gaps to the sky): the high band and the pockets off it, the way out and its ledge;
- * - den (umber earth, scrapes): the burrbacks' tunnel, burrow and den.
+ * - den (umber earth, scrapes): the burrbacks' tunnel and den.
  */
 const ROOM_LOOKS: Record<string, Look> = {
   'cn-hub': 'heartwood',
@@ -36,7 +36,7 @@ const ROOM_LOOKS: Record<string, Look> = {
   'cn-ledge': 'canopy',
   'cn-out': 'canopy',
   'cn-tunnel': 'den',
-  'cn-burrow': 'den',
+  'cn-burrow': 'nest',
   'cn-den': 'den',
 };
 

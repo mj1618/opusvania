@@ -69,11 +69,12 @@ export const GROWTH: Record<TopFamily, GrowthSpec> = {
     dotR: [3, 8],
     rise: 8,
   },
+  // (Canopy review r8 #10: saturated amber discs read as cheese. Half the chroma, in smears.)
   amber: {
-    deep: 0x2e1c0c,
-    body: 0x5e3e18,
-    high: 0x8e6632,
-    lit: 0xc29a58,
+    deep: 0x261d15,
+    body: 0x50402d,
+    high: 0x7c684e,
+    lit: 0xb09c7b,
     shadow: 0x0a0604,
     moss: 0.25,
     th: [10, 34],
@@ -139,7 +140,7 @@ export const RIM_FAMILY: Record<TopFamily, { lit: number; shade: number }> = {
 /** The face moss beside it (the faces she clings to): mid and lit, or none. */
 export const FACE_FAMILY: Record<TopFamily, { moss: number; lit: number } | null> = {
   lime: null,
-  amber: { moss: 0x6a4418, lit: 0xb07e3a },
+  amber: { moss: 0x594630, lit: 0x9a815f },
   frost: null,
   fungus: { moss: 0x3c3640, lit: 0x8a8296 },
   straw: { moss: 0x5a4c26, lit: 0x9a8650 },
@@ -358,17 +359,22 @@ const limeCushions: Piece = (p, G, a, b, Y, thick, h, sd, r, bumps) => {
   }
 };
 
-/** Amber: flat lichen rosettes, overlapping, each a lighter rim round a darker heart, gold specks. */
+/** Amber: flat lichen in irregular smears (not discs: review r8 #10), overlapping, a darker heart, gold specks. */
 const amberRosettes: Piece = (p, G, a, b, Y, thick, h, sd, r, bumps) => {
   let x = a + range(r, 2, 14);
   while (x < b - 4) {
     const d = thick(x);
-    const rx = range(r, 4, 12);
-    const ry = Math.min(d * 0.4, rx * range(r, 0.3, 0.5));
+    const rx = range(r, 6, 20);
+    const ry = Math.min(d * 0.4, rx * range(r, 0.18, 0.36));
     const cy = Y(x) + range(r, 0.1, 0.6) * d;
     const s = sd + Math.round(x);
-    p.solid(chaikin(blob(x, cy, rx, ry, s, 0.35, 12), 1), G.high, h + 0.16, { moss: G.moss });
-    p.tint(chaikin(blob(x, cy + ry * 0.1, rx * 0.6, ry * 0.55, s + 1, 0.3, 10), 1), G.body, 0.85);
+    const rot = range(r, -0.25, 0.25);
+    p.solid(chaikin(blob(x, cy, rx, ry, s, 0.55, 14, rot), 1), G.high, h + 0.16, { moss: G.moss });
+    p.tint(
+      chaikin(blob(x + rx * 0.2, cy + ry * 0.1, rx * 0.5, ry * 0.5, s + 1, 0.5, 10, rot), 1),
+      G.body,
+      0.85,
+    );
     if (r() < 0.25) p.tint(blob(x - rx * 0.2, cy - ry * 0.3, 1.8, 1.4, s + 2, 0.2, 6), G.lit, 0.8);
     if (cy - ry < Y(x) + 1) bumps.push([x, Math.min(G.rise, Y(x) + 1 - (cy - ry)), rx * 0.7]);
     x += rx * range(r, 1.2, 3.2);
@@ -463,3 +469,466 @@ const strawBlades: Piece = (p, G, a, b, Y, _thick, h, sd, r, bumps) => {
     x += range(r, 20, 60);
   }
 };
+
+/**
+ * The wrap (canopy r9, the r8 compare sheet: Silksong wraps thick moss round every edge, down the sides and under the
+ * undersides, with clumps hanging off; ours was a cap on the tops): what grows on a top grows on round its free
+ * edges too, in the same family's colours and stipple, thinner on a face than on a walk and hanging in clumps under a
+ * ceiling. All of it hugs the painted edge (the lobes, `off`), standing out into the air and a little into the mass;
+ * the mass's inside stays near-black.
+ *
+ *   face   from the face's top down over 35-90% of it (thickest at the top, where it comes round from the walk), then
+ *          a patch or two lower; the family's pieces: lime cushions bulging out, amber rosettes, frost hairs, fungus
+ *          shelves standing off the bark, straw tufts.
+ *   under  a band under the underside over 50-90% of it, and clumps hanging from it: lime moss beards (wide almost to
+ *          the end, then round: a point reads as a thorn or an icicle), amber lichen beards (a few thin strands),
+ *          frost feathers (short), fungus rootlets with caps on them, straw tufts of dry blades.
+ */
+export interface WrapSpec {
+  /** A face's growth: thickness at its top (px), coverage of the face from the top. */
+  faceTh: readonly [number, number];
+  faceCover: readonly [number, number];
+  /** An underside's band: thickness, coverage. */
+  underTh: readonly [number, number];
+  underCover: readonly [number, number];
+  /** Hanging clumps: spacing, length and width at the root (px). */
+  clumpGap: readonly [number, number];
+  clumpLen: readonly [number, number];
+  clumpW: readonly [number, number];
+}
+
+export const WRAP: Record<TopFamily, WrapSpec> = {
+  lime: {
+    faceTh: [34, 70],
+    faceCover: [0.55, 0.92],
+    underTh: [20, 44],
+    underCover: [0.6, 0.92],
+    clumpGap: [50, 170],
+    clumpLen: [44, 190],
+    clumpW: [24, 52],
+  },
+  amber: {
+    faceTh: [20, 42],
+    faceCover: [0.5, 0.85],
+    underTh: [12, 26],
+    underCover: [0.5, 0.85],
+    clumpGap: [70, 200],
+    clumpLen: [34, 110],
+    clumpW: [12, 26],
+  },
+  frost: {
+    faceTh: [14, 30],
+    faceCover: [0.45, 0.8],
+    underTh: [10, 22],
+    underCover: [0.5, 0.85],
+    clumpGap: [60, 180],
+    clumpLen: [16, 44],
+    clumpW: [14, 30],
+  },
+  fungus: {
+    faceTh: [16, 34],
+    faceCover: [0.45, 0.8],
+    underTh: [12, 26],
+    underCover: [0.45, 0.8],
+    clumpGap: [80, 220],
+    clumpLen: [44, 130],
+    clumpW: [7, 14],
+  },
+  straw: {
+    faceTh: [20, 44],
+    faceCover: [0.5, 0.88],
+    underTh: [14, 30],
+    underCover: [0.5, 0.88],
+    clumpGap: [60, 180],
+    clumpLen: [30, 110],
+    clumpW: [14, 32],
+  },
+};
+
+/** Covered runs along [a, b]: `first` starts at a (the corner it comes round), the rest spread with breaks. */
+function wrapRuns(a: number, b: number, cover: number, first: boolean, r: Rng): Array<[number, number]> {
+  const L = b - a;
+  const out: Array<[number, number]> = [];
+  if (L < 20) return out;
+  let left = L * cover;
+  let u = first ? a : a + range(r, 0, L * (1 - cover) * 0.5);
+  // The first (longest) run, then shorter ones with breaks between.
+  let k = 0;
+  while (left > 12 && u < b - 12) {
+    const len = Math.min(b - u, k === 0 ? left * range(r, 0.55, 0.85) : left * range(r, 0.4, 1));
+    out.push([u, u + len]);
+    left -= len;
+    u += len + range(r, 0.06, 0.25) * L;
+    k++;
+  }
+  return out;
+}
+
+/** A face's wrap: x = `off(u)` is the painted edge at height u (air on side `dir`), [a, b] top to bottom. */
+export function paintFaceWrap(
+  p: Paint,
+  a: number,
+  b: number,
+  dir: number,
+  off: (u: number) => number,
+  h: number,
+  seed: number,
+  fam: TopFamily,
+): void {
+  const G = GROWTH[fam];
+  const W = WRAP[fam];
+  const r = rngFor(seed, Math.round(a), Math.round(b), 521);
+  const L = b - a;
+  if (L < 24) return;
+  const th0 = range(r, W.faceTh[0], W.faceTh[1]);
+  const runs = wrapRuns(a, b, range(r, W.faceCover[0], W.faceCover[1]), true, r);
+  for (const [ri, [u0, u1]] of runs.entries()) {
+    const len = u1 - u0;
+    const sd = seed + ri * 37;
+    // Thickest at the top (where it comes round the corner), thinning down; a lower patch is a bell.
+    const thick = (u: number) => {
+      const t = clamp((u - u0) / len, 0, 1);
+      const prof =
+        ri === 0 ? (1 - t) ** 0.7 * smoothstep(0, 0.04, t + 0.02) : Math.sin(Math.PI * t) ** 0.6 * 0.7;
+      return Math.max(2, th0 * prof * (0.75 + 0.25 * wobble(u, sd, 41)));
+    };
+    const out: number[] = [];
+    const inn: number[] = [];
+    for (let u = u0; u <= u1 + 0.01; u += 5) {
+      const x = off(u);
+      const d = thick(u);
+      out.push(x + dir * d * 0.55, u);
+      inn.push(x - dir * d * 0.5, u);
+    }
+    const body = out.slice();
+    for (let k = inn.length / 2 - 1; k >= 0; k--) body.push(inn[k * 2] as number, inn[k * 2 + 1] as number);
+    p.solid(body, G.deep, h + 0.08, { moss: G.moss });
+    // Stipple: lighter toward the outside and the top (the moon from above).
+    const n = Math.round((len * th0 * 0.5) / (G.dot * 1.3));
+    for (let k = 0; k < n; k++) {
+      const u = range(r, u0 + 2, u1 - 2);
+      const d = thick(u);
+      if (d < 3) continue;
+      const t = r();
+      const x = off(u) + dir * d * (0.5 - t * 0.9);
+      const rad = range(r, G.dotR[0], G.dotR[1]) * Math.min(1, d / 14) * (1 - 0.3 * t);
+      const lit = r() < 0.7 - t * 0.5 - 0.3 * ((u - u0) / len);
+      const col = lit ? mixc(G.body, G.high, range(r, 0.1, 0.9)) : mixc(G.deep, G.body, range(r, 0.2, 0.8));
+      p.solid(blob(x, u, rad, rad * range(r, 0.7, 1), sd + k, 0.3, 7), col, h + 0.12 + (lit ? 0.03 : 0), {
+        moss: G.moss,
+      });
+    }
+    facePieces(p, G, fam, u0, u1, dir, off, thick, h, sd, r);
+  }
+}
+
+function facePieces(
+  p: Paint,
+  G: GrowthSpec,
+  fam: TopFamily,
+  u0: number,
+  u1: number,
+  dir: number,
+  off: (u: number) => number,
+  thick: (u: number) => number,
+  h: number,
+  sd: number,
+  r: Rng,
+): void {
+  if (fam === 'lime' || fam === 'straw') {
+    // Cushions bulging out past the edge, each its own size, a lit cap on the upper side.
+    let u = u0 + range(r, 2, 16);
+    while (u < u1 - 6) {
+      const d = thick(u);
+      const rad = range(r, 0.45, 0.9) * Math.max(6, d);
+      if (d > 5) {
+        const cx = off(u) + dir * d * range(r, 0.2, 0.55);
+        p.solid(chaikin(blob(cx, u, rad, rad * 1.1, sd + Math.round(u), 0.22, 12), 1), G.body, h + 0.18, {
+          moss: G.moss,
+        });
+        if (r() < 0.6)
+          p.solid(
+            chaikin(
+              blob(
+                cx + dir * rad * 0.15,
+                u - rad * 0.35,
+                rad * 0.6,
+                rad * 0.5,
+                sd + Math.round(u) + 1,
+                0.2,
+                10,
+              ),
+              1,
+            ),
+            fam === 'straw' ? G.high : r() < 0.5 ? G.lit : G.high,
+            h + 0.24,
+            { moss: G.moss },
+            range(r, 0.55, 0.9),
+          );
+        if (fam === 'straw' && r() < 0.5)
+          for (let q = 0; q < 4; q++) {
+            const ln = range(r, 8, 22);
+            const ang = range(r, 0.2, 1.2);
+            p.tint(
+              [cx - 1, u, cx + 1, u, cx + dir * Math.sin(ang) * ln, u + Math.cos(ang) * ln],
+              G.lit,
+              range(r, 0.5, 0.85),
+            );
+          }
+      }
+      u += rad * range(r, 1.2, 2.4);
+    }
+  } else if (fam === 'amber') {
+    let u = u0 + range(r, 2, 14);
+    while (u < u1 - 4) {
+      const d = thick(u);
+      const rx = range(r, 6, 16) * Math.min(1, d / 10 + 0.3);
+      const cx = off(u) + dir * range(r, -0.3, 0.4) * d;
+      const rot = range(r, -0.35, 0.35);
+      p.solid(chaikin(blob(cx, u, rx * 0.3, rx, sd + Math.round(u), 0.55, 14, rot), 1), G.high, h + 0.16, {
+        moss: G.moss,
+      });
+      p.tint(
+        chaikin(blob(cx, u + rx * 0.2, rx * 0.18, rx * 0.5, sd + Math.round(u) + 1, 0.5, 10, rot), 1),
+        G.body,
+        0.85,
+      );
+      u += rx * range(r, 1.4, 3.2);
+    }
+  } else if (fam === 'frost') {
+    // Hairs leaning out and down off the edge, bright specks.
+    for (let u = u0 + range(r, 2, 8); u < u1 - 3; u += range(r, 3, 10)) {
+      const d = thick(u);
+      const x = off(u) + dir * d * 0.4;
+      const ln = range(r, 3, 10) * Math.min(1, d / 8 + 0.3);
+      const lean = range(r, 0.3, 1);
+      p.tint(
+        [x, u - 0.8, x, u + 0.8, x + dir * ln * lean, u + ln * (1 - lean * 0.5)],
+        G.high,
+        range(r, 0.5, 0.85),
+      );
+      if (r() < 0.2) p.tint(blob(x, u, 1.5, 1.3, sd + Math.round(u), 0.2, 6), G.lit, 0.95);
+    }
+  } else {
+    // Fungus: little shelves standing off the bark in clusters, pale tops, a dark gill line under each.
+    let u = u0 + range(r, 10, 50);
+    while (u < u1 - 10) {
+      const nq = 2 + Math.floor(r() * 3);
+      for (let q = 0; q < nq; q++) {
+        const cu = u + q * range(r, 7, 13);
+        if (cu > u1 - 4) break;
+        const w = range(r, 8, 18) * (q ? 0.8 : 1);
+        const x = off(cu);
+        const tip = x + dir * w;
+        const shelf = [
+          x - dir * 3,
+          cu + 2,
+          x - dir * 3,
+          cu - w * 0.35,
+          tip * 0.6 + x * 0.4,
+          cu - w * 0.42,
+          tip,
+          cu - 1,
+          tip - dir * 2,
+          cu + 2,
+        ];
+        p.solid(chaikin(shelf, 1), G.high, h + 0.2, { moss: G.moss });
+        p.tint([x, cu + 1, tip - dir * 2, cu + 0.5, tip - dir * 3, cu + 3, x, cu + 3.5], G.deep, 0.9);
+        p.tint(
+          chaikin(blob(x + dir * w * 0.45, cu - w * 0.25, w * 0.3, w * 0.12, sd + Math.round(cu), 0.2, 8), 1),
+          G.lit,
+          0.8,
+        );
+      }
+      u += range(r, 70, 180);
+    }
+  }
+}
+
+/** An underside's wrap: y = `off(x)` is the painted underside at x, [a, b] its run. */
+export function paintUnderWrap(
+  p: Paint,
+  a: number,
+  b: number,
+  off: (x: number) => number,
+  h: number,
+  seed: number,
+  fam: TopFamily,
+  /** Its free corners (it comes round them from the faces): thicker there. */
+  cornerA: boolean,
+  cornerB: boolean,
+): void {
+  const G = GROWTH[fam];
+  const W = WRAP[fam];
+  const r = rngFor(seed, Math.round(a), Math.round(b), 541);
+  const L = b - a;
+  if (L < 24) return;
+  const th0 = range(r, W.underTh[0], W.underTh[1]);
+  const runs = wrapRuns(a, b, range(r, W.underCover[0], W.underCover[1]), cornerA, r);
+  // (A free corner at the far end too: the last run reaches it.)
+  if (cornerB && runs.length && (runs[runs.length - 1] as [number, number])[1] < b - 30)
+    runs.push([b - Math.min(L * 0.3, range(r, 80, 220)), b]);
+  for (const [ri, [x0, x1]] of runs.entries()) {
+    const len = x1 - x0;
+    if (len < 12) continue;
+    const sd = seed + ri * 43;
+    const thick = (x: number) => {
+      const t = clamp((x - x0) / len, 0, 1);
+      const bell = Math.sin(Math.PI * t) ** 0.5;
+      const corner =
+        (cornerA && x0 <= a + 1 ? (1 - t) ** 2 * 0.8 : 0) + (cornerB && x1 >= b - 1 ? t ** 2 * 0.8 : 0);
+      return Math.max(2, th0 * Math.max(bell, corner) * (0.7 + 0.3 * wobble(x, sd, 33)));
+    };
+    const up: number[] = [];
+    const dn: number[] = [];
+    for (let x = x0; x <= x1 + 0.01; x += 5) {
+      const y = off(x);
+      const d = thick(x);
+      up.push(x, y - d * 0.4);
+      dn.push(x, y + d * 0.6);
+    }
+    const body = up.slice();
+    for (let k = dn.length / 2 - 1; k >= 0; k--) body.push(dn[k * 2] as number, dn[k * 2 + 1] as number);
+    p.solid(body, G.deep, h + 0.06, { moss: G.moss });
+    // Stipple: an underside is in shadow, so mostly the dark and mid values, a few lit specks at its lower edge.
+    const n = Math.round((len * th0 * 0.5) / (G.dot * 1.4));
+    for (let k = 0; k < n; k++) {
+      const x = range(r, x0 + 2, x1 - 2);
+      const d = thick(x);
+      if (d < 3) continue;
+      const t = r();
+      const y = off(x) + d * (0.55 - t * 0.85);
+      const rad = range(r, G.dotR[0], G.dotR[1]) * Math.min(1, d / 12) * 0.9;
+      const lit = r() < 0.3 - t * 0.2;
+      const col = lit ? mixc(G.body, G.high, range(r, 0.1, 0.6)) : mixc(G.deep, G.body, range(r, 0.1, 0.7));
+      p.solid(blob(x, y, rad, rad * range(r, 0.7, 1), sd + k, 0.3, 7), col, h + 0.1, { moss: G.moss });
+    }
+    // The clumps hanging from it.
+    let x = x0 + range(r, W.clumpGap[0] * 0.2, W.clumpGap[0]);
+    while (x < x1 - 10) {
+      const y = off(x) + thick(x) * 0.45;
+      const k = clamp(thick(x) / th0, 0.4, 1);
+      const len = range(r, W.clumpLen[0], W.clumpLen[1]) * (0.4 + 0.6 * k) * (r() < 0.25 ? 0.5 : 1);
+      const w0 = range(r, W.clumpW[0], W.clumpW[1]) * (0.6 + 0.4 * k);
+      hangClumpOf(p, G, fam, x, y, len, w0, h, sd + Math.round(x), r);
+      x += range(r, W.clumpGap[0], W.clumpGap[1]);
+    }
+  }
+}
+
+/** One clump hanging from (x, y): `len` long, `w0` wide at its root. */
+function hangClumpOf(
+  p: Paint,
+  G: GrowthSpec,
+  fam: TopFamily,
+  x: number,
+  y: number,
+  len: number,
+  w0: number,
+  h: number,
+  sd: number,
+  r: Rng,
+): void {
+  if (fam === 'lime' || fam === 'straw') {
+    // A beard: wide almost to the end, then round; lumpy flanks; stippled; a lit speck or two on its upper half.
+    const sway = range(r, -0.15, 0.15) * len;
+    const Lp: number[] = [];
+    const Rp: number[] = [];
+    const n = 12;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const yy = y + t * len;
+      const cx = x + sway * t * t;
+      const hw = (w0 / 2) * (1 - t ** 3) ** 0.5 * (1 + 0.3 * wobble(yy, sd, 11)) + 1;
+      Lp.push(cx - hw, yy);
+      Rp.push(cx + hw, yy);
+    }
+    const shape = [...Lp];
+    for (let i = Rp.length / 2 - 1; i >= 0; i--) shape.push(Rp[i * 2] as number, Rp[i * 2 + 1] as number);
+    p.solid(chaikin(shape, 1), G.deep, h + 0.04, { moss: G.moss });
+    const nd = Math.round((len * w0) / (G.dot * 1.1));
+    for (let k = 0; k < nd; k++) {
+      const t = r() ** 1.2;
+      const hw = (w0 / 2) * (1 - t ** 3) ** 0.5;
+      const cx = x + sway * t * t + range(r, -hw, hw) * 0.8;
+      const rad = range(r, G.dotR[0], G.dotR[1]) * 0.8 * (1 - 0.4 * t);
+      const lit = r() < 0.4 - 0.3 * t;
+      p.solid(
+        blob(cx, y + t * len, rad, rad, sd + k, 0.3, 7),
+        lit ? mixc(G.body, G.high, range(r, 0.2, 0.9)) : mixc(G.deep, G.body, range(r, 0.2, 0.8)),
+        h + 0.08,
+        { moss: G.moss },
+      );
+    }
+    if (fam === 'straw')
+      for (let q = 0; q < 5; q++) {
+        const sx = x + range(r, -w0 / 2, w0 / 2);
+        const ln = len * range(r, 0.6, 1.15);
+        p.tint([sx - 0.9, y, sx + 0.9, y, sx + range(r, -6, 6), y + ln], G.lit, range(r, 0.45, 0.8));
+      }
+  } else if (fam === 'amber') {
+    // Lichen beard: a few thin strands of different lengths from one tuft.
+    p.solid(chaikin(blob(x, y + 2, w0 * 0.5, w0 * 0.35, sd, 0.3, 10), 1), G.body, h + 0.06, { moss: G.moss });
+    const ns = 3 + Math.floor(r() * 3);
+    for (let q = 0; q < ns; q++) {
+      const sx = x + range(r, -w0 * 0.4, w0 * 0.4);
+      const ln = len * range(r, 0.35, 1);
+      const bend = range(r, -6, 6);
+      const ww = range(r, 1.4, 2.6);
+      p.solid(
+        [
+          sx - ww,
+          y,
+          sx + ww,
+          y,
+          sx + bend + ww * 0.5,
+          y + ln * 0.6,
+          sx + bend * 1.4 + 0.8,
+          y + ln,
+          sx + bend * 1.4 - 0.8,
+          y + ln,
+          sx + bend - ww * 0.5,
+          y + ln * 0.6,
+        ],
+        q % 2 ? G.high : G.body,
+        h + 0.07,
+        { moss: G.moss },
+      );
+      p.tint(blob(sx + bend * 1.4, y + ln, ww * 1.1, ww * 1.3, sd + q, 0.2, 6), G.lit, 0.75);
+    }
+  } else if (fam === 'frost') {
+    // Frost feathers: a short pale tuft of fine hairs, splayed, no long points.
+    for (let q = 0; q < 9; q++) {
+      const sx = x + range(r, -w0 / 2, w0 / 2);
+      const ln = len * range(r, 0.4, 1);
+      const lean = range(r, -0.5, 0.5);
+      p.tint([sx - 0.9, y, sx + 0.9, y, sx + lean * ln, y + ln], q % 3 ? G.high : G.lit, range(r, 0.55, 0.9));
+    }
+    p.tint(chaikin(blob(x, y + 1, w0 * 0.45, 3, sd, 0.2, 8), 1), G.body, 0.9);
+  } else {
+    // Fungus: a thin dark rootlet with two or three small caps along it.
+    const bend = range(r, -0.25, 0.25) * len;
+    const pts = [x - w0 / 2, y, x + w0 / 2, y, x + bend + 1.2, y + len, x + bend - 1.2, y + len];
+    p.solid(pts, G.deep, h + 0.04, { bark: 0.4 });
+    const nc = 2 + Math.floor(r() * 2);
+    for (let q = 0; q < nc; q++) {
+      const t = range(r, 0.3, 1);
+      const cx = x + bend * t;
+      const cy = y + len * t;
+      const cw = range(r, 4, 9);
+      const side = q % 2 ? 1 : -1;
+      const cap = [
+        cx,
+        cy + 1,
+        cx + side * cw,
+        cy - cw * 0.2,
+        cx + side * cw * 0.8,
+        cy - cw * 0.55,
+        cx,
+        cy - cw * 0.45,
+      ];
+      p.solid(chaikin(cap, 1), G.high, h + 0.1, { moss: G.moss });
+      p.tint(blob(cx + side * cw * 0.45, cy - cw * 0.35, cw * 0.3, cw * 0.15, sd + q, 0.2, 6), G.lit, 0.8);
+    }
+  }
+}

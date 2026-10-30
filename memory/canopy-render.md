@@ -299,3 +299,52 @@ repo).
 - Headless playwright-cli (no GPU) crashes in `AlphaMaskPipe` (`_resolution` of null) when a cover patch is in view:
   capture with `tools/lib/browser` `launch({ gpu: true })` + `openGame` (a scratch `.mts` script) instead.
 - Weak still: see the round's report (docs/design/levels/first-area.md when the orchestrator files it).
+
+## Round 9: the v8 features drawn, the wrap, air and hue by look (review r8 #3, #6, #10)
+Shots: `shots/canopy-r9-render/look-check/<WxH>/<room>/` (342 of 342 pass), `compare/r9-vs-refs.png` (same rows and
+reference crops as r6-r8), `compare/before-after.png` (well chimney, hub door, tunnel run, burrow nest: r8 | r9).
+- **The Lamp prompt** (hud/prompts.ts, lesson `fling`): the Lamp key's cap HELD on the flame's far side from her, a thin
+  ring breathing round the flame, while the sim's `flingTarget` (called over the render view) finds a flame and she has
+  never flung; gone for good on `fling`. **`hudLink` was only set by the goal renderer after its "no lanterns, no
+  heart" early return: in the Canopy no prompt (glide, kick) had ever shown.** It is set first now. To see one in a
+  `?manual` capture: `__prompts.enabled = true; __prompts.reset()`, and a running jump off the hatch's lip (a fall
+  past a flame is in reach for ~10 frames: `flingAfter` 0.08 s).
+- **lantern/acts.ts** (`Acts`, wood kit only): the first fling's stream (pale moonlit moths off `wick-first` to the
+  nearest top on the side away from the one she stands on; dark moths were lost among the night's falling leaves), the
+  arrivals' tells (from `sim.light.hidden / respawn` and the spawn's `arrive` list, picked as the sim picks) and events
+  (`arriveWay`: drop = grit, a shadow growing on the floor, a landing burst; wall = a ragged hole in the wall's foot with
+  a lit crumbled rim, a dark earth cloud, clods over the crawler's back; ground = a mound in front while it heaves out;
+  fly = shaken dust), the patch flare on `patchMark`, the kin's kept lights (`light` landmarks: a split seed husk, a
+  low steady flame, a warm point light `kept-<id>`). Gotcha: a dark oval for a burrow mouth read as a black disc
+  stuck on the wall; a hole needs a lit rim on its open side.
+- **enemies/arrive.ts** `arrivalView`: the creature drawn on an eased path (drop = t², wall = out, a look, a scurry;
+  ground = rises 35% then scurries), a beetle's stride running with the distance. The sim's box slides evenly.
+- **Audio**: `enemyArrive` (route-play.ts): a short rumble for a beetle (higher for a juvenile), a thump on a drop's
+  landing, a flutter for a flyer.
+- **The kin's beats** (tatter.ts `beatOf` reads the `marks.notes` line beside the mark: "turns away" / "keeps a" /
+  "waits"): away = turns its back and hunches inside 380 px (after its want's try), back at 680; keep = faces its light,
+  head low, looks up on a `barkBreak` or inside 620 px, turns to her; wait = faces her, walks ahead along its own top
+  (never off it) when she joins. The way out's mark sits at its top's east end: it has nowhere to walk to.
+- **The den lid** (kit.ts `knit`): a standing flat gate (no `shut`) trembles and sheds dust for 1.1 s on its room's
+  trigger `flagSet` (the wave coming); it was already a root mat that withdraws on `gateOpen`.
+- **The burrow is `nest`** (looks.ts), **the Spire's root column** `paintRootColumns` (pf-mass.ts: a <= 96 px rect hung
+  beside a face, nothing over or under it: a wound bundle out of the bark with ragged tips; also the hub's at 6,976).
+- **The wrap** (top-growth.ts `WRAP`, `paintFaceWrap`, `paintUnderWrap`; pf-mass step 7 over every free face and
+  underside along the painted lobes `em.faceAt / underAt`; pf-branch under every limb): the family's growth from the
+  face's top down over 45-90% (thickest where it comes round the corner), a band under undersides with clumps hanging
+  (lime beards wide to the end then round, amber lichen strands, frost feathers, fungus rootlets with caps, straw tufts).
+  The limbs' beards are what made the Grove read lush; the face wrap only adds where FACE_FAMILY moss was thin.
+- **The core starts 112-220 px in** (`MASS.core`); look:check's `solidDeep` is 200 to match (interior <= 12 there).
+- **Air and hue** (review r8 #6): the shaft a cold teal (TONES / MASS_TONES / grade / veil; air 46-70, was 91-113), the
+  den warm umber (#2e1f15 -> #5a4330, warmth 0.18: at 0.3 and rich saturation 1.12 it went terracotta), the nest
+  ochre, canopy exposure 1.06 and heartwood 1.24 (the pockets were 86-92 at 21:9). **look:check** adds the air's mean
+  <= 85 and its HSV saturation >= 0.12 (fail), and deep solid (> 96 px in) <= 30% a stop / room median <= 20%
+  (reported; `--share-fails` fails): the well 40-51%, the cellar 43-50%, rot / crawl / elder ~40% today.
+- **Objects** (review r8 #10): the Grovemother's plates are fissured ridges 3-5x taller than wide, overlapping
+  (round-topped plates half a column wide read as scales); every floor-mounted ledge gets 3-4 roots fanning from below
+  the mount's middle into the pad's ends (the stalk-and-disc read); amber lichen at half its chroma, in tilted smears;
+  face fungus 2-5 brackets, the first about twice the rest, tilted, overlapping.
+- Capture note: `npm run clip` follows her; a fixed camera is easier with a scratch script (`launch({gpu:true})` +
+  `openGame` + `g.cam({x, y, zoom})` + `g.step(n)` + canvas screenshots). `?nopickups` removes the enemies too.
+- Weak still: claw faces' lobes stay +-24 (the review asks +-40-80 on long faces: it would move the drawn wall off her
+  hand); the deep-solid share is geometry (the level builder's hollowing); the arrivals are small at play zoom.

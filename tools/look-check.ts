@@ -12,6 +12,8 @@
  *     (pixels inside the solids more than `solidDeep` px from their edge) has a mean luma <= `solidMax` (HK and
  *     Silksong's ground 0-5), and the air (outside every solid and her box) has a median >= `airK` x that mean.
  *     Frames with under `solidMinShare` of interior skip both.
+ *   - the air (review r8 #6): its mean luma <= `airMax`, its mean HSV saturation >= `airSat`;
+ *   - deep solid (review r8 #2): at most 30% of a stop, a room's median <= 20%: reported (`--share-fails` fails).
  *
  *   npm run look:check                                  every Canopy room with wide stops (dev server on 5180)
  *   npm run look:check -- --rooms=cn-hub,cn-well --url=http://localhost:5212 [--out=dir] [--sizes=1920x1080] [--masks]
@@ -33,6 +35,8 @@ const { values: args } = parseArgs({
     out: { type: 'string', default: 'shots/look-check' },
     /** Also write each frame's split as a grey PGM beside it (black her box, 80 air, 160 solid interior, 240 the rest). */
     masks: { type: 'boolean', default: false },
+    /** Fail on the deep-solid share too (review r8 #2), not only report it. */
+    'share-fails': { type: 'boolean', default: false },
   },
 });
 
@@ -44,11 +48,26 @@ export const LOOK_CHECK = {
   flatMax: 0.35,
   bin: 12,
   width: 480,
-  /** World px inside a solid's edge before a pixel counts as its interior (the rim, lobes and moss live outside). */
-  solidDeep: 96,
+  /**
+   * World px inside a solid's edge before a pixel counts as its deep interior, judged near-black (canopy r9, review r8
+   * #3: the core starts 120-200 px in, the outer band mid-dark, carrying the lobes, knuckles and roots).
+   */
+  solidDeep: 200,
   solidMax: 12,
   airK: 4,
   solidMinShare: 0.02,
+  /**
+   * How much of the frame is deep solid (inside the solids more than `shareDeep` px; review r8 #2): at most `shareMax`
+   * of a wide stop, the room's median at most `shareMedian`. Reported, not failed, until the level builder's hollowed
+   * walls land (`--share-fails` fails on it).
+   */
+  shareDeep: 96,
+  shareMax: 0.3,
+  shareMedian: 0.2,
+  /** The air (review r8 #6): its mean luma at most this (the well's paper fog was 91-113)... */
+  airMax: 85,
+  /** ... and its mean HSV saturation at least this (the den and the nest were grey). */
+  airSat: 0.12,
 };
 
 interface Box {
@@ -130,7 +149,7 @@ export function figureGround(
 /** Named stops (`room:stop`) that must keep this mean luma. */
 const MIN_MEAN: Record<string, number> = { 'cn-hub:clearing': 25 };
 
-function luma480(file: string): { w: number; h: number; y: Float32Array } {
+function luma480(file: string): { w: number; h: number; y: Float32Array; sat: Float32Array } {
   const W = LOOK_CHECK.width;
   const probe = execFileSync(
     'ffprobe',
@@ -157,12 +176,16 @@ function luma480(file: string): { w: number; h: number; y: Float32Array } {
     { maxBuffer: W * H * 3 + 1024 },
   );
   const y = new Float32Array(W * H);
-  for (let i = 0; i < W * H; i++)
-    y[i] =
-      0.2126 * (rgb[i * 3] as number) +
-      0.7152 * (rgb[i * 3 + 1] as number) +
-      0.0722 * (rgb[i * 3 + 2] as number);
-  return { w: W, h: H, y };
+  const sat = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    const r = rgb[i * 3] as number;
+    const g = rgb[i * 3 + 1] as number;
+    const b = rgb[i * 3 + 2] as number;
+    y[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const mx = Math.max(r, g, b);
+    sat[i] = mx > 0 ? (mx - Math.min(r, g, b)) / mx : 0;
+  }
+  return { w: W, h: H, y, sat };
 }
 
 /**
@@ -211,6 +234,7 @@ async function main(): Promise<void> {
   const outDir = resolve(args.out ?? 'shots/look-check');
   const browser = await launch({ gpu: true });
   const fails: string[] = [];
+  const shares = new Map<string, number[]>();
   let frames = 0;
   try {
     for (const [W, H] of sizes) {
@@ -243,9 +267,16 @@ async function main(): Promise<void> {
           );
           const file = join(dir, `wide-${i + 1}-${stop.name}.png`);
           writeFileSync(file, await page.locator('#game').screenshot({ type: 'png' }));
-          const { w, h, y } = luma480(file);
+          const { w, h, y, sat } = luma480(file);
           const split = splitByCollision(frame, w, h, LOOK_CHECK.solidDeep);
           const fg = figureGround(y, split);
+          // How much of the frame is ground deeper than `shareDeep` (review r8 #2).
+          const deepSplit = splitByCollision(frame, w, h, LOOK_CHECK.shareDeep);
+          let deepN = 0;
+          for (const v of deepSplit) if (v === 2) deepN++;
+          const share = deepN / deepSplit.length;
+          const key = `${W}x${H} ${id}`;
+          shares.set(key, [...(shares.get(key) ?? []), share]);
           if (args.masks)
             writeFileSync(
               file.replace(/\.png$/, '-split.pgm'),
@@ -258,12 +289,14 @@ async function main(): Promise<void> {
           let n = 0;
           let dark = 0;
           let mid = 0;
+          let satSum = 0;
           for (let p = 0; p < y.length; p++) {
             const v = y[p] as number;
             all += v;
             if (ground[p]) continue;
             n++;
             sum += v;
+            satSum += sat[p] as number;
             if (v < LOOK_CHECK.dark) dark++;
             if (v >= (LOOK_CHECK.mid[0] as number) && v <= (LOOK_CHECK.mid[1] as number)) mid++;
           }
@@ -274,6 +307,12 @@ async function main(): Promise<void> {
           if (dark / n > LOOK_CHECK.darkMax) bad.push(`near-black ${Math.round((100 * dark) / n)}%`);
           if (mid / n < LOOK_CHECK.midMin) bad.push(`mid ${Math.round((100 * mid) / n)}%`);
           if (flat > LOOK_CHECK.flatMax) bad.push(`flat ${Math.round(100 * flat)}%`);
+          const airMean = sum / n;
+          const airSat = satSum / n;
+          if (airMean > LOOK_CHECK.airMax) bad.push(`air mean ${airMean.toFixed(0)} > ${LOOK_CHECK.airMax}`);
+          if (airSat < LOOK_CHECK.airSat) bad.push(`air sat ${airSat.toFixed(2)} < ${LOOK_CHECK.airSat}`);
+          const shareBad = share > LOOK_CHECK.shareMax;
+          if (shareBad && args['share-fails']) bad.push(`deep solid ${Math.round(100 * share)}%`);
           const want = MIN_MEAN[`${id}:${stop.name}`];
           if (want !== undefined && mean < want) bad.push(`mean ${mean.toFixed(1)} < ${want}`);
           let fgText = 'solid -';
@@ -285,7 +324,7 @@ async function main(): Promise<void> {
             if (fg.air < LOOK_CHECK.airK * Math.max(1, fg.solid))
               bad.push(`air ${fg.air.toFixed(0)} < ${LOOK_CHECK.airK}x solid`);
           }
-          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, air: mean ${(sum / n).toFixed(1)}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}`;
+          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, air: mean ${airMean.toFixed(1)} sat ${airSat.toFixed(2)}, deep ${Math.round(100 * share)}%${shareBad ? ' (over 30%)' : ''}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}`;
           console.log(bad.length ? `FAIL ${line} (${bad.join(', ')})` : `ok   ${line}`);
           if (bad.length) fails.push(line);
           frames++;
@@ -295,6 +334,21 @@ async function main(): Promise<void> {
     }
   } finally {
     await browser.close();
+  }
+  // The deep-solid share by room (review r8 #2): reported (failed with --share-fails).
+  const over: string[] = [];
+  for (const [key, list] of shares) {
+    const sorted = [...list].sort((a, b) => a - b);
+    const med = sorted[sorted.length >> 1] ?? 0;
+    const max = sorted[sorted.length - 1] ?? 0;
+    if (max > LOOK_CHECK.shareMax || med > LOOK_CHECK.shareMedian)
+      over.push(`${key}: deep solid median ${Math.round(100 * med)}%, max ${Math.round(100 * max)}%`);
+  }
+  if (over.length) {
+    console.log(
+      `\nDeep solid over the bar (<= 30% a stop, median <= 20%; reported${args['share-fails'] ? ', failing' : ''}):`,
+    );
+    for (const o of over) console.log(`  ${o}`);
   }
   console.log(`\n${frames - fails.length} of ${frames} frames pass.`);
   if (fails.length) process.exit(1);

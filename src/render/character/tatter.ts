@@ -10,6 +10,14 @@
  *   watch     its head on her cocoon while she is shut in, on her as she breaks out and runs by;
  *   the swarm looks up as it passes, up off its heels, its wings lift to fly and cannot, it sinks back;
  *   after     stays behind: looks the way she went now and then.
+ *
+ * The kin's three beats in the Canopy (round 9; each mark has a `marks.notes` line saying which, read here):
+ *   away      (the hub, 1/3) watches her come into the clearing; as she nears it turns its back and hunches, and
+ *             turns to watch again once she has gone on;
+ *   keep      (the bower, 2/3) sits facing the small light it keeps (`light` landmark), head low over it; when she
+ *             breaks in (a `barkBreak`) or comes near, it looks up, then turns to her;
+ *   wait      (the way out, 3/3) waits on the cliff facing the way she comes; when she reaches it, it goes on ahead
+ *             of her along the top it stands on, walking, and stops at its end to wait again.
  */
 import type { Container } from 'pixi.js';
 import type { Room } from '../../scene/room';
@@ -87,7 +95,28 @@ export const TATTER = {
    * little, its wings stirring once, for `secs` (the first-timer: "the moth companion needs one reaction").
    */
   rest: { near: 700, secs: 3.2, lift: 0.3, wings: 0.35 },
+  /** The hub's beat: it turns its back inside `px`, turns back past `back`; how low it hunches (perch). */
+  away: { px: 380, back: 680, hunch: 0.25 },
+  /** The bower's beat: she is noticed inside `px`; how long it looks up before it turns to her (s). */
+  keep: { px: 620, look: 0.9, jolt: 0.45 },
+  /** The way out's beat: she joins it inside `join`; it walks `lead` px ahead of her at up to `speed` px/s. */
+  wait: { join: 320, lead: 240, speed: 150, edge: 40 },
 } as const;
+
+type Beat = 'away' | 'keep' | 'wait' | null;
+
+/** Which of the kin's beats a mark plays: the `marks.notes` line beside it (the level's words for it). */
+function beatOf(room: Room, x: number, y: number): Beat {
+  const notes =
+    (room.marks as { notes?: Array<{ x: number; y: number; text: string }> } | undefined)?.notes ?? [];
+  for (const n of notes) {
+    if (Math.abs(n.x - x) > 300 || Math.abs(n.y - y) > 300 || !/\bkin\b/.test(n.text)) continue;
+    if (/turns away/.test(n.text)) return 'away';
+    if (/keeps a/.test(n.text)) return 'keep';
+    if (/waits/.test(n.text)) return 'wait';
+  }
+  return null;
+}
 
 export class Tatter {
   readonly mesh;
@@ -98,7 +127,18 @@ export class Tatter {
   private readonly me: PlayerView;
   private readonly x: number;
   private readonly y: number;
-  private readonly facing: number;
+  private facing: number;
+  /** The kin's beat here (`beatOf`), its light (keep), the top it may walk (wait: x from..to). */
+  private readonly beat: Beat;
+  private readonly keptAt: { x: number; y: number } | null = null;
+  private readonly walk: [number, number] = [0, 0];
+  /** Beat state: turned away (0..1), she has been noticed (s since, -1 not yet), joined (s since, -1 not yet). */
+  private awayK = 0;
+  private noticeT = -1;
+  private joinT = -1;
+  private aheadDir = 1;
+  private walkX = 0;
+  private broke = false;
   private readonly swarmY: number;
   /** Where the swarm's pass is densest (view px), or null. */
   private readonly focus: { x: number; y: number } | null;
@@ -137,8 +177,41 @@ export class Tatter {
     this.x = at.x;
     this.y = at.y;
     this.facing = at.facing;
+    this.beat = beatOf(room, at.x, at.y);
+    if (this.beat === 'keep') {
+      const lms = (room.marks as { landmarks?: Array<{ kind: string; x: number; y: number }> } | undefined)
+        ?.landmarks;
+      let best: { x: number; y: number } | null = null;
+      for (const l of lms ?? [])
+        if (l.kind === 'light' && (!best || Math.abs(l.x - at.x) < Math.abs(best.x - at.x))) best = l;
+      this.keptAt = best;
+      // It sits facing what it keeps.
+      if (best) this.facing = best.x < at.x ? -1 : 1;
+    }
+    if (this.beat === 'wait') {
+      // The top under its feet: how far it runs either way (it never steps off).
+      const top = room.solids.find((r) => r.x <= at.x && r.x + r.w >= at.x && Math.abs(r.y - at.y) < 8);
+      let x0 = top ? top.x : at.x;
+      let x1 = top ? top.x + top.w : at.x;
+      for (let grow = true; grow && top; ) {
+        grow = false;
+        for (const r of room.solids)
+          if (Math.abs(r.y - top.y) < 8) {
+            if (r.x < x0 && r.x + r.w >= x0) {
+              x0 = r.x;
+              grow = true;
+            }
+            if (r.x + r.w > x1 && r.x <= x1) {
+              x1 = r.x + r.w;
+              grow = true;
+            }
+          }
+      }
+      this.walk[0] = x0 + TATTER.wait.edge;
+      this.walk[1] = x1 - TATTER.wait.edge;
+    }
     const st = createPlayer(at.x, at.y, tuning, room);
-    st.facing = at.facing;
+    st.facing = this.facing as -1 | 1;
     const feetY = st.y + st.h;
     this.me = { ...st, cx: st.x + st.w / 2, cy: st.y + st.h / 2, feetY } as PlayerView;
     // The swarm's height over it (the room's swarm path), for the look up.
@@ -218,9 +291,12 @@ export class Tatter {
     sinceBreak: number,
     stirred: boolean,
     rested = false,
+    broke = false,
   ): void {
     const T = TATTER;
     const rig = this.rig;
+    if (broke) this.broke = true;
+    this.beats(dt, her);
     // With a want, its try is timed from her arrival instead of the hatching's break.
     const want = this.want;
     if (want && this.wantT < 0 && her && Math.hypot(her.cx - this.x, her.feetY - this.y) < T.want.arrive)
@@ -305,6 +381,13 @@ export class Tatter {
       ly = lerp(ly, her.feetY - 60, rk);
       lw = lerp(lw, 1, rk);
     }
+    // The kin's beats (`beats`): where it looks.
+    const bl = this.beatLook(her, headY);
+    if (bl) {
+      lx = lerp(lx, bl.x, bl.w);
+      ly = lerp(ly, bl.y, bl.w);
+      lw = lerp(lw, bl.firm, bl.w);
+    }
     // Looking down, the antennae droop with the head (a lowered chin alone lifts them into rods).
     rig.antExtra = 34 * sink;
     rig.antCurlExtra = 0.12 * sink;
@@ -330,8 +413,9 @@ export class Tatter {
         : 0;
     const stir = stirred ? 1 : 0;
     this.stirK = Math.max(this.stirK * Math.exp(-3 * dt), stir);
-    rig.strain = Math.max(brk, strain, 0.18 * this.stirK, T.rest.lift * rk);
+    rig.strain = Math.max(brk, strain, 0.18 * this.stirK, T.rest.lift * rk, this.beatStrain());
     rig.perch = 1 - 0.75 * rig.strain;
+    if (this.beat === 'away') rig.perch = Math.min(1, rig.perch + T.away.hunch * this.awayK);
     const tw =
       t < P.full + T.tryWings[2]
         ? smoothstep(P.full + T.tryWings[0], P.full + T.tryWings[1], t) *
@@ -374,6 +458,75 @@ export class Tatter {
   }
 
   private stirK = 0;
+
+  /** Steps the kin's beat: turning away, noticing her, going on ahead (it moves its own `me` along the top). */
+  private beats(dt: number, her: PlayerView | null): void {
+    const T = TATTER;
+    const me = this.me as { -readonly [K in keyof PlayerView]: PlayerView[K] };
+    me.vx = 0;
+    if (!this.beat || !her) return;
+    const d = Math.hypot(her.cx - me.cx, her.feetY - me.feetY);
+    if (this.beat === 'away') {
+      // (After its try at the shelf, if it has one: the try is what it does as she arrives.)
+      const tried = !this.want || this.wantT > 5;
+      const want = tried && (d < T.away.px || (this.awayK > 0.5 && d < T.away.back)) ? 1 : 0;
+      this.awayK += (want - this.awayK) * (1 - Math.exp(-(want ? 2.2 : 1.2) * dt));
+      const toHer = her.cx < me.cx ? -1 : 1;
+      this.facing = this.awayK > 0.5 ? -toHer : this.awayK < 0.2 && d < 1400 ? toHer : this.facing;
+    } else if (this.beat === 'keep') {
+      if (this.noticeT < 0 && (this.broke || d < T.keep.px)) this.noticeT = 0;
+      else if (this.noticeT >= 0) this.noticeT += dt;
+      if (this.noticeT > T.keep.look) this.facing = her.cx < me.cx ? -1 : 1;
+    } else if (this.beat === 'wait') {
+      if (this.joinT < 0 && d < T.wait.join) {
+        this.joinT = 0;
+        this.aheadDir = her.cx < me.cx ? 1 : -1;
+      } else if (this.joinT >= 0) this.joinT += dt;
+      if (this.joinT >= 0) {
+        // Ahead of her by `lead`, along its top, never faster than a walk; at the end it turns to wait for her.
+        const goal = Math.min(this.walk[1], Math.max(this.walk[0], her.cx + this.aheadDir * T.wait.lead));
+        const gap = goal - me.cx;
+        const step = Math.sign(gap) * Math.min(Math.abs(gap), T.wait.speed * dt);
+        const going = Math.abs(gap) > 6 && this.joinT > 0.5 && Math.sign(gap) === this.aheadDir;
+        if (going) {
+          me.grounded = true;
+          me.cx += step;
+          me.x += step;
+          me.vx = step / Math.max(1e-3, dt * 60);
+          this.walkX += step;
+          this.facing = this.aheadDir;
+        } else this.facing = her.cx < me.cx ? -1 : 1;
+      } else this.facing = her.cx < me.cx ? -1 : 1;
+    }
+    me.facing = this.facing as -1 | 1;
+  }
+
+  /** Where the beat wants it to look (and how firmly, how much of the old look it takes over), or null. */
+  private beatLook(
+    her: PlayerView | null,
+    headY: number,
+  ): { x: number; y: number; firm: number; w: number } | null {
+    const me = this.me;
+    if (this.beat === 'away' && this.awayK > 0.01)
+      return { x: me.cx + this.facing * 160, y: me.feetY + 20, firm: 0.8, w: this.awayK };
+    if (this.beat === 'keep' && this.keptAt) {
+      if (this.noticeT < 0) return { x: this.keptAt.x, y: this.keptAt.y - 12, firm: 0.95, w: 1 };
+      // Looks up at her (or at the broken wall as she comes through), then holds on her.
+      const k = Math.min(1, this.noticeT / 0.35);
+      return her ? { x: her.cx, y: her.feetY - 50, firm: 1, w: k } : null;
+    }
+    if (this.beat === 'wait' && her && this.joinT >= 0 && Math.abs(me.vx) > 0.2)
+      return { x: me.cx + this.facing * 220, y: headY + 10, firm: 0.7, w: 0.8 };
+    return null;
+  }
+
+  /** How far up off its heels the beat holds it: the bower's start as she breaks in. */
+  private beatStrain(): number {
+    if (this.beat !== 'keep' || this.noticeT < 0) return 0;
+    const T = TATTER.keep;
+    return T.jolt * Math.exp(-this.noticeT * 2.5) * Math.min(1, this.noticeT / 0.08);
+  }
+
   private readonly goodPose: WingPose = { x: 0, y: 0, ang: 0, span: 1, lead: -1 };
   private readonly tornPose: WingPose = { x: 0, y: 0, ang: 0, span: 1, lead: -1 };
 
@@ -416,6 +569,7 @@ export class Tatter {
     p.outline = 1.5;
     p.outlineColor = [0.03, 0.025, 0.045];
     p.outlineAlpha = 0.95;
+    p.mesh.pivot.set(this.me.cx, this.me.feetY);
     p.mesh.position.set(this.me.cx + this.ox, this.me.feetY + this.oy + this.hopY * TATTER.scale);
     p.begin();
     // Its own moth wings (tatter-wing.ts): the good one behind it, the torn one over it.
