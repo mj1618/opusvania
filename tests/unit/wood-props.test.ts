@@ -1,10 +1,26 @@
 /**
  * The wood's stock props (canopy review r5 #6: the same stump-cone in seven rooms, the same talon in five): burls and
- * hanging clumps are drawn from four families each, never one twice in a room, none in more than three Canopy rooms.
+ * hanging clumps are drawn from their families, never one twice in a room until it has used them all, none in more than three Canopy rooms.
  * The contact-sheet check made a test: the family is the silhouette.
  */
 import { describe, expect, it } from 'vitest';
-import { propFamilies, propKey, roomTapers } from '../../src/render/scene/lib/pf-mass';
+import {
+  SHELF_FAMILIES,
+  STUMP_MAX_H,
+  shelfFamilies,
+  shelfKey,
+  shelfMount,
+  THORN_FAMILIES,
+  thornFamilies,
+} from '../../src/render/scene/lib/families';
+import {
+  BURL_FAMILIES,
+  HANG_FAMILIES,
+  propFamilies,
+  propKey,
+  roomTapers,
+} from '../../src/render/scene/lib/pf-mass';
+import { shelfFor } from '../../src/render/scene/lib/wood-claims';
 import { ROOMS } from '../../src/scene/index';
 
 const canopy = Object.values(ROOMS).filter((r) => r.art?.kit === 'wood' && r.id.startsWith('cn-'));
@@ -19,7 +35,11 @@ describe('wood props', () => {
         const f = fam.get(propKey(room.id, t.up, t.x, t.y));
         expect(f, `${room.id} taper at ${t.x}, ${t.y}`).toBeDefined();
         const k = `${t.up ? 'burl' : 'hang'}:${f}`;
-        expect(seen.has(k), `${room.id} has two ${k}`).toBe(false);
+        // (Twice only once the room has used every family of its kind.)
+        const all = (t.up ? BURL_FAMILIES : HANG_FAMILIES).every((q) =>
+          seen.has(`${t.up ? 'burl' : 'hang'}:${q}`),
+        );
+        expect(seen.has(k) && !all, `${room.id} has two ${k}`).toBe(false);
         seen.add(k);
         if (!rooms.has(k)) rooms.set(k, new Set());
         rooms.get(k)?.add(room.id);
@@ -49,5 +69,35 @@ describe('wood props', () => {
           for (const [, h] of xs) expect(h, `${room.id} taper at ${t.x}, ${t.y}`).toBeLessThanOrEqual(400);
         }
       }
+  });
+
+  // (Review r6 #8: the stalked one-way, a birdbath, in 4 rooms; the thorn tray identical in 20.)
+  it('grows every one-way from its mount, never a stalk, no family in more than three rooms', () => {
+    const fam = shelfFamilies();
+    const rooms = new Map<string, Set<string>>();
+    for (const room of canopy)
+      room.oneWays.forEach((o, i) => {
+        const f = fam.get(shelfKey(room.id, i));
+        const mount = shelfMount(room, o);
+        expect(SHELF_FAMILIES[mount], `${room.id} one-way ${i} (${mount})`).toContain(f);
+        if (f === 'stump') expect((shelfFor(room, o).floor ?? 0) - o.y).toBeLessThanOrEqual(STUMP_MAX_H);
+        const k = `${mount}:${f}`;
+        if (!rooms.has(k)) rooms.set(k, new Set());
+        rooms.get(k)?.add(room.id);
+      });
+    for (const [k, set] of rooms) expect(set.size, `${k} in ${[...set].join(', ')}`).toBeLessThanOrEqual(3);
+  });
+
+  it('gives every thorn bed a family, none in more than three rooms', () => {
+    const fam = thornFamilies();
+    const rooms = new Map<string, Set<string>>();
+    for (const room of canopy)
+      for (const t of (room as { thorns?: Array<{ id: string }> }).thorns ?? []) {
+        const f = fam.get(`${room.id}:${t.id}`);
+        expect(THORN_FAMILIES, `${room.id} ${t.id}`).toContain(f);
+        if (!rooms.has(f as string)) rooms.set(f as string, new Set());
+        rooms.get(f as string)?.add(room.id);
+      }
+    for (const [k, set] of rooms) expect(set.size, `${k} in ${[...set].join(', ')}`).toBeLessThanOrEqual(3);
   });
 });

@@ -43,6 +43,7 @@ import {
 } from './pf-edge';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
+import { shelfFamilies, shelfKey } from './families';
 import { shelfFor } from './wood-claims';
 
 export const MASS = {
@@ -2215,81 +2216,10 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
     // (Review r5 #6: a ledge out in the open hung on four strands read as a planter on ropes.) Carried by a root from
     // a wall within 256 px, rising under it below the walk (so the walk visibly ends at the ledge's end), or by a
     // knuckle of roots rising from the floor under it; hung only when nothing is near.
-    if (!sh.wall && sh.near) {
-      const wx = sh.near.x;
-      const side = sh.near.side === 'w' ? -1 : 1;
-      const ex = side < 0 ? sh.x0 + range(rr, 10, 40) : sh.x1 - range(rr, 10, 40);
-      const yw = y + th + range(rr, 70, 180);
-      for (let k = 0; k < 2; k++) {
-        const line = chaikinLine([
-          wx - side * 30,
-          yw + k * range(rr, 20, 50),
-          lerp(wx, ex, 0.45),
-          lerp(yw, y + th, 0.6) + range(rr, 0, 30),
-          ex,
-          y + th * 0.6,
-          ex - side * range(rr, 20, 60),
-          y + th * 0.4,
-        ]);
-        const w0 = k ? range(rr, 14, 22) : range(rr, 30, 46);
-        paintLimb(
-          p,
-          lineLimb(line, (t) => Math.max(6, w0 * (1 - t * 0.5)), B.walkH - 0.04, seed + i * 41 + k, 0.2, 0.7),
-        );
-      }
-    } else if (!sh.wall && sh.floor !== null) {
-      const fy = sh.floor;
-      const mid = lerp(sh.x0, sh.x1, range(rr, 0.35, 0.65));
-      const hgt = fy - (y + th * 0.5);
-      // Two or three roots braided up from a flared foot into the ledge's underside, splaying under it.
-      // (A root rising straight under the middle read as a table on a stem: it comes up from one side, leaning.)
-      const n = 2 + (rr() < 0.5 ? 1 : 0);
-      const side = rr() < 0.5 ? -1 : 1;
-      const lean = side * range(rr, 0.45, 0.9) * Math.min(hgt, 320);
-      for (let k = 0; k < n; k++) {
-        const fx = mid + lean + (k - 1) * range(rr, 20, 50);
-        const tx = lerp(sh.x0 + 20, sh.x1 - 20, (k + 0.5) / n);
-        const tw = range(rr, -0.3, 0.3) * 40;
-        const line = chaikinLine([
-          fx,
-          fy + 10,
-          fx - lean * 0.15 + tw,
-          fy - hgt * 0.4,
-          mid + lean * 0.35 + tw * 0.5,
-          fy - hgt * 0.8,
-          tx,
-          y + th * 0.6,
-        ]);
-        const w0 = range(rr, 26, 44) * (k === 0 ? 1.2 : 0.85);
-        paintLimb(
-          p,
-          lineLimb(
-            line,
-            (t) => Math.max(8, w0 * (1.25 - t * 0.6)),
-            B.walkH - 0.03 + k * 0.01,
-            seed + i * 43 + k,
-            0.25,
-            0.8,
-          ),
-        );
-      }
-      // Its foot: roots splaying onto the floor.
-      for (const sd of [-1, 1]) {
-        const fm = mid + lean;
-        const line = chaikinLine([
-          fm,
-          fy - 30,
-          fm + sd * range(rr, 30, 60),
-          fy - 8,
-          fm + sd * range(rr, 80, 150),
-          fy + 4,
-        ]);
-        paintLimb(
-          p,
-          lineLimb(line, (t) => Math.max(4, 22 * (1 - t)), B.walkH - 0.02, seed + i * 47 + sd, 0.3, 0.6),
-        );
-      }
-    } else if (!sh.wall) {
+    const fam = shelfFamilies().get(shelfKey(room.id, i)) ?? '';
+    if (!sh.wall && sh.near) paintNearMount(p, fam, sh, sh.near, y, th, rr, seed + i * 41);
+    else if (!sh.wall && sh.floor !== null) paintFloorMount(p, fam, sh, sh.floor, y, th, rr, seed + i * 43);
+    else if (!sh.wall) {
       const top = sh.ceil ?? y - 900;
       // A knot of roots, not a swing: strands of uneven weight that twist round each other, splay out over the
       // roof and wrap the shelf's ends, darkening up into the roof.
@@ -2323,7 +2253,8 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
         );
       }
     }
-    paintLimb(p, L, knotsFor(L, seed + o.x, 400));
+    if (sh.wall && (fam === 'bracket' || fam === 'tiers')) paintBracket(p, fam, sh, y, th, rr, seed + i * 53);
+    else paintLimb(p, L, knotsFor(L, seed + o.x, 400));
     // Under it: short roots and moss hanging, a dark belly (it is a ledge in the dark, not a beam).
     for (let x = sh.x0 + range(rr, 10, 30); x < sh.x1 - 10; x += range(rr, 22, 50)) {
       const len = range(rr, 14, 70);
@@ -2349,6 +2280,414 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
     );
     plan?.stretches.push(topStretch(`shelf-${i}`, sh.x0, sh.x1, y, th, wallW, wallE));
   });
+}
+
+type ShelfPlan = ReturnType<typeof shelfFor>;
+
+/**
+ * A one-way held by a mass within reach (review r6 #8: grown from its mount): `elbow` two roots out of the wall rising
+ * under it; `knuckle` one thick root running under it and curling up into a knuckle past its far end; `braid` three
+ * roots from different heights twisting together; `fork` one root splitting into two tines under its ends.
+ */
+function paintNearMount(
+  p: Paint,
+  fam: string,
+  sh: ShelfPlan,
+  near: { x: number; side: 'w' | 'e' },
+  y: number,
+  th: number,
+  rr: () => number,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const wx = near.x;
+  const side = near.side === 'w' ? -1 : 1;
+  const nearEnd = side < 0 ? sh.x0 : sh.x1;
+  const farEnd = side < 0 ? sh.x1 : sh.x0;
+  const limb = (pts: number[], w: (t: number) => number, k: number, h = B.walkH - 0.04) =>
+    paintLimb(p, lineLimb(chaikinLine(pts), w, h, seed + k, 0.2, 0.7));
+  if (fam === 'knuckle') {
+    const w0 = range(rr, 50, 76);
+    const yw = y + th + range(rr, 40, 120);
+    limb(
+      [
+        wx - side * 40,
+        yw,
+        lerp(wx, nearEnd, 0.6),
+        y + th + 20,
+        lerp(nearEnd, farEnd, 0.5),
+        y + th * 0.75,
+        farEnd - side * 10,
+        y + th * 0.5,
+      ],
+      (t) => w0 * (1 - t * 0.35),
+      1,
+    );
+    // The knuckle: the root turning up past the far end, a swollen rounded joint.
+    const kx = farEnd - side * range(rr, 0, 16);
+    p.solid(
+      chaikin(blob(kx, y + th * 0.35, w0 * 0.62, w0 * 0.55, seed + 5, 0.25, 14), 2),
+      B.bark,
+      B.walkH - 0.02,
+      {
+        bark: 0.7,
+      },
+    );
+    knot(p, kx, y + th * 0.4, w0 * 0.2, 0, B.walkH, seed + 7);
+    return;
+  }
+  if (fam === 'braid') {
+    for (let k = 0; k < 3; k++) {
+      const yw = y + th + 40 + k * range(rr, 40, 90);
+      const tw = (k - 1) * range(rr, 14, 30);
+      limb(
+        [
+          wx - side * 30,
+          yw,
+          lerp(wx, nearEnd, 0.5) + tw,
+          lerp(yw, y + th, 0.5) - tw * 0.5,
+          lerp(nearEnd, farEnd, 0.35) - tw,
+          y + th * 0.9 + tw * 0.3,
+          lerp(nearEnd, farEnd, 0.8),
+          y + th * 0.6,
+        ],
+        (t) => Math.max(6, range(rr, 16, 30) * (1 - t * 0.6)),
+        k + 1,
+        B.walkH - 0.04 + k * 0.01,
+      );
+    }
+    return;
+  }
+  if (fam === 'fork') {
+    const w0 = range(rr, 40, 60);
+    const yw = y + th + range(rr, 120, 240);
+    const fx = lerp(wx, nearEnd, 0.5);
+    const fy = lerp(yw, y + th, 0.55);
+    limb([wx - side * 40, yw, lerp(wx, fx, 0.5), lerp(yw, fy, 0.6), fx, fy], (t) => w0 * (1 - t * 0.2), 1);
+    for (const [tx, k] of [
+      [nearEnd + side * -20, 2],
+      [lerp(nearEnd, farEnd, 0.8), 3],
+    ] as const)
+      limb(
+        [fx, fy, lerp(fx, tx, 0.5), lerp(fy, y + th, 0.7), tx, y + th * 0.6],
+        (t) => w0 * 0.7 * (1 - t * 0.5),
+        k,
+      );
+    return;
+  }
+  // elbow
+  const ex = side < 0 ? sh.x0 + range(rr, 10, 40) : sh.x1 - range(rr, 10, 40);
+  const yw = y + th + range(rr, 70, 180);
+  for (let k = 0; k < 2; k++) {
+    const line = chaikinLine([
+      wx - side * 30,
+      yw + k * range(rr, 20, 50),
+      lerp(wx, ex, 0.45),
+      lerp(yw, y + th, 0.6) + range(rr, 0, 30),
+      ex,
+      y + th * 0.6,
+      ex - side * range(rr, 20, 60),
+      y + th * 0.4,
+    ]);
+    const w0 = k ? range(rr, 14, 22) : range(rr, 30, 46);
+    paintLimb(
+      p,
+      lineLimb(line, (t) => Math.max(6, w0 * (1 - t * 0.5)), B.walkH - 0.04, seed + k, 0.2, 0.7),
+    );
+  }
+}
+
+/**
+ * A one-way over a floor and nothing else (review r6 #8: never a free-standing stalk, the birdbath): `snag` a broken
+ * dead branch leaning out of the floor past one end, its splintered top over the walk; `burl` a great root burl it
+ * sits on the shoulder of; `arch` a root arching out of the floor and back into it, the ledge on its crest; `stump` an
+ * old flared stump as wide as the ledge; `heap` a mound of tangled roots.
+ */
+function paintFloorMount(
+  p: Paint,
+  fam: string,
+  sh: ShelfPlan,
+  fy: number,
+  y: number,
+  th: number,
+  rr: () => number,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const side = rr() < 0.5 ? -1 : 1;
+  const w = sh.x1 - sh.x0;
+  const hgt = fy - (y + th * 0.5);
+  const limb = (pts: number[], wf: (t: number) => number, k: number, h = B.walkH - 0.03) =>
+    paintLimb(p, lineLimb(chaikinLine(pts), wf, h, seed + k, 0.25, 0.8));
+  const feet = (fx: number, k: number, reach = 1) => {
+    for (const sd of [-1, 1])
+      limb(
+        [
+          fx,
+          fy - 30,
+          fx + sd * range(rr, 30, 60) * reach,
+          fy - 8,
+          fx + sd * range(rr, 80, 150) * reach,
+          fy + 4,
+        ],
+        (t) => Math.max(4, 22 * reach * (1 - t)),
+        k + sd,
+        B.walkH - 0.02,
+      );
+  };
+  if (fam === 'snag' || fam === 'fallen') {
+    // (A fallen log lies much lower and thicker, its end sawn by the fall: rings, not splinters.)
+    const fallen = fam === 'fallen';
+    const ex = side < 0 ? sh.x0 + 24 : sh.x1 - 24;
+    const lean = (fallen ? range(rr, 0.9, 1.4) : range(rr, 0.25, 0.5)) * Math.min(hgt, 520);
+    const fx = ex + side * lean;
+    const topY = y - (fallen ? range(rr, 10, 40) : range(rr, 70, 170));
+    const w0 = fallen ? range(rr, 80, 110) : range(rr, 56, 84);
+    limb(
+      [fx, fy + 10, lerp(fx, ex, 0.5), lerp(fy, y, 0.5), ex, y + th * 0.5, ex - side * lean * 0.15, topY],
+      (t) => Math.max(20, w0 * (1 - t * 0.5)),
+      1,
+    );
+    if (fallen) {
+      const cx = ex - side * lean * 0.15;
+      p.solid(chaikin(blob(cx, topY, w0 * 0.3, w0 * 0.42, seed + 8, 0.15, 14), 1), B.wood, B.walkH - 0.01, {
+        bark: 0.2,
+      });
+      p.tint(
+        strand(chaikin(blob(cx, topY, w0 * 0.18, w0 * 0.26, seed + 9, 0.1, 12), 1), 2, 0),
+        B.barkDark,
+        0.6,
+      );
+      feet(fx, 10);
+      return;
+    }
+    // Its broken top: pale splinters.
+    for (let k = 0; k < 4; k++) {
+      const sx = ex - side * lean * 0.15 + range(rr, -0.4, 0.4) * w0 * 0.5;
+      const sl = range(rr, 16, 44);
+      p.solid(
+        [sx - 5, topY + 10, sx + range(rr, -8, 8), topY - sl, sx + 5, topY + 10],
+        B.wood,
+        B.walkH - 0.01,
+        { bark: 0.3 },
+      );
+    }
+    feet(fx, 10);
+    return;
+  }
+  if (fam === 'burl') {
+    const cx = lerp(sh.x0, sh.x1, side < 0 ? 0.3 : 0.7);
+    const bw = Math.max(w * 0.5, Math.min(hgt * 0.45, 380));
+    const top = y + th * 0.55;
+    const pts: number[] = [];
+    for (let k = 0; k <= 24; k++) {
+      const t = k / 24;
+      const a = Math.PI * (1 - t);
+      const sx = Math.cos(a);
+      const ry = (fy + 12 - top) * (0.92 + 0.08 * wobble(t * 900, seed, 120));
+      pts.push(
+        cx + sx * bw * (1 - 0.45 * Math.sin(a) ** 2) * (1 + 0.08 * wobble(t * 700, seed + 2, 90)),
+        fy + 12 - Math.sin(a) ** 0.6 * ry,
+      );
+    }
+    const body = chaikin(pts, 1);
+    p.solid(body, T.body, B.walkH - 0.06, { bark: 0.6 });
+    // (One smooth dome read as an egg: lobes swelling out of it, each with a lit upper-left arc, roots over it.)
+    for (let k = 0; k < 4; k++) {
+      const lx = cx + range(rr, -0.6, 0.6) * bw;
+      const ly = lerp(top, fy, range(rr, 0.3, 0.8));
+      const lr = bw * range(rr, 0.25, 0.42);
+      p.solid(
+        chaikin(blob(lx, ly, lr, lr * 0.8, seed + 20 + k, 0.3, 14), 2),
+        lerp3(T.body, T.lift, 0.5),
+        B.walkH - 0.05,
+        {
+          bark: 0.6,
+        },
+      );
+      const arcPts: number[] = [];
+      for (let q = 0; q <= 8; q++) {
+        const a = Math.PI * (1.05 + 0.5 * (q / 8));
+        arcPts.push(lx + Math.cos(a) * lr, ly + Math.sin(a) * lr * 0.8);
+      }
+      p.tint(strand(arcPts, range(rr, 4, 7), 0.3), T.veinLit, 0.6);
+    }
+    for (let k = 0; k < 3; k++) {
+      const x0 = cx + range(rr, -0.5, 0.5) * bw;
+      limb(
+        [
+          x0,
+          top + 10,
+          x0 + range(rr, -0.4, 0.4) * bw,
+          lerp(top, fy, 0.5),
+          x0 + range(rr, -0.8, 0.8) * bw,
+          fy + 8,
+        ],
+        (t) => Math.max(5, range(rr, 12, 22) * (1 - t * 0.4)),
+        70 + k,
+        B.walkH - 0.04,
+      );
+    }
+    feet(cx - bw * 0.8, 20, 0.8);
+    feet(cx + bw * 0.8, 30, 0.8);
+    return;
+  }
+  if (fam === 'arch') {
+    const mid = lerp(sh.x0, sh.x1, range(rr, 0.4, 0.6));
+    const a0 = sh.x0 - range(rr, 60, 200);
+    const a1 = sh.x1 + range(rr, 60, 200);
+    const w0 = range(rr, 40, 62);
+    limb(
+      [
+        a0,
+        fy + 12,
+        lerp(a0, mid, 0.3),
+        lerp(fy, y, 0.75),
+        mid,
+        y + th * 0.7,
+        lerp(mid, a1, 0.7),
+        lerp(fy, y, 0.75),
+        a1,
+        fy + 12,
+      ],
+      (t) => w0 * (0.85 + 0.3 * Math.abs(t - 0.5)),
+      1,
+    );
+    // A thinner root crossing it.
+    limb(
+      [lerp(a0, mid, 0.5), fy + 12, mid + side * 30, lerp(fy, y + th, 0.5), lerp(mid, a1, 0.6), y + th * 0.9],
+      (t) => Math.max(6, w0 * 0.45 * (1 - t * 0.6)),
+      2,
+      B.walkH - 0.05,
+    );
+    return;
+  }
+  if (fam === 'stump') {
+    const cx = lerp(sh.x0, sh.x1, 0.5) + side * w * 0.08;
+    const sw = w * range(rr, 0.42, 0.5);
+    const top = y + th * 0.5;
+    const pts: number[] = [];
+    for (let k = 0; k <= 12; k++) {
+      const t = k / 12;
+      const yy = lerp(top, fy + 12, t);
+      pts.push(cx - sw * (1 + 0.7 * t ** 3) - 6 * wobble(yy, seed + 1, 80), yy);
+    }
+    for (let k = 12; k >= 0; k--) {
+      const t = k / 12;
+      const yy = lerp(top, fy + 12, t);
+      pts.push(cx + sw * (1 + 0.7 * t ** 3) + 6 * wobble(yy, seed + 2, 80), yy);
+    }
+    p.solid(pts, T.body, B.walkH - 0.06, { bark: 0.8 });
+    // Its grain: long lit-lipped furrows down it.
+    for (let k = 0; k < 4; k++) {
+      const gx = cx + range(rr, -0.7, 0.7) * sw;
+      p.tint(
+        strand(
+          [gx, top + 20, gx + range(rr, -10, 10), lerp(top, fy, 0.5), gx + range(rr, -20, 20), fy],
+          range(rr, 4, 8),
+          0.3,
+        ),
+        T.deep,
+        0.8,
+      );
+      p.tint(
+        strand([gx + 5, top + 24, gx + 5, lerp(top, fy, 0.5), gx + 6, fy - 10], 2.5, 0.3),
+        T.veinLit,
+        0.4,
+      );
+    }
+    feet(cx - sw * 1.4, 40, 0.9);
+    feet(cx + sw * 1.4, 50, 0.9);
+    return;
+  }
+  // heap: a mound of tangled roots, a dark body behind them.
+  const cx = lerp(sh.x0, sh.x1, 0.5);
+  const hw = w * 0.8;
+  p.solid(
+    chaikin(blob(cx, lerp(y + th, fy, 0.6), hw * 0.75, (fy - y) * 0.5, seed + 9, 0.3, 16), 2),
+    T.body,
+    B.walkH - 0.08,
+    { bark: 0.4 },
+  );
+  for (let k = 0; k < 7; k++) {
+    const fx = cx + range(rr, -1, 1) * hw;
+    const tx = lerp(sh.x0 + 20, sh.x1 - 20, range(rr, 0, 1));
+    limb(
+      [
+        fx,
+        fy + 10,
+        lerp(fx, tx, 0.3) + range(rr, -50, 50),
+        lerp(fy, y, 0.4),
+        lerp(fx, tx, 0.7) + range(rr, -40, 40),
+        lerp(fy, y, 0.8),
+        tx,
+        y + th * 0.6,
+      ],
+      (t) => Math.max(6, range(rr, 18, 34) * (1 - t * 0.5)),
+      60 + k,
+      B.walkH - 0.05 + k * 0.004,
+    );
+  }
+}
+
+/**
+ * A shelf fungus out of the wall (review r6 #8): `bracket` one wide cap whose flat top is the walk, its underside
+ * rounded with pale gills, two small brackets under it; `tiers` three caps stepping down and narrowing.
+ */
+function paintBracket(
+  p: Paint,
+  fam: string,
+  sh: ShelfPlan,
+  y: number,
+  th: number,
+  rr: () => number,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const dir = sh.wall === 'w' ? 1 : -1;
+  const wallX = dir > 0 ? sh.x0 - 10 : sh.x1 + 10;
+  const reach = sh.x1 - sh.x0 + 18;
+  const cap = (ty: number, rch: number, dep: number, k: number) => {
+    const top: number[] = [];
+    const low: number[] = [];
+    for (let q = 0; q <= 16; q++) {
+      const t = q / 16;
+      const x = wallX + dir * rch * t;
+      // The rim rolls down at the free edge; the underside a half lens back to the wall.
+      const roll = t > 0.85 ? ((t - 0.85) / 0.15) ** 2 * dep * 0.35 : 0;
+      top.push(x, ty + roll + 2 * wobble(x, seed + k, 40));
+      low.push(
+        x,
+        ty + dep * Math.sin(Math.PI * (0.5 + 0.5 * (1 - t))) ** 0.7 * (1 - t * 0.6) + dep * 0.25 * (1 - t),
+      );
+    }
+    const pts = [...top];
+    for (let q = low.length / 2 - 1; q >= 0; q--) pts.push(low[q * 2] as number, low[q * 2 + 1] as number);
+    p.solid(chaikin(pts, 1), 0x2a2620, B.walkH - 0.02 - k * 0.01, { bark: 0.2 });
+    // Growth rings near the rim, pale gills underneath.
+    p.tint(
+      strand(
+        top.map((v, j) => (j % 2 ? v + dep * 0.18 : v)),
+        4,
+        0.3,
+      ),
+      0x5a5040,
+      0.6,
+    );
+    for (let q = 2; q < 15; q += 2) {
+      const gx = low[q * 2] as number;
+      const gy = low[q * 2 + 1] as number;
+      p.tint(strand([gx, gy - 3, lerp(gx, wallX, 0.3), gy - dep * 0.25], 2, 0.3), 0xb8ac94, 0.45);
+    }
+  };
+  cap(y, reach, Math.max(th, reach * 0.3), 0);
+  let ty = y + Math.max(th, reach * 0.3) + range(rr, 10, 30);
+  for (let k = 1; k <= 2; k++) {
+    const rch = reach * (fam === 'tiers' ? 0.75 / k : range(rr, 0.25, 0.4));
+    const dep = rch * 0.35;
+    cap(ty, rch, dep, k);
+    ty += dep + range(rr, 8, 40);
+  }
 }
 
 /**
