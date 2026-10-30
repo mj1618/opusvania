@@ -17,6 +17,7 @@ import {
   backEdgeShade,
   backMask,
   drawDeepBack,
+  drawMidBack,
   INTERIOR,
   type InteriorPlan,
   interiorPlan,
@@ -37,6 +38,8 @@ export class InteriorLayer implements EnvModule {
   private plan: InteriorPlan | null = null;
   private readonly deep = new Graphics({ label: 'interior-deep' });
   private readonly mask = new Graphics({ label: 'interior-mask' });
+  private readonly mid = new Graphics({ label: 'interior-mid' });
+  private readonly midMask = new Graphics({ label: 'interior-mid-mask' });
   private readonly beyond = new Graphics({ label: 'interior-beyond' });
   private readonly edge = new Graphics({ label: 'interior-edge' });
   private readonly edgeMask = new Graphics({ label: 'interior-edge-mask' });
@@ -67,6 +70,13 @@ export class InteriorLayer implements EnvModule {
     const airBack = ctx.layers.get('airBack');
     airBack.addChild(this.mask);
     this.deep.mask = this.mask;
+    // The mid plane (review r5 #7), masked to the same backs.
+    const padMid = Math.max(W, H) * (1 - INTERIOR.midParallax) + 240;
+    drawMidBack(this.mid, plan, LOOK.seed, padMid, massTone(room).body);
+    ctx.layers.get('interiorMid').addChild(this.mid);
+    for (const m of polys) this.midMask.poly(m).fill({ color: 0xffffff });
+    airBack.addChild(this.midMask);
+    this.mid.mask = this.midMask;
     // The torn edge falls into shadow (review r3 #2: where a back met open air its hard mask edge cut flat pale shapes
     // out of the night: the Grove's and the hub's "mint"): bands following the edge inward (inside only: a twin mask).
     for (const m of polys) this.edgeMask.poly(m).fill({ color: 0xffffff });
@@ -370,6 +380,7 @@ export class InteriorLayer implements EnvModule {
 
   destroy(): void {
     this.deep.mask = null;
+    this.mid.mask = null;
     this.edge.mask = null;
   }
 }

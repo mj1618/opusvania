@@ -5,7 +5,8 @@
  * - `root` / `ground` solids: the mass painter (pf-mass.ts).
  * - `trunk` solids: a solid tree in `marks.trees` (or, without marks, the trunk itself).
  * - Other solids (`branch`, ...): a stretch in `marks.stretches` (or, without marks, the runs of abutting rects).
- * - One-way ledges: a root shelf (`shelfFor`): grown out of the wall beside it, or hung from the ceiling over it.
+ * - One-way ledges: a root shelf (`shelfFor`): grown out of the wall beside it, carried by a root from a wall within
+ *   256 px or one rising from the floor under it, else hung from the limb or roof over it (never on ropes).
  */
 import type { Room } from '../../../scene/room';
 
@@ -24,6 +25,10 @@ export interface ShelfPlan {
   wall: 'w' | 'e' | null;
   /** The ceiling it hangs from when it has no wall (y of the lowest underside over it), or null (open sky). */
   ceil: number | null;
+  /** A mass face within 256 px of a free end (review r5 #6: a ledge near a wall grows from it): its x and side. */
+  near: { x: number; side: 'w' | 'e' } | null;
+  /** The floor under it (y of the highest top within 900 px below its middle), or null. */
+  floor: number | null;
 }
 
 const isMassTag = (tag: string): boolean => tag === 'root' || tag === 'ground';
@@ -41,7 +46,35 @@ export function shelfFor(room: Room, o: { x: number; y: number; w: number }): Sh
     const b = q.y + q.h;
     if (b <= o.y - 32 && q.x < o.x + o.w && q.x + q.w > o.x) ceil = ceil === null ? b : Math.max(ceil, b);
   }
-  return { x0: o.x, x1: o.x + o.w, y: o.y, wall: west ? 'w' : east ? 'e' : null, ceil };
+  let nearW: Rect | undefined;
+  let nearE: Rect | undefined;
+  for (const q of masses) {
+    if (!(q.y < o.y + 120 && q.y + q.h > o.y + 40)) continue;
+    const dw = o.x - (q.x + q.w);
+    const de = q.x - (o.x + o.w);
+    if (dw >= 0 && dw <= 256 && (!nearW || q.x + q.w > nearW.x + nearW.w)) nearW = q;
+    if (de >= 0 && de <= 256 && (!nearE || q.x < nearE.x)) nearE = q;
+  }
+  const nearWall =
+    nearW && (!nearE || o.x - (nearW.x + nearW.w) <= nearE.x - (o.x + o.w))
+      ? { x: nearW.x + nearW.w, side: 'w' as const }
+      : nearE
+        ? { x: nearE.x, side: 'e' as const }
+        : null;
+  let floor: number | null = null;
+  const mid = o.x + o.w / 2;
+  for (const q of room.solids)
+    if (q.y > o.y + 24 && q.y <= o.y + 900 && q.x <= mid && q.x + q.w >= mid)
+      floor = floor === null ? q.y : Math.min(floor, q.y);
+  return {
+    x0: o.x,
+    x1: o.x + o.w,
+    y: o.y,
+    wall: west ? 'w' : east ? 'e' : null,
+    ceil,
+    near: nearWall,
+    floor,
+  };
 }
 
 /**
@@ -77,7 +110,7 @@ export function unclaimedStandables(room: Room): string[] {
   for (const o of room.oneWays) {
     const sh = shelfFor(room, o);
     // A shelf is drawn when it has something to grow from or hang on (or stands in open sky as a limb's stub).
-    if (!sh.wall && sh.ceil === null && room.marks?.backs?.length)
+    if (!sh.wall && !sh.near && sh.floor === null && sh.ceil === null && room.marks?.backs?.length)
       out.push(`${room.id} one-way (${o.x}, ${o.y}, w ${o.w}) has no wall or ceiling to hang from`);
   }
   return out;

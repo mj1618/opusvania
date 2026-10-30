@@ -14,6 +14,7 @@
  * `ground` masses (the den's packed earth) swap the bark for earth: a soil crust with stones and root ends.
  */
 
+import { ROOMS } from '../../../scene/index';
 import type { Room } from '../../../scene/room';
 import { gradeLookOf, type Look } from './looks';
 import {
@@ -27,6 +28,19 @@ import {
   type Stretch,
   strand,
 } from './pf-branch';
+import {
+  distToRuns,
+  EDGE,
+  type EdgeTone,
+  type LobeSpec,
+  lerp3,
+  lobeOffset,
+  lobesFor,
+  paintFaceLobes,
+  paintFringe,
+  paintTopBand,
+  paintUnderLobes,
+} from './pf-edge';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
 import { shelfFor } from './wood-claims';
@@ -62,6 +76,12 @@ export const MASS = {
   looseBulge: 34,
   /** Stacks narrower than this are tapers (burls, hanging clumps), painted as one shape. */
   taperMaxW: 900,
+  /** ...a hanging one only this narrow (wider is the roof's own mass), and none with a claw face this tall. */
+  hangMaxW: 360,
+  /** Faces of masses narrower than this keep a bark column (a root post), not lobes. */
+  lobeMinW: 220,
+  hangMinH: 160,
+  clawTaper: 400,
   /** The lift near the playfield (review r3 #10): the shadow family's teal, how far in from a lit edge (px). */
   lift: 0x0f2a36,
   liftReach: 200,
@@ -152,16 +172,17 @@ export const MASS_TONES: Record<Look, MassTone> = {
     crust: 0x2e5a50,
     crustA: 0.26,
   },
+  // (Review r5 #7: cool umber-grey earth, not a second brown.)
   den: {
-    body: 0x18100c,
-    deep: 0x100a08,
-    vein: 0x261810,
-    veinLit: 0x48301e,
-    lift: 0x4a2e1a,
+    body: 0x141313,
+    deep: 0x0c0b0b,
+    vein: 0x221f1e,
+    veinLit: 0x3e3c3a,
+    lift: 0x363634,
     liftReach: 400,
-    plate: 0x2e1e14,
-    crust: 0x6a4630,
-    crustA: 0.3,
+    plate: 0x252322,
+    crust: 0x5e625e,
+    crustA: 0.26,
   },
 };
 
@@ -169,6 +190,20 @@ export const MASS_TONES: Record<Look, MassTone> = {
 export function massTone(room: Room): MassTone {
   const look = gradeLookOf(room);
   return look ? MASS_TONES[look] : NIGHT_TONE;
+}
+
+/** The edge painter's colours for the paint in progress (pf-edge.ts). */
+function edgeTone(): EdgeTone {
+  const night = T === NIGHT_TONE;
+  const shaft = T === MASS_TONES.shaft;
+  return {
+    body: T.body,
+    deep: T.deep,
+    lift: T.lift,
+    rim: night ? BRANCH.barkLit : T.crust,
+    rimA: night ? 0.6 : Math.min(0.8, T.crustA * 2.4),
+    moss: shaft ? 0 : BRANCH.mossDark,
+  };
 }
 
 /** The tone of the paint in progress (set by `paintMasses` / `paintShelves`; they paint synchronously). */
@@ -243,23 +278,28 @@ export function matSag(x: number, seed: number): number {
  * root mat (lumps hanging); its free outer corners round up into the flank on a wide radius (nothing stands there:
  * review r3 #3, the cabinets). A face that refuses the claws (`kick: false`) leans and bulges more.
  */
-function outline(r: MassRect, s: Sides, seed: number): number[] {
+function outline(r: MassRect, s: Sides, seed: number, em?: EdgeModel): number[] {
   const pts: number[] = [];
   const st = 16;
+  const fs = 8;
   const o = 3;
   const loose = r.kick === false;
   const bulge = (y: number, k: number, sd: number) =>
     lerp(MASS.bulge[0] as number, MASS.bulge[1] as number, hash1(k, sd)) +
     (loose ? MASS.looseBulge * Math.max(0, wobble(y, seed + sd, 320)) : 0);
+  // (Review r5 #4: the free edges are chains of lobes, the same ones the edge painter draws on them.)
+  const face = (dir: number, x: number, y: number, k: number, sd: number): number =>
+    em ? em.faceAt(dir, x, y) : bulge(y, k, sd) * clamp((y - r.y) / 40, 0.2, 1);
+  const under = (x: number): number => (em ? em.underAt(x, r.y + r.h) : matSag(x, seed));
   const yb = r.y + r.h;
   const R = Math.min(MASS.underRound, r.w * 0.35, r.h * 0.45);
   const brC = inSegs(yb - 2, s.right) && inSegs(r.x + r.w - 2, s.bottom);
   const blC = inSegs(yb - 2, s.left) && inSegs(r.x + 2, s.bottom);
   for (let x = r.x; x < r.x + r.w; x += st) pts.push(x, inSegs(x, s.top) ? r.y : r.y - o);
-  for (let y = r.y; y < yb; y += st) {
+  for (let y = r.y; y < yb; y += fs) {
     if (brC && y > yb - R) break;
     const k = Math.round(y / st);
-    const out = inSegs(y, s.right) ? bulge(y, k, 1) * clamp((y - r.y) / 40, 0.2, 1) : o;
+    const out = inSegs(y, s.right) ? face(1, r.x + r.w, y, k, 1) : o;
     pts.push(r.x + r.w + out, y);
   }
   // (Review r4 #3: a quarter circle at every free underside corner made the cabinets' rounded rects. The corner is a
@@ -279,11 +319,11 @@ function outline(r: MassRect, s: Sides, seed: number): number[] {
         yb - R + Math.sin(t) * (Ry * q + matSag(r.x + r.w - R, seed) * 0.6) + (R - Ry) * Math.cos(t) * 0,
       );
     }
-  for (let x = r.x + r.w; x > r.x; x -= st) {
+  for (let x = r.x + r.w; x > r.x; x -= fs) {
     if (brC && x > r.x + r.w - R) continue;
     if (blC && x < r.x + R) break;
     // (A narrow post's foot barely sags: a root mat under 64 px turned it into a baluster's knob.)
-    const sag = inSegs(x, s.bottom) ? matSag(x, seed) * (r.h > 120 ? 1 : 0.4) * clamp(r.w / 260, 0.15, 1) : o;
+    const sag = inSegs(x, s.bottom) ? under(x) * (r.h > 120 ? 1 : 0.4) * clamp(r.w / 260, 0.15, 1) : o;
     pts.push(x, yb + sag);
   }
   if (blC)
@@ -295,12 +335,70 @@ function outline(r: MassRect, s: Sides, seed: number): number[] {
         yb - R + Math.sin(t) * (Ry * q + matSag(r.x + R, seed) * 0.6),
       );
     }
-  for (let y = blC ? yb - R : yb; y > r.y; y -= st) {
+  for (let y = blC ? yb - R : yb; y > r.y; y -= fs) {
     const k = Math.round(y / st);
-    const out = inSegs(y, s.left) ? bulge(y, k, 3) * clamp((y - r.y) / 40, 0.2, 1) : o;
+    const out = inSegs(y, s.left) ? face(-1, r.x, y, k, 3) : o;
     pts.push(r.x - out, y);
   }
   return pts;
+}
+
+/**
+ * The free edges of a room's masses (review r5 #4): merged runs of face, underside and top, each face or underside a
+ * chain of lobes (pf-edge.ts) that the body's outline and the edge painter share.
+ */
+export interface EdgeModel {
+  faces: Run[];
+  unders: Run[];
+  tops: Run[];
+  spec(run: Run, vertical: boolean): LobeSpec;
+  seedOf(run: Run): number;
+  faceAt(dir: number, x: number, y: number): number;
+  underAt(x: number, y: number): number;
+}
+
+export function edgeModel(
+  masses: readonly MassRect[],
+  sides: readonly Sides[],
+  seed: number,
+  skip?: Set<number>,
+): EdgeModel {
+  const faceRuns: Run[] = [];
+  const underRuns: Run[] = [];
+  const topRuns: Run[] = [];
+  masses.forEach((r, i) => {
+    if (skip?.has(i)) return;
+    const s = sides[i] as Sides;
+    for (const [y0, y1] of s.right) faceRuns.push({ key: r.x + r.w, a: y0, b: y1, i, dir: 1 });
+    for (const [y0, y1] of s.left) faceRuns.push({ key: r.x, a: y0, b: y1, i, dir: -1 });
+    for (const [x0, x1] of s.bottom) underRuns.push({ key: r.y + r.h, a: x0, b: x1, i, dir: 0 });
+    for (const [x0, x1] of s.top) topRuns.push({ key: r.y, a: x0, b: x1, i, dir: 0 });
+  });
+  const faces = mergeRuns(faceRuns);
+  const unders = mergeRuns(underRuns);
+  const tops = mergeRuns(topRuns);
+  const spec = (run: Run, vertical: boolean): LobeSpec =>
+    !vertical ? EDGE.under : (masses[run.i] as MassRect).kick === false ? EDGE.loose : EDGE.claw;
+  const seedOf = (run: Run) => seed * 7 + Math.round(run.key) * 13 + run.dir * 101 + (run.dir === 0 ? 5 : 0);
+  const find = (list: Run[], dir: number, key: number, u: number) =>
+    list.find((q) => q.dir === dir && Math.abs(q.key - key) < 0.5 && u >= q.a - 0.5 && u <= q.b + 0.5);
+  const at = (q: Run | undefined, vertical: boolean, u: number, dflt: number): number => {
+    if (!q) return dflt;
+    const sp = spec(q, vertical);
+    // (A narrow post's faces lobe less: both faces lobed full read as a string of beads.)
+    const m = masses[q.i] as MassRect;
+    const k = vertical ? (m.w < MASS.lobeMinW ? 0.5 : clamp(m.w / 240, 0.5, 1)) : 1;
+    return k * lobeOffset(sp, lobesFor(sp, seedOf(q), q.a, q.b), q.a, q.b, u);
+  };
+  return {
+    faces,
+    unders,
+    tops,
+    spec,
+    seedOf,
+    faceAt: (dir, x, y) => at(find(faces, dir, x, y), true, y, 3),
+    underAt: (x, y) => at(find(unders, 0, y, x), false, x, 3),
+  };
 }
 
 /** The painted silhouette of `r` among `all` (a patch's mask: it shows its lumps and rounded corners, not its rect). */
@@ -311,7 +409,9 @@ export function massOutline(
   H: number,
   seed: number,
 ): number[] {
-  return outline(r, exposedSides(r, all, W, H), seed);
+  const sides = all.map((q) => exposedSides(q, all, W, H));
+  const i = all.indexOf(r);
+  return outline(r, sides[i] as Sides, seed, edgeModel(all, sides, seed));
 }
 
 /**
@@ -322,6 +422,27 @@ export function massOutline(
 interface Taper {
   up: boolean;
   idx: number[];
+}
+
+/** The longest face down a stack of tiers (same x on one side, consecutive tiers) that takes the claws, px. */
+function clawRun(ms: readonly MassRect[]): number {
+  let best = 0;
+  for (const side of [0, 1]) {
+    let run = 0;
+    let x = Number.NaN;
+    for (const m of ms) {
+      const mx = side ? m.x + m.w : m.x;
+      if (m.kick === false) {
+        run = 0;
+        x = Number.NaN;
+        continue;
+      }
+      run = Math.abs(mx - x) < 1 ? run + m.h : m.h;
+      x = mx;
+      best = Math.max(best, run);
+    }
+  }
+  return best;
 }
 
 function findTapers(masses: readonly MassRect[], sides: readonly Sides[]): Taper[] {
@@ -358,6 +479,14 @@ function findTapers(masses: readonly MassRect[], sides: readonly Sides[]): Taper
       if (chain.length < 2) continue;
       const tip = sides[chain[chain.length - 1] as number] as Sides;
       if (up ? !tip.top.length : !tip.bottom.length) continue;
+      // (Review r5 #6: a wide clump hanging from a roof is the roof's own mass, lobed with a fringe, not a prop.)
+      if (!up && b.w > MASS.hangMaxW) continue;
+      // (...and a short one is a lump of the roof: lobes and a fringe.)
+      const spanH = chain.reduce((acc, c) => acc + (masses[c] as MassRect).h, 0);
+      if (!up && spanH < MASS.hangMinH) continue;
+      // (Review r5 #6: a face that takes the claws for over 400 px is a cliff, never a taper: the fork's face was
+      // painted as a pleated fan the size of a cliff.)
+      if (clawRun(chain.map((c) => masses[c] as MassRect)) > MASS.clawTaper) continue;
       for (const c of chain) used.add(c);
       out.push({ up, idx: chain });
       break;
@@ -436,6 +565,8 @@ export function paintMasses(
   /** Rects that are mass for the edges (a rotten wall, baked on its own) but not painted here. */
   ghosts: readonly MassRect[] = [],
   tone: MassTone = NIGHT_TONE,
+  /** The room (its props take their family from the world's spread, `propFamilies`). */
+  roomId = '',
 ): void {
   T = tone;
   const B = BRANCH;
@@ -448,28 +579,28 @@ export function paintMasses(
   const tapers = findTapers(masses, sides);
   const inTaper = new Set(tapers.flatMap((t) => t.idx));
 
+  // The merged runs of exposed edge: a face down two stacked rects is one face (no seam where they meet); each face
+  // and underside a chain of lobes (review r5 #4) shared by the body's outline and the edge painter.
+  const em = edgeModel(masses, sides, seed, inTaper);
+  const faces = em.faces;
+  const unders = em.unders;
+  const tops = em.tops;
+
   // 1. The body (a taper's is its own silhouette, step 1b).
   masses.forEach((r, i) => {
     if (inTaper.has(i) || !near(r.x, r.y, r.x + r.w, r.y + r.h)) return;
     const s = sides[i] as Sides;
-    p.solid(outline(r, s, seed + i * 7), earth(r) ? T.deep : T.body, B.walkH - 0.12, { bark: 0.25 });
+    p.solid(outline(r, s, seed + i * 7, em), earth(r) ? T.deep : T.body, B.walkH - 0.12, { bark: 0.25 });
   });
 
-  // The merged runs of exposed edge: a face down two stacked rects is one face (no seam where they meet).
-  const faceRuns: Run[] = [];
-  const underRuns: Run[] = [];
-  const topRuns: Run[] = [];
-  masses.forEach((r, i) => {
-    if (inTaper.has(i)) return;
-    const s = sides[i] as Sides;
-    for (const [y0, y1] of s.right) faceRuns.push({ key: r.x + r.w, a: y0, b: y1, i, dir: 1 });
-    for (const [y0, y1] of s.left) faceRuns.push({ key: r.x, a: y0, b: y1, i, dir: -1 });
-    for (const [x0, x1] of s.bottom) underRuns.push({ key: r.y + r.h, a: x0, b: x1, i, dir: 0 });
-    for (const [x0, x1] of s.top) topRuns.push({ key: r.y, a: x0, b: x1, i, dir: 0 });
-  });
-  const faces = mergeRuns(faceRuns);
-  const unders = mergeRuns(underRuns);
-  const tops = mergeRuns(topRuns);
+  // (Review r5 #4: the inside of a mass is the darkest plane. Its veins, plates and fissures further than
+  // `EDGE.inner` from a free edge keep a third of their contrast.)
+  const edgeRuns = [
+    ...faces.map((f) => ({ key: f.key, a: f.a, b: f.b, vertical: true })),
+    ...unders.map((f) => ({ key: f.key, a: f.a, b: f.b, vertical: false })),
+    ...tops.map((f) => ({ key: f.key, a: f.a, b: f.b, vertical: false })),
+  ];
+  const innerK = (x: number, y: number) => (distToRuns(x, y, edgeRuns) > EDGE.inner ? EDGE.innerK : 1);
 
   // 2. The deep: dim roots wandering through big masses, a knot now and then.
   masses.forEach((r, i) => {
@@ -493,11 +624,13 @@ export function paintMasses(
       }
       const wl = wander(line, 24, seed + i * 31 + k, 70);
       const wd = range(rr, 8, 26);
+      const kv = innerK((xa + xb) / 2, (ya + yb) / 2);
       p.solid(
         ribbon(wl, (t) => wd * (0.35 + Math.sin(t * Math.PI) * 0.65)),
         T.vein,
         B.walkH - 0.06,
-        { bark: 0.5, alpha: 0.8 },
+        { bark: 0.5, alpha: 0.8 * kv },
+        kv,
       );
       p.tint(
         strand(
@@ -505,12 +638,13 @@ export function paintMasses(
           wd * 0.22,
         ),
         T.veinLit,
-        0.4,
+        0.4 * kv,
       );
     }
     for (let k = 0; k < Math.round(area / 400000); k++) {
       const cx = r.x + range(rr, 40, Math.max(41, r.w - 40));
       const cy = r.y + range(rr, 40, Math.max(41, r.h - 40));
+      if (innerK(cx, cy) < 1) continue;
       knot(p, cx, cy, range(rr, 8, 16), range(rr, -0.6, 0.6), B.walkH - 0.08, seed + k * 13 + i);
     }
     // A big mass is wood, not a plane (review r4 #3, #5: the well's walls, the way out's blocks, the hub's high block
@@ -525,12 +659,13 @@ export function paintMasses(
         const shape = vert
           ? chaikin(blob(cx, cy, d / 2, l / 2, seed + k * 41 + i, 0.3, 16), 2)
           : chaikin(blob(cx, cy, l / 2, d / 2, seed + k * 41 + i, 0.3, 16), 2);
+        const kp = innerK(cx, cy);
         p.solid(
           shape,
           rr() < 0.5 ? T.plate : T.vein,
           B.walkH - 0.07,
-          { bark: 0.7, alpha: 0.6 },
-          range(rr, 0.35, 0.7),
+          { bark: 0.7, alpha: 0.6 * kp },
+          range(rr, 0.35, 0.7) * kp,
         );
       }
       for (let k = 0; k < Math.round(area / 90000); k++) {
@@ -546,7 +681,8 @@ export function paintMasses(
           );
         const wl = wander(line, 14, seed + k * 53 + i, 160);
         const wd = range(rr, 4, 11);
-        p.solid(strand(wl, wd, 0.3), T.deep, B.walkH - 0.09, { bark: 0.2 }, 0.8);
+        const kf = innerK(xa, ya);
+        p.solid(strand(wl, wd, 0.3), T.deep, B.walkH - 0.09, { bark: 0.2, alpha: kf }, 0.8 * kf);
         p.tint(
           strand(
             wl.map((v, j) => (j % 2 ? v : v + wd * 0.7)),
@@ -554,7 +690,7 @@ export function paintMasses(
             0.3,
           ),
           T.veinLit,
-          0.6,
+          0.6 * kf,
         );
       }
     }
@@ -622,12 +758,16 @@ export function paintMasses(
     const ms = t.idx.map((i) => masses[i] as MassRect);
     const b0 = ms[0] as MassRect;
     if (!near(b0.x - 200, b0.y - 600, b0.x + b0.w + 200, b0.y + b0.h + 600)) continue;
-    paintTaper(p, plan, masses, sides, t, seed + b0.x * 3 + b0.y);
+    const y0 = Math.min(...ms.map((m) => m.y));
+    const fam = propFamilies().get(propKey(roomId, t.up, b0.x, y0)) ?? (t.up ? 'stump' : 'talon');
+    paintTaper(p, plan, masses, sides, t, seed + b0.x * 3 + b0.y, fam);
   }
 
-  // 3. Sides: columns of bark (or earth) down every exposed face, lit toward the air.
+  // 3a. A narrow post (a root column) keeps a column of bark down each face: lobes on both faces of a post read as a
+  // string of beads.
   for (const f of faces) {
     const r = masses[f.i] as MassRect;
+    if (r.w >= MASS.lobeMinW) continue;
     const i = f.i;
     const dir = f.dir;
     const x = f.key;
@@ -717,42 +857,17 @@ export function paintMasses(
     }
   }
 
-  // 3b. A long free face (600+ px) gets a root running down across it, inside the collision (review r4 #3: the
-  // silhouette rule for a face she may cling to: its line stays near plumb, so the break is a root, a plate, a split).
+  // 3. Sides (review r5 #4: a column of bark down a face read as a plank on a ruled edge): a chain of lobes down every
+  // free face, each a knob outlined by a seam with a lit crescent on its arc, moss on a face's upper arcs.
+  const et0 = edgeTone();
   for (const f of faces) {
-    const len = f.b - f.a;
     const r = masses[f.i] as MassRect;
-    if (len < 600 || earth(r) || r.w < 220 || !near(f.key - 400, f.a, f.key + 400, f.b)) continue;
-    const rr = rngFor(seed, f.key, f.a, 97);
-    const n = Math.max(1, Math.round(len / 1100));
-    for (let k = 0; k < n; k++) {
-      const y0 = f.a + ((k + range(rr, 0.1, 0.4)) * len) / n;
-      const y1 = Math.min(f.b - 40, y0 + range(rr, 300, 620));
-      const inA = range(rr, 24, 60);
-      const inB = range(rr, 130, Math.min(320, r.w * 0.6));
-      const line = chaikinLine([
-        f.key - f.dir * inA,
-        y0,
-        f.key - f.dir * lerp(inA, inB, 0.35),
-        lerp(y0, y1, 0.4),
-        f.key - f.dir * lerp(inA, inB, 0.8),
-        lerp(y0, y1, 0.75),
-        f.key - f.dir * inB,
-        y1,
-      ]);
-      const w0 = range(rr, 22, 40);
-      paintLimb(
-        p,
-        lineLimb(
-          line,
-          (t) => Math.max(4, w0 * (1 - t * 0.7)),
-          B.walkH - 0.04,
-          seed + k * 7 + f.key,
-          0.2,
-          0.6,
-        ),
-      );
-    }
+    if (r.w < MASS.lobeMinW || !near(f.key - 200, f.a, f.key + 200, f.b)) continue;
+    const et = earth(r)
+      ? { ...et0, body: MASS.soil, deep: T.deep, lift: MASS.soilLit, rim: MASS.soilLit, moss: 0 }
+      : et0;
+    paintFaceLobes(p, em.spec(f, true), em.seedOf(f), f, et, B.walkH, r.w * 0.3, clamp(r.w / 240, 0.5, 1));
+    if (earth(r)) stones(p, f.dir > 0 ? f.key - 60 : f.key, f.a, 60, f.b - f.a, seed + f.i);
   }
 
   // 4. Undersides: a root mat (review r3 #3: a beam with brackets read as a joist): no beam, the body's own lumpy
@@ -777,7 +892,11 @@ export function paintMasses(
       );
       stones(p, x0, y - th, x1 - x0, th, seed + 3 * i);
     }
+    // (Review r5 #4: lobes hanging off the underside, a fringe of moss drips and roots under them.)
+    const et = earth(r) ? { ...et0, body: MASS.soil, lift: MASS.soilLit, rim: MASS.soilLit, moss: 0 } : et0;
+    paintUnderLobes(p, em.spec(u, false), em.seedOf(u), u, et, B.walkH);
     rootMat(p, x0, x1, y, seed + i * 5 + x0, earth(r));
+    paintFringe(p, em.spec(u, false), em.seedOf(u), u, B.walkH, earth(r), T === MASS_TONES.shaft);
     plan?.hangs.push({ x0: x0 + 20, x1: x1 - 20, y: () => y + 4, deep: false, reach: 180 });
   }
 
@@ -817,8 +936,10 @@ export function paintMasses(
     };
     const line: number[] = [];
     const ws: number[] = [];
+    // (Review r5 #4: the great root under a top read as a plank on a ruled line: half as thick now, under the band.)
+    const limbK = earth(r) ? 1 : 0.5;
     for (let x = xa; x <= xb + 0.01; x += 12) {
-      const w = thAt(x);
+      const w = thAt(x) * limbK;
       line.push(x, y + w * 0.5 + dropAt(x));
       ws.push(w);
     }
@@ -853,8 +974,19 @@ export function paintMasses(
           T.crustA,
         );
       fadeInto(p, line, (k) => (ws[Math.min(ws.length - 1, k)] as number) * 1.04, 0, 1, T.body);
-      roots(p, line, 1, th * 0.8, seed + i * 13 + x0, 'down');
     }
+    // (Review r5 #4: a thick lit moss band on every walk, its lower edge draping in lobes.)
+    paintTopBand(
+      p,
+      x0 - (wallW ? 6 : 0),
+      x1 + (wallE ? 6 : 0),
+      y,
+      seed + i * 19 + x0,
+      B.walkH,
+      freeW ? 30 : 0,
+      freeE ? 30 : 0,
+      earth(r) ? { color: MASS.soilLit, k: 0.6 } : T.crustA > 0 ? { color: T.crust, k: 0.35 } : null,
+    );
     mossBlanket(
       p,
       x0 - (wallW ? 6 : 0),
@@ -1123,6 +1255,7 @@ function paintTaper(
   sides: readonly Sides[],
   t: Taper,
   seed: number,
+  family = 'stump',
 ): void {
   const B = BRANCH;
   const r = rngFor(seed, 229);
@@ -1156,7 +1289,11 @@ function paintTaper(
     return pts;
   };
   if (!up) {
-    hangClump(p, plan, masses, sides, t, seed);
+    hangClump(p, plan, masses, sides, t, seed, family);
+    return;
+  }
+  if (family === 'knee' || family === 'fungus' || family === 'fallen') {
+    burlShape(p, plan, masses, sides, t, seed, family);
     return;
   }
   const L = profile(-1);
@@ -1184,7 +1321,8 @@ function paintTaper(
   }
   // The roots up its flanks, at uneven spacing (40-140 px), each its own weight.
   const us: number[] = [];
-  for (let x = range(r, 0, 30); x <= base.w; x += range(r, 40, 140)) us.push(x / base.w);
+  const gapK = family === 'split' ? 1.8 : 1;
+  for (let x = range(r, 0, 30); x <= base.w; x += range(r, 40, 140) * gapK) us.push(x / base.w);
   if (us.length < 3) us.splice(0, us.length, 0.1, 0.5, 0.9);
   const order = us
     .map((u, k) => ({ u, k }))
@@ -1241,9 +1379,68 @@ function paintTaper(
       lineLimb(line, (tt) => Math.max(3, w0 * (1 - tt) ** 0.8), B.walkH + 0.01, seed + 31 * k, 0.2, 0.6),
     );
   }
+  // A split stump: two crowns standing off the tip's ends, leaning apart, the split running down between them.
+  if (family === 'split') {
+    const tx = tip.x + shift(yTip);
+    for (const side of [-1, 1]) {
+      const w = clamp(tip.w * range(r, 0.22, 0.34), 26, 90);
+      const x = side < 0 ? tx - 6 : tx + tip.w - w + 6;
+      const hi = range(r, 50, 110);
+      const lean = side * range(r, 8, 30);
+      const crown = chaikin(
+        [
+          x,
+          yTip + 26,
+          x + lean * 0.3,
+          yTip - hi * 0.6,
+          x + w * 0.3 + lean,
+          yTip - hi,
+          x + w * 0.62 + lean * 0.8,
+          yTip - hi * 0.72,
+          x + w * 0.8 + lean * 0.5,
+          yTip - hi * 0.85,
+          x + w + lean * 0.2,
+          yTip - hi * 0.4,
+          x + w,
+          yTip + 26,
+        ],
+        1,
+      );
+      p.solid(crown, T.body, B.walkH - 0.04, { bark: 0.8 });
+      p.tint(crown, T.lift, 0.4);
+      p.tint(
+        strand([x + w * 0.3 + lean, yTip - hi, x + w * 0.62 + lean * 0.8, yTip - hi * 0.72], 3, 0.2),
+        B.barkLit,
+        0.5,
+      );
+    }
+    const cx = tx + tip.w * range(r, 0.4, 0.6);
+    const vw = tip.w * range(r, 0.12, 0.2);
+    const vy = lerp(yTip, yFar, range(r, 0.35, 0.55));
+    p.solid(
+      chaikin(
+        [
+          cx - vw,
+          yTip - 4,
+          cx - vw * 0.3,
+          lerp(yTip, vy, 0.5),
+          cx + range(r, -8, 8),
+          vy,
+          cx + vw * 0.35,
+          lerp(yTip, vy, 0.45),
+          cx + vw,
+          yTip - 4,
+        ],
+        1,
+      ),
+      T.deep,
+      B.walkH - 0.02,
+      { bark: 0.1 },
+    );
+  }
   // The top: broken off (a few splinters and a torn rim), never a round cap.
   const tx0 = tip.x + shift(yTip);
-  const nSp = 2 + Math.floor(r() * 3);
+  const nSp = family === 'split' ? 0 : 2 + Math.floor(r() * 3);
   for (let k = 0; k < nSp; k++) {
     const w = range(r, 10, 26);
     const x = tx0 + range(r, 0.05, 0.95) * Math.max(10, tip.w - w);
@@ -1292,6 +1489,7 @@ function hangClump(
   sides: readonly Sides[],
   t: Taper,
   seed: number,
+  family = 'talon',
 ): void {
   const B = BRANCH;
   const r = rngFor(seed, 239);
@@ -1315,6 +1513,11 @@ function hangClump(
   }
   core.push(base.x + base.w + 10, yRoof - 20);
   p.solid(chaikin(core, 2), T.body, B.walkH - 0.1, { bark: 0.3 });
+  if (family !== 'talon') {
+    hangFamily(p, ms, yRoof, yEnd, seed, family);
+    hangTops(p, plan, masses, sides, t, seed);
+    return;
+  }
   // 3-7 strands, the widest at most 40% of the clump, twisting across each other, tips at very different heights.
   const n = clamp(Math.round(base.w / 70) + Math.floor(r() * 3), 3, 7);
   const lanes: number[] = [];
@@ -1350,6 +1553,18 @@ function hangClump(
       ),
     );
   }
+  hangTops(p, plan, masses, sides, t, seed);
+}
+
+/** A hanging taper's tops (moss, stretches) and undersides (the growth's beards). */
+function hangTops(
+  p: Paint,
+  plan: BranchPlan | null,
+  masses: readonly MassRect[],
+  sides: readonly Sides[],
+  t: Taper,
+  seed: number,
+): void {
   t.idx.forEach((i) => {
     const m = masses[i] as MassRect;
     const sd = sides[i] as Sides;
@@ -1360,6 +1575,343 @@ function hangClump(
     for (const [x0, x1] of sd.bottom)
       plan?.hangs.push({ x0: x0 + 10, x1: x1 - 10, y: () => m.y + m.h + 4, deep: false, reach: 120 });
   });
+}
+
+/**
+ * The other hanging families (review r5 #6: the same talon in five rooms):
+ * - `beard`: a moss beard, many fine wavy strands, pale at the tips, longest in the middle;
+ * - `curtain`: a root curtain, thin roots of very uneven length with gaps between them;
+ * - `pod`: a short core with a seed pod hanging on a stalk from its tip, ribbed, lit on one side.
+ */
+function hangFamily(
+  p: Paint,
+  ms: readonly MassRect[],
+  yRoof: number,
+  yEnd: number,
+  seed: number,
+  family: string,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 241);
+  const base = ms[0] as MassRect;
+  const tip = ms[ms.length - 1] as MassRect;
+  const span = yEnd - yRoof;
+  if (family === 'beard') {
+    const n = clamp(Math.round(tip.w / 9), 10, 30);
+    for (let k = 0; k < n; k++) {
+      const u = range(r, 0.02, 0.98);
+      const x = lerp(tip.x, tip.x + tip.w, u);
+      const mid = 1 - Math.abs(u - 0.5) * 1.4;
+      const len = (40 + span * 0.5 * mid + range(r, 0, 120)) * range(r, 0.5, 1.2);
+      const y0 = yEnd - range(r, 10, 40);
+      const raw: number[] = [];
+      for (let q = 0; q <= 10; q++) {
+        const v = q / 10;
+        raw.push(x + Math.sin(v * 6 + k) * 6 * v + range(r, -2, 2), y0 + v * len);
+      }
+      const w0 = range(r, 3, 8);
+      p.solid(strand(raw, w0, 0.5), B.mossDark, B.walkH, { moss: 0.7 });
+      p.tint(
+        strand(raw.slice(Math.round(raw.length * 0.55) & ~1), w0 * 0.8, 0.5),
+        B.lichen[k % 3] as number,
+        0.55,
+      );
+    }
+    return;
+  }
+  if (family === 'curtain') {
+    let x = base.x - range(r, 0, 20);
+    while (x < base.x + base.w + 20) {
+      // (Gaps: now and then the curtain parts.)
+      if (r() < 0.18) {
+        x += range(r, 24, 60);
+        continue;
+      }
+      const ms0 = ms.find((m) => x >= m.x && x <= m.x + m.w) ?? tip;
+      const len = ms0.y + ms0.h - yRoof + range(r, 20, 220) * r();
+      const line = chaikinLine([
+        x,
+        yRoof - 30,
+        x + range(r, -10, 10),
+        yRoof + len * 0.5,
+        x + range(r, -18, 18),
+        yRoof + len,
+      ]);
+      const w0 = range(r, 6, 16);
+      paintLimb(
+        p,
+        lineLimb(
+          line,
+          (tt) => Math.max(1.5, w0 * (1 - tt ** 2 * 0.8)),
+          B.walkH + (r() < 0.5 ? 0.02 : -0.02),
+          seed + Math.round(x),
+          0.1,
+          0.5,
+        ),
+      );
+      x += range(r, 8, 22);
+    }
+    return;
+  }
+  // A seed pod on a stalk from the core's tip.
+  const cx = tip.x + tip.w * range(r, 0.35, 0.65);
+  const stalk = range(r, 24, 70);
+  const pw = clamp(tip.w * range(r, 0.5, 0.8), 40, 90);
+  const ph = pw * range(r, 1.4, 1.9);
+  const top = yEnd + stalk;
+  paintLimb(
+    p,
+    lineLimb(
+      [cx, yEnd - 20, cx + range(r, -6, 6), yEnd + stalk * 0.5, cx, top + 8],
+      () => range(r, 7, 11),
+      B.walkH,
+      seed + 3,
+      0.2,
+      0.5,
+    ),
+  );
+  const pod: number[] = [];
+  for (let q = 0; q <= 24; q++) {
+    const a = (q / 24) * Math.PI * 2;
+    const yy = Math.cos(a) * -0.5 + 0.5;
+    const hw = (pw / 2) * Math.sin(Math.PI * yy) ** 0.8 * (1 - 0.25 * yy);
+    pod.push(cx + Math.sin(a) * hw * (Math.sin(a) > 0 ? 1 : 1) * 1, top + yy * ph);
+  }
+  p.solid(chaikin(pod, 1), lerp3(T.body, T.plate, 0.6), B.walkH + 0.02, { bark: 0.6 });
+  // Ribs down it and a lit side.
+  for (let k = -2; k <= 2; k++) {
+    const line: number[] = [];
+    for (let q = 1; q < 10; q++) {
+      const yy = q / 10;
+      const hw = (pw / 2) * Math.sin(Math.PI * yy) ** 0.8 * (1 - 0.25 * yy);
+      line.push(cx + (k / 3) * hw, top + yy * ph);
+    }
+    p.tint(strand(line, 2.5, 0.3), T.deep, 0.6);
+  }
+  const lit: number[] = [];
+  for (let q = 1; q < 9; q++) {
+    const yy = q / 10;
+    const hw = (pw / 2) * Math.sin(Math.PI * yy) ** 0.8 * (1 - 0.25 * yy);
+    lit.push(cx + hw * 0.78, top + yy * ph);
+  }
+  p.tint(strand(lit, 5, 0.4), B.barkLit, 0.5);
+}
+
+/**
+ * The other standing families (review r5 #6: the same leaning stump-cone in seven rooms):
+ * - `knee`: a root arching out of the floor, over the tiers and back into the floor: one thick bow, its bark
+ *   running along it, a shadowed hollow at its foot;
+ * - `fungus`: a rounded knob of old wood crusted with bracket fungi, few roots.
+ * The tip's top stays on the collision (the walk) with its moss.
+ */
+function burlShape(
+  p: Paint,
+  plan: BranchPlan | null,
+  masses: readonly MassRect[],
+  sides: readonly Sides[],
+  t: Taper,
+  seed: number,
+  family: string,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 233);
+  const ms = t.idx.map((i) => masses[i] as MassRect);
+  const base = ms[0] as MassRect;
+  const tip = ms[ms.length - 1] as MassRect;
+  const yFar = base.y + base.h;
+  const yTip = tip.y;
+  const span = yFar - yTip;
+  // The silhouette: the tiers' outer corners pushed out and rounded.
+  const out = family === 'knee' ? range(r, 60, 150) : range(r, 14, 40);
+  const L: number[] = [];
+  const R: number[] = [];
+  ms.forEach((m, k) => {
+    const grow =
+      family === 'knee'
+        ? out * (1 - k / ms.length) ** 1.2
+        : out * (0.6 + 0.4 * Math.sin((k / ms.length) * Math.PI));
+    L.push(m.x - grow, m.y + m.h, m.x - grow * 0.7, m.y + 4);
+    R.push(m.x + m.w + grow, m.y + m.h, m.x + m.w + grow * 0.7, m.y + 4);
+  });
+  const poly: number[] = [base.x - out * 1.2, yFar + 14];
+  for (let k = 0; k < L.length; k += 2) poly.push(L[k] as number, L[k + 1] as number);
+  poly.push(tip.x + 4, yTip - 2, tip.x + tip.w - 4, yTip - 2);
+  for (let k = R.length - 2; k >= 0; k -= 2) poly.push(R[k] as number, R[k + 1] as number);
+  poly.push(base.x + base.w + out * 1.2, yFar + 14);
+  const body = chaikin(poly, 3);
+  p.solid(body, T.body, B.walkH - 0.1, { bark: 0.3 });
+  p.tint(body, T.lift, 0.3);
+  if (family === 'knee') {
+    // The bow: a thick root along the crest from foot to foot, the hollow under it in shadow.
+    const xa = base.x - out * 1.1;
+    const xb = base.x + base.w + out * 1.1;
+    const crest: number[] = [];
+    for (let q = 0; q <= 16; q++) {
+      const v = q / 16;
+      const x = lerp(xa, xb, v);
+      const lift = Math.sin(v * Math.PI) ** 0.6;
+      crest.push(x, lerp(yFar + 6, yTip + 34, lift));
+    }
+    const th = clamp(span * 0.42, 50, 120);
+    paintLimb(
+      p,
+      lineLimb(crest, (tt) => th * (0.8 + 0.35 * Math.abs(tt - 0.5) * 2), B.walkH - 0.02, seed + 5, 0.4, 0.9),
+    );
+    const hx = (xa + xb) / 2 + range(r, -0.1, 0.1) * (xb - xa);
+    const hw = (xb - xa) * range(r, 0.16, 0.24);
+    const hh = Math.min(span * 0.32, 90);
+    const hollow: number[] = [];
+    for (let q = 0; q <= 12; q++) {
+      const a = (q / 12) * Math.PI;
+      hollow.push(hx - Math.cos(a) * hw, yFar + 4 - Math.sin(a) * hh);
+    }
+    p.solid(chaikin(hollow, 1), T.deep, B.walkH - 0.12, { bark: 0 });
+    // A second, thinner root crossing the bow.
+    const line2 = chaikinLine([
+      xa + (xb - xa) * 0.25,
+      yFar + 4,
+      hx,
+      yTip + span * 0.45,
+      xb - (xb - xa) * 0.1,
+      yFar + 6,
+    ]);
+    paintLimb(
+      p,
+      lineLimb(line2, (tt) => Math.max(5, 26 * (1 - Math.abs(tt - 0.5))), B.walkH, seed + 9, 0.3, 0.7),
+    );
+  } else if (family === 'fallen') {
+    // A fallen section lying on the mound: its top is the walk, a sawn-looking cut end with rings on one side (the
+    // only rings in the wood: a cut end shows them), a torn end on the other.
+    const th = clamp(span * 0.55, 56, 120);
+    const ext = range(r, 10, 34);
+    const xa = tip.x - ext;
+    const xb = tip.x + tip.w + ext * range(r, 0.6, 1.4);
+    const cy = yTip + th / 2;
+    const log: number[] = [];
+    for (let x = xa; x <= xb + 0.01; x += 12) log.push(x, cy + 3 * wobble(x, seed + 1, 120));
+    paintLimb(
+      p,
+      lineLimb(log, () => th, B.walkH + 0.01, seed + 11, 0.6, 1),
+    );
+    const cut = r() < 0.5 ? xa : xb;
+    const dir = cut === xa ? -1 : 1;
+    const ell = (k: number) => {
+      const pts: number[] = [];
+      for (let q = 0; q <= 18; q++) {
+        const a = (q / 18) * Math.PI * 2;
+        pts.push(cut + dir * 4 + Math.cos(a) * th * 0.2 * k, cy + Math.sin(a) * (th / 2) * k);
+      }
+      return pts;
+    };
+    p.solid(ell(1), 0x3a3428, B.walkH + 0.03, { bark: 0.1 });
+    for (const k of [0.75, 0.5, 0.28])
+      p.tint(strand([...ell(k), ...ell(k).slice(0, 2)], 2, 0), 0x1e1a14, 0.7);
+    const torn = cut === xa ? xb : xa;
+    for (let k = 0; k < 3; k++) {
+      const yy = cy + range(r, -0.35, 0.35) * th;
+      const len = range(r, 20, 60);
+      p.solid(
+        strand(
+          [torn, yy, torn - dir * len * 0.5, yy + range(r, -6, 6), torn - dir * len, yy + range(r, -10, 10)],
+          range(r, 10, 22),
+          0.6,
+        ),
+        B.bark,
+        B.walkH + 0.02,
+        { bark: 1 },
+      );
+    }
+  } else {
+    // Bracket fungi in two or three clusters on the flanks: pale lit caps, dark undersides.
+    const nCl = 2 + Math.floor(r() * 2);
+    for (let c = 0; c < nCl; c++) {
+      const side = c % 2 ? 1 : -1;
+      const y0 = lerp(yTip + 30, yFar - 30, range(r, 0.15, 0.85));
+      const m = ms.find((mm) => y0 >= mm.y && y0 <= mm.y + mm.h) ?? base;
+      const x0 = side < 0 ? m.x - out * 0.6 : m.x + m.w + out * 0.6;
+      const nCap = 3 + Math.floor(r() * 4);
+      for (let k = 0; k < nCap; k++) {
+        const w = range(r, 22, 56) * (1 - k * 0.08);
+        const y = y0 + k * range(r, 10, 22) - nCap * 8;
+        const x = x0 + side * range(r, -8, 6) + range(r, -10, 10);
+        const cap: number[] = [];
+        for (let q = 0; q <= 10; q++) {
+          const a = (q / 10) * Math.PI;
+          cap.push(x + side * Math.sin(a) * w, y - Math.cos(a) * w * 0.28 + (a > Math.PI / 2 ? w * 0.1 : 0));
+        }
+        p.solid(cap, 0x2a2a24, B.walkH + 0.05, { bark: 0.2 });
+        p.tint(strand(cap.slice(0, 12), 4, 0.3), 0x8a8068, 0.75);
+        p.tint(strand(cap.slice(10), 3, 0.3), T.deep, 0.7);
+      }
+    }
+    // Moss in patches down the knob, a knot or two.
+    for (let k = 0; k < 2 + Math.floor(r() * 2); k++) {
+      const y = lerp(yTip + 20, yFar - 20, r());
+      const m = ms.find((mm) => y >= mm.y && y <= mm.y + mm.h) ?? base;
+      knot(
+        p,
+        lerp(m.x + 20, m.x + m.w - 20, r()),
+        y,
+        range(r, 8, 16),
+        range(r, -0.6, 0.6),
+        B.walkH,
+        seed + k,
+      );
+    }
+  }
+  t.idx.forEach((i) => {
+    const m = masses[i] as MassRect;
+    const sd = sides[i] as Sides;
+    for (const [x0, x1] of sd.top) {
+      const full = m === tip;
+      if (full) paintTopBand(p, x0, x1, m.y, seed + x0, B.walkH, 18, 18);
+      mossBlanket(p, x0, x1, () => m.y, seed + x0, full ? 22 : 10, full ? 22 : 10);
+      plan?.stretches.push(topStretch(`taper-${i}-${x0}`, x0, x1, m.y, 60, false, false));
+    }
+  });
+}
+
+/** Burl and hang families (review r5 #6): no family twice in a room, spread evenly over the world's rooms. */
+export const BURL_FAMILIES = ['stump', 'split', 'knee', 'fungus', 'fallen'] as const;
+export const HANG_FAMILIES = ['talon', 'beard', 'curtain', 'pod'] as const;
+
+export const propKey = (roomId: string, up: boolean, x: number, y: number) =>
+  `${roomId}|${up ? 'b' : 'h'}|${x}|${y}`;
+
+let FAMILIES: Map<string, string> | null = null;
+
+/**
+ * Which family each taper in the wood's rooms is drawn as: rooms in id order, each taper given the family used in the
+ * fewest rooms so far among those not yet in its room (so at most ceil(rooms / 4) rooms share one).
+ */
+export function propFamilies(): Map<string, string> {
+  if (FAMILIES) return FAMILIES;
+  const out = new Map<string, string>();
+  const rooms = Object.values(ROOMS)
+    .filter((q) => q.art?.kit === 'wood')
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const count = new Map<string, number>();
+  for (const room of rooms) {
+    const used = new Set<string>();
+    for (const tp of roomTapers(room)) {
+      const list: readonly string[] = tp.up ? BURL_FAMILIES : HANG_FAMILIES;
+      let best = list[0] as string;
+      let bestN = Number.POSITIVE_INFINITY;
+      for (const f of list) {
+        if (used.has(f)) continue;
+        const n = count.get(f) ?? 0;
+        if (n < bestN) {
+          best = f;
+          bestN = n;
+        }
+      }
+      used.add(best);
+      count.set(best, (count.get(best) ?? 0) + 1);
+      out.set(propKey(room.id, tp.up, tp.x, tp.y), best);
+    }
+  }
+  FAMILIES = out;
+  return out;
 }
 
 /**
@@ -1542,8 +2094,84 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
     const n = L.pts.length / 2;
     for (let k = 0; k < n; k++)
       L.w[k] = ws[Math.min(ws.length - 1, Math.round((k / Math.max(1, n - 1)) * (ws.length - 1)))] as number;
-    // Hung from the ceiling: twisting strands from the roof down into both ends and the middle (drawn first, behind).
-    if (!sh.wall) {
+    // (Review r5 #6: a ledge out in the open hung on four strands read as a planter on ropes.) Carried by a root from
+    // a wall within 256 px, rising under it below the walk (so the walk visibly ends at the ledge's end), or by a
+    // knuckle of roots rising from the floor under it; hung only when nothing is near.
+    if (!sh.wall && sh.near) {
+      const wx = sh.near.x;
+      const side = sh.near.side === 'w' ? -1 : 1;
+      const ex = side < 0 ? sh.x0 + range(rr, 10, 40) : sh.x1 - range(rr, 10, 40);
+      const yw = y + th + range(rr, 70, 180);
+      for (let k = 0; k < 2; k++) {
+        const line = chaikinLine([
+          wx - side * 30,
+          yw + k * range(rr, 20, 50),
+          lerp(wx, ex, 0.45),
+          lerp(yw, y + th, 0.6) + range(rr, 0, 30),
+          ex,
+          y + th * 0.6,
+          ex - side * range(rr, 20, 60),
+          y + th * 0.4,
+        ]);
+        const w0 = k ? range(rr, 14, 22) : range(rr, 30, 46);
+        paintLimb(
+          p,
+          lineLimb(line, (t) => Math.max(6, w0 * (1 - t * 0.5)), B.walkH - 0.04, seed + i * 41 + k, 0.2, 0.7),
+        );
+      }
+    } else if (!sh.wall && sh.floor !== null) {
+      const fy = sh.floor;
+      const mid = lerp(sh.x0, sh.x1, range(rr, 0.35, 0.65));
+      const hgt = fy - (y + th * 0.5);
+      // Two or three roots braided up from a flared foot into the ledge's underside, splaying under it.
+      // (A root rising straight under the middle read as a table on a stem: it comes up from one side, leaning.)
+      const n = 2 + (rr() < 0.5 ? 1 : 0);
+      const side = rr() < 0.5 ? -1 : 1;
+      const lean = side * range(rr, 0.45, 0.9) * Math.min(hgt, 320);
+      for (let k = 0; k < n; k++) {
+        const fx = mid + lean + (k - 1) * range(rr, 20, 50);
+        const tx = lerp(sh.x0 + 20, sh.x1 - 20, (k + 0.5) / n);
+        const tw = range(rr, -0.3, 0.3) * 40;
+        const line = chaikinLine([
+          fx,
+          fy + 10,
+          fx - lean * 0.15 + tw,
+          fy - hgt * 0.4,
+          mid + lean * 0.35 + tw * 0.5,
+          fy - hgt * 0.8,
+          tx,
+          y + th * 0.6,
+        ]);
+        const w0 = range(rr, 26, 44) * (k === 0 ? 1.2 : 0.85);
+        paintLimb(
+          p,
+          lineLimb(
+            line,
+            (t) => Math.max(8, w0 * (1.25 - t * 0.6)),
+            B.walkH - 0.03 + k * 0.01,
+            seed + i * 43 + k,
+            0.25,
+            0.8,
+          ),
+        );
+      }
+      // Its foot: roots splaying onto the floor.
+      for (const sd of [-1, 1]) {
+        const fm = mid + lean;
+        const line = chaikinLine([
+          fm,
+          fy - 30,
+          fm + sd * range(rr, 30, 60),
+          fy - 8,
+          fm + sd * range(rr, 80, 150),
+          fy + 4,
+        ]);
+        paintLimb(
+          p,
+          lineLimb(line, (t) => Math.max(4, 22 * (1 - t)), B.walkH - 0.02, seed + i * 47 + sd, 0.3, 0.6),
+        );
+      }
+    } else if (!sh.wall) {
       const top = sh.ceil ?? y - 900;
       // A knot of roots, not a swing: strands of uneven weight that twist round each other, splay out over the
       // roof and wrap the shelf's ends, darkening up into the roof.
@@ -1694,4 +2322,130 @@ export function paintRoost(
       k % 5 ? 0.9 : 0.22,
     );
   }
+}
+
+/**
+ * The painted free edges of a room's masses as polylines (review r5 #4's check: no straight run over 300 px along a
+ * mass outline): every face and underside the edge painter draws, sampled every `step` px. Tapers (burls, clumps) are
+ * their own silhouettes and not included; tops are the walk (flat by design, broken by the moss band and the growth).
+ */
+export function massEdgeLines(
+  room: Room,
+  seed = 0,
+  step = 8,
+): Array<{ kind: 'face' | 'under'; key: number; a: number; b: number; pts: number[] }> {
+  const masses: MassRect[] = room.solids.filter((s) => s.tag === 'root' || s.tag === 'ground');
+  const sides = masses.map((r) => exposedSides(r, masses, room.width, room.height));
+  const tapers = new Set(findTapers(masses, sides).flatMap((t) => t.idx));
+  const em = edgeModel(masses, sides, seed, tapers);
+  const out: Array<{ kind: 'face' | 'under'; key: number; a: number; b: number; pts: number[] }> = [];
+  for (const f of em.faces) {
+    const pts: number[] = [];
+    for (let u = f.a; u <= f.b; u += step) pts.push(f.key + f.dir * em.faceAt(f.dir, f.key, u), u);
+    out.push({ kind: 'face', key: f.key, a: f.a, b: f.b, pts });
+  }
+  for (const f of em.unders) {
+    const pts: number[] = [];
+    for (let u = f.a; u <= f.b; u += step) pts.push(u, f.key + em.underAt(u, f.key));
+    out.push({ kind: 'under', key: f.key, a: f.a, b: f.b, pts });
+  }
+  return out;
+}
+
+/** The tapers of a room (burls standing up, clumps hanging), for the prop families (`propFamilies`) and tests. */
+export function roomTapers(room: Room): Array<{ up: boolean; x: number; y: number; w: number; h: number }> {
+  const masses: MassRect[] = room.solids.filter((s) => s.tag === 'root' || s.tag === 'ground');
+  const sides = masses.map((r) => exposedSides(r, masses, room.width, room.height));
+  return findTapers(masses, sides).map((t) => {
+    const ms = t.idx.map((i) => masses[i] as MassRect);
+    const y0 = Math.min(...ms.map((m) => m.y));
+    const y1 = Math.max(...ms.map((m) => m.y + m.h));
+    const b = ms[0] as MassRect;
+    return { up: t.up, x: b.x, y: y0, w: b.w, h: y1 - y0 };
+  });
+}
+
+/**
+ * The den's taproot (review r5 #6: a 96 px post with rings): 160-220 px thick, plunging from the roof with a twist,
+ * splitting into 3-4 roots where it plants, and a glowing scar on its face where the wick sits. Painted over the
+ * column's own mass (the collision stays the column's).
+ */
+export function paintTaproot(p: Paint, room: Room, seed: number): void {
+  const boss = (room.enemies ?? []).find((e) => (e as { taproot?: [number, number] }).taproot);
+  const span = (boss as { taproot?: [number, number] } | undefined)?.taproot;
+  if (!span) return;
+  const [x0, x1] = span;
+  const col = room.solids.find((s) => s.x <= x0 + 1 && s.x + s.w >= x1 - 1 && s.h > s.w);
+  if (!col) return;
+  T = massTone(room);
+  const B = BRANCH;
+  const r = rngFor(seed, x0, 503);
+  const cx = (x0 + x1) / 2;
+  const top = col.y - 60;
+  const foot = col.y + col.h;
+  const len = foot - top;
+  const th = clamp(range(r, 160, 220), col.w + 40, 240);
+  // The trunk: a twisting line, two strands wound round each other over a dark core.
+  const line: number[] = [];
+  for (let q = 0; q <= 24; q++) {
+    const v = q / 24;
+    line.push(cx + 14 * Math.sin(v * 5.2 + 1) + 10 * wobble(v * len, seed + 3, 300), lerp(top, foot - 60, v));
+  }
+  paintLimb(
+    p,
+    lineLimb(line, (t) => th * (1 + 0.15 * t), B.walkH - 0.01, seed + 7, 0.2, 1),
+  );
+  for (let k = 0; k < 3; k++) {
+    const ph = k * 2.1 + range(r, 0, 1);
+    const w = line.map((v, j) => (j % 2 ? v : v + Math.sin((j / line.length) * 9 + ph) * th * 0.32));
+    paintLimb(
+      p,
+      lineLimb(w, () => th * range(r, 0.22, 0.34), B.walkH + 0.01 + k * 0.01, seed + 11 + k, 0.15, 0.8),
+    );
+  }
+  // The foot: 3-4 roots splitting off and splaying onto the floor.
+  const n = 3 + (r() < 0.5 ? 1 : 0);
+  for (let k = 0; k < n; k++) {
+    const u = (k + 0.5) / n - 0.5;
+    const out = u * range(r, 260, 420);
+    const rl = chaikinLine([
+      cx + u * th * 0.6,
+      foot - 220,
+      cx + u * th * 0.8 + out * 0.3,
+      foot - 90,
+      cx + out * 0.8,
+      foot - 10,
+      cx + out,
+      foot + 8,
+    ]);
+    paintLimb(
+      p,
+      lineLimb(rl, (t) => Math.max(8, th * 0.36 * (1 - t * 0.75)), B.walkH + 0.02, seed + 31 + k, 0.3, 0.8),
+    );
+  }
+  // The scar where the wick sits: a long gash in the bark, pale sap-lit wood inside a dark lip.
+  const wick = (room.lamps ?? []).find((l) => l.x >= x0 - 140 && l.x <= x1 + 140);
+  const sy = wick ? wick.y : lerp(top, foot, 0.45);
+  const gash: number[] = [];
+  for (let q = 0; q <= 16; q++) {
+    const a = (q / 16) * Math.PI * 2;
+    gash.push(cx + Math.sin(a) * th * 0.16 * (1 + 0.3 * Math.sin(a * 3)), sy + Math.cos(a) * 70);
+  }
+  p.solid(chaikin(gash, 1), 0x0a0605, B.walkH + 0.04, { bark: 0.2 });
+  p.tint(
+    chaikin(
+      gash.map((v, j) => (j % 2 ? sy + (v - sy) * 0.72 : cx + (v - cx) * 0.55)),
+      1,
+    ),
+    0x8a5a30,
+    0.85,
+  );
+  p.tint(
+    chaikin(
+      gash.map((v, j) => (j % 2 ? sy + (v - sy) * 0.4 : cx + (v - cx) * 0.25)),
+      1,
+    ),
+    0xd8a060,
+    0.7,
+  );
 }

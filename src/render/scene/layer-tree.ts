@@ -41,6 +41,8 @@ export const LAYERS = [
   { name: 'mid', parallax: 0.68, screen: false },
   // The deep back of an enclosed wood room (layers/interior.ts), masked to its backs.
   { name: 'interiorDeep', parallax: 0.86, screen: false },
+  // Its mid plane (review r5 #7), between the deep back and the playfield, masked the same.
+  { name: 'interiorMid', parallax: 0.93, screen: false },
   // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).
   { name: 'airBack', parallax: 1, screen: false },
   // Warm light that passes behind the terrain: the heart waking, the ending (src/render/goal).

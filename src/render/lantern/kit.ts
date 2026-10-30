@@ -1049,33 +1049,59 @@ export class Kit {
   ): void {
     const a = 1 - fall;
     if (LOOK.kit === 'wood') {
-      // The wood's seal: a lid of roots woven over the hole, the moon on their upper edges; it sinks as it opens.
+      // The wood's seal (review r5 #6: crossed diagonal strands read as a timber truss): a mat of roots grown across
+      // the hole, each running on into the wood at both sides, wavy, over and under each other, of uneven weight,
+      // the moon on their upper edges, rootlets hanging under; it sinks as it opens.
       const dy = fall * fall * 140;
-      g.roundRect(x - 6, y + dy, w + 12, h, 14).fill({ color: 0x050a10, alpha: a });
-      const n = Math.max(4, Math.round(w / 34));
-      for (const dir of [1, -1]) {
-        for (let k = -1; k <= n; k++) {
-          const r = hash01(id, k * 3 + (dir > 0 ? 1 : 2));
-          const x0 = x + (k / n) * w;
-          const x1 = x0 + dir * h * 1.6;
-          const mid = (x0 + x1) / 2 + (r - 0.5) * 10;
-          const strand = (dx: number, off: number) =>
-            g
-              .moveTo(Math.min(x + w, Math.max(x, x0 + dx)), y + dy + off)
-              .quadraticCurveTo(
-                Math.min(x + w, Math.max(x, mid + dx)),
-                y + dy + h * 0.5 + off,
-                Math.min(x + w, Math.max(x, x1 + dx)),
-                y + dy + h - 2 + off,
-              );
-          strand(0, 0);
-          g.stroke({ color: 0x16222e, width: 8 + r * 5, alpha: a, cap: 'round' });
-          strand(0, -3);
-          g.stroke({ color: 0x4a6274, width: 1.4, alpha: 0.55 * a, cap: 'round' });
-        }
+      const yy = y + dy;
+      g.ellipse(x + w / 2, yy + h * 0.55, w / 2 + 10, h * 0.62).fill({ color: 0x050a10, alpha: a });
+      const n = 4 + Math.round(w / 90);
+      for (let k = 0; k < n; k++) {
+        const r = hash01(id, k * 7 + 1);
+        const r2 = hash01(id, k * 7 + 2);
+        const y0 = yy + h * (0.12 + 0.76 * hash01(id, k * 7 + 3));
+        const y1 = yy + h * (0.12 + 0.76 * hash01(id, k * 7 + 4));
+        const xa = x - 24 - r * 30;
+        const xb = x + w + 24 + r2 * 30;
+        const sag = (hash01(id, k * 7 + 5) - 0.3) * h * 0.5;
+        const th = 9 + 14 * hash01(id, k * 7 + 6);
+        const path = () =>
+          g
+            .moveTo(xa, y0)
+            .bezierCurveTo(
+              x + w * (0.2 + 0.2 * r),
+              y0 + sag,
+              x + w * (0.6 + 0.2 * r2),
+              y1 - sag * 0.6,
+              xb,
+              y1,
+            );
+        path();
+        g.stroke({ color: 0x0e1820, width: th + 4, alpha: a, cap: 'round' });
+        path();
+        g.stroke({ color: 0x1c2a36, width: th, alpha: a, cap: 'round' });
+        g.moveTo(xa, y0 - th * 0.3).bezierCurveTo(
+          x + w * (0.2 + 0.2 * r),
+          y0 + sag - th * 0.3,
+          x + w * (0.6 + 0.2 * r2),
+          y1 - sag * 0.6 - th * 0.3,
+          xb,
+          y1 - th * 0.3,
+        );
+        g.stroke({ color: 0x4a6274, width: 1.6, alpha: 0.5 * a, cap: 'round' });
       }
-      g.moveTo(x - 4, y + dy + 2).lineTo(x + w + 4, y + dy + 2);
-      g.stroke({ color: 0x5a7486, width: 2, alpha: 0.5 * a });
+      // Rootlets under the mat.
+      for (let k = 0; k < Math.round(w / 22); k++) {
+        const xx = x + (k + hash01(id, 90 + k)) * (w / Math.round(w / 22));
+        const l = 10 + 46 * hash01(id, 120 + k) ** 2;
+        g.moveTo(xx, yy + h * 0.85).quadraticCurveTo(
+          xx + 4,
+          yy + h + l * 0.5,
+          xx + (hash01(id, 150 + k) - 0.5) * 14,
+          yy + h + l,
+        );
+      }
+      g.stroke({ color: 0x0e1820, width: 2.4, alpha: 0.8 * a, cap: 'round' });
       return;
     }
     // Roots woven across, silk binding them.
