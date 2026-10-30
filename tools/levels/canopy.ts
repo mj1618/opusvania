@@ -1046,9 +1046,9 @@ function trunk(): Json {
   r.thornsUnder('thorn-roof', 960, 768, 128);
   r.thorns('thorn-t3', 256, 1664, 192);
   r.juvenile('juv-t1', 2480, 704, -1, 140);
-  // A dangler pair under the low roof (review r3 #7: a new kind on the path, where the lampwing was).
-  r.dangler('dang-t2a', 600, 768, 1);
-  r.dangler('dang-t2b', 880, 768, -1);
+  // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
+  // (r4 bots: a pair over the thorns faded the casual one 29 times).
+  r.dangler('dang-t2', 700, 768, 1);
   r.cover('rot-shaft', 1024, 1088, 320, 832, 'rot-panel');
   r.landmark('giant-wall', 'teach', 1504, 704);
   r.place('top', 2900, 384);
@@ -1118,13 +1118,18 @@ function well(): Json {
   r.fill();
   r.mass(2048, 960, 256, 192);
   r.mass(1792, 704, 384, 48);
+  // Leg 1 is the east face (onto the mouth's floor): the west face ends under the mouth's roof, so it refuses the
+  // claws (r4 bots: the skilled one kicked under that roof for 90 s).
+  r.noClaws(1024, 2944, 4672);
+  // A root curtain at the bottom cave's mouth carries the east face down to 128 over the floor (a jump reaches it).
+  r.mass(1536, 4608, 64, 192);
   // A root across the chimney's mouth: she climbs through it from below, and the hollow's floor is whole.
   r.oneWay(CH0, 1152, 384, 'branch');
   r.add('glades', { id: 'glade-claws', x: 1360, y: 4704, w: 216, h: 224, ability: C });
   r.patch('p-well', 1900, 4928);
   // The west moth-stone beside the claws (review r3 #8: the rot branch is on the map the moment it matters).
   r.stone('stone-west', 2250, 4928, 'cn-west');
-  r.great('claw-prize', 1090, 3900);
+  r.great('claw-prize', 1440, 3900);
   for (const [id, f, y0, y1] of WELL_THORNS) r.thornsUp(id, f === 'w' ? CH0 : CH0 + 384 - 28, y0, y1 - y0);
   r.hollow('shard-well', CH0 - 560, 2240, 'moonShard');
   r.hoard('niche-w-', CH0 - 440, 2160, 80, 40, 2);
@@ -1233,6 +1238,10 @@ function rot(): Json {
   r.cave(2368, 1088, 3008, 1472, { ceil: 64, w: 0, e: 64, corner: 64 });
   r.bark('crawl-panel', 896, 1472, 192, 64, true);
   r.fill();
+  // (The shaft down from the giant is a one-way drop: its faces refuse the claws, so it never reads as a way up to a
+  // panel she cannot open from below; r4 bots kicked up it for minutes.)
+  r.noClaws(1088, 0, 1088);
+  r.noClaws(1280, 0, 1088);
   r.burrback('burr-rot', 1900, 1472, -1, 260, { fenced: true });
   r.thorns('thorn-r1', 2000, 1472, 128);
   r.thornsUnder('thorn-r2', 1440, 1088, 320);
