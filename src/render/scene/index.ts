@@ -43,6 +43,7 @@ import { PlayfieldLayer } from './layers/playfield';
 import { SkyLayer } from './layers/sky';
 import { VeilLayer } from './layers/veil';
 import { isInterior, isLantern } from './lib/room-look';
+import { withSealedMass } from './lib/sealed';
 
 /** What a module gets once, at init. */
 export interface SceneContext extends RenderContext {
@@ -106,7 +107,10 @@ export class SceneRenderer {
 
   /** Builds every layer for the scene. Call once. */
   init(_scene: Scene = this.ctx.scene): void {
-    const ctx: SceneContext = { ...this.ctx, viewScale: this.ctx.viewScale, layers: this.layers };
+    // (Sealed air is mass to the environment's painters: lib/sealed.ts. The other renderers keep the sim's scene.)
+    const scene =
+      (this.ctx.scene as Room).art?.kit === 'wood' ? withSealedMass(this.ctx.scene) : this.ctx.scene;
+    const ctx: SceneContext = { ...this.ctx, scene, viewScale: this.ctx.viewScale, layers: this.layers };
     // A greybox room (memory/greybox.md) builds none of the painted layers: one flat module instead.
     for (const M of modulesFor(this.ctx.scene)) {
       const m = new M();

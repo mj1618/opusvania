@@ -49,8 +49,8 @@ const frameOf = (e: SimEvent) => (e as unknown as { frame: number }).frame;
 
 /** [room, trigger flag, where she comes in (feet), the input she comes in with]. */
 const ENTRIES: Array<[string, string, number, number, number]> = [
-  // The well's hollow: off the block (east), from the hollow's west, and landing in its middle.
-  ['cn-well', 'cn-well-ambush', 1500, 960, ActionBit.left],
+  // The well's hollow: up the stair and west (r9: the block is gone), from the hollow's west, and landing in its middle.
+  ['cn-well', 'cn-well-ambush', 1800, 1152, ActionBit.left],
   ['cn-well', 'cn-well-ambush', 940, 1152, ActionBit.right],
   ['cn-well', 'cn-well-ambush', 1290, 1100, 0],
   // The Grove: the drop west of the Grovemother, at both sides of it and onto the root step.
@@ -104,9 +104,9 @@ describe('a patch she runs through is her re-form point (review r7 #4)', () => {
     // She rested at the landing's save, two legs down.
     s.save.patch = { room: 'cn-well', id: 'p-landing' };
     const ev: SimEvent[] = [];
-    // Run west over p-hollow (1,856), over the block and into the ambush, never stopping.
+    // Run west over the stair's root and p-hollow (r9: 1,472), into the ambush, never stopping.
     let k = 0;
-    while (s.player.x + s.player.w / 2 > 1700 && k++ < 200) run(s, scene, ActionBit.left, 1, ev);
+    while (s.player.x + s.player.w / 2 > 1390 && k++ < 200) run(s, scene, ActionBit.left, 1, ev);
     expect(ev.some((e) => e.type === 'patchMark' && e.id === 'p-hollow')).toBe(true);
     expect(ev.some((e) => e.type === 'patchRest')).toBe(false);
     expect(s.save.patch).toEqual({ room: 'cn-well', id: 'p-hollow' });
@@ -127,7 +127,7 @@ describe('a patch she runs through is her re-form point (review r7 #4)', () => {
     while (s.player.faded > 0 && k++ < 600) run(s, scene, 0, 1, fade);
     const fx = s.player.x + s.player.w / 2;
     expect(s.room).toBe('cn-well');
-    expect(Math.abs(fx - 1856)).toBeLessThan(100);
+    expect(Math.abs(fx - 1472)).toBeLessThan(100);
     expect(Math.abs(s.player.y + s.player.h - 1152)).toBeLessThan(8);
     // The ambush plays again: its flag was taken back.
     expect(s.save.flags).not.toContain('cn-well-ambush');

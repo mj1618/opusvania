@@ -106,6 +106,8 @@ export const KIT = {
    *  r7 #8: about 40 frames; it popped). */
   gateGrow: 40 / 60,
   gateWithdraw: 40 / 60,
+  /** Seconds a standing lid trembles and knits tighter when its room's ambush is set off. */
+  knit: 1.1,
   coverEase: 3,
   shake: 0.25,
 } as const;
@@ -124,6 +126,11 @@ export class Kit {
   private readonly opening = new Map<number, number>();
   /** Gates growing shut: seconds since their `gateShut`. */
   private readonly closing = new Map<number, number>();
+  /**
+   * A lid that stands from the start (no `shut`: the tunnel's `den-lid`) knits tighter when its room's ambush is set
+   * off (a trigger's `flagSet`): seconds since. It trembles and dust shakes out of it.
+   */
+  private readonly knit = new Map<number, number>();
   /** Covers: how visible each is now (eased). */
   private readonly coverK: number[] = [];
   /** Moonmoss: how lit each piece is now (eased). */
@@ -167,6 +174,14 @@ export class Kit {
             this.opening.set(i, (1 - done) * KIT.gateWithdraw);
             this.closing.delete(i);
           }
+          break;
+        }
+        case 'flagSet': {
+          const fl = (e as { flag?: string }).flag;
+          if (fl && (S.triggers ?? []).some((t) => t.sets === fl))
+            (S.gates ?? []).forEach((g, i) => {
+              if (g.shut === undefined && g.w > g.h && !(sim.kit.gates[i] ?? 0)) this.knit.set(i, 0);
+            });
           break;
         }
         case 'gateShut': {
@@ -226,6 +241,10 @@ export class Kit {
     }
     for (const [k, t] of this.opening) this.opening.set(k, t + dt);
     for (const [k, t] of this.closing) this.closing.set(k, t + dt);
+    for (const [k, t] of this.knit) {
+      if (t > KIT.knit) this.knit.delete(k);
+      else this.knit.set(k, t + dt);
+    }
     for (const [k, b] of this.bellT) {
       b.t += dt;
       if (b.t > 3) this.bellT.delete(k);
@@ -405,11 +424,17 @@ export class Kit {
           ? 1 - Math.min(1, c / KIT.gateGrow)
           : 0;
       if (fall >= 1) return;
+      // (A lid knitting tighter as the ambush comes: a tremble that dies away and dust shaken out of it.)
+      const kt = this.knit.get(i);
+      const kk = kt === undefined ? 0 : 1 - kt / KIT.knit;
+      const kx = kk * kk * 3 * Math.sin((kt ?? 0) * 70);
       if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
-      else if (wood) this.rootMat(back, glow, g.x, g.y, g.w, g.h, clock, 1 - fall, g.id);
+      else if (wood) this.rootMat(back, glow, g.x + kx, g.y, g.w, g.h, clock, 1 - fall, g.id);
       else this.seal(back, g.x, g.y, g.w, g.h, clock, fall, g.id);
       // Dust shaken out of the wood while it moves.
+      if (wood && kk > 0)
+        motes(back, g.x + g.w / 2, g.y + g.h + 90, g.w / 2, 140, clock, 16, KIT.rot.dust, 0.8 * kk);
       if (wood && fall > 0)
         motes(
           back,

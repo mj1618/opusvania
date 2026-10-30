@@ -18,6 +18,7 @@ import { BRANCH, strand } from './pf-branch';
 import { exposedSides, type MassRect } from './pf-mass';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
+import { sealedOf } from './sealed';
 
 export const INTERIOR = {
   /** The deep back's parallax (between the mid layer's 0.68 and the playfield). */
@@ -87,7 +88,7 @@ const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
   heartwood: {
     deep: 0x3a2a1e,
     deepLit: 0x6c4c32,
-    fog: 0x584a3e,
+    fog: 0x4c4034,
     near: 0x3a2a1e,
     nearLit: 0xbc8c5c,
     grain: 0x1e140d,
@@ -97,27 +98,29 @@ const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
   heartwoodWarm: {
     deep: 0x36281c,
     deepLit: 0x664a30,
-    fog: 0x56483a,
+    fog: 0x4a3e32,
     near: 0x382a1e,
     nearLit: 0xb08a60,
     grain: 0x1a120c,
     root: 0x443224,
     rootLit: 0xb49470,
   },
+  // (Review r8 #6: the shaft's air was paper, mean 91-113, black slabs on a lightbox. A cold teal-blue fog now,
+  // #0b2a33 -> #4a6f7a, the frost-lit ribs the brightest shapes in the back.)
   shaft: {
-    deep: 0x3a5674,
-    deepLit: 0x8eaccc,
-    fog: 0xb4cce4,
-    near: 0x25394f,
-    nearLit: 0xc8def4,
-    grain: 0x15243a,
-    root: 0x203248,
-    rootLit: 0xb0c8e4,
+    deep: 0x14343e,
+    deepLit: 0x4e7a86,
+    fog: 0x4a6f7a,
+    near: 0x0e2830,
+    nearLit: 0x86b4c0,
+    grain: 0x081a20,
+    root: 0x0e2a32,
+    rootLit: 0x7aa8b4,
   },
   nest: {
-    deep: 0x38362c,
-    deepLit: 0x66604a,
-    fog: 0x5a5c50,
+    deep: 0x3a3222,
+    deepLit: 0x685a3c,
+    fog: 0x5e5236,
     near: 0x403a2e,
     nearLit: 0xaaa07a,
     grain: 0x1a1810,
@@ -127,7 +130,7 @@ const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
   canopy: {
     deep: 0x1a3638,
     deepLit: 0x325c58,
-    fog: 0x426c6c,
+    fog: 0x385c5c,
     near: 0x132c2c,
     nearLit: 0x5c9488,
     grain: 0x0a1a1a,
@@ -137,7 +140,7 @@ const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
   canopyWarm: {
     deep: 0x18302c,
     deepLit: 0x30544a,
-    fog: 0x42645a,
+    fog: 0x38564e,
     near: 0x142a26,
     nearLit: 0x5c8070,
     grain: 0x0a1614,
@@ -146,15 +149,17 @@ const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
   },
   // (Review r5 #7: the den and the heartwood were two browns, the same picture desaturated. The den is cool umber-grey
   // earth lit from below by fungus, dark roots hanging; the heartwood amber lit from above.)
+  // (Review r8 #6: the den was greyscale, the dullest room on the way to the boss. Warm umber now, #2a1d14 -> #5a4330;
+  // the fungus's violet and cyan are its only cool notes.)
   den: {
-    deep: 0x2a2725,
-    deepLit: 0x4a5250,
-    fog: 0x444a4a,
-    near: 0x2a2624,
-    nearLit: 0x76807a,
-    grain: 0x121010,
-    root: 0x1a1716,
-    rootLit: 0x5a605c,
+    deep: 0x2e1f15,
+    deepLit: 0x5e4430,
+    fog: 0x5a4330,
+    near: 0x2a1c12,
+    nearLit: 0x9a744e,
+    grain: 0x140c08,
+    root: 0x22160e,
+    rootLit: 0x7a5a3c,
   },
 };
 
@@ -265,7 +270,11 @@ function freeEdges(b: Rect, room: Room, masses: readonly MassRect[]): BackEdges 
 
 /** The plan for a wood room with backs, or null (no backs: a vista). */
 export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
-  const marked = (room.marks?.backs ?? []) as Rect[];
+  // (Sealed air is drawn as a hollow in the mass, sealed.ts: its backs at parallax drew displaced ruled rectangles.)
+  const sealed = sealedOf(room);
+  const marked = ((room.marks?.backs ?? []) as Rect[]).filter(
+    (b) => !sealed.some((s) => s.x === b.x && s.y === b.y && s.w === b.w && s.h === b.h),
+  );
   if (!marked.length) return null;
   // A cover's hollow is inside the wood too (review r3 #2: the hub's bank hollow showed open sky, then flat mint):
   // its rect is a back, unless the room's backs already hold it.
@@ -433,7 +442,16 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
       }
     }
   }
-  return { look, mat, tone, backs, edges, lights, masses };
+  // (Nothing glows inside sealed air: it is wood with a hollow cut in it, sealed.ts. A shaft or beam is out when any
+  // of its length crosses one.)
+  const sealedHit = (l: Glow): boolean => {
+    const ys =
+      l.kind === 'shaft' || l.kind === 'beam' ? [0, 0.25, 0.5, 0.75, 1].map((t) => l.y + t * l.len) : [l.y];
+    return ys.some((y) =>
+      sealed.some((q) => l.x > q.x - 24 && l.x < q.x + q.w + 24 && y > q.y && y < q.y + q.h),
+    );
+  };
+  return { look, mat, tone, backs, edges, lights: lights.filter((l) => !sealedHit(l)), masses };
 }
 
 /** How far into the back the torn edge reaches at (x, y): 0 at a free edge, 1 deep inside or along a closed edge. */
@@ -1190,22 +1208,31 @@ export function paintGlowFlora(p: Paint, plan: InteriorPlan): void {
           B.walkH + 0.08,
           { moss: 0.6 },
         );
-      const n = 4 + Math.floor(r() * 5);
+      // (Canopy review r8 #10: identical half-ovals stacked on a face read as drawer handles.) Bracket fungi, 2-5 to a
+      // cluster, the largest about twice the rest, overlapping down the face, each tilted its own way with a lumpy
+      // lip and its pale gill line under it.
+      const n = 2 + Math.floor(r() * 4);
+      let y = l.y - l.s * range(r, 0.6, 1.1);
       for (let k = 0; k < n; k++) {
-        const y = l.y + range(r, -1.5, 1.5) * l.s;
-        const w = l.s * range(r, 0.3, 0.85) * (1 - Math.abs(y - l.y) / (l.s * 2.4));
-        const x = l.x + l.dir * (w * 0.4 + range(r, -4, 8));
+        const w = l.s * (k === 0 ? range(r, 0.75, 1) : range(r, 0.36, 0.6));
+        const tilt = range(r, -0.25, 0.12);
+        const thick = range(r, 0.24, 0.42);
+        const x = l.x + l.dir * range(r, -2, 10);
         const cap: number[] = [];
-        for (let a = 0; a <= 10; a++) {
-          const t = (a / 10) * Math.PI;
-          cap.push(x + l.dir * Math.sin(t) * w * 0.55, y - Math.cos(t) * w * 0.32 - w * 0.08);
+        for (let a = 0; a <= 12; a++) {
+          const t = (a / 12) * Math.PI;
+          const lump = 1 + 0.14 * Math.sin(t * range(r, 3, 6) + k);
+          const px = Math.sin(t) * w * 0.6 * lump;
+          const py = -Math.cos(t) * w * thick - w * 0.06;
+          cap.push(x + l.dir * px, y + py + px * tilt);
         }
-        p.solid(cap, l.violet ? 0x2c1a3a : 0x14303a, B.walkH + 0.1, { bark: 0 });
+        p.solid(cap, l.violet ? 0x2c1a3a : 0x14303a, B.walkH + 0.1 + k * 0.005, { bark: 0 });
         p.tint(
-          ribbon([x, y + w * 0.1, x + l.dir * w * 0.5, y + w * 0.02], () => w * 0.12),
+          ribbon([x, y + w * 0.12, x + l.dir * w * 0.55, y + w * 0.04 + w * 0.55 * tilt], () => w * 0.1),
           l.violet ? 0xd8b0ff : 0xb8f6ff,
           0.85,
         );
+        y += w * range(r, 0.3, 0.55);
       }
     } else if (l.kind === 'sap') {
       // Sap welling out of the face in beads, a run of it down the bark.

@@ -84,7 +84,7 @@
   "lr-hall:seal-foot->exit:seal": ["walkL18"],
   "lr-hall:seal-foot->find:h2": ["walkL6", "jkindleR", "fling-jL-U-k", "walkL6"],
   "lr-hall:tunnel-w->gallery-w": ["kindle", "fling-jR-UR-g-k", "climbL", "fling-jR-U-cr"],
-  "lr-hall:gallery-w->tunnel-w": ["hopL12", "kindle", "fling-jR-L-g-cu-k"],
+  "lr-hall:gallery-w->tunnel-w": ["walkL18", "walkL18", "kindle", "fling-jR-UL-g"],
   "lr-hall:tunnel-w->flag:shaft-open": ["kindle", "fling-jR-UR-g-k"],
   "lr-hall:gallery-w->roof": ["hopL12", "pogoL"],
   "lr-hall:roof->gallery-w": ["offglideR"],

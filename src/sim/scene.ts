@@ -340,6 +340,16 @@ export interface MoonPatch {
   id: string;
   x: number;
   y: number;
+  /**
+   * A map station (the Canopy r9, review r8 #9: the kin's lamp, HK's bench with Cornifer's quill): resting here shows
+   * the map (`mapStation`; render opens it) and hangs the moth-stones she has read and not hung yet (`hangs`).
+   */
+  map?: boolean;
+  /**
+   * The stones this station hangs: `stone` = `room:id` of a moth-stone in `taken`; resting here with it read and
+   * `flag` not yet set sets `flag` (`stoneHung`): one more each time she comes back. Render draws the hung ones.
+   */
+  hangs?: Array<{ stone: string; flag: string }>;
 }
 
 /**

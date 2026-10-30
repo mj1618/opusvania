@@ -119,6 +119,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     fling: -1,
     flingFrames: 0,
     flingCd: 0,
+    flingBuf: 0,
     chainX: Math.round(feetX),
     chainY: y + h,
     lureBack: -1,
@@ -1330,10 +1331,20 @@ function fling(c: Ctx): boolean {
   if (p.flingCd > 0) p.flingCd--;
   const aimY = (c.held(ActionBit.down) ? 1 : 0) - (c.held(ActionBit.up) ? 1 : 0);
   if (p.fling < 0) {
-    if (!c.pressed(ActionBit.lamp) || p.flingCd > 0 || p.mode === 'dash' || p.stagger > 0) return false;
+    // A press in the cooldown after a fling waits `flingBufferFrames` while Lamp is held (canopy r9b: the gap's second
+    // lamp comes into reach 5 frames after the first's release, inside the cooldown, and an early press was eaten). A
+    // press out of the cooldown is taken now or not at all (the glow rooms' Lamp verbs take it: lampVerb).
+    // (`flingBuf` counts the frames the press may still start one, this one included.)
+    if (c.pressed(ActionBit.lamp))
+      p.flingBuf = p.flingCd > 0 ? 1 + Math.max(0, Math.round(L.flingBufferFrames)) : 1;
+    else if (!c.held(ActionBit.lamp)) p.flingBuf = 0;
+    if (p.flingBuf <= 0) return false;
+    p.flingBuf--;
+    if (p.flingCd > 0 || p.mode === 'dash' || p.stagger > 0) return false;
     const i = flingTarget(c.state, c.scene, t);
     const l = i >= 0 ? c.scene.lures?.[i] : undefined;
     if (!l) return false;
+    p.flingBuf = 0;
     p.fling = i;
     p.flingFrames = 0;
     endGlide(c, 'lure');

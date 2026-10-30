@@ -155,7 +155,8 @@ const CLAIMS: Claim[] = [
     reach: ['trunk', 'wallJump', 'cn-well:p-well', 'cn-well:stone-west'],
     not: ['rot'],
   },
-  // (In from the giant's mouth with the claws: the chimney's kicks across, the landing's niche, the hollow.)
+  // (In from the giant's mouth with the claws: leg 2's chimney, then r9's gallery (the floor west, the terraces, the
+  // bough east, the stair) into the hollow, and its door to the limbs.)
   {
     room: 'cn-well',
     from: [2400, 3200],
@@ -163,8 +164,9 @@ const CLAIMS: Claim[] = [
     reach: [
       'limbs',
       'place:mid',
-      'place:rest',
-      'cn-well:shard-well',
+      'place:terrace',
+      'place:gallery',
+      'place:door',
       'cn-well:stone-west',
       'cn-well:p-hollow',
       'cn-well-ambush',
@@ -172,13 +174,32 @@ const CLAIMS: Claim[] = [
     not: ['rot'],
     max: 9000,
   },
-  // (r7: the ambush hollow's lamp is the way up to the east shelf from its floor.)
+  // (r9, review r8 #1: the gallery and the door are walked and jumped, not climbed: from the landing to the limbs
+  // with no claws at all.)
+  {
+    room: 'cn-well',
+    from: [1700, 2432],
+    kit: [],
+    reach: ['place:gallery', 'place:door', 'limbs'],
+    max: 9000,
+  },
+  // (r9, review r8 #1: the ambush pays. The moon shard on the west wall's shelf is the hollow lamp's: no face or jump
+  // reaches it, with the claws; lit, an up-left fling from over the ambush floor lands her on it.)
+  {
+    room: 'cn-well',
+    from: [1700, 1152],
+    kit: [C],
+    reach: ['limbs', 'cn-well:p-hollow', 'place:door'],
+    not: ['cn-well:shard-well'],
+    lampKey: true,
+    max: 9000,
+  },
   {
     room: 'cn-well',
     from: [600, 1152],
     kit: [C],
     lit: true,
-    reach: ['limbs', 'cn-well:p-hollow'],
+    reach: ['limbs', 'cn-well:p-hollow', 'cn-well:shard-well'],
     max: 9000,
   },
   // The upper limbs: both ways with the claws, the niche.
@@ -371,7 +392,7 @@ const CLAIMS: Claim[] = [
     from: [5440, 1856],
     kit: [C],
     reach: ['hub', 'burrow', 'place:pile', 'cn-tunnel:pile-1'],
-    not: ['den', 'cellar'],
+    not: ['den', 'cellar', 'place:east'],
     max: 9000,
   },
   { room: 'cn-tunnel', from: [800, 1856], kit: [], reach: ['place:floor'], max: 9000 },

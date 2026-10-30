@@ -1,7 +1,7 @@
-# The Canopy: the first area built to the reference numbers (v8, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v9, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
-docs/design/levels/reviews/canopy-r1.md .. canopy-r7.md; the reference data: docs/design/reference-levels/ (all four
+docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
 exact since 2026-10-30).
 Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
@@ -23,6 +23,73 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v9b (round 9's weak list): the tunnel's glide, the hawker, the chain's press
+- **A glide lock wants a high take-off**: the glide gains ~2 px across for each px of drop, a jump ~0.4. v9's hump
+  (256 over the far floor) let a jump held through land 25 px past the lip. v9b: the hump steps up from the west to a
+  plumb east face that IS the pit's west wall (`PIT_W` 6080, top 1472, 384 over the far floor), pit 960, far face slick
+  (`noClaws(PIT_E, ...)`). Highest ground at the lip: a step down by the lip is where people jump from.
+- **`tools/levels/glide-probe.ts <room> <x> <y> <lipX> [--kit=] [--creatures] [--sweep --far=<x>]`**: every way across
+  off a lip (jump, held, apex glide, late glide, walk-off glide, coyote jump + kick, jump + kick, and with `--creatures`
+  the answers to a strike: check back, drop and re-glide, cut). The tunnel's numbers: jumps reach the thorns at
+  6790-6828; glides land 7116 (late) to 7746 (walk-off); `--sweep` runs 36 arrival phases.
+- **Thorns are a pogo** (HK's spike pogo: a down cut on them bounces her ~230 px on; the next touch hurts). A jump that
+  reaches the thorns within ~250 px of the far lip crosses on one bounce: the explorer found it (`pogoR`). And **a lamp
+  on a jump's descent is a pogo target too** (v9b's first try: the higher jump passed over `wick-pit` and bounced onto
+  the lip). A lamp over a glide lock goes where only the glide passes (the far lip, 7000 x 1560).
+- **The pit's hawker hunts her** (no `orbit`: on its clock the strike came whenever, and what she saw was the 6-frame
+  pull-back): home under the roof over the pit's east half, `sight` 520 (the lip is 760 off), `guards` its lamp. Tell
+  30 (`hawker.curiousFrames`; `creatures.test` holds it >= 30), a strike led to where her glide will be. Struck while
+  gliding she is thrown on along it (`hawker.glideKnockVx` 8 / `glideKnockLift` 5; `touched(..., glide)`): every
+  sweep phase still lands across. A check back (10 frames), a drop and a fresh glide, or a cut (an up cut when it is
+  above) take no hit at all 36 phases of 36.
+- **The fling keeps an early press** (`lures.flingBufferFrames` 8, `player.flingBuf`): a Lamp press in the cooldown
+  after a fling still starts one for 8 frames while Lamp is held. The gap's lamp 2 (in reach 5 frames after lamp 1's
+  release) took no press before +8; now any from +1. Only in the cooldown: a buffer on every unanswered press broke
+  four of Lanternroot's stored lines (its glow rooms' Lamp verbs, mend / gust, take a press with no flame in reach).
+- **Sim changes replay Lanternroot's tapes** (`proto-1-solve.test.ts`): the hawker's 30-frame tell moved one edge;
+  `npx tsx tools/solve/proto-1.ts --write --edge=<id>` re-records it.
+- **Bots**: a cell given up as "not reached in 45 s" gives up the rest of that ground (`giveUpGround`). The r9 run's
+  skilled bot spent 45 s on each cell of the well's shard shelf in turn (100+ s). Their explorer still ranks every
+  unwalked cell (rank 1) over exits (rank 3), so a door in frame waits until the room is walked.
+- **route-video.ts v6**: the v9 route (gallery legs, the hollow's shard, the gap's chain and out by the fork, the
+  warning's fight `until` `cn-tunnel-clear`); `plan` runs the whole area (57 legs, 5.6 min of play), only the
+  optional shard fling unfound (it needs the ambush on). A fight leg that fails now says who is up and where she is.
+- **A gate can shut on her**: `shut` gates have no body check. The Grove's `pit-wave` trigger reached up to 32 px
+  under the arena gates' foot, so a slow drop through the opening set it with her head in the gate's rect: stuck
+  inside a solid (the route plan stood there 240 s). Keep an arena trigger's top >= her height + 32 under any gate it
+  shuts (`canopy-r9b.test.ts`).
+- **Framing a room's edge with a zone**: a zone's `bounds` must lie inside the room, and a zoomed view meets the room's
+  edges softly (`zones.edgeKnee` 220 px), so a fit frame ending at the room's foot leaves the view ~80 px short of it.
+  To put the view near an edge, give a set `zoom` and a small frame in that corner: the view centres on it, asks past
+  the edge and the knee stops it ~20 px short. The den's warning: `zoom` 0.85 over 640 x 640 at the mouth's corner
+  (v9: the fit frame stopped at the mouth's floor, beat 2's tell on the frame's edge).
+
+## v9 (review r8): shape, frames, the second peak
+- **Sealed air** (`sealDeep(d)` before `fill()`, `sealed(x0, y0, x1, y1)` by hand): mass more than `d` from any carved
+  air or the room's edge becomes air she can never reach, with a back, listed in `marks.sealed`. The sim and the
+  painter see air; `export-area.ts` (so the map, `metrics.ts`, `canopy-furniture.ts`) and the bots' map
+  (`buildSurfaces`) see rock. Keep `d` >= 192 from anything reachable, and off the room's edge. **The bots walked at
+  sealed floors for 45 s at a time until their map dropped them**: any new kind of unreachable air needs the same.
+  Render painted the hub's sealed under-floor as the open sky backdrop, not the deep back (render's call).
+- **Deep solid in frame**: `npx tsx tools/levels/canopy-frames.ts [room ...]` frames every wide stop with the real
+  follow camera and its zones (headless, a second for all rooms) at 16:9 / 16:10 / 21:9 and prints look:check's
+  deep share (> 96 px in); the bar is <= 30% a stop, a room's median <= 20%. It matched the review's numbers on v8.
+- **The well is two climbing legs** (leg 1, leg 2's chimney), then the gallery: walked and jumped (terraces, a bough,
+  a stair of one-ways under open air: a solid band over a stair step bumps the jump off it). A one-way stair needs
+  no band within 272 px over any step's launch spot.
+- **Fling lines**: `npx tsx tools/levels/fling-probe.ts <room> <lamp> <x> <y> [--set=<lamp>=x,y] [--glide] [--hold=]`
+  prints every aim's flight off a lamp (lamps it brings into reach, landing, thorns). Reach is 110 px from her centre,
+  so two aims off one lamp only share a third lamp within ~300 px of it (the paths fan out). After a fling, the next
+  lamp can be in reach inside the 8-frame `flingCooldown` (v9b: the press is kept, `flingBufferFrames`).
+- **The glide is weak over a shallow drop**: a held ground jump opens the wings 16 px under the take-off, already
+  falling fast. The long glide is from the apex (let go, press again) or a walk-off. v9b raised the tunnel's take-off
+  to 384 over the far floor (above).
+- **Peaks along the route**: `canopy-furniture.ts --route` (`ROUTE`: room-local points from the hatch to the den;
+  sliding 2-screen windows, things within 640 x 360 of her line, glints out) and the hub-to-Grove climbing share.
+  A full-frame window counted every room's walls and flattened everything (median 4.8).
+- **A map station** (sim): `MoonPatch.map` / `hangs` (`mapStation`, `stoneHung`); the hub's `p-crossing`.
+- **Every creature-waking trigger has a camera zone keyed to its wave** (`canopy-check.ts`).
 
 ## v8 (review r7): the first ten minutes
 - **A required lesson in a room crossed once**: a fling lamp goes out for good when she lands, so a required fling on a
@@ -226,6 +293,9 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   lookahead flung and the hands never did, "did not go as foreseen"). v7's still played the old catch. Their old
   lamp-cut lines snuff lamps for good: a required lamp must `relight`. r8 run (canopy-r8): all three out of the
   hatch in the first minute, two clear the hollow's ambush, none finds the shelf to the limbs.
+- r9 (canopy-r9): claws at 1:22-2:19; the average and skilled bots in the hollow at 3:37-3:54, the average on the
+  door's floor 14 s after the ambush, then off to explore (the shard's shelf they cannot fling to, the well's bottom);
+  none to the limbs. Their explorer chases unwalked ground before exits.
 - r6: **they read strips** (lines.ts: a climb move whose face has a thorn strip in its span offers the clean far face
   first, `wall climb (the far face: ...)`, and `humanPick` takes it first).
 

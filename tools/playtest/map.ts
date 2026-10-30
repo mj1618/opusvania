@@ -137,7 +137,12 @@ export function buildSurfaces(
     const pits = (
       (scene as { catches?: Array<{ x: number; y: number; w: number; h: number }> }).catches ?? []
     ).map((c) => ({ x: c.x, y: c.y, w: c.w, h: c.h + 8 }));
-    for (const t of [...(scene.thorns ?? []), ...pits]) {
+    // Nor a top inside sealed air (the Canopy r9: air behind a wall with no way in; it reads as the deep back, and a
+    // persona that took it for ground walked at it for 45 s at a time).
+    const sealed =
+      (scene as { marks?: { sealed?: Array<{ x: number; y: number; w: number; h: number }> } }).marks
+        ?.sealed ?? [];
+    for (const t of [...(scene.thorns ?? []), ...pits, ...sealed]) {
       if (!(t.y < s.y + 4 && t.y + t.h > s.y - 40)) continue;
       spans = spans.flatMap(([a, b]): Array<[number, number]> => {
         if (t.x + t.w <= a || t.x >= b) return [[a, b]];

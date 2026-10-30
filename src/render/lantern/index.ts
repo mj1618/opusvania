@@ -17,6 +17,7 @@ import { Container, Graphics } from 'pixi.js';
 import type { EnvModule, SceneContext, SceneFrame } from '../scene/index';
 import { lanternTops } from '../scene/lib/lr-terrain';
 import { isInterior, LOOK } from '../scene/lib/room-look';
+import { Acts } from './acts';
 import { Creatures } from './creatures';
 import { drawMotes, InteriorDepth } from './fore';
 import { Fx } from './fx';
@@ -33,6 +34,8 @@ export class LanternPieces implements EnvModule {
   private readonly kit = new Kit();
   private readonly creatures = new Creatures();
   private fx!: Fx;
+  /** The Canopy's small events (acts.ts): the first fling's moths, arrivals, patch flares, the kin's lights. */
+  private acts: Acts | null = null;
   private water: RootWater | null = null;
   private depth: InteriorDepth | null = null;
   private vista: Vista | WoodVista | null = null;
@@ -49,6 +52,7 @@ export class LanternPieces implements EnvModule {
   init(ctx: SceneContext): void {
     this.lamps = new Lamps(ctx.scene, ctx.lights);
     this.fx = new Fx(ctx.lights);
+    if (LOOK.kit === 'wood') this.acts = new Acts(ctx, ctx.lights);
     const marks = ctx.scene.marks as
       | { landmarks?: Array<{ kind: string; x: number; y: number }> }
       | undefined;
@@ -92,6 +96,7 @@ export class LanternPieces implements EnvModule {
     this.fx.onEvents(sim.events, sim);
     this.moon?.onEvents(sim.events);
     this.water?.onEvents(sim.events, sim);
+    this.acts?.onEvents(sim.events, sim);
     this.back.clear();
     this.front.clear();
     this.glowBack.begin();
@@ -111,6 +116,7 @@ export class LanternPieces implements EnvModule {
     );
     this.creatures.draw(dt, clock, sim, camera, this.back, this.front, this.glowMid);
     this.fx.draw(dt, clock, sim, this.front, this.glowFront);
+    this.acts?.draw(dt, clock, sim, camera, this.back, this.front, this.glowBack, this.glowFront);
     this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
     this.vista?.update(camera, clock);
@@ -127,6 +133,7 @@ export class LanternPieces implements EnvModule {
   destroy(): void {
     this.lamps?.destroy();
     this.fx?.destroy();
+    this.acts?.destroy();
     this.depth?.destroy();
     this.vista?.destroy();
     this.moon?.destroy();

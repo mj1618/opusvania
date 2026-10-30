@@ -23,10 +23,12 @@ import type { BakeLook, MistFill } from './pf-bake';
 import {
   MASS,
   type MassRect,
+  massCore,
   massOutline,
   massTone,
   paintMasses,
   paintRoost,
+  paintRootColumns,
   paintShelves,
   paintTaproot,
 } from './pf-mass';
@@ -45,7 +47,8 @@ import {
   wobble,
 } from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
-import { paintGrowth, setTopFamily, topFamily, topFamilyOf } from './top-growth';
+import { paintSealed, withSealedMass } from './sealed';
+import { paintGrowth, paintUnderWrap, setTopFamily, topFamily, topFamilyOf } from './top-growth';
 
 export const BRANCH = {
   /** Out of a tree a limb starts at this share of the trunk's width (clamped); out of a fork each tine
@@ -1388,16 +1391,20 @@ function greatTrunk(
   const inside = (y: number) => [xl(y) + collar(-1, y), xr(y) - collar(1, y)] as const;
   // 1. Plates: columns across the width, each plate a tall lozenge, staggered, a dark seam round it, its moon side
   //    (right) a step lighter and its top lip catching the light.
-  const cols = Math.max(3, Math.round(tree.w / (B.plateW as number)));
+  // (Canopy review r8 #10: tall lozenges the width of a column read as river stones or a pile of shields. Fissured
+  //  bark: narrow ridges 2-4x taller than wide, overlapping, each column's ridges wandering off the plumb.)
+  const cols = Math.max(4, Math.round(tree.w / ((B.plateW as number) * 0.55)));
   for (let c = 0; c < cols; c++) {
-    let y = y0 + range(r, -200, 60);
+    let y = y0 + range(r, -300, 60);
     while (y < y1) {
-      const h = range(r, B.plateH[0] as number, B.plateH[1] as number);
+      const [a0, b0] = inside(y);
+      const cw0 = (b0 - a0) / cols;
+      const h = clamp(cw0 * range(r, 0.85, 1.05) * range(r, 3, 5.5), 150, 1000);
       const yc = y + h / 2;
       const [a, b] = inside(yc);
       const cw = (b - a) / cols;
-      const cx = a + cw * (c + 0.5) + range(r, -cw * 0.12, cw * 0.12);
-      const hw = cw * range(r, 0.4, 0.5);
+      const cx = a + cw * (c + 0.5) + range(r, -cw * 0.3, cw * 0.3);
+      const hw = cw * range(r, 0.38, 0.55);
       const sd = seed + c * 101 + Math.round(y);
       // (Smooth ovals read as a pattern of scales: plates are torn, squarish slabs, longer than wide.)
       const shape = chaikin(plateShape(cx, yc, hw, h / 2, sd), 1);
@@ -1413,7 +1420,8 @@ function greatTrunk(
         lip.push(cx + Math.cos(t) * hw * 0.92, yc + Math.sin(t) * (h / 2) * 0.94);
       }
       p.tint(strand(lip, range(r, 2.5, 4.5), 0.4), B.barkLit, 0.25 + 0.4 * side);
-      y += h + range(r, 6, 22);
+      // (Overlapping: the next ridge starts inside this one's lower end.)
+      y += h * range(r, 0.82, 0.97);
     }
   }
   // 2. The lit ridge down the moon side: a long rounded ridge of bark a little in from the flank, broken where a collar
@@ -2166,6 +2174,8 @@ export function paintBranchTerrain(
   seed: number,
 ): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const B = BRANCH;
+  // Sealed air is mass to every painter; its hollow is cut back in after the masses (sealed.ts).
+  room = withSealedMass(room);
   const p = new Paint(room.width, room.height);
   // What grows on the tops: the room's look's family (top-growth.ts), for every painter below.
   setTopFamily(topFamilyOf(room));
@@ -2266,6 +2276,10 @@ function paintBranchBody(
   );
   // The den's taproot over its column (review r5 #6).
   paintTaproot(p, room, seed + 67);
+  // Root columns hung off a face (the Spire's neck).
+  paintRootColumns(p, room, seed + 71);
+  // The hollows in the wood where the level sealed air off (canopy r9b).
+  paintSealed(p, room, { ...massTone(room), core: massCore(massTone(room)) }, seed + 79);
   // The one-way ledges: root shelves (review r3 #2).
   paintShelves(p, massPlan, room, seed + 61);
   // The glowing growth on them (its light is live: layers/interior.ts).
@@ -2432,6 +2446,13 @@ function paintBranchBody(
     const drape = (e: End): number =>
       e === 'nub' ? 12 : e === 'fork' || e === 'tip' || e === 'knee' || e === 'crotch' ? 28 : 0;
     mossBlanket(p, m0, m1, st.top, sd + 17, drape(st.west), drape(st.east));
+    // The wrap (canopy r9): the top's growth runs on under the limb, clumps hanging off it (top-growth.ts).
+    const fam = topFamily();
+    if (fam) {
+      const u0 = st.x0 + (st.west === 'trunk' ? 20 : 4);
+      const u1 = st.x1 - (st.east === 'trunk' ? 20 : 4);
+      paintUnderWrap(p, u0, u1, (x) => st.under(x) - 3, B.walkH, sd + 29, fam, fw, fe);
+    }
     plan.hangs.push({
       x0: st.x0 + (fw ? 30 : 10),
       x1: st.x1 - (fe ? 30 : 10),

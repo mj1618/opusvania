@@ -157,12 +157,14 @@ export interface PlayerState {
   lureAimY: number;
   /**
    * The fling (memory/lures.md): `fling` = the lure she is aiming off (-1 = none), `flingFrames` = how long (the
-   * world slows meanwhile), `flingCd` = frames before the next can start. While aiming `lureAimX/Y` is the aim
+   * world slows meanwhile), `flingCd` = frames before the next can start, `flingBuf` = frames a press made in the
+   * cooldown still waits, Lamp held. While aiming `lureAimX/Y` is the aim
    * and `lureArc` the flight it gives. (`lure` and the beat fields are the old catch's: always -1 / 0 now.)
    */
   fling: number;
   flingFrames: number;
   flingCd: number;
+  flingBuf: number;
   /** Where the fling chain began (her last ground before its first launch): landing back there is a miss. */
   chainX: number;
   chainY: number;

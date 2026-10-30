@@ -18,6 +18,7 @@ import { clamp, sat } from '../character/math';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { LOOK } from '../scene/lib/room-look';
+import { arrivalView } from './arrive';
 import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
 import { BOSS, BURR, LAMP } from './config';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
@@ -750,11 +751,13 @@ export class EnemyRenderer {
     let drawn = 0;
     this.react(sim);
     for (let i = 0; i < list.length; i++) {
-      const e = list[i];
-      if (!e) continue;
+      const e0 = list[i];
+      if (!e0) continue;
       // (Painted rooms draw hawkers on the lampwing's art and the juvenile, the old burrback and the carriers on the
       // burrback's rig, scaled: kinds.ts. The test grove draws only its own two kinds.)
-      const art = creatureArt(e.kind, lookKey());
+      const art = creatureArt(e0.kind, lookKey());
+      // An ambush's creature on its way in is drawn on its eased path (arrive.ts).
+      const e = e0.arrive > 0 ? arrivalView(e0, sim, art === 'beetle') : e0;
       if (art === 'moth') {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;

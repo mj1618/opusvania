@@ -165,9 +165,10 @@ export interface KindRules {
   harmless?(e: EnemyState, info: StepInfo): boolean;
   /**
    * Her body met it and she was hurt (`dir` = the way she is thrown, -1 / 1). Also called, without
-   * any hurt, when it meets her while she kindles a lantern: it is turned away.
+   * any hurt, when it meets her while she kindles a lantern: it is turned away. `glide` = the way she was
+   * gliding when it met her (-1 / 1), 0 if she was not.
    */
-  touched?(e: EnemyState, info: StepInfo, dir: number): void;
+  touched?(e: EnemyState, info: StepInfo, dir: number, glide: number): void;
   /**
    * Its lamp went out (a lamp-guarder: `EnemyState.guard`, memory/creatures.md): it gives up its own
    * way and says how (`enemyDisperse.how`). `quiet`: the lamp was out before she came into the room

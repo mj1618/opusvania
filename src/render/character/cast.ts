@@ -211,6 +211,8 @@ export class Cast {
     // Tatter is somewhere only once / until its story flag (`when` / `until`).
     const stirred = events.some((e) => e.type === 'hatchStir');
     const rested = events.some((e) => e.type === 'patchRest');
+    // (A wall broken in its room: the bower's kin looks up as she breaks in.)
+    const broke = events.some((e) => e.type === 'barkBreak');
     const hl = this.halo.clear();
     // (The camera's zoom alone: a small window is not a wide frame.)
     const zoom = Math.abs(this.layer.scale.x);
@@ -249,7 +251,7 @@ export class Cast {
         : t.ox === 0 && t.oy === 0
           ? her
           : ({ ...her, cx: her.cx - t.ox, feetY: her.feetY - t.oy } as PlayerView);
-      t.update(dt, clock, seen, row.hersAt, row.sinceBreak, stirred, rested);
+      t.update(dt, clock, seen, row.hersAt, row.sinceBreak, stirred, rested, broke);
     }
   }
 

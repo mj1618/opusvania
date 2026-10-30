@@ -58,6 +58,22 @@ export function restAt(state: GameState, scene: Scene, i: number, events: SimEve
   state.save.patch = { room: scene.id, id: patch.id };
   state.rest = { at: i, frames: state.rest.at === i ? state.rest.frames : 0, done: true };
   events.push({ type: 'patchRest', id: patch.id, room: scene.id, x: patch.x, y: patch.y, hp: p.hp });
+  // A map station (the Canopy r9): the map is shown, and the stones she carries are hung (one more each return).
+  if (patch.map) events.push({ type: 'mapStation', id: patch.id, room: scene.id, x: patch.x, y: patch.y });
+  const hangs = patch.hangs ?? [];
+  for (const h of hangs) {
+    if (!state.save.taken.includes(h.stone) || !remember(state.save.flags, h.flag)) continue;
+    const hung = hangs.filter((q) => state.save.flags.includes(q.flag)).length;
+    events.push({
+      type: 'stoneHung',
+      id: patch.id,
+      stone: h.stone,
+      flag: h.flag,
+      hung,
+      x: patch.x,
+      y: patch.y,
+    });
+  }
 }
 
 /**

@@ -26,6 +26,8 @@ const pt = (x: number, y: number, c: string) => {
   if (row && row[Math.floor(x / S)] !== undefined) row[Math.floor(x / S)] = c;
 };
 const list = (k: string) => (room[k] as R[] | undefined) ?? [];
+// (Sealed air, r9: carved for the frame, never reached: ':'.)
+for (const q of ((room.marks as Record<string, R[]> | undefined)?.sealed ?? []) as R[]) paint(q, ':');
 for (const q of list('solids')) paint(q, q.kick === false ? 'k' : '#');
 for (const q of list('oneWays')) paint({ ...q, h: 8 }, '=');
 for (const q of list('thorns')) paint(q, '^');

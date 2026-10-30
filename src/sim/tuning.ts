@@ -418,6 +418,11 @@ export const defaultTuning = withVariants({
     flingSpeed: 15,
     flingLift: 5,
     flingCooldown: 8,
+    /**
+     * A Lamp press in the cooldown after a fling still starts one for this many frames after it while Lamp is held
+     * (canopy r9b: the gap's chain brings the next lamp into reach inside the cooldown). Let go, it is dropped.
+     */
+    flingBufferFrames: 8,
     /** Landing within this many px of where a fling chain began (on the same ground) is a miss: its embers relight. */
     chainBackPx: 160,
     /**
@@ -1048,6 +1053,13 @@ export const defaultTuning = withVariants({
     /** A blow of a hawker with a `rim` (spawn): free, she is kicked toward it at `rimKick` px/f, lifted `rimLift`. */
     rimKick: 9,
     rimLift: 11,
+    /**
+     * A blow on a gliding moth throws her on along her glide at `glideKnockVx` px/f, lifted `glideKnockLift` (in
+     * place of the knock back or down), so a hit over a pit costs a light and not the crossing: held, her wings open
+     * again as the stagger ends (canopy r9b, the tunnel's hawker). 0 = off (the lampwing).
+     */
+    glideKnockVx: 0,
+    glideKnockLift: 0,
     stallFrames: 34,
     perchUpPx: 170,
     perchSidePx: 110,
@@ -1914,6 +1926,13 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       diveMaxFrames: 72,
       diveSpeed: 6.4,
       diveLeadRun: 1,
+      // Canopy r9b (the tunnel's pit: its strike came out of a 6-frame pull-back in a crossing that lasts ~80): it
+      // tells for 30 frames (the fairness floor; the lampwing's 36 is a drift on a hunter this fast) and strikes where
+      // her glide will be, so a change of line (a check back, a drop and a fresh glide) or a cut answers it; a blow on
+      // a glider throws her on her way, a light lost and the crossing kept.
+      curiousFrames: 30,
+      glideKnockVx: 8,
+      glideKnockLift: 5,
       // Feel review r2: the 65-frame dive was a drift. Now 6 frames pulling back, then a 15 px/f strike.
       strikeSpeed: 15,
       strikeMaxFrames: 34,

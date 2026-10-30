@@ -16,14 +16,14 @@ import { gradeLookOf, type Look } from '../lib/looks';
 
 /** Haze colour (screen-blended: each channel is what it adds to black) at the view's top and foot, per look. */
 export const VEIL: Record<Look | 'night' | 'nightDeep', { top: number; low: number }> = {
-  night: { top: 0x1a2c38, low: 0x24404a },
+  night: { top: 0x182a34, low: 0x203a44 },
   // (An open room under a dark crown: the hub's back is the darkest of the open rooms, its air stayed at 40-45.)
   nightDeep: { top: 0x24384a, low: 0x2e4c5a },
   canopy: { top: 0x1a3430, low: 0x22443c },
   heartwood: { top: 0x2c2216, low: 0x382c1e },
-  shaft: { top: 0x06080c, low: 0x0a0e14 },
-  nest: { top: 0x28261a, low: 0x343022 },
-  den: { top: 0x161616, low: 0x1e1e1c },
+  shaft: { top: 0x061416, low: 0x0a1c20 },
+  nest: { top: 0x282010, low: 0x342816 },
+  den: { top: 0x1e140c, low: 0x2a1c10 },
 };
 
 /** Open rooms that take another veil than the night's. */

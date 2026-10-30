@@ -334,6 +334,18 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       return [beast('creak', K.creakDb, { variant: nearest(CREAK_S, e.frames / 60), cents: -800 })];
     case 'enemyWake':
       return [beast('catchBreath', K.rearDb - 6, { cents: -700 })];
+    case 'enemyArrive': {
+      // An ambush's creature comes (the Canopy r8): from where it shows. A beetle scrabbles out of the earth (a
+      // short rumble, higher for a juvenile), and a drop lands with a thump; a flyer's wings.
+      const from = { x: e.fromX, y: e.fromY };
+      if (FLYERS.has(e.kind)) return [beast('flutter', K.buzzDb - 3, from)];
+      const drop = e.y - e.fromY > 150;
+      const out = [
+        beast('rumble', K.rumbleDb - 8, { ...from, cents: e.kind === 'juvenileBurrback' ? 500 : 200 }),
+      ];
+      if (drop) out.push(beast('thump', K.wallDb - 4, { delay: e.frames / 60 }, 1));
+      return out;
+    }
     case 'enemyDisperse':
       return e.quiet || e.how !== 'leave' ? [] : [beast('flutter', K.buzzDb - 4)];
     case 'enemySnatch':

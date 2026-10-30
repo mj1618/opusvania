@@ -31,7 +31,7 @@ describe('wood looks', () => {
       'cn-ledge': 'canopy',
       'cn-bower': 'canopy',
       'cn-tunnel': 'den',
-      'cn-burrow': 'den',
+      'cn-burrow': 'nest',
       'cn-den': 'den',
     };
     for (const [id, look] of Object.entries(want)) if (ROOMS[id]) expect(lookOf(room(id)), id).toBe(look);

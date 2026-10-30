@@ -18,6 +18,21 @@
  * cannot go on (a level bug); it is saved in legs.json (`warps`), replayed by `render` at the same sim frame and
  * captioned. An `optional` fight leaves the creature be when time runs out. `--title`, `--layout` and the commit
  * (git) head chapters.md.
+ *
+ * v4 (2026-10-30): the v4 layout's route (chimneys of alternate thorns, plugs, the Grove's wave, the den without a
+ * teleport, moon shards, the bower's save). The explorer gets the chimney macros (`zig`) and counts bark cuts left
+ * (`barkHp`), as the Canopy's proofs do; captions for shards, plugs, the wave, the save and the den's snuffed lamp.
+ *
+ * v5 (2026-10-31): the v7 layout's route (the well's three legs and mid rest, the ambush on its trigger, the Grove's
+ * arena behind root gates, fling lines, the hub's high chamber, the ledge after the boss). `optional` exit / goal legs
+ * are detours (one look; the route goes on without them); a fight's `until` waits out the gap between a wave's
+ * beats; a fight target not hurt in 10 s is left a while for another (a lampwing hovering out of reach). Flings out
+ * of fights are captioned. The den's plan in fight.ts walks off a solid shelf and out from under one.
+ *
+ * v6 (2026-10-31): the v9 layout's route (the well's two climbing legs, then the gallery walked and jumped: the
+ * landing's floor, the terraces, the bough and the stair to the hollow; the hollow lamp's fling to the shard after the
+ * ambush; the gap's three-lamp chain down to the pod garden and out by the fork; the tunnel's glide onto the den's
+ * warning, its two beats, then the den).
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -29,9 +44,10 @@ import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { cloneState, step } from '../../src/sim/index';
+import { ActionBit } from '../../src/sim/input';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
-import { type ExploreNode, explore, feet, glideClimbMacros, pathTo } from '../solve/explore';
+import { chimneyMacros, type ExploreNode, explore, feet, glideClimbMacros, pathTo } from '../solve/explore';
 import { fightScore, fightTactics, hostile } from './fight';
 import type { Line } from './lines';
 
@@ -52,6 +68,8 @@ const { values: args, positionals } = parseArgs({
   },
 });
 
+// (v4's den needed \`DEN_HOLD=1\` (wait by the taproot in phase 3: its shelves stopped a ram drawn mid-arena); v5 raised
+// the shelves to 256 over the floor, so the den's plan draws the rams again. Set it in the environment if needed.)
 const WORLD = 'canopy';
 const START = 'cn-hatch';
 const tuning = cloneTuning(defaultTuning);
@@ -60,12 +78,26 @@ const world = getWorld(WORLD);
 // ---- the route
 
 type Leg =
-  | { name: string; kind: 'exit'; exit: string; max?: number }
-  | { name: string; kind: 'goal'; test: (s: GameState) => boolean; max?: number }
-  | { name: string; kind: 'fight'; ids: string[]; seconds?: number; optional?: boolean }
+  /** `optional`: a detour; if no line gets there, the route goes on from where she stands. */
+  | { name: string; kind: 'exit'; exit: string; max?: number; optional?: boolean }
+  | { name: string; kind: 'goal'; test: (s: GameState) => boolean; max?: number; optional?: boolean }
+  /**
+   * `until`: the fight is over only when this holds (a wave whose next beat appears after the last one dies: the
+   * named creatures not yet woken are `gone`); between beats she waits.
+   */
+  | {
+      name: string;
+      kind: 'fight';
+      ids: string[];
+      seconds?: number;
+      optional?: boolean;
+      until?: (s: GameState) => boolean;
+    }
   | { name: string; kind: 'script'; script: string }
   /** A harness teleport (feet at x, y), only where play cannot go on (a level bug): captioned in the video. */
   | { name: string; kind: 'warp'; x: number; y: number; why: string }
+  /** A harness edit of a save flag (the debug API's `flag(name)`), only where play cannot go on: captioned. */
+  | { name: string; kind: 'flag'; flag: string; why: string }
   | { name: string; kind: 'settle' };
 
 const taken = (id: string) => (s: GameState) => s.save.taken.includes(id);
@@ -86,98 +118,220 @@ const near =
 const opened = (id: string) => (s: GameState) => s.save.opened.some((o) => o === id || o.endsWith(`:${id}`));
 
 export const ROUTE: Leg[] = [
-  // v3 (build a46886f): the critical path from a fresh save, both fights, and detours to the new things (the
-  // Elder's plug and chimney, the webs, the crawl, the rot walls; the cellar's ants and the nest wall; the Grove's
-  // keen hollow; the way out's ledge wall).
+  // v6 (the v9 layout): the well's gallery, the hollow's shard, the gap's chain, the den's warning (below).
+  // v5 video (build 3e924ff, the v7 layout): the critical path from a fresh save, every fight (the well's ambush on
+  // its trigger, the Grove's arena wave, the old burrback), the well's three legs with leg 3's mid rest and its
+  // lampwing, and detours to the new things: the well's landing niche (a moon shard), the limbs' fling line to the
+  // niche, the hub's high chamber (a moon shard behind a rotten wall), the Grove pit's wall (a moon shard), the gap's
+  // roost, the hub's wings shelf (flung off the lampoak's socket), the ledge after the boss. (The Elder is shut from the well's side
+  // since v6: its door opens from the Elder's room.)
   // The hatch: the cocoon listens after the fade up; three presses break it.
   { name: 'cn-hatch: the hatching', kind: 'script', script: '.170 J2 .10 J2 .10 J2 .10 J2 .90' },
   { name: 'cn-hatch: down to the drop', kind: 'exit', exit: 'drop', max: 12000 },
-  // The Crossing reads west: down the root floor into the giant's mouth.
-  { name: 'cn-hub: the lit way west', kind: 'exit', exit: 'trunk', max: 9000 },
-  // The fallen giant: the rotten wall is the only way on from its first hall.
-  { name: 'cn-trunk: the rotten wall', kind: 'goal', test: opened('giant-wall'), max: 9000 },
-  { name: 'cn-trunk: the seed in the roof', kind: 'goal', test: flag('seeds:1'), max: 9000 },
-  { name: 'cn-trunk: down to the well', kind: 'exit', exit: 'well', max: 9000 },
-  { name: 'cn-well: the claws at the bottom', kind: 'goal', test: owns('wallJump'), max: 9000 },
-  // Detour west: the plug into the Elder's room, its chimney to the moonDrop, down through the webs and the crawl,
-  // the rot hall's walls, back into the well's foot.
-  { name: 'cn-well: the plug (a rotten wall)', kind: 'exit', exit: 'elder', max: 9000 },
+  // The Crossing (8,000 wide since v6) reads west: the root floor through the moonlit clearing to the giant's mouth.
+  { name: 'cn-hub: the lit way west', kind: 'exit', exit: 'trunk', max: 20000 },
+  { name: 'cn-trunk: the rotten wall', kind: 'goal', test: opened('giant-wall'), max: 12000 },
+  { name: 'cn-trunk: the seed behind it', kind: 'goal', test: flag('seeds:1'), max: 12000 },
+  { name: 'cn-trunk: down to the well', kind: 'exit', exit: 'well', max: 12000 },
+  { name: 'cn-well: the claws at the bottom', kind: 'goal', test: owns('wallJump'), max: 12000 },
   {
-    name: 'cn-elder: the chimney to the moonDrop',
+    name: "cn-well: the claws' prize on the face",
     kind: 'goal',
-    test: taken('cn-elder:drop-elder'),
+    test: picked('cn-well', 'claw-prize'),
+    max: 12000,
+    optional: true,
+  },
+  // The well's bottom is a start: the one way out is up, two climbing legs, then the gallery (v9).
+  {
+    name: "cn-well: leg 1, up the shaft to the giant's mouth",
+    kind: 'goal',
+    test: (s) => s.room === 'cn-well' && s.player.grounded && feet(s).y <= 3200 && feet(s).y > 2900,
+    max: 16000,
+  },
+  {
+    name: 'cn-well: leg 2, the chimney to the landing',
+    kind: 'goal',
+    test: (s) => s.room === 'cn-well' && s.player.grounded && feet(s).y <= 2440 && feet(s).y > 2300,
+    max: 16000,
+  },
+  // v9: the gallery, a switchback walked and jumped through the hollowed west wall: west along the landing's floor
+  // (a burrback, a bramble pit), up two root terraces, east along a bough (a lampwing), up the stair to the hollow.
+  {
+    name: "cn-well: the gallery's burrback",
+    kind: 'fight',
+    ids: ['burr-gallery'],
+    seconds: 30,
+    optional: true,
+  },
+  {
+    name: 'cn-well: the gallery, west and up the root terraces',
+    kind: 'goal',
+    test: (s) => s.room === 'cn-well' && s.player.grounded && feet(s).y <= 2060 && feet(s).y > 1900,
+    max: 16000,
+  },
+  {
+    name: "cn-well: the gallery's bough",
+    kind: 'goal',
+    test: (s) => s.room === 'cn-well' && s.player.grounded && feet(s).y <= 1870 && feet(s).y > 1700,
+    max: 16000,
+  },
+  {
+    name: "cn-well: the bough's lampwing",
+    kind: 'fight',
+    ids: ['wing-gallery'],
+    seconds: 30,
+    optional: true,
+  },
+  {
+    name: 'cn-well: the stair to the hollow',
+    kind: 'goal',
+    test: (s) => s.room === 'cn-well' && s.player.grounded && feet(s).y <= 1160 && feet(s).y > 900,
+    max: 16000,
+  },
+  // v7: the ambush wakes on a trigger over the hollow's floor (not the claws).
+  {
+    name: "cn-well: into the hollow (the ambush's trigger)",
+    kind: 'goal',
+    test: flag('cn-well-ambush'),
     max: 12000,
   },
-  { name: 'cn-elder: down to the webs', kind: 'exit', exit: 'webs', max: 12000 },
-  // (The explorer counts the web's hold as a failure: she walks in cutting, is held, breaks free, the weaver misses.)
-  { name: "cn-webs: through the weaver's web", kind: 'script', script: `${'R+A1 R12 '.repeat(23)}R10` },
-  // (Not the niche's great glint: every way up to it crosses strands, and the explorer will not be held.)
-  { name: 'cn-crawl: the crawlspace', kind: 'exit', exit: 'rot', max: 12000 },
-  { name: 'cn-rot: the cache wall', kind: 'goal', test: picked('cn-rot', 'cache-great'), max: 12000 },
-  { name: 'cn-rot: back to the well', kind: 'exit', exit: 'well', max: 12000 },
+  { name: 'cn-well: the ambush', kind: 'fight', ids: ['burr-am-1', 'burr-am-2', 'wing-am'], seconds: 120 },
+  // v9: the ambush pays. The hollow lamp's up-left fling onto the west wall's root shelf (a moon shard).
   {
-    name: 'cn-well: up the shaft',
+    name: "cn-well: the hollow lamp's fling to the shard",
     kind: 'goal',
-    test: (s) => s.room === 'cn-well' && feet(s).y <= 1160 && feet(s).y > 900,
+    test: taken('cn-well:shard-well'),
     max: 12000,
+    optional: true,
   },
-  { name: 'cn-well: the ambush', kind: 'fight', ids: ['burr-am-1', 'burr-am-2'], seconds: 120 },
-  // (The ambush's lampwing hovers ~450 px over the hollow's floor and never comes down to her: left be if so.)
-  { name: 'cn-well: the lampwing', kind: 'fight', ids: ['wing-am'], seconds: 20, optional: true },
-  { name: 'cn-well: out to the upper limbs', kind: 'exit', exit: 'limbs', max: 9000 },
-  { name: 'cn-limbs: the jump over the thorns', kind: 'exit', exit: 'hub', max: 9000 },
-  { name: 'cn-hub: east to the fork', kind: 'exit', exit: 'fork', max: 9000 },
-  // Detour: the fork's rotten floor, the cellar's ants, the galleries' nest wall.
-  { name: 'cn-fork: the rotten floor to the cellar', kind: 'exit', exit: 'cellar', max: 9000 },
-  { name: 'cn-cellar: past the ants', kind: 'exit', exit: 'galleries', max: 12000 },
+  { name: 'cn-well: out to the upper limbs', kind: 'exit', exit: 'limbs', max: 12000 },
+  // A fling line: off the second limb's lamp up into the niche over it.
   {
-    name: 'cn-galleries: the nest wall',
+    name: 'cn-limbs: the fling to the niche',
     kind: 'goal',
-    test: picked('cn-galleries', 'nest-great'),
+    test: picked('cn-limbs', 'niche-2'),
     max: 12000,
+    optional: true,
   },
-  { name: 'cn-galleries: back', kind: 'exit', exit: 'cellar', max: 12000 },
-  { name: 'cn-cellar: back up', kind: 'exit', exit: 'fork', max: 12000 },
-  { name: 'cn-fork: the claw climb to the Grove', kind: 'exit', exit: 'grove', max: 9000 },
-  { name: 'cn-grove: the keen hollow', kind: 'goal', test: flag('upgrade:keenBlade'), max: 9000 },
-  { name: 'cn-grove: the seed', kind: 'goal', test: flag('seeds:2'), max: 9000 },
-  { name: 'cn-grove: on to the Spire', kind: 'exit', exit: 'spire', max: 9000 },
-  { name: 'cn-spire: the climb', kind: 'exit', exit: 'bower', max: 12000 },
+  { name: 'cn-limbs: the jump over the thorns', kind: 'exit', exit: 'hub', max: 12000 },
+  // The hub's high chamber: a rotten wall high in the block's east face (the claws), a moon shard inside.
+  {
+    name: "cn-hub: the high chamber's wall",
+    kind: 'goal',
+    test: opened('high-wall'),
+    max: 16000,
+    optional: true,
+  },
+  {
+    name: "cn-hub: the high chamber's shard",
+    kind: 'goal',
+    test: taken('cn-hub:shard-high'),
+    max: 12000,
+    optional: true,
+  },
+  { name: 'cn-hub: east to the fork', kind: 'exit', exit: 'fork', max: 20000 },
+  { name: 'cn-fork: the claw climb to the Grove', kind: 'exit', exit: 'grove', max: 12000 },
+  // The Grove: landing in the pit shuts the root gates; both open when the wave is down.
+  { name: 'cn-grove: down into the pit', kind: 'goal', test: flag('cn-grove-wave'), max: 12000 },
+  {
+    name: 'cn-grove: the wave',
+    kind: 'fight',
+    ids: ['burr-pit-w', 'burr-pit-e', 'juv-wave-w', 'juv-wave-e', 'dang-wave', 'wing-wave'],
+    seconds: 240,
+    until: flag('cn-grove-clear'),
+  },
+  {
+    name: "cn-grove: the pit's rotten wall",
+    kind: 'goal',
+    test: taken('cn-grove:shard-grove'),
+    max: 12000,
+    optional: true,
+  },
+  { name: 'cn-grove: the keen hollow', kind: 'goal', test: flag('upgrade:keenBlade'), max: 16000 },
+  { name: 'cn-grove: the seed', kind: 'goal', test: flag('seeds:2'), max: 16000 },
+  { name: 'cn-grove: through the gate to the Spire', kind: 'exit', exit: 'spire', max: 16000 },
+  { name: "cn-spire: the climb through the hawker's orbit", kind: 'exit', exit: 'bower', max: 16000 },
+  { name: 'cn-bower: the save', kind: 'goal', test: (s) => s.save.patch?.room === 'cn-bower', max: 6000 },
   { name: 'cn-bower: the kin climb to the crown', kind: 'exit', exit: 'crown', max: 12000 },
-  { name: 'cn-crown: the glide', kind: 'goal', test: owns('glide'), max: 9000 },
-  { name: 'cn-crown: back down', kind: 'exit', exit: 'bower', max: 9000 },
+  { name: 'cn-crown: the glide', kind: 'goal', test: owns('glide'), max: 12000 },
+  { name: 'cn-crown: back down', kind: 'exit', exit: 'bower', max: 12000 },
   { name: 'cn-bower: west to the gap', kind: 'exit', exit: 'gap', max: 12000 },
   { name: 'cn-gap: the glide to the far seed', kind: 'goal', test: flag('seeds:3'), max: 12000 },
-  { name: 'cn-gap: the drop into the Crossing', kind: 'exit', exit: 'hub', max: 9000 },
-  { name: 'cn-hub: the seed door', kind: 'exit', exit: 'door', max: 9000 },
-  { name: 'cn-tunnel: the glide over the thorn pit', kind: 'exit', exit: 'den', max: 12000 },
-  // Build a46886f: the balcony is sealed from the arena (the arena cave's bitten west corner leaves solid at
-  // x 640-736, y 416-512 across the balcony's mouth), so she walks to its end and is set 180 px east, in the air.
+  // The roost hidden in the hanging root clump (its glints; the shelf's lamps fling into its mouth).
   {
-    name: "cn-den: the balcony's end",
+    name: "cn-gap: the roost's glints",
     kind: 'goal',
-    test: (s) => s.room === 'cn-den' && feet(s).x >= 560,
-    max: 3000,
+    test: picked('cn-gap', 'roost-2'),
+    max: 16000,
+    optional: true,
   },
+  // v9: the gap's chain, three lamps down to the pod garden (the third past a slick hanging root), then out by the
+  // fork and back west into the Crossing.
   {
-    name: 'cn-den: (teleport past the sealed lip)',
-    kind: 'warp',
-    x: 800,
-    y: 576,
-    why: 'Teleport: the balcony is sealed (level bug)',
+    name: "cn-gap: the three lamps' chain down to the pod garden",
+    kind: 'goal',
+    test: (s) => {
+      // (Down there by the chain: the third lamp flung, so out, not a drop from the roost.)
+      const k = (getRoom('cn-gap').lures ?? []).findIndex((l) => l.id === 'wick-gap-3');
+      return (
+        s.room === 'cn-gap' &&
+        s.player.grounded &&
+        feet(s).y >= 1990 &&
+        Math.abs(feet(s).x - 2944) < 400 &&
+        (s.lures.hp[k] ?? 1) <= 0
+      );
+    },
+    max: 16000,
+    optional: true,
   },
+  { name: 'cn-gap: down to the fork', kind: 'exit', exit: 'fork', max: 16000 },
+  { name: 'cn-fork: back into the Crossing', kind: 'exit', exit: 'hub', max: 16000 },
+  // The wings shelf off the high block's top: only the glide reaches it.
+  {
+    name: "cn-hub: the wings shelf's great",
+    kind: 'goal',
+    test: picked('cn-hub', 'shelf-great'),
+    max: 16000,
+    optional: true,
+  },
+  { name: 'cn-hub: the seed door', kind: 'exit', exit: 'door', max: 20000 },
+  // v9: the glide over the thorn pit (its hawker strikes mid-glide) lands on the den's warning: two beats, the lid opens.
+  { name: 'cn-tunnel: the glide over the thorn pit', kind: 'goal', test: flag('cn-tunnel-wave'), max: 16000 },
+  {
+    name: "cn-tunnel: the den's warning",
+    kind: 'fight',
+    ids: ['wing-warn-1', 'wing-warn-2', 'juv-warn', 'juv-warn-2', 'burr-warn'],
+    seconds: 240,
+    until: flag('cn-tunnel-clear'),
+  },
+  { name: 'cn-tunnel: down through the lid to the den', kind: 'exit', exit: 'den', max: 16000 },
   {
     name: 'cn-den: down into the arena',
     kind: 'goal',
-    test: (s) => s.room === 'cn-den' && feet(s).y >= 1270 && feet(s).x > 700,
+    test: (s) => s.room === 'cn-den' && s.player.grounded && feet(s).y >= 1300,
     max: 9000,
   },
   { name: 'cn-den: the old burrback', kind: 'fight', ids: ['old-burr'], seconds: 300 },
-  { name: 'cn-den: out through the root gate', kind: 'exit', exit: 'out', max: 9000 },
-  { name: 'cn-out: the rotten wall to the ledge', kind: 'exit', exit: 'ledge', max: 12000 },
-  { name: 'cn-ledge: the hoard', kind: 'goal', test: picked('cn-ledge', 'ledge-great'), max: 9000 },
-  { name: 'cn-ledge: back out', kind: 'exit', exit: 'out', max: 9000 },
-  { name: 'cn-out: the glide over the valley', kind: 'goal', test: flag('cn-area-end'), max: 12000 },
+  { name: 'cn-den: out through the root gate', kind: 'exit', exit: 'out', max: 12000 },
+  // The ledge after the boss: a rotten wall in the way out's foot, a great in the room behind it.
+  { name: 'cn-out: the rotten wall to the ledge', kind: 'exit', exit: 'ledge', max: 12000, optional: true },
+  {
+    name: 'cn-ledge: the great',
+    kind: 'goal',
+    test: picked('cn-ledge', 'ledge-great'),
+    max: 12000,
+    optional: true,
+  },
+  { name: 'cn-ledge: back out', kind: 'exit', exit: 'out', max: 12000, optional: true },
+  // The way out: the chimney's three legs, its rotten plug cut from a cling, the clifftop, the glide over the valley.
+  { name: 'cn-out: the plug and the chimney', kind: 'goal', test: opened('out-plug'), max: 16000 },
+  {
+    name: 'cn-out: up to the clifftop',
+    kind: 'goal',
+    test: (s) => s.room === 'cn-out' && s.player.grounded && feet(s).y <= 400,
+    max: 16000,
+  },
+  { name: 'cn-out: the glide over the valley', kind: 'goal', test: flag('cn-area-end'), max: 16000 },
   { name: 'end: hold', kind: 'script', script: '.240' },
 ];
 void near;
@@ -200,8 +354,8 @@ class Driver {
   rooms: string[] = [];
   events: Array<{ f: number; e: SimEvent }> = [];
   log: LegLog[] = [];
-  /** Harness teleports: before sim frame `f` (the tape's length then), feet at (x, y). */
-  warps: Array<{ f: number; x: number; y: number; why: string }> = [];
+  /** Harness edits: before sim frame `f` (the tape's length then), feet at (x, y), or a save flag set. */
+  warps: Array<{ f: number; x: number; y: number; why: string; flag?: string }> = [];
   private last: readonly SimEvent[] = [];
 
   constructor() {
@@ -232,7 +386,11 @@ class Driver {
   /** Replays a saved tape with its teleports (a resumed plan). */
   replay(tape: readonly number[], warps: Driver['warps']): void {
     for (const m of tape) {
-      for (const w of warps) if (w.f === this.tape.length) this.warp(w.x, w.y, w.why);
+      for (const w of warps)
+        if (w.f === this.tape.length) {
+          if (w.flag) this.setFlag(w.flag, w.why);
+          else this.warp(w.x, w.y, w.why);
+        }
       this.push(m);
     }
   }
@@ -240,6 +398,11 @@ class Driver {
   warp(x: number, y: number, why: string): void {
     this.game.teleport(x, y);
     this.warps.push({ f: this.tape.length, x, y, why });
+  }
+
+  setFlag(flag: string, why: string): void {
+    if (!this.s.save.flags.includes(flag)) this.s.save.flags.push(flag);
+    this.warps.push({ f: this.tape.length, x: 0, y: 0, why, flag });
   }
 
   settle(max = 180): void {
@@ -275,7 +438,8 @@ class Driver {
       glow: null,
       creatures: true,
       order,
-      more: glideClimbMacros(),
+      more: [...glideClimbMacros(), ...chimneyMacros()],
+      barkHp: true,
       ...(goalExit ? { goalExit } : {}),
       ...(goal ? { goal } : {}),
     });
@@ -295,7 +459,7 @@ class Driver {
   }
 
   /** Fight creature ids (or the nearest hostile) until they are down or `frames` pass. */
-  fight(ids: string[] | null, frames: number): string {
+  fight(ids: string[] | null, frames: number, until?: (s: GameState) => boolean): string {
     let line: Line | null = null;
     let k = 0;
     let name = '';
@@ -304,9 +468,23 @@ class Driver {
     const t0 = this.tape.length;
     let hurts = 0;
     let approachFails = 0;
+    let lastDeal = t0;
+    const skip = new Map<string, number>();
     while (this.tape.length - t0 < frames) {
       const s = this.s;
-      const i = this.pickFoe(ids);
+      // A target she has not hurt in 10 s (a lampwing hovering out of reach) is left for 8 s for another one.
+      if (fi >= 0 && this.tape.length - lastDeal > 600) {
+        skip.set(s.enemies[fi]?.id ?? '', this.tape.length + 480);
+        lastDeal = this.tape.length;
+        line = null;
+      }
+      const i = this.pickFoe(ids, skip, this.tape.length);
+      if (i < 0 && until && !until(s)) {
+        // (Between beats: the next ones are not woken yet.)
+        prev = 0;
+        this.push(0);
+        continue;
+      }
       if (i < 0) return `down in ${((this.tape.length - t0) / 60).toFixed(1)} s, ${hurts} hits taken`;
       const e = s.enemies[i] as GameState['enemies'][number];
       const boss = (e.kind as string) === 'oldBurrback';
@@ -333,6 +511,15 @@ class Driver {
         }
         approachFails++;
       }
+      if (!boss && far && approachFails >= 3 && s.player.grounded && dy > 200) {
+        // (v6: the explorer, creatures in, found no unhurt line down to it (the Grove's wave: she stood on a ledge
+        // 440 px over the pit floor for 240 s). Walk off toward it and fight on the floor.)
+        const dir = e.x + e.w / 2 < f.x ? ActionBit.left : ActionBit.right;
+        for (let n = 0; n < 40 && (n < 4 || !this.s.player.grounded); n++) this.push(dir);
+        approachFails = 0;
+        line = null;
+        continue;
+      }
       if (i !== fi || !line || (!boss && k >= 20)) {
         const tactics = fightTactics(this.game.scene, i, 1, 0);
         const cand = boss
@@ -349,8 +536,21 @@ class Driver {
       prev = m;
       const ev = this.push(m);
       if (ev.some((x) => x.type === 'hurt')) hurts++;
+      if (
+        ev.some(
+          (x) => (x.type === 'enemyHit' || x.type === 'enemyDie') && ids?.includes((x as { id: string }).id),
+        )
+      )
+        lastDeal = this.tape.length;
     }
-    return `not down after ${frames / 60} s (${hurts} hits taken)`;
+    const up = (ids ?? [])
+      .map((id) => this.s.enemies.find((q) => q.id === id))
+      .filter((q) => q && q.mode !== 'dead' && !q.gone)
+      .map(
+        (q) =>
+          `${q?.id} ${q?.mode} at ${Math.round((q?.x ?? 0) + (q?.w ?? 0) / 2)},${Math.round((q?.y ?? 0) + (q?.h ?? 0))}`,
+      );
+    return `not down after ${frames / 60} s (${hurts} hits taken; she is at ${Math.round(feet(this.s).x)},${Math.round(feet(this.s).y)} (${this.s.player.mode}${this.s.player.grounded ? ', standing' : ''}${this.s.player.fling >= 0 ? ', aiming' : ''}); up: ${up.join(', ') || 'none'})`;
   }
 
   /** fight.ts's look-ahead choice, plus: never a tactic that drops her far below where she stands. */
@@ -397,7 +597,16 @@ class Driver {
     return best;
   }
 
-  pickFoe(ids: string[] | null): number {
+  pickFoe(ids: string[] | null, skip?: Map<string, number>, now = 0): number {
+    if (skip?.size) {
+      // (Skipped targets only while another one is there to fight.)
+      const live = this.s.enemies.filter((e) => ids?.includes(e.id) && !e.gone && e.mode !== 'dead');
+      if (live.some((e) => (skip.get(e.id) ?? 0) <= now)) {
+        const i = this.pickFoe(ids);
+        const others = live.filter((e) => (skip.get(e.id) ?? 0) <= now).map((e) => e.id);
+        return others.includes(this.s.enemies[i]?.id ?? '') ? i : this.pickFoe(others);
+      }
+    }
     const s = this.s;
     const f = feet(s);
     let best = -1;
@@ -428,17 +637,23 @@ class Driver {
       this.warp(L.x, L.y, L.why);
       note = L.why;
       ok = true;
+    } else if (L.kind === 'flag') {
+      this.setFlag(L.flag, L.why);
+      note = L.why;
+      ok = true;
     } else if (L.kind === 'settle') {
       this.settle();
       ok = true;
     } else if (L.kind === 'fight') {
-      note = this.fight(L.ids, (L.seconds ?? 120) * 60);
+      note = this.fight(L.ids, (L.seconds ?? 120) * 60, L.until);
       // (An optional fight that runs out of time leaves the creature be: the route goes on.)
       ok = note.startsWith('down') || L.optional === true;
     } else {
       const test = L.kind === 'goal' ? L.test : undefined;
       const exit = L.kind === 'exit' ? L.exit : undefined;
-      for (let attempt = 0; attempt < 6 && !ok; attempt++) {
+      // (A detour gets one look: no waiting, no fighting for it.)
+      const tries = L.optional ? 1 : 6;
+      for (let attempt = 0; attempt < tries && !ok; attempt++) {
         this.settle();
         if (test?.(this.s)) {
           ok = true;
@@ -515,6 +730,8 @@ const KEEP = new Set([
   'fallCatch',
   'shortcutOpen',
   'enemyPhase',
+  'lureSnuff',
+  'fling',
 ]);
 
 // ---- render
@@ -557,7 +774,7 @@ async function main(): Promise<void> {
         join(out, 'legs.json'),
         JSON.stringify({ legs: d.log, hash: d.game.hash(), frames: d.tape.length, warps: d.warps }, null, 1),
       );
-      if (!log.ok || L.name === args.upto) break;
+      if ((!log.ok && !('optional' in L && L.optional)) || L.name === args.upto) break;
     }
     writeFileSync(join(out, 'rooms.json'), JSON.stringify(compress(d.rooms)));
     writeFileSync(join(out, 'events.json'), JSON.stringify(d.events));
@@ -613,12 +830,17 @@ async function render(out: string): Promise<void> {
     const warps =
       (
         JSON.parse(readFileSync(join(out, 'legs.json'), 'utf8')) as {
-          warps?: Array<{ f: number; x: number; y: number }>;
+          warps?: Array<{ f: number; x: number; y: number; flag?: string }>;
         }
       ).warps ?? [];
     while (done < total) {
       for (const w of warps)
-        if (w.f === done)
+        if (w.f === done && w.flag)
+          await page.evaluate(
+            (f) => (window as unknown as { __game: { flag(f: string): unknown } }).__game.flag(f),
+            w.flag,
+          );
+        else if (w.f === done)
           await page.evaluate(
             ([x, y]) =>
               (window as unknown as { __game: { teleport(x: number, y: number): unknown } }).__game.teleport(
@@ -685,7 +907,7 @@ const UPGRADE: Record<string, string> = {
 };
 const BARK: Record<string, string> = {
   // v2
-  'bank-wall': 'Secret: a rotten wall breaks',
+  'bank-wall': "Secret: the root clump's wall breaks",
   'cache-floor': 'Secret: a rotten floor breaks',
   'pit-panel': 'A rotten floor breaks',
   'ledge-wall': 'Secret: a rotten wall breaks',
@@ -702,6 +924,13 @@ const BARK: Record<string, string> = {
   'hollow-wall': 'Secret: a rotten wall breaks',
   'kin-wall': 'Secret: a rotten wall breaks',
   'burrow-panel': 'Secret: a rotten floor breaks',
+  // v4
+  'niche-wall': 'Secret: a rotten wall breaks',
+  'elder-heart': 'The heartwood plug breaks',
+  'out-plug': 'The rotten plug breaks: the way up',
+  // v7
+  'high-wall': 'Secret: a rotten wall breaks (the high chamber)',
+  'rot-door': 'Secret: a rotten wall breaks',
 };
 
 function eventText(e: SimEvent): string | null {
@@ -714,7 +943,13 @@ function eventText(e: SimEvent): string | null {
     case 'barkBreak':
       return BARK[x.id as string] ?? null;
     case 'hollowGrant':
-      return `Hollow: ${UPGRADE[x.upgrade as string] ?? x.upgrade}`;
+      return x.upgrade === 'moonShard'
+        ? 'Moon shard (three make a light)'
+        : `Hollow: ${UPGRADE[x.upgrade as string] ?? x.upgrade}`;
+    case 'patchRest':
+      return x.room === 'cn-bower' ? 'A save: the bower' : null;
+    case 'lureSnuff':
+      return x.id === 'wick-taproot' ? "The den's lamp goes out" : null;
     case 'stoneRead':
       return 'Moth-stone: the map is drawn';
     case 'enemyDie':
@@ -727,7 +962,7 @@ function eventText(e: SimEvent): string | null {
       return x.phase === 2
         ? 'Phase 2: the slam, then it rolls'
         : x.phase === 3
-          ? 'Phase 3: the desperate rams'
+          ? 'Phase 3: the desperate rams, in the dark'
           : null;
     case 'gateOpen':
       return x.id === 'seed-door'
@@ -738,7 +973,13 @@ function eventText(e: SimEvent): string | null {
     case 'shortcutOpen':
       return 'A shortcut opens';
     case 'flagSet':
-      return x.flag === 'cn-area-end' ? 'The way on: end of the Canopy' : null;
+      return x.flag === 'cn-area-end'
+        ? 'The way on: end of the Canopy'
+        : x.flag === 'cn-grove-wave'
+          ? 'The pit wakes: the gates shut'
+          : x.flag === 'cn-grove-clear'
+            ? 'The wave is down: the gates open'
+            : null;
     case 'fade':
       return 'She fades';
     default:
@@ -808,16 +1049,30 @@ function finish(out: string): void {
     ).warps ?? [];
   for (const w of warps)
     lines.push({ a: vt(w.f), b: Math.min(end, vt(w.f) + 4), style: 'Event', text: w.why });
+  // A fling: the first in each leg that is not a fight (a fight's flings are its own business).
   for (const L of legs)
-    if (/ambush|old burrback/.test(L.name)) {
+    if (!L.note.startsWith('down') && !L.note.startsWith('not down')) {
+      const fl = events.find(({ f, e }) => e.type === 'fling' && f >= L.start && f < L.end);
+      if (fl)
+        lines.push({
+          a: vt(fl.f),
+          b: Math.min(end, vt(fl.f) + 3),
+          style: 'Event',
+          text: 'A fling off the lamp',
+        });
+    }
+  for (const L of legs)
+    if (/ambush|old burrback|the wave/.test(L.name)) {
       const a = vt(L.start);
-      lines.push({
-        a,
-        b: Math.min(end, a + 3),
-        style: 'Event',
-        text: L.name.includes('ambush') ? 'Ambush!' : 'Boss: the old burrback',
-      });
-      if (L.name.includes('ambush'))
+      const what = L.name.includes('ambush') ? 'ambush' : L.name.includes('wave') ? 'wave' : 'boss';
+      if (what !== 'wave')
+        lines.push({
+          a,
+          b: Math.min(end, a + 3),
+          style: 'Event',
+          text: what === 'ambush' ? 'Ambush!' : 'Boss: the old burrback',
+        });
+      if (what === 'ambush')
         lines.push({ a: vt(L.end), b: Math.min(end, vt(L.end) + 3), style: 'Event', text: 'Ambush cleared' });
     }
   const ass = [
@@ -861,13 +1116,15 @@ function finish(out: string): void {
   const rows: string[] = [];
   let lastRoom = '';
   for (const L of legs) {
+    // (Detours that did not happen, or were done on the way to the leg before.)
+    if (!L.ok || L.end === L.start) continue;
     const t = vt(L.start);
     const room = L.name.split(':')[0] ?? '';
     const what = L.name.slice(room.length + 1).trim();
-    const evs = events
-      .filter(({ f }) => f >= L.start && f < L.end)
-      .map(({ e }) => eventText(e))
-      .filter((x): x is string => !!x);
+    const inLeg = events.filter(({ f }) => f >= L.start && f < L.end);
+    const evs = inLeg.map(({ e }) => eventText(e)).filter((x): x is string => !!x);
+    if (!/^(not )?down/.test(L.note) && inLeg.some(({ e }) => e.type === 'fling'))
+      evs.unshift('a fling off a lamp');
     const fightNote = L.note.startsWith('down') ? ` (${L.note})` : '';
     const roomCell = room === lastRoom ? '' : room.startsWith('cn-') ? `${title(room)} (\`${room}\`)` : room;
     lastRoom = room;
@@ -884,7 +1141,7 @@ function finish(out: string): void {
       ...(warps.length
         ? [
             '',
-            `Harness edits (captioned in the video): ${warps.map((w) => `${mmss(vt(w.f))} ${w.why}`).join('; ')}. A teleport re-creates her with the base maximum, so she loses a light there (5 to 4).`,
+            `Harness edits (captioned in the video): ${warps.map((w) => `${mmss(vt(w.f))} ${w.why}`).join('; ')}.${warps.some((w) => !(w as { flag?: string }).flag) ? ' A teleport re-creates her with the base maximum, so she can lose a light there.' : ''}`,
           ]
         : []),
       '',

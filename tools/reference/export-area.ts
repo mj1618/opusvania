@@ -89,6 +89,10 @@ function exportRoom(room: Room, ox: number, oy: number, out: AreaFile): void {
   const t = (kind: AreaTerrain['kind'], x: number, y: number, w: number, h: number) =>
     out.terrain.push({ roomId: id, kind, poly: rect(ox + x, oy + y, w, h) });
   for (const s of room.solids) t('solid', s.x, s.y, s.w, s.h);
+  // (Sealed air behind the Canopy's walls, r9: carved for the frame, never reached; rock on the map and in the measures.)
+  const sealed =
+    (r.marks as { sealed?: Array<{ x: number; y: number; w: number; h: number }> } | undefined)?.sealed ?? [];
+  for (const s of sealed) t('solid', s.x, s.y, s.w, s.h);
   for (const o of room.oneWays) t('oneway', o.x, o.y, o.w, 0);
   for (const h of (r.thorns as Array<{ x: number; y: number; w: number; h: number }>) ?? [])
     t('hazard', h.x, h.y, h.w, h.h);

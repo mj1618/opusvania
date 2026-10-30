@@ -122,6 +122,16 @@ export type SimEvent =
   /** She rested at a moon patch (`id`): whole again (`hp`), saved, and her re-form point. `x, y` = its foot. */
   | { type: 'patchRest'; id: string; room: string; x: number; y: number; hp: number }
   /**
+   * She rested at a map station (`MoonPatch.map`, the Canopy r9): render shows the map of what she has walked. `x, y`
+   * = the patch's foot.
+   */
+  | { type: 'mapStation'; id: string; room: string; x: number; y: number }
+  /**
+   * A moth-stone she carried is hung at a station (`MoonPatch.hangs`): `stone` = its `room:id`, `flag` set now,
+   * `hung` = how many of the station's stones hang there now (1..). `x, y` = the patch's foot.
+   */
+  | { type: 'stoneHung'; id: string; stone: string; flag: string; hung: number; x: number; y: number }
+  /**
    * She passed through a moon patch without resting (review r7 #4): it is her re-form point now (saved), but she is
    * not made whole. `x, y` = its foot.
    */

@@ -5,19 +5,12 @@
  * A plan that takes a reward off the line (review r5 #2: glints over a strip) is a risk: it must pass at 0 and 6
  * with half the margin.
  * The climbs and the player model: tools/levels/climbs.ts.
- * With the creatures in (review r6 #3): the well's leg 3b and its lampwing are a choice, not a toll (`CREATURE_CLIMBS`).
+ * With the creatures in (review r6 #3, `CREATURE_CLIMBS`): r9's leg 2 untouched by the gallery's creatures, the Spire's
+ * foot past its hawker at most one hit.
  */
 import { describe, expect, it } from 'vitest';
 import { getRoom } from '../../src/scene/index';
-import {
-  CLIMBS,
-  type Climb,
-  CREATURE_CLIMBS,
-  DELAYS,
-  MARGIN,
-  restSafe,
-  runClimb,
-} from '../../tools/levels/climbs';
+import { CLIMBS, type Climb, CREATURE_CLIMBS, DELAYS, MARGIN, runClimb } from '../../tools/levels/climbs';
 
 describe('the Canopy climbs are fair', () => {
   for (const c of CLIMBS)
@@ -42,10 +35,13 @@ describe('the Canopy climbs are fair', () => {
     }, 60_000);
 });
 
-describe("leg 2's strip reads before she touches it (review r7 #9)", () => {
-  it('thorn-w2 is at least 160 tall', () => {
+describe("leg 2's strip is off the climb (review r8 #1)", () => {
+  it('thorn-w2 lies in the gallery floor, under no climbing face', () => {
     const t = (getRoom('cn-well').thorns ?? []).find((q) => q.id === 'thorn-w2');
-    expect(t?.h ?? 0).toBeGreaterThanOrEqual(160);
+    expect(t).toBeDefined();
+    // A floor bed (wide, low), not a strip on a face.
+    expect(t?.w ?? 0).toBeGreaterThan(t?.h ?? 0);
+    expect(t?.y ?? 0).toBeGreaterThan(2432);
   });
 });
 
@@ -61,8 +57,4 @@ describe('the Canopy climbs with their creatures in', () => {
       );
       expect(ok.length).toBeGreaterThanOrEqual(cc.of);
     }, 60_000);
-  it('well-3b: the mid rest is a rest (10 s on it with the lampwing in, no hit)', () => {
-    const c = CLIMBS.find((q) => q.id === 'well-3b') as Climb;
-    for (const x of c.xs) expect(restSafe(c, x), `x ${x}`).toBe(0);
-  }, 60_000);
 });

@@ -13,8 +13,8 @@
  * levers (our lamps), hazards, one-ways and secret walls, per box screen of that room; how they vary from room to
  * room (CV = sd / mean over the rooms, population sd), the quietest tenth, the rooms under 0.5 a screen, the
  * busiest over the median; and how the hazard length is laid (runs of >= 640 px, hero-scaled, and their share).
- * `--check` holds the Canopy to round 7's bar (CV >= 0.8, >= 6 quiet rooms, the peak >= 5x the median, >= 50% of
- * the hazard length in runs >= 640, hazard in <= 14 rooms, the totals within 10% of v6) and exits 1 if it misses.
+ * `--check` holds the Canopy to round 9's bar (`check`) and exits 1 if it misses; `--route` prints the measure along
+ * the critical route (`alongRoute`: peaks without glints, and how much of the path climbs); `--rooms` room by room.
  */
 import { readFileSync } from 'node:fs';
 import type { AreaFile } from '../reference/schema';
@@ -150,10 +150,322 @@ const PATH = [
 ];
 
 /**
- * Round 8's bar for the Canopy (review r7 #7 on top of round 7's, review r6 #1): what misses it. v6's totals: 12,000
- * px of thorns, 1.77 hit + ledges. Two peaks (rooms at >= 4x the median), a quiet path room (<= 0.8) between the hub
- * and the Grove, no three path rooms in a row within 20% of each other. Quiet rooms >= 5 (r7: 6; the burrow, a closed
- * hole counted quiet, became the nest, review r7 #7).
+ * The critical route as walked (r9, review r8 #1 / #4): room-local points in order, from the hatch to the den, for
+ * measuring along it what the player walks through (not the room's dead ends) and how much of it is climbing.
+ */
+export const ROUTE: Array<[string, Array<[number, number]>]> = [
+  [
+    'cn-hatch',
+    [
+      [864, 1022],
+      [3460, 892],
+      [4480, 1183],
+      [5400, 1664],
+    ],
+  ],
+  [
+    'cn-hub',
+    [
+      [6160, 1152],
+      [5920, 1600],
+      [2960, 1600],
+      [1200, 1600],
+      [300, 1920],
+      [0, 1920],
+    ],
+  ],
+  [
+    'cn-trunk',
+    [
+      [3200, 384],
+      [2900, 384],
+      [2500, 704],
+      [800, 1024],
+      [600, 1664],
+      [0, 1664],
+    ],
+  ],
+  [
+    'cn-well',
+    [
+      [2560, 3200],
+      [2200, 3200],
+      [1400, 3200],
+      [1400, 4928],
+      [1460, 4928],
+      [1560, 3200],
+      [2112, 3200],
+      [2112, 2432],
+      [1760, 2432],
+      [1000, 2432],
+      [608, 2240],
+      [608, 2048],
+      [800, 1856],
+      [1536, 1856],
+      [1700, 1664],
+      [1820, 1472],
+      [1700, 1312],
+      [1728, 1152],
+      [2176, 960],
+      [2400, 768],
+      [2560, 768],
+    ],
+  ],
+  [
+    'cn-limbs',
+    [
+      [0, 768],
+      [1088, 768],
+      [1472, 576],
+      [2016, 576],
+      [2400, 704],
+      [2560, 448],
+      [2880, 448],
+      [3200, 576],
+    ],
+  ],
+  [
+    'cn-hub',
+    [
+      [0, 576],
+      [1024, 576],
+      [1100, 1600],
+      [2960, 1600],
+      [5920, 1600],
+      [7232, 1344],
+      [8000, 1344],
+    ],
+  ],
+  [
+    'cn-fork',
+    [
+      [0, 1344],
+      [1000, 1344],
+      [2700, 1344],
+      [2780, 576],
+      [3200, 576],
+    ],
+  ],
+  [
+    'cn-grove',
+    [
+      [0, 576],
+      [300, 576],
+      [1800, 1600],
+      [3600, 1472],
+      [3840, 1472],
+    ],
+  ],
+  [
+    'cn-spire',
+    [
+      [0, 1472],
+      [300, 1472],
+      [1100, 1472],
+      [1100, 900],
+      [960, 200],
+      [960, 0],
+    ],
+  ],
+  [
+    'cn-bower',
+    [
+      [4288, 1664],
+      [3800, 1408],
+      [1408, 256],
+      [1408, 0],
+    ],
+  ],
+  [
+    'cn-crown',
+    [
+      [1400, 1920],
+      [1400, 1792],
+      [1400, 1920],
+    ],
+  ],
+  [
+    'cn-bower',
+    [
+      [1408, 0],
+      [1408, 256],
+      [400, 704],
+      [0, 704],
+    ],
+  ],
+  [
+    'cn-gap',
+    [
+      [4352, 1344],
+      [4000, 1344],
+      [3456, 1344],
+      [2256, 1856],
+      [1200, 1856],
+      [320, 1856],
+      [320, 2304],
+    ],
+  ],
+  [
+    'cn-hub',
+    [
+      [7680, 0],
+      [7720, 1344],
+      [5440, 1600],
+      [5440, 2304],
+    ],
+  ],
+  [
+    'cn-tunnel',
+    [
+      [5440, 0],
+      [5440, 1856],
+      // (r9b: up the hump to its lip, the jump's apex, the glide down onto the warning's floor.)
+      [5984, 1472],
+      [6080, 1472],
+      [6400, 1220],
+      [7420, 1856],
+      [7820, 2048],
+      [8000, 2048],
+    ],
+  ],
+  [
+    'cn-den',
+    [
+      [0, 512],
+      [300, 512],
+      [1700, 1344],
+      [3700, 1344],
+      [3840, 1344],
+    ],
+  ],
+];
+
+/**
+ * Along the route (review r8 #4: the tunnel met the room bar with its dead-end branch): things a screen in windows of
+ * `stretch` screens of path (1,920 px a screen) sliding a quarter stretch at a time, counting what she walks through
+ * (within `wx` x `wy` of her line somewhere in the window: two thirds of a screen; a full frame counted the whole
+ * room's walls and made every stretch busy), glints left out (they buy nothing, r8 #5). Peaks: the densest window of
+ * each run at >= 3x the windows' median, runs 4+ screens apart. And how much of the path climbs (review r8 #1: up px
+ * over the path's length, between the hub and the Grove).
+ */
+export function alongRoute(a: AreaFile, stretch = 2, wx = 640, wy = 360) {
+  const at = new Map(a.rooms.map((r) => [r.id, r.rect]));
+  const pts: Array<{ room: string; x: number; y: number }> = [];
+  for (const [room, list] of ROUTE) {
+    const r = at.get(room);
+    if (!r) throw new Error(`route: no room ${room}`);
+    for (const [x, y] of list) pts.push({ room, x: r[0] + x, y: r[1] + y });
+  }
+  // Samples every 120 px of path, with the path length at each.
+  const samples: Array<{ room: string; x: number; y: number; d: number }> = [];
+  let d = 0;
+  let up = 0;
+  let down = 0;
+  let across = 0;
+  const climbs: Array<{ from: number; to: number; up: number; across: number }> = [];
+  let hubSeen = 0;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const p = pts[i] as (typeof pts)[number];
+    const q = pts[i + 1] as (typeof pts)[number];
+    const len = Math.hypot(q.x - p.x, q.y - p.y);
+    // (Between rooms the points are the shared opening: no path.)
+    if (p.room !== q.room) {
+      if (q.room === 'cn-hub') hubSeen++;
+      continue;
+    }
+    if (p.room === 'cn-hub' && i > 0 && pts[i - 1]?.room !== 'cn-hub') hubSeen = Math.max(hubSeen, 1);
+    const n = Math.max(1, Math.ceil(len / 120));
+    for (let k = 0; k < n; k++)
+      samples.push({
+        room: p.room,
+        x: p.x + ((q.x - p.x) * k) / n,
+        y: p.y + ((q.y - p.y) * k) / n,
+        d: d + (len * k) / n,
+      });
+    d += len;
+    up += Math.max(0, p.y - q.y);
+    down += Math.max(0, q.y - p.y);
+    across += Math.abs(q.x - p.x);
+    climbs.push({ from: d - len, to: d, up: Math.max(0, p.y - q.y), across: Math.abs(q.x - p.x) });
+  }
+  const total = d;
+  const things = [
+    ...a.enemies.map((e) => ({ id: e.id, room: e.roomId, x: e.at[0], y: e.at[1] })),
+    ...a.things
+      .filter((t) => ROOM_THINGS.has(t.kind) && t.kind !== 'pickup-minor')
+      .map((t) => ({ id: t.id, room: t.roomId, x: t.at[0], y: t.at[1] })),
+    ...a.terrain
+      .filter((t) => ROOM_TERRAIN.has(t.kind))
+      .map((t, i) => {
+        const xs = t.poly.map((v) => v[0] as number);
+        const ys = t.poly.map((v) => v[1] as number);
+        return {
+          id: `${t.kind}-${i}`,
+          room: t.roomId,
+          x: (Math.min(...xs) + Math.max(...xs)) / 2,
+          y: (Math.min(...ys) + Math.max(...ys)) / 2,
+        };
+      }),
+  ];
+  const span = stretch * 1920;
+  const out: Array<{ at: number; rooms: string; things: number; density: number }> = [];
+  // (Windows slide a quarter of a stretch at a time: a peak is not split by where a stretch happens to start.)
+  for (let s0 = 0; s0 + span / 2 < total; s0 += span / 4) {
+    const ss = samples.filter((q) => q.d >= s0 && q.d < s0 + span);
+    if (!ss.length) continue;
+    const seen = new Set<string>();
+    for (const t of things)
+      if (ss.some((q) => q.room === t.room && Math.abs(q.x - t.x) <= wx && Math.abs(q.y - t.y) <= wy))
+        seen.add(t.id);
+    const len = Math.min(span, total - s0) / 1920;
+    out.push({
+      at: Math.round((s0 / 1920) * 10) / 10,
+      rooms: [...new Set(ss.map((q) => q.room.replace(/^cn-/, '')))].join('/'),
+      things: seen.size,
+      density: Math.round((seen.size / len) * 100) / 100,
+    });
+  }
+  const sorted = out.map((o) => o.density).sort((x, y) => x - y);
+  const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
+  // Peaks: the densest window of each run of windows at >= 3x the median, runs apart by 4+ screens of path.
+  const peaks: typeof out = [];
+  for (const o of out) {
+    if (o.density < 3 * median - 1e-9) continue;
+    const last = peaks[peaks.length - 1];
+    if (last && o.at - last.at < 4) {
+      if (o.density > last.density) peaks[peaks.length - 1] = o;
+    } else peaks.push(o);
+  }
+  // Between the hub and the Grove: from the first point in the trunk to the Grove's first.
+  const i0 = samples.findIndex((q) => q.room === 'cn-trunk');
+  const i1 = samples.findIndex((q) => q.room === 'cn-grove');
+  const d0 = samples[i0]?.d ?? 0;
+  const d1 = samples[i1]?.d ?? total;
+  const leg = climbs.filter((c) => c.from >= d0 && c.to <= d1);
+  const legLen = leg.reduce((x, c) => x + (c.to - c.from), 0);
+  const legUp = leg.reduce((x, c) => x + c.up, 0);
+  const legAcross = leg.reduce((x, c) => x + c.across, 0);
+  return {
+    screens: Math.round((total / 1920) * 10) / 10,
+    stretches: out,
+    median,
+    peaks,
+    climb: { up, down, across, share: Math.round((up / total) * 100) / 100 },
+    hubToGrove: {
+      screens: Math.round((legLen / 1920) * 10) / 10,
+      up: Math.round(legUp),
+      across: Math.round(legAcross),
+      climbShare: Math.round((legUp / Math.max(1, legLen)) * 100) / 100,
+    },
+  };
+}
+
+/**
+ * Round 9's bar for the Canopy (review r8 #4 on round 8's, review r7 #7, and round 7's, review r6 #1): what misses it.
+ * A room peak (>= 4x the median), and two peaks along the route without glints (`alongRoute`: >= 3x its median); a
+ * quiet path room (<= 0.8) between the hub and the Grove, no three path rooms in a row within 20% of each other; quiet
+ * rooms >= 5; thorns >= 10,000 px (r9: two strips came off the climbs); 1.5 hit + ledges an air screen; the hub to the
+ * Grove climbing at most half its path.
  */
 export function check(a: AreaFile): string[] {
   const f = furniture(a, 1);
@@ -165,7 +477,9 @@ export function check(a: AreaFile): string[] {
   const by = new Map(roomDensity(a).map((r) => [r.id, r.density]));
   const median = s.densityMedian;
   const peaks = [...by].filter(([, x]) => x >= 4 * median - 1e-9);
-  if (peaks.length < 2)
+  // (r9: one room peak is enough; the second peak is measured along the route, below. The tunnel's dead-end hall made
+  // it a room peak in v8, review r8 #4.)
+  if (peaks.length < 1)
     bad.push(
       `${peaks.length} rooms at >= 4x the median ${median} (want 2: ${peaks.map(([id]) => id).join(', ')})`,
     );
@@ -187,9 +501,21 @@ export function check(a: AreaFile): string[] {
     bad.push(`${s.longHazardShare} of the hazard length in runs >= 640 (want >= 0.5)`);
   if (new Set(a.terrain.filter((t) => t.kind === 'hazard').map((t) => t.roomId)).size > 14)
     bad.push(`hazard in ${s.roomsWithHazard} rooms (want <= 14)`);
-  if (f.hazardPx < 10800) bad.push(`thorns ${f.hazardPx} px (v6 12,000: want within 10%)`);
+  // (r9: 10,000, review r8 #1: leg 2's and leg 3b's strips came off the climbs, "each hit a choice someone made".)
+  if (f.hazardPx < 10000) bad.push(`thorns ${f.hazardPx} px (want >= 10,000)`);
   if (f.hitPlusLedgesPerAir < 1.5)
     bad.push(`hit + ledges ${f.hitPlusLedgesPerAir} per air screen (want >= 1.5)`);
+  // Round 9 (review r8 #4 / #1): two peaks along the route without glints (stretches >= 4x the route's median), and
+  // the path between the hub and the Grove climbs at most half its length.
+  const r = alongRoute(a);
+  // (Review r8 #4 asked two at >= 4x; r9 holds two at >= 3x, the Grove 3.8x and the den's warning 3.0x: 4x wants the
+  // middle stretches, 3-6 a screen, thinned. first-area.md, v9.)
+  if (r.peaks.length < 2)
+    bad.push(
+      `peaks along the route: ${r.peaks.map((p) => `${p.rooms} ${p.density}`).join(', ') || 'none'} over a median ${r.median} (want two at >= 3x, 4+ screens apart)`,
+    );
+  if (r.hubToGrove.climbShare > 0.5)
+    bad.push(`the hub to the Grove climbs ${r.hubToGrove.climbShare} of its path (want <= 0.5)`);
   return bad;
 }
 
@@ -208,9 +534,23 @@ if (process.argv[1]?.endsWith('canopy-furniture.ts')) {
       console.log(
         `  ${r.id.padEnd(16)} ${r.screens.toFixed(1).padStart(5)} screens ${String(r.things).padStart(3)} things ${r.density.toFixed(2)}`,
       );
+  if (process.argv.includes('--route')) {
+    const r = alongRoute(ours);
+    console.log(`along the route (${r.screens} screens of path, glints out), median ${r.median} a screen:`);
+    for (const o of r.stretches)
+      console.log(
+        `  ${o.at.toFixed(1).padStart(5)}  ${o.density.toFixed(2).padStart(5)}  ${String(o.things).padStart(3)} things  ${o.rooms}${r.peaks.includes(o) ? '  PEAK' : ''}`,
+      );
+    console.log(
+      `climbing: up ${r.climb.up} px, down ${r.climb.down}, across ${r.climb.across} (up ${r.climb.share} of the path)`,
+    );
+    console.log(
+      `the hub to the Grove: ${r.hubToGrove.screens} screens, up ${r.hubToGrove.up} px, across ${r.hubToGrove.across} px, climbing ${r.hubToGrove.climbShare} of the path`,
+    );
+  }
   if (process.argv.includes('--check')) {
     const bad = check(ours);
-    console.log(bad.length ? `round 8's bar missed:\n  ${bad.join('\n  ')}` : "round 8's bar met");
+    console.log(bad.length ? `round 9's bar missed:\n  ${bad.join('\n  ')}` : "round 9's bar met");
     process.exitCode = bad.length ? 1 : 0;
   }
 }

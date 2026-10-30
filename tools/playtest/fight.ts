@@ -168,8 +168,9 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
             return A | dirBit(d) | (c.y > p.y + p.h ? ActionBit.down : 0);
           return dirBit(d) | (prev & J ? J : 0);
         }
-        // Up on a ledge over its floor: down (camping is slammed).
-        if (p.grounded && floorY - fy > 60) return onOneWay(s, scene) ? (prev & J ? D : D | J) : dirBit(d);
+        // Up on a ledge over its floor: down (camping is slammed). Off a solid shelf away from it: the v7 den's
+        // shelves are 384 wide, and with it parked under the shelf she stood over it for minutes (route-video v5).
+        if (p.grounded && floorY - fy > 60) return onOneWay(s, scene) ? (prev & J ? D : D | J) : dirBit(-d);
         // Open on its back: in and cut.
         if (stunned) {
           if (!p.grounded) return dirBit(d);
@@ -225,6 +226,13 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
           if (Math.abs(spot - px) > 30) return dirBit(Math.sign(spot - px));
           if (rootWait < 0 || k - rootWait > 400) rootWait = k;
           return 0;
+        }
+        // Not under a shelf: a ram pulls up under a roof lower than its headroom, so it never braces there and
+        // creeps (route-video v5: a 75 s stand-off under the den's west shelf). Out from under it, away from it.
+        const roofed = solidAt(scene, p.x, p.y - 150, p.w, 140);
+        if (roofed && p.grounded) {
+          const behind = d > 0 ? px - range[0] : range[1] - px;
+          return dirBit(behind > 200 ? -d : d);
         }
         // Phase 1: in to draw the ram (it braces once she is in its range), not under its nose, and with room
         // behind her for the ram to carry past (toward the middle of its ground when it is not there).

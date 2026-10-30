@@ -230,6 +230,11 @@ export interface RoomMarks {
    * sky): pf-mass.ts paints them behind everything, so a cave reads as a cave (the Canopy v2's enclosed rooms).
    */
   backs?: Array<{ x: number; y: number; w: number; h: number }>;
+  /**
+   * The Canopy (r9): carved air behind a wall that she can never reach (no way in), with a back over it: the deep
+   * behind the pillars and boughs. Air to the sim and the painter; rock to the area's map and measures.
+   */
+  sealed?: Array<{ x: number; y: number; w: number; h: number }>;
 }
 
 /**
