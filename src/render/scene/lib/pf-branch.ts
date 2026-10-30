@@ -2048,7 +2048,17 @@ export function paintBranchTerrain(
   // 1c. The masses (root / ground: the wood's bulk that encloses space, pf-mass.ts), behind the limbs. Their tops
   // join the stretches (rim, growth) after the limbs are painted.
   const massPlan: BranchPlan = { stretches: [], sprigs: [], hangs: [], clear: [], cocoons: [], clumps: [] };
-  paintMasses(p, massPlan, room.solids.filter(isMass), room.width, room.height, seed);
+  // (A rotten wall in the mass is mass for its neighbours' edges: no lip, moss or root mat where they meet it.)
+  const walls = ((room as { bark?: Array<{ x: number; y: number; w: number; h: number }> }).bark ?? []).map(
+    (b) => ({
+      x: b.x,
+      y: b.y,
+      w: b.w,
+      h: b.h,
+      tag: 'root',
+    }),
+  );
+  paintMasses(p, massPlan, room.solids.filter(isMass), room.width, room.height, seed, undefined, walls);
   // The one-way ledges: root shelves (review r3 #2).
   paintShelves(p, massPlan, room, seed + 61);
   // The glowing growth on them (its light is live: layers/interior.ts).

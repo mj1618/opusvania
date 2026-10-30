@@ -1,7 +1,8 @@
-# The Canopy, render side (round 3, 2026-10-30)
+# The Canopy, render side (rounds 3 and 4, 2026-10-30)
 
-What the wood kit draws in `?world=canopy` beyond the mass painter (memory/canopy.md "Render"); review that drove it:
-docs/design/levels/reviews/canopy-r2.md. Shots: `shots/canopy-r3/` (21:9 in `shots/canopy-r3/21x9/`).
+What the wood kit draws in `?world=canopy` beyond the mass painter (memory/canopy.md "Render"); reviews that drove it:
+docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`, round 4 before / after in
+`shots/canopy-r4-render/before|after|after-21x9/<room>/`.
 
 ## Every creature has a renderer (kinds.ts)
 - `src/render/enemies/kinds.ts` `creatureArt(kind, look)` says who draws a kind: `beetle` (burrback rig, scaled by
@@ -54,3 +55,42 @@ docs/design/levels/reviews/canopy-r2.md. Shots: `shots/canopy-r3/` (21:9 in `sho
   pixel brighter than the cap, with a hard rim where its reach ended).
 - `ROOM_LAMPS` (render/lantern/config.ts): per-room lamp size / light / moths; the Grove's are 1.9x with 2.2x moths and
   a warm wash.
+
+## Round 4 (review r3 #2, #3, #4/#9, #5)
+- **Standables are drawn** (`lib/wood-claims.ts`, pure): `unclaimedStandables(room)` mirrors who paints what (mass,
+  solid tree, stretch, a small solid under a limb's end) and `shelfFor` says how a one-way ledge is drawn: a root shelf
+  out of the wall beside it, or a knot of twisting roots hung from the roof / limb over it (`paintShelves`, pf-mass.ts).
+  `tests/unit/wood-standables.test.ts` walks every wood room. A new solid tag or ledge kind needs a painter and a line.
+- **Masses** (pf-mass.ts): edges are merged into runs across rects (`mergeRuns`: one face down two stacked rects, no
+  seam). **Tapers** (`findTapers`: rects narrowing up from a floor = the generator's `burl`, narrowing down from a roof
+  = `hang`, base <= 900 wide) are painted as ONE shape (`paintTaper`): a root flare whose roots fan out onto the floor,
+  or a bundle of vertical roots ending in ragged tips; tiers stay collision, their tops keep a little moss and their
+  stretches. Undersides are **root mats** (`matSag` lumps, `rootMat` clumps, no beam, no ceiling brackets: `cornerFill`);
+  an underside's free outer corners round on `underRound` (scaled down on narrow posts: a 64 px post's lumps made a
+  baluster). A **lift** toward `#0f2a36` and bark **plates** within `liftReach` of every lit top / face. Over a face
+  >= 420 tall the top's free end rolls further (`roundTall`) and gets `brokenTop` (torn rim, moss curtain, split).
+  Faces with `kick: false` may bulge `looseBulge` more; faces that take the claws stay within ~12 px.
+- Rotten walls are passed to `paintMasses` as `ghosts` (mass for the neighbours' edges, not painted): a post under a
+  wall got a lip and moss at the seam. Wall patches mask to their rect; covers to their painted outline (`poly`).
+- **Root bases** (pf-branch.ts `rootBase`): a tree whose foot is in the room flares into the floor under it; trees
+  standing on its foot (the Grovemother's stilts) are not painted, the base draws them as arching roots with the
+  trunk's underside an arch between.
+- **Five looks** (lib/interior.ts `lookOf`): `art.look` (schema, src/scene) wins; then `ROOM_LOOKS` (a few Canopy ids);
+  then carriers = nest, old burrback or `ground` = den, h >= 1.7 w = shaft, a deep mood = heartwood, else canopy.
+  Material per look (`MAT`): heartwood `grain` (panels along the trunk, splits, knots weeping sap; rings and horizontal
+  grain in the deep), shaft `root` fibres + one `beam` light + frost moss, nest `earth` + tunnel mouths, seed caches,
+  `larva` cells, ant `trail` lights, canopy `leaf` (bark strips, leaf mats, dark ragged gaps to the night in the deep),
+  den `earth` + shed shells and claw scrapes. Lights: `sap`, `larva`, `beam`, `trail` (layers/interior.ts).
+- **The mint was the warm tone's deep back cut by a torn mask** under the lamps' wash. Warm variants are dark grey-green
+  now, the fog bands thinner, and the mask's edge is shaded inward (`edge` + its twin mask in airBack).
+- A **cover's hollow is a back** (inset 48 px, edges closed) in a room that has backs: the hub's bank hollow showed sky.
+- **Gates** (kit.ts `rootGate`): an arch of two twisted roots per side out of a flared foot, a tangle of uneven roots
+  across (drawn back toward where each grew as it opens), roots hanging from the crown. Even bars read as a cage.
+- **Rot** (kit.ts `rot`, `dust`): a wood wall's patch gets a darker warm face, rot blooms, a lit slanted crack, chips at
+  its foot and dust on a cut; a wall named by a `teach` landmark is a step stronger.
+- **The wood's vista** (lantern/vista.ts `WoodVista`): from a `vista` landmark (fades in from 1100 px west of it), on
+  far2: a range whose peak stands under the moon when the moon is in the 1920 view (else where `mountain` puts it), its
+  west flanks shaded and one snow cap per peak on the moon side (per-step slivers read as stripes), a near ridge with
+  firs, the valley's false lights in clusters with mist. Near screen-fixed (`parallax` 0.05).
+- Gotchas: narrow spikes over an edge read as thorns; pale alpha blobs in a back read as smoke or ghosts; a lit
+  sinusoidal width on a short column reads as turned wood. Debug a look: `look` in `interiorPlan(room)`.

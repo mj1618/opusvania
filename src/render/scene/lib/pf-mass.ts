@@ -174,7 +174,8 @@ function outline(r: MassRect, s: Sides, seed: number): number[] {
   for (let x = r.x + r.w; x > r.x; x -= st) {
     if (brC && x > r.x + r.w - R) continue;
     if (blC && x < r.x + R) break;
-    const sag = inSegs(x, s.bottom) ? matSag(x, seed) * (r.h > 120 ? 1 : 0.4) : o;
+    // (A narrow post's foot barely sags: a root mat under 64 px turned it into a baluster's knob.)
+    const sag = inSegs(x, s.bottom) ? matSag(x, seed) * (r.h > 120 ? 1 : 0.4) * clamp(r.w / 260, 0.15, 1) : o;
     pts.push(x, yb + sag);
   }
   if (blC)
@@ -320,12 +321,14 @@ export function paintMasses(
   H: number,
   seed: number,
   only?: { x: number; y: number; w: number; h: number },
+  /** Rects that are mass for the edges (a rotten wall, baked on its own) but not painted here. */
+  ghosts: readonly MassRect[] = [],
 ): void {
   const B = BRANCH;
   const near = (x0: number, y0: number, x1: number, y1: number) =>
     !only ||
     (x1 > only.x - 200 && x0 < only.x + only.w + 200 && y1 > only.y - 200 && y0 < only.y + only.h + 200);
-  const sides = masses.map((r) => exposedSides(r, masses, W, H));
+  const sides = masses.map((r) => exposedSides(r, [...masses, ...ghosts], W, H));
   const earth = (r: MassRect) => r.tag === 'ground';
 
   const tapers = findTapers(masses, sides);
@@ -468,7 +471,7 @@ export function paintMasses(
     const y1 = f.b;
     if (!near(x - 200, y0, x + 200, y1)) continue;
     const rr = rngFor(seed, x, y0, 5);
-    const th = range(rr, MASS.sideTh[0] as number, MASS.sideTh[1] as number);
+    const th = Math.min(range(rr, MASS.sideTh[0] as number, MASS.sideTh[1] as number), r.w * 0.6);
     const cx = x - dir * (th * 0.5 - 6);
     // Drawn so the lit flank (the limb's upper side) faces the air: down on an east face, up on a west face.
     // (Under an exposed top the column starts below the top's root, which turns down over the corner.)
@@ -524,7 +527,8 @@ export function paintMasses(
       // The face's width swells and pinches (a column of even width reads as a post).
       const L = lineLimb(
         line,
-        (t) => th * (0.75 + 0.3 * Math.sin(t * Math.PI * 3 + i) + 0.15 * wobble(t * 900, seed + i, 200)),
+        // (By length, not lobes per face: three lobes down a short post turned it into a baluster.)
+        (t) => th * (0.86 + 0.14 * wobble(t * Math.abs(yb - ya), seed + i, 260)),
         B.walkH,
         seed + i * 3 + y0,
         0,
@@ -735,15 +739,30 @@ export function paintMasses(
 function brokenTop(p: Paint, x: number, y: number, dir: number, seed: number): void {
   const B = BRANCH;
   const r = rngFor(seed, 233);
-  // The break: a low torn rim at the very edge (tall spikes read as thorns), a cushion of moss over it.
-  const pts: number[] = [x - dir * 90, y + 20, x - dir * 90, y + 2];
-  for (let k = 0; k <= 6; k++) {
-    const xx = x - dir * 90 * (1 - k / 6);
-    pts.push(xx, y - (k % 2 ? range(r, 2, 6) : range(r, 6, 14)) * (k / 6));
+  // The break: broad blunt slabs of snapped wood standing off the edge, leaning out, their torn tips pale (thin
+  // spikes read as thorns); a cushion of moss in front of them.
+  let xx = x - dir * 150;
+  let k = 0;
+  while (dir > 0 ? xx < x - 10 : xx > x + 10) {
+    const w = range(r, 22, 44);
+    const u = 1 - Math.abs(x - xx) / 150;
+    const hi = range(r, 8, 16) + 22 * u * u * (k % 2 ? 0.5 : 1);
+    const lean = dir * hi * range(r, 0.15, 0.4);
+    const x0 = xx;
+    const x1 = xx + dir * w;
+    // (Torn, not cut: the top is a ragged run of fibres, the pale only a thin line along the tear.)
+    const tear: number[] = [];
+    for (let q = 0; q <= 5; q++) {
+      const v = q / 5;
+      const tx = lerp(x0, x1, v) + lean * (0.6 + 0.4 * v);
+      tear.push(tx, y - hi * (0.55 + 0.45 * Math.sin(v * Math.PI)) + (q % 2 ? range(r, 4, 12) : 0));
+    }
+    p.solid([x0, y + 16, ...tear, x1, y + 16], B.bark, B.walkH - 0.03, { bark: 1 });
+    p.tint(strand(tear, 2.2, 0.2), B.barkLit, 0.45);
+    xx = x1 + dir * range(r, 2, 10);
+    k++;
   }
-  pts.push(x + dir * 6, y + 10, x + dir * 2, y + 40);
-  p.solid(pts, B.barkDark, B.walkH - 0.04, { bark: 0.9 });
-  p.solid(chaikin(blob(x - dir * 34, y - 2, 46, 11, seed + 3, 0.35, 14), 2), B.mossDark, B.walkH + 0.22, {
+  p.solid(chaikin(blob(x - dir * 40, y - 2, 60, 12, seed + 3, 0.35, 14), 2), B.mossDark, B.walkH + 0.22, {
     moss: 1,
   });
   // The split: a dark crack down the face, ragged, narrowing.
@@ -771,8 +790,8 @@ function brokenTop(p: Paint, x: number, y: number, dir: number, seed: number): v
         range(r, 6, 13),
         0.7,
       ),
-      B.mossDark,
-      B.walkH + 0.16,
+      B.moss,
+      B.walkH + 0.2,
       { moss: 1, alpha: 0.9 },
     );
   }

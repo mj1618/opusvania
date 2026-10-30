@@ -248,8 +248,17 @@ function freeEdges(b: Rect, room: Room, masses: readonly MassRect[]): BackEdges 
 
 /** The plan for a wood room with backs, or null (no backs: a vista). */
 export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
-  const backs = (room.marks?.backs ?? []) as Rect[];
-  if (!backs.length) return null;
+  const marked = (room.marks?.backs ?? []) as Rect[];
+  if (!marked.length) return null;
+  // A cover's hollow is inside the wood too (review r3 #2: the hub's bank hollow showed open sky, then flat mint):
+  // its rect is a back, unless the room's backs already hold it.
+  const inMarked = (c: Rect) =>
+    marked.some((b) => c.x >= b.x && c.y >= b.y && c.x + c.w <= b.x + b.w && c.y + c.h <= b.y + b.h);
+  const covers = ((room.marks?.covers ?? []) as Rect[])
+    .filter((c) => !inMarked(c) && c.w > 160 && c.h > 160)
+    // (Inset: its paint, which runs a little past a back, stays under the walls round it.)
+    .map((c) => ({ x: c.x + 48, y: c.y + 48, w: c.w - 96, h: c.h - 96 }));
+  const backs = [...marked, ...covers];
   const masses = room.solids.filter(massOf) as MassRect[];
   const cx = backs.reduce((a, b) => a + b.x + b.w / 2, 0) / backs.length;
   const mood = moodAt(room, cx);
@@ -258,7 +267,10 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
   const warm = mood === 'warm';
   const tone =
     TONES[warm && look === 'canopy' ? 'canopyWarm' : warm && look === 'heartwood' ? 'heartwoodWarm' : look];
-  const edges = backs.map((b) => freeEdges(b, room, masses));
+  // (A cover's hollow is closed all round: no torn edge, the wood's own walls bound it.)
+  const edges = backs.map((b, i) =>
+    i < marked.length ? freeEdges(b, room, masses) : { w: false, e: false, n: false, s: false },
+  );
   const lights: Glow[] = [];
   const I = INTERIOR;
   const add = (g: Omit<Glow, 'seed'>): void => {
@@ -1060,8 +1072,9 @@ export function drawDeepBack(
       for (let k = 0; k < Math.max(2, Math.round(b0.w / 900)); k++) {
         const cx = b0.x + range(r, 0.1, 0.9) * b0.w;
         const cy = b0.y + range(r, 0.05, 0.45) * b0.h;
-        const rx = range(r, 90, 220);
-        const ry = rx * range(r, 0.6, 1.1);
+        // (Ragged and wider than tall: a round one read as a porthole.)
+        const rx = range(r, 70, 170);
+        const ry = rx * range(r, 0.4, 0.7);
         // (A hole to the night sky, darker than the bark round it: pale blobs read as smoke.)
         g.poly(chaikin(blob(cx, cy, rx, ry, seed + k * 11, 0.4, 18), 2)).fill({
           color: 0x0c1828,
