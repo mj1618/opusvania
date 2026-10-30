@@ -1,4 +1,4 @@
-# The Canopy, render side (rounds 3-7, 2026-10-30 / 31)
+# The Canopy, render side (rounds 3-8, 2026-10-30 / 31)
 
 What the wood kit draws in `?world=canopy` beyond the mass painter (memory/canopy.md "Render"); reviews that drove it:
 docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`, round 4 before / after in
@@ -253,3 +253,49 @@ reference crops as r6), `compare/before-after.png` (hub, Grove, den, way out, ha
 - Weak still: the Grove's Grovemother trunk is a flat dark rectangle; the well's lobed shaft walls stack like pillows;
   the den's back is flat grey fog lenses; the moss is smooth next to Silksong's stippled clumps; the thorn families
   differ mostly up close (a bed is 32-64 px deep); the burl mount is still an egg at a distance.
+
+## Round 8: ground as silhouette, moss by look (review r7 #3, #6, #8, #10, the hub's moon)
+Shots: `shots/canopy-r8-render/look-check/<WxH>/<room>/` (all rooms, three sizes), `compare/r8-vs-refs.png` (same rows
+and reference crops as r6 / r7; the reference crops live in the session scratchpad `cmp/p01|p11|p21.png`, never in the
+repo).
+- **The core** (pf-mass.ts step 2c, `paintCore`, `MASS.core / coreA / coreWob / coreK`, `massCore(tone)`): deeper than
+  28-136 px from a free edge (`distToRuns` over the merged runs, so neighbouring rects and the room's edge do not
+  count) a mass sinks to its near-black core in ten wavering steps of strips 4 px tall (one fill per step: strips share
+  edges, the multisampled bake draws no seams). Every rect, however thin (a 128 px rect left out showed as a lit
+  ruled band). The bake multiplies its light by the albedo, so the diagonal streaks go with it. The wood beyond the
+  room (layers/interior.ts `paintBeyond`) is the same core. Solid interior 10-25 -> 3-8 luma.
+- **look:check measures figure-ground** (tools/look-check.ts `splitByCollision`, `figureGround`; `--masks` writes
+  each frame's split as a PGM): solid interior = inside the solids more than 96 px from their edge, mean <= 12; air
+  (outside the solids, the room's box and her box) median >= 4x that. **The frame bars (near-black, mid, flat) are
+  measured over the air**: a black ground is the point, and HK's King's Pass is 50-56% near-black over the whole frame,
+  flat 28-50% (Silksong Tut_03 75% / 56%), so whole-frame bars failed the references themselves (and over "all but
+  the deep interior" the black outer band and the wood beyond the room still failed the crawl, the fork's face, the
+  way out's foot).
+- **Moss by look** (lib/top-growth.ts): `TOP_FAMILY` canopy lime, heartwood amber lichen, shaft frost, den fungus caps on
+  earth, nest straw; `setTopFamily` is set by `paintBranchTerrain` for the room, and `mossBlanket` / `paintTopBand`
+  hand over to `paintGrowth` while it is (null: the old band, other kits). `growthRuns`: a coverage per top in the
+  family's range (40-85% overall), runs and breaks of uneven length, thickness 10-60 by run length. Dots over a dark
+  body with a shadowed underside. The live rim (`Rim(plan, RIM_FAMILY[fam])`) is the thin lit lip on every top, in
+  the family's colour; face moss `FACE_FAMILY`. `tests/unit/wood-moss.test.ts`. Gotchas: relief moss 1 takes the
+  moon's yellow-green key, so lichens use moss 0.15-0.25; saturated amber discs read as cheese; small pale caps read
+  as snow (caps 9-24 px with stalks, clusters 80-200 apart).
+- **Gates grow** (lantern/kit.ts `rootMat`, `KIT.gateGrow / gateWithdraw` 40 frames; `closing` map on `gateShut`): a
+  flat wood gate is sinuous tapered root ribbons reaching across from both sides, each its own delay; rootlets once
+  knit; dust motes while it moves; `gateShut` adds trauma (`budget.gateShut`). The tall root gate's arch fades with
+  its tangle. Straight parallel strokes with round caps read as pipes; a full-width hole under a half-grown mat as a lens.
+- **The Grovemother** (pf-branch.ts `greatTrunk`, solid trunks >= `BRANCH.greatTrunkW`): torn squarish plates
+  (`plateShape`, smooth ovals read as scales), a lit ridge (`ridgeLit`), climbing roots, a hollow.
+- **Mounds -> ribs** (shaft mid plane): ribs running off the back's top and bottom with a frost edge, root curtains;
+  `mossMound` is gone. Claw lobes 100-400 px (more short than long), knobs a breath lighter, roots across seams.
+- **Mounts**: burl = a bundle of roots that parts under the ledge (three legs to a slab read as a stool); arch = a root
+  surfacing far off and diving in past the ledge with a tangle under its span.
+- **Thorn beds** (`bramble`, runs >= `KIT.thorn.bedMin` 640): a 48-96 px tangle with a thorny silhouette, canes
+  looping and arching off the ends, a warm glint every 200 px. **The den's back**: banks with burrow mouths low in
+  them (a round mound with a mouth and a lit crescent read as a face), shed half-shells (crescents, never domes), no
+  strata lenses.
+- **The moon** (layers/far.ts `initMoonWindow`, `MOON_WINDOW`): the far composite (one opaque sprite in far2, sky
+  included) hid the hub's moon; a soft window over it samples `SKY_OUTPUT.texture` round `art.moon`. Hiding a far
+  layer to debug skips the composite (far.ts), so "hide far2 and the moon shows" proves nothing about far2's content.
+- Headless playwright-cli (no GPU) crashes in `AlphaMaskPipe` (`_resolution` of null) when a cover patch is in view:
+  capture with `tools/lib/browser` `launch({ gpu: true })` + `openGame` (a scratch `.mts` script) instead.
+- Weak still: see the round's report (docs/design/levels/first-area.md when the orchestrator files it).
