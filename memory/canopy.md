@@ -67,6 +67,10 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   creatures, `*` finds, `L` lamps, `P` patches).
 
 ## Gotchas (v3, still true)
+- **Floor thorns sit in a shallow pit** (64 deep, r5): a flat bed on the way is floor the human bots (and tired
+  people) walk into; a pit reads as a gap and gets jumped. Tier 2's bed under its 256 px roof was unjumpable: a
+  jump bumped the roof and came down in it from any lip (the roof lifts over it now). Check a bed under a low roof
+  with a real jump.
 - **A creature spawned inside a kit solid is sealed in** (v4 video: the Grove wave's juveniles inside the bounce
   caps: never move, never cut, the wave's gate never opens). `finish()` now throws on a spawn inside a solid, cap,
   gate or bark (walkers probed at their feet and shoulders).

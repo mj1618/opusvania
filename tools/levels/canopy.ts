@@ -1072,6 +1072,7 @@ function trunk(): Json {
   // The drop to tier 3, and tier 3 out west to the well.
   r.hole(448, 1024, 640, 1216);
   r.cave(0, 1216, 1024, 1664, { ceil: 96, w: 0, e: 0, corner: 0 });
+  r.hole(256, 1664, 448, 1728);
   r.fill();
   // A root burl up to the alcove (one swelling, not a pillar).
   r.burl(1344, 704, 128, 96, 1);
@@ -1081,7 +1082,8 @@ function trunk(): Json {
   r.mass(640, 1216, 64, 256);
   // (Review r4 #2: the floor strip alone is the lesson; the roof strip over it is cut.)
   r.thorns('thorn-t2', 832, 1088, 128);
-  r.thorns('thorn-t3', 256, 1664, 192);
+  // (In a shallow pit: a gap she jumps on the way to the well, not floor she walks into.)
+  r.thorns('thorn-t3', 256, 1728, 192);
   r.juvenile('juv-t1', 2480, 704, -1, 140);
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
@@ -1170,7 +1172,7 @@ function well(): Json {
   r.oneWay(CH0, 1152, 384, 'branch');
   // A root lip out from the landing (a branch she climbs up through from leg 2): from its end the east face is a
   // jump away, so leg 3 starts from a rest.
-  r.oneWay(CH0, LAND, 128, 'branch');
+  r.oneWay(CH0, LAND, 256, 'branch');
   r.add('glades', { id: 'glade-claws', x: 1360, y: 4704, w: 216, h: 224, ability: C });
   r.patch('p-well', 1900, 4928);
   // The west moth-stone beside the claws (review r3 #8: the rot branch is on the map the moment it matters).
@@ -1627,6 +1629,9 @@ function grove(): Json {
   // Secret: a pocket in the pit's west wall behind rotten heartwood (was a floor panel: r2 #6).
   r.hole(1088, 1408, 1408, 1600);
   r.bark('pit-wall', 1408, 1408, 64, 192);
+  // (Floor thorns sit in shallow pits, gaps she jumps: r5's bots walked into every flat bed on the way.)
+  r.hole(2560, 1600, 2700, 1664);
+  r.hole(3300, 1472, 3460, 1536);
   r.cap('cap-w', 1536, 1536, 128, 'big');
   r.cap('cap-e', 3008, 1536, 128, 'mid');
   r.back(704, 800, 3200, 1600);
@@ -1678,8 +1683,8 @@ function grove(): Json {
   r.add('triggers', { id: 'pit-wave', x: 1536, y: 1472, w: 1664, h: 128, sets: 'cn-grove-wave' });
   r.flyer('lampwing', 'wing-a', 1700, 900, 1, { radius: 220 });
   r.flyer('hawker', 'hawk-e', 3600, 700, -1, { radius: 260 });
-  r.thorns('thorn-p1', 2560, 1600, 140);
-  r.thorns('thorn-e1', 3300, 1472, 160);
+  r.thorns('thorn-p1', 2560, 1664, 140);
+  r.thorns('thorn-e1', 3300, 1536, 160);
   r.thornsUnder('thorn-roof', 1400, 192, 256);
   r.hoard('pit-', 1180, 1500, 180, 80, 3);
   r.great('pit-great', 1150, 1560);
