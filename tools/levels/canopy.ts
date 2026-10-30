@@ -1042,6 +1042,9 @@ function trunk(): Json {
   // A root burl up to the alcove (one swelling, not a pillar).
   r.burl(1344, 704, 128, 96, 1);
   r.add('moonseeds', { id: 'seed-giant', x: 1248, y: 290 });
+  // A root column carries the shaft's east face down to 192 over tier 3's floor: with the claws she climbs back up
+  // (v3's shaft started 448 over the floor: tier 3 was a pocket the bots wandered for minutes).
+  r.mass(640, 1216, 64, 256);
   r.thorns('thorn-t2', 768, 1024, 192);
   r.thornsUnder('thorn-roof', 960, 768, 128);
   r.thorns('thorn-t3', 256, 1664, 192);

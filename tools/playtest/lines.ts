@@ -735,18 +735,26 @@ export function zigCandidates(
   hands: Hands,
   wait = 0,
 ): Candidate[] {
-  const across = faces.some((fc) => fc.w === -w && (fc.x - faceX) * -w >= 200 && (fc.x - faceX) * -w <= 700);
-  if (!across) return [];
+  const opp = faces.find((fc) => fc.w === -w && (fc.x - faceX) * -w >= 200 && (fc.x - faceX) * -w <= 700);
+  if (!opp) return [];
   const out: Candidate[] = [];
+  // (Thorns on alternate faces work for one phase only: which face she jumps at first. A person tries both.)
   for (const [n, away] of [
     [0, 0],
     [1, 0],
     [0, 12],
     [2, 0],
-  ] as const) {
-    const nm = `kick up the chimney (${n} on the face${away ? ', out from under the lip' : ''})`;
-    out.push({ name: nm, make: () => zigLine(nm, scene, goal, tx, { faceX, w, n, away, wait }, hands) });
-  }
+  ] as const)
+    for (const [fx, fw] of [
+      [faceX, w],
+      [opp.x, -w],
+    ] as const) {
+      const nm = `kick up the chimney (${fw === w ? 'this' : 'the far'} face first, ${n} on it${away ? ', out from under the lip' : ''})`;
+      out.push({
+        name: nm,
+        make: () => zigLine(nm, scene, goal, tx, { faceX: fx, w: fw, n, away, wait }, hands),
+      });
+    }
   return out;
 }
 

@@ -71,6 +71,8 @@ const CLAIMS: Claim[] = [
     not: ['well', 'rot', 'cn-trunk:seed-giant'],
   },
   { room: 'cn-trunk', from: [600, 1664], kit: [], reach: ['well'], not: ['hub', 'rot'] },
+  // (Back in from the well with the claws: up the tiers to the hall and out to the Crossing.)
+  { room: 'cn-trunk', from: [600, 1664], kit: [C], reach: ['well', 'place:t2', 'place:t1', 'hub'] },
   // The well: without the claws the bottom is a pit (out only east to the rot hall); with them, everything.
   {
     room: 'cn-well',
