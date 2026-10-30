@@ -19,6 +19,7 @@
  */
 import type { Graphics } from 'pixi.js';
 import type { Lure } from '../../sim/scene';
+import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import type { LightRegistry } from '../lights';
 import { hash01 } from './config';
@@ -367,7 +368,7 @@ export class Acts {
     const spawns = sim.scene.enemies ?? [];
     if (!L?.hidden || !L.respawn) return;
     const A = ACTS.arrive;
-    const delay = 36;
+    const delay = Math.max(1, Math.round(tuning.enemies.arriveDelayFrames));
     spawns.forEach((s, i) => {
       if (!s.arrive || !L.hidden?.[i] || !(L.respawn?.[i] ?? 0)) return;
       const left = L.respawn?.[i] ?? 0;
