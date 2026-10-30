@@ -278,7 +278,8 @@ export function paintMasses(
         const yb = dir > 0 ? y1 + 10 : yTop;
         // A free-standing pillar flares into its foot (and a face leans a little either way), never a plumb post.
         // (Only a tall one: the steps of a narrowing stack, each flared at its foot, read as a pagoda.)
-        const pillar = r.w <= MASS.pillarW && r.h >= MASS.pillarMinH && s.left.length > 0 && s.right.length > 0;
+        const pillar =
+          r.w <= MASS.pillarW && r.h >= MASS.pillarMinH && s.left.length > 0 && s.right.length > 0;
         const yLo = Math.max(ya, yb);
         const flare = (yy: number) => (pillar ? MASS.flare * clamp((yy - (yLo - 200)) / 200, 0, 1) ** 2 : 0);
         const line: number[] = [];
