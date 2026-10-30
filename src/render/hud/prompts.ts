@@ -34,6 +34,7 @@ import type { GameState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { hudLink } from './link';
+import { fadeStep, type Lesson, owns } from './prompt-logic';
 
 export const PROMPTS = {
   /** Frames of plain falling (not gliding, not hurt) before the glide's key shows; the wings' own flutter starts at 14. */
@@ -84,7 +85,9 @@ export const PROMPTS = {
   flingDy: 0,
   flingRing: 30,
   flingBreath: 6,
-  flingAfter: 0.08,
+  flingAfter: 0,
+  /** Seconds the fling's cap stays after the flame leaves her reach (r10 #1: it came and went in 67 ms). */
+  lingerFling: 0.6,
   /** Cap half-size, logical px. */
   cap: 13.5,
   /** The hold: seconds per loop, pressed from..to (of the loop), how far the cap sinks px. */
@@ -104,7 +107,6 @@ const CELL = 72;
 const PALE = 'rgba(226, 236, 240, 0.94)';
 const PALE_N = 0xe2ecf0;
 
-type Lesson = 'glide' | 'kick' | 'offer' | 'fling';
 /** The keys of the offer (src/input/bindings.ts) and the letter on their cap. */
 const OFFER_KEYS: Record<string, string> = { KeyF: 'F' };
 /** The Lamp's keys (the fling, src/input/bindings.ts) and their letters. */
@@ -125,6 +127,8 @@ function flingReady(sim: SimView): number {
 /** A key cap with its letter (or the space bar's mark), pale on a soft dark seat. `wide` = half-width px. */
 function paintCap(label: string, wide: number): Texture {
   const P = PROMPTS;
+  // No DOM (the unit tests drive the prompts' rules in node): a blank cap.
+  if (typeof document === 'undefined') return Texture.EMPTY;
   const canvas = document.createElement('canvas');
   canvas.width = CELL * RES;
   canvas.height = CELL * RES;
@@ -258,6 +262,8 @@ export class Prompts {
   private lampKey = 'KeyV';
   /** Seconds a flame has been in her reach (the fling's lesson waits `flingAfter`). */
   private inReach = 0;
+  /** The flame the fling's cap stands by (kept while it lingers after the reach ends; -1 none). */
+  private flame = -1;
   /** The flame's offset from her on screen, logical px (the fling's cap stands by it). */
   private fx = 0;
   private fy = 0;
@@ -398,22 +404,28 @@ export class Prompts {
     // A flame in her reach (the fling's lesson): where it is from her, on screen.
     const flame = !this.taught.fling && free ? flingReady(sim) : -1;
     this.inReach = flame >= 0 ? this.inReach + dt : 0;
-    if (flame >= 0) {
-      const l = sim.scene.lures?.[flame];
+    if (flame >= 0) this.flame = flame;
+    // The cap and ring stay by the flame while the lesson lingers after the reach (not by her).
+    const by = flame >= 0 ? flame : this.lesson === 'fling' ? this.flame : -1;
+    if (by >= 0) {
+      const l = sim.scene.lures?.[by];
       if (l) {
-        flameAt(sim.lures, flame, l, sim.frame - 1 + sim.alpha, tuning, FLAME);
+        flameAt(sim.lures, by, l, sim.frame - 1 + sim.alpha, tuning, FLAME);
         this.fx = (FLAME.x - p.cx) * hudLink.zoom;
         this.fy = (FLAME.y - p.cy) * hudLink.zoom;
       }
     }
 
+    // Never a lesson for a move she does not own (r9: the glide's cap in the hatch, with nothing owned).
+    const owned = sim.save.abilities;
     let want: Lesson | null = null;
     if (this.enabled && hudLink.on) {
-      if (!this.taught.kick && this.slide >= P.slideFrames) want = 'kick';
+      if (!this.taught.kick && owns(owned, 'kick') && this.slide >= P.slideFrames) want = 'kick';
       else if (flame >= 0 && this.inReach >= P.flingAfter) want = 'fling';
       else if (!this.taught.offer && !this.offerRest && free && giftReady(sim)) want = 'offer';
       else if (
         !this.taught.glide &&
+        owns(owned, 'glide') &&
         falling &&
         (drop > P.dropPx || (this.ranOff && this.fall < P.fallFrames)) &&
         (this.ranOff || (this.fall >= P.fallFrames && p.y - p.airTopY >= P.fallPx)) &&
@@ -423,6 +435,8 @@ export class Prompts {
       )
         want = 'glide';
     }
+    // The glide's lesson never takes over from the fling's while that one is still up (it lingers after the reach).
+    if (want === 'glide' && this.lesson === 'fling' && this.alpha > 0.003 && this.linger > 0) want = null;
     // A new showing of the offer's cap; after `offerShows` of them unanswered it rests until a fade.
     // (A showing = the cap coming up from nothing: a flicker of the target inside one does not count.)
     if (want === 'offer' && !this.offerWas && (this.lesson !== 'offer' || this.alpha <= 0.003)) {
@@ -454,14 +468,15 @@ export class Prompts {
           want === 'kick' ? (p.wallDir > 0 ? -1 : 1) : want === 'fling' ? (this.fx >= 0 ? 1 : -1) : 1;
         if (this.alpha <= 0.003) this.place(1);
       }
-      this.linger = want === 'glide' || want === 'fling' ? P.linger : P.lingerKick;
+      this.linger = want === 'fling' ? P.lingerFling : want === 'glide' ? P.linger : P.lingerKick;
     } else this.linger -= dt;
     const done = this.lesson !== null && this.taught[this.lesson];
     const on = this.lesson !== null && !done && this.linger > 0 && this.enabled;
-    this.alpha = Math.min(
-      1,
-      Math.max(0, this.alpha + (on ? dt / P.fadeIn : -dt / (done ? P.learned : P.fadeOut))),
-    );
+    // The fling's cap is at full strength on the first frame of reach (r10 #1: the window can be 8 frames).
+    this.alpha = fadeStep(this.alpha, on, dt, {
+      fadeIn: this.lesson === 'fling' ? 0 : P.fadeIn,
+      fadeOut: done ? P.learned : P.fadeOut,
+    });
     if (this.alpha <= 0.003) {
       this.box.visible = false;
       this.ring.visible = false;
