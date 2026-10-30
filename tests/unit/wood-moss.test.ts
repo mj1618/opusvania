@@ -6,7 +6,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Look } from '../../src/render/scene/lib/looks';
 import { massTops } from '../../src/render/scene/lib/pf-mass';
-import { GROWTH, growthCover, growthRuns, TOP_FAMILY, topFamilyOf } from '../../src/render/scene/lib/top-growth';
+import {
+  GROWTH,
+  growthCover,
+  growthRuns,
+  TOP_FAMILY,
+  topFamilyOf,
+} from '../../src/render/scene/lib/top-growth';
 import { ROOMS } from '../../src/scene/index';
 
 const canopy = Object.values(ROOMS).filter((r) => r.art?.kit === 'wood' && r.id.startsWith('cn-'));
