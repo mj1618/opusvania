@@ -19,11 +19,13 @@
  *
  * Render only: reads the scene, `sim.kit`, `sim.save`, `sim.rest`, `sim.light`, events.
  */
+
 import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import { mix, wind } from '../scene/lib/look';
+import { MASS_PATCHES } from '../scene/lib/mass-patches';
 import { LOOK } from '../scene/lib/room-look';
 import { hash01 } from './config';
 import type { GlowPool } from './glow';
@@ -297,11 +299,19 @@ export class Kit {
     // Bark: rotten plugs and panels; heartwood.
     (S.bark ?? []).forEach((b, i) => {
       const left = sim.kit.bark[i] ?? 0;
+      const patch = MASS_PATCHES.get(`bark:${b.id}`);
+      if (patch) patch.visible = left > 0;
       if (left <= 0 || !seen(b.x, b.y, b.w, b.h)) return;
       const hit = this.hits.get(i);
       const shake = hit ? Math.max(0, 1 - hit.t / KIT.shake) : 0;
       const ox = shake * Math.sin(hit ? hit.t * 90 : 0) * 3 * (hit?.dir || 1);
       const max = (b as { hp?: number }).hp ?? 3;
+      // In the wood the wall is the mass it sits in (baked: mass-patches.ts); only a faint seam and its cuts show.
+      if (patch) {
+        patch.x = ox;
+        this.seam(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
+        return;
+      }
       if ((b as { heartwood?: boolean }).heartwood) this.heartwood(back, b.x + ox * 0.4, b.y, b.w, b.h, b.id);
       else this.bark(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
     });
@@ -425,6 +435,13 @@ export class Kit {
       const k0 = this.coverK[i] ?? want;
       const k = k0 + (want - k0) * Math.min(1, dt * KIT.coverEase);
       this.coverK[i] = k;
+      // A cover in the wood is the mass it sits in (baked: mass-patches.ts).
+      const patch = MASS_PATCHES.get(`cover:${c.id}`);
+      if (patch) {
+        patch.alpha = k;
+        patch.visible = k >= 0.01;
+        return;
+      }
       if (k < 0.01 || !seen(c.x, c.y, c.w, c.h)) return;
       this.cover(front, c.x, c.y, c.w, c.h, k, c.id, clock);
     });
@@ -508,6 +525,44 @@ export class Kit {
       g.moveTo((pts[0] as number) + 1.5, pts[1] as number);
       for (let k = 2; k < pts.length; k += 2) g.lineTo((pts[k] as number) + 1.5, pts[k + 1] as number);
       g.stroke({ color: B.plateLit, width: 0.8, alpha: 0.5 });
+    }
+  }
+
+  /**
+   * A rotten wall in the wood (its body is the baked mass): the faint seam where the rot meets the sound wood, and a
+   * crack for every cut taken. Found by a sharp eye or a blade, as in the references.
+   */
+  private seam(
+    g: Graphics,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    floor: boolean,
+    cracks: number,
+    id: string,
+  ): void {
+    const B = KIT.bark;
+    const line: number[] = [];
+    if (floor) for (let k = 0; k <= 8; k++) line.push(x + (w * k) / 8, y + 10 + (hash01(id, k) - 0.5) * 6);
+    else
+      for (let k = 0; k <= 10; k++)
+        line.push(x + w * 0.5 + (hash01(id, k) - 0.5) * w * 0.5, y + 12 + ((h - 24) * k) / 10);
+    g.moveTo(line[0] as number, line[1] as number);
+    for (let k = 2; k < line.length; k += 2) g.lineTo(line[k] as number, line[k + 1] as number);
+    g.stroke({ color: 0x02050a, width: 1.6, alpha: 0.55 });
+    for (let c = 0; c < cracks; c++) {
+      const sx = floor ? x + w * (0.2 + 0.6 * hash01(id, c + 40)) : x + w * (0.3 + 0.4 * hash01(id, c + 40));
+      const sy = floor ? y + 2 : y + h * (0.15 + 0.25 * c);
+      g.moveTo(sx, sy);
+      let cx = sx;
+      let cy = sy;
+      for (let k = 0; k < 5; k++) {
+        cx += (hash01(id, c * 9 + k) - 0.5) * (floor ? 22 : 18);
+        cy += floor ? h / 6 : h / 9;
+        g.lineTo(cx, cy);
+      }
+      g.stroke({ color: B.crack, width: 2.6, alpha: 0.9 });
     }
   }
 
@@ -621,6 +676,36 @@ export class Kit {
     id: string,
   ): void {
     const a = 1 - fall;
+    if (LOOK.kit === 'wood') {
+      // The wood's seal: a lid of roots woven over the hole, the moon on their upper edges; it sinks as it opens.
+      const dy = fall * fall * 140;
+      g.roundRect(x - 6, y + dy, w + 12, h, 14).fill({ color: 0x050a10, alpha: a });
+      const n = Math.max(4, Math.round(w / 34));
+      for (const dir of [1, -1]) {
+        for (let k = -1; k <= n; k++) {
+          const r = hash01(id, k * 3 + (dir > 0 ? 1 : 2));
+          const x0 = x + (k / n) * w;
+          const x1 = x0 + dir * h * 1.6;
+          const mid = (x0 + x1) / 2 + (r - 0.5) * 10;
+          const strand = (dx: number, off: number) =>
+            g
+              .moveTo(Math.min(x + w, Math.max(x, x0 + dx)), y + dy + off)
+              .quadraticCurveTo(
+                Math.min(x + w, Math.max(x, mid + dx)),
+                y + dy + h * 0.5 + off,
+                Math.min(x + w, Math.max(x, x1 + dx)),
+                y + dy + h - 2 + off,
+              );
+          strand(0, 0);
+          g.stroke({ color: 0x16222e, width: 8 + r * 5, alpha: a, cap: 'round' });
+          strand(0, -3);
+          g.stroke({ color: 0x4a6274, width: 1.4, alpha: 0.55 * a, cap: 'round' });
+        }
+      }
+      g.moveTo(x - 4, y + dy + 2).lineTo(x + w + 4, y + dy + 2);
+      g.stroke({ color: 0x5a7486, width: 2, alpha: 0.5 * a });
+      return;
+    }
     // Roots woven across, silk binding them.
     for (let k = 0; k < 5; k++) {
       const r = hash01(id, k);
@@ -802,16 +887,32 @@ export class Kit {
     clock: number,
   ): void {
     const L = KIT.leafCover;
-    const cols = Math.max(2, Math.round(w / 70));
-    const rows = Math.max(2, Math.round(h / 70));
-    for (let j = 0; j < rows; j++)
-      for (let i = 0; i < cols; i++) {
-        const r = hash01(id, i * 31 + j * 7);
-        const cx = x + ((i + 0.5) * w) / cols + (r - 0.5) * 30;
-        const cy = y + ((j + 0.5) * h) / rows + (hash01(id, i + j * 13 + 5) - 0.5) * 24;
-        const rad = 52 + 30 * hash01(id, i * 3 + j * 17 + 9);
-        g.ellipse(cx, cy, rad, rad * 0.8).fill({ color: r < 0.25 ? L.mid : L.body, alpha: 0.98 * k });
-      }
+    // A dark core inset from the edge (so nothing shows through), then leaves over all of it, denser at the rim.
+    g.roundRect(x + 18, y + 14, w - 36, h - 28, Math.min(w, h) * 0.4).fill({
+      color: L.body,
+      alpha: 0.98 * k,
+    });
+    const inner = Math.round((w * h) / 900);
+    for (let c = 0; c < inner; c++) {
+      const px = x + 10 + hash01(id, c + 900) * (w - 20);
+      const py = y + 8 + hash01(id, c + 1900) * (h - 16);
+      const a = hash01(id, c + 2900) * Math.PI * 2 + Math.sin(clock * 0.6 + c * 0.3) * 0.06;
+      const len = 22 + 18 * hash01(id, c + 3900);
+      const wd = len * 0.42;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const tone = hash01(id, c + 4900);
+      g.poly([
+        px,
+        py,
+        px + ca * len * 0.5 - sa * wd,
+        py + sa * len * 0.5 + ca * wd,
+        px + ca * len,
+        py + sa * len,
+        px + ca * len * 0.5 + sa * wd,
+        py + sa * len * 0.5 - ca * wd,
+      ]).fill({ color: tone < 0.3 ? L.mid : L.body, alpha: 0.98 * k });
+    }
     // Single leaves round the edge, stirring a little: the clump's outline is leaves, never a line.
     const n = Math.round((w + h) / 14);
     for (let c = 0; c < n; c++) {

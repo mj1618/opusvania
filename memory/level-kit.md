@@ -105,6 +105,12 @@ dir, floor}`, `kitClang {id, kind: 'seedCase', hitX, hitY, dir, hitstop, recoil}
 `signRead {id, room, flag, rhythm}`, `hollowGrant {id, upgrade}`; `slashHit.target.kind` `thorns | seedCase | bark |
 cap`; `hurt.source.kind` `thorns`.
 
+## The wood's pieces (painted, `art.pieces`)
+Covers and rotten bark in a wood room with masses are baked as the mass they sit in (src/render/scene/lib/mass-patches.ts,
+memory/canopy.md): a cover fades as before, a wall shows a faint seam and its cracks until it breaks. A gate on
+`seeds:N` in the wood is a lid of woven roots with its sockets. `marks.backs` gives carved space a back wall;
+`camera.headroom` (room) caps how far the view rises over the room's top.
+
 ## Greybox look
 Thorns red with teeth; seed-case an amber ring; bark a brown hatched panel with cut pips and spores rising from
 its seams (the one secret language), a ghost outline once broken; a gate a pale silk curtain that drops on

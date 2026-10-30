@@ -15,7 +15,7 @@
  *
  * Structure, knobs and gotchas: memory/playfield.md.
  */
-import type { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { SimEvent } from '../../../sim/events';
 import { slashBox } from '../../../sim/index';
 import { tuning } from '../../../sim/tuning';
@@ -25,6 +25,7 @@ import { prng } from '../lib/look';
 import { growLantern } from '../lib/lr-flora';
 import { LanternRim } from '../lib/lr-rim';
 import { LANTERN_BAKE, type LanternPlan, paintLanternTerrain } from '../lib/lr-terrain';
+import { MASS_PATCHES } from '../lib/mass-patches';
 import { bakeTerrain, GROVE_BAKE } from '../lib/pf-bake';
 import { paintBranchTerrain, WOOD_BAKE } from '../lib/pf-branch';
 import { growBranch } from '../lib/pf-branch-flora';
@@ -101,6 +102,21 @@ export class PlayfieldLayer implements EnvModule {
     const baked = bakeTerrain(ctx.renderer, paint, scale, info.mist, look);
     paint.albedo.destroy();
     paint.relief.destroy();
+    // Covers and rotten walls painted as the mass they sit in (mass-patches.ts): each baked on its own, masked to its rect.
+    MASS_PATCHES.clear();
+    const walls: Container[] = [];
+    for (const pt of wood?.patches ?? []) {
+      const b = bakeTerrain(ctx.renderer, pt.paint, scale, [], look);
+      pt.paint.albedo.destroy();
+      pt.paint.relief.destroy();
+      const mask = new Graphics().rect(pt.rect.x, pt.rect.y, pt.rect.w, pt.rect.h).fill(0xffffff);
+      const holder = new Container({ label: pt.key });
+      holder.addChild(b.layer, mask);
+      holder.mask = mask;
+      if (pt.front) ctx.layers.air.addChild(holder);
+      else walls.push(holder);
+      MASS_PATCHES.set(pt.key, holder);
+    }
 
     this.field = new BendField(scene.width, scene.height);
     const garden = {
@@ -134,6 +150,7 @@ export class PlayfieldLayer implements EnvModule {
     // (Behind the character, the creatures and the slash mark: in `playfieldFront` they flew over
     // the cut itself, flat green triangles on the crescent.)
     pf.addChild(baked.layer);
+    for (const w of walls) pf.addChild(w);
     if (wood) {
       this.rim = new Rim(wood.plan);
       pf.addChild(this.rim.container);

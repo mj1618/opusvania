@@ -60,6 +60,8 @@ export interface RoomCamera {
   /** Her feet line, as a share of the safe area's height from its top. */
   anchorY?: number;
   lookaheadX?: number;
+  /** How far the view may rise above the room's top (default `cameraTuning.headroom`): 0 in a room roofed in mass. */
+  headroom?: number;
   /** How far below her feet the view leads in a real fall, px. */
   fallLookahead?: number;
   smoothYFall?: number;
@@ -216,6 +218,11 @@ export interface RoomMarks {
   moonholes?: Array<{ x: number; y: number }>;
   places?: Array<{ id: string; x: number; y: number; note?: string }>;
   chambers?: Array<{ id: string; x: number; y: number; w: number; h: number }>;
+  /**
+   * The wood: rects of carved space that have a back wall (the inside of the wood or the earth behind the air, not the
+   * sky): pf-mass.ts paints them behind everything, so a cave reads as a cave (the Canopy v2's enclosed rooms).
+   */
+  backs?: Array<{ x: number; y: number; w: number; h: number }>;
 }
 
 /**

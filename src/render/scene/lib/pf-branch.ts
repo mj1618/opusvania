@@ -14,10 +14,12 @@
  * Nothing floats and nothing props anything up. The far branch is the backdrop's (`marks.farBranch`).
  * Structure, knobs and gotchas: memory/playfield.md, "The wood: the hatching branch".
  */
+
 import type { Room } from '../../../scene/room';
 import type { SolidRect } from '../../../sim/scene';
 import { mix } from './look';
 import type { BakeLook, MistFill } from './pf-bake';
+import { paintBacks, paintMasses } from './pf-mass';
 import { Paint } from './pf-paint';
 import { blob, chaikin, clamp, cubic, lerp, quad, range, rngFor, smoothstep, wobble } from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
@@ -144,7 +146,7 @@ export interface Limb {
  * / `knee` (the next stretch abuts it), `fork` (the limb dips and splits: one tine rises into the next
  * stretch, one goes on down), `snap` (broken), `nub` (a blunt natural end), `tip` (thins into twigs).
  */
-type End = 'trunk' | 'burl' | 'knee' | 'under' | 'crotch' | 'fork' | 'snap' | 'nub' | 'tip';
+export type End = 'trunk' | 'burl' | 'knee' | 'under' | 'crotch' | 'fork' | 'snap' | 'nub' | 'tip';
 
 /** One stretch of the walk (a run of rolling rects) as one limb. */
 export interface Stretch {
@@ -238,7 +240,7 @@ function along(L: Limb, v: (i: number) => number, i0: number, i1: number): numbe
 }
 
 /** A thin ribbon along a line, `w0` px wide, thinning toward both ends over `taper` of its length. */
-function strand(line: number[], w0: number, taper = 0.3): number[] {
+export function strand(line: number[], w0: number, taper = 0.3): number[] {
   const n = line.length / 2;
   const left: number[] = [];
   const right: number[] = [];
@@ -501,7 +503,15 @@ export function paintLimb(p: Paint, L: Limb, knots: Array<{ i: number; v: number
 }
 
 /** A knot: a swelling with bark creased round it and a dark socket whose lower lip catches the light. */
-function knot(p: Paint, cx: number, cy: number, rad: number, rot: number, h: number, seed: number): void {
+export function knot(
+  p: Paint,
+  cx: number,
+  cy: number,
+  rad: number,
+  rot: number,
+  h: number,
+  seed: number,
+): void {
   const B = BRANCH;
   dome(p, cx, cy, rad * 2, rad * 1.3, h + 0.08, h + 0.2, seed, rot);
   p.tint(blob(cx, cy - rad * 0.55, rad * 1.6, rad * 0.7, seed + 1, 0.25, 18, rot), B.barkLit, 0.25);
@@ -515,7 +525,7 @@ function knot(p: Paint, cx: number, cy: number, rad: number, rot: number, h: num
   p.tint(blob(cx, cy + rad * 0.3, rad * 0.46, rad * 0.13, seed + 10, 0.25, 12, rot), B.barkLit, 0.35);
 }
 
-function lichen(p: Paint, cx: number, cy: number, size: number, h: number, seed: number): void {
+export function lichen(p: Paint, cx: number, cy: number, size: number, h: number, seed: number): void {
   const r = rngFor(seed, cx, cy);
   const n = 3 + Math.floor(r() * 6);
   for (let k = 0; k < n; k++) {
@@ -601,7 +611,7 @@ function planTrees(room: Room): TreeLike[] {
 
 function planStretches(room: Room, trees: TreeLike[]): Stretch[] {
   const B = BRANCH;
-  const branches = room.solids.filter((s) => s.tag !== 'trunk').sort((a, b) => a.x - b.x);
+  const branches = room.solids.filter((s) => s.tag !== 'trunk' && !isMass(s)).sort((a, b) => a.x - b.x);
   // The stretches: the room's marks, or (without them) runs of abutting rects within a step.
   let marks = room.marks?.stretches ?? [];
   if (!marks.length) {
@@ -841,7 +851,7 @@ function stretchLimb(st: Stretch, xa: number, xb: number, seed: number): Limb {
 }
 
 /** A limb along a polyline with a width profile. */
-function lineLimb(
+export function lineLimb(
   line: number[],
   wd: (t: number) => number,
   h: number,
@@ -857,7 +867,7 @@ function lineLimb(
 }
 
 /** Knots placed along a stretch (index along its limb, offset, radius). */
-function knotsFor(L: Limb, seed: number, every: number): Array<{ i: number; v: number; r: number }> {
+export function knotsFor(L: Limb, seed: number, every: number): Array<{ i: number; v: number; r: number }> {
   const r = rngFor(seed, 41);
   const n = L.pts.length / 2;
   const out: Array<{ i: number; v: number; r: number }> = [];
@@ -877,7 +887,7 @@ function knotsFor(L: Limb, seed: number, every: number): Array<{ i: number; v: n
  * The moss blanket on a walk top (`topAt` is the rolled bark top): cushions and thin skins, now and
  * then a fat tuft that breaks the line, tongues creeping down the flank, drapes over free ends.
  */
-function mossBlanket(
+export function mossBlanket(
   p: Paint,
   x0: number,
   x1: number,
@@ -1837,10 +1847,24 @@ function tipTangle(
 }
 
 /** Paints the wood room's playfield. */
+/** A solid the wood paints as bulk, not as a limb (pf-mass.ts). */
+export function isMass(s: { tag: string }): boolean {
+  return s.tag === 'root' || s.tag === 'ground';
+}
+
+/** A cover or a rotten wall painted as the mass it sits in, to bake on its own (mass-patches.ts). */
+export interface MassPatch {
+  key: string;
+  rect: { x: number; y: number; w: number; h: number };
+  /** Over her (a cover) or behind her (a wall). */
+  front: boolean;
+  paint: Paint;
+}
+
 export function paintBranchTerrain(
   room: Room,
   seed: number,
-): { paint: Paint; info: TerrainInfo; plan: BranchPlan } {
+): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const B = BRANCH;
   const p = new Paint(room.width, room.height);
   const trees = planTrees(room);
@@ -1858,6 +1882,16 @@ export function paintBranchTerrain(
   const busy = (x: number): boolean => (x > cx0 && x < cx1) || (!!tat && Math.abs(x - tat.x) < 140);
   const sdOf = (st: Stretch): number => seed + st.s.x * 7 + st.s.y;
   const childOf = (st: Stretch): Stretch | undefined => stretches.find((o) => o.parent === st.id);
+
+  // 0. The back walls of carved space (pf-mass.ts), behind everything.
+  const backs = room.marks?.backs ?? [];
+  if (backs.length)
+    paintBacks(
+      p,
+      backs,
+      room.solids.some((q) => q.tag === 'ground'),
+      seed + 5,
+    );
 
   // 1. Forks (the parent's dip, the lower tine, the crotch, the rising tine) behind the walk.
   const kinds: ForkKind[] = ['dip', 'behind', 'hang'];
@@ -1885,6 +1919,11 @@ export function paintBranchTerrain(
     paintTrunk(p, t, joinsOf(t), room.height, seed + Math.round(t.x));
     if (t.top > -40) droopCrown(p, plan, t, seed + Math.round(t.x) + 3);
   }
+
+  // 1c. The masses (root / ground: the wood's bulk that encloses space, pf-mass.ts), behind the limbs. Their tops
+  // join the stretches (rim, growth) after the limbs are painted.
+  const massPlan: BranchPlan = { stretches: [], sprigs: [], hangs: [], clear: [], cocoons: [], clumps: [] };
+  paintMasses(p, massPlan, room.solids.filter(isMass), room.width, room.height, seed);
 
   // 2. The stretches. A root in a solid tree runs on into it (the trunk's collar wraps it, step 3); a
   // root in a decor tree sinks into its dark.
@@ -2048,6 +2087,17 @@ export function paintBranchTerrain(
       reach: 210,
     });
   }
+  plan.stretches.push(...massPlan.stretches);
+  plan.hangs.push(...massPlan.hangs);
+  for (const st of massPlan.stretches)
+    info.tops.push({
+      x0: st.x0,
+      x1: st.x1,
+      y: st.y,
+      kind: 'branch',
+      freeL: freeWest(st),
+      freeR: freeEast(st),
+    });
   for (const c of plan.cocoons) {
     const st = stretches.find((o) => c.x >= o.x0 && c.x <= o.x1);
     const uy = st ? Math.min(c.y, st.under(c.x)) : c.y;
@@ -2059,7 +2109,22 @@ export function paintBranchTerrain(
       0.55,
     );
   }
-  return { paint: p, info, plan };
+  // The patches: each cover and rotten wall painted as the masses would be with it solid, masked to it at display.
+  const patches: MassPatch[] = [];
+  const masses = room.solids.filter(isMass);
+  if (masses.length && room.art?.pieces) {
+    const tag = masses.some((q) => q.tag === 'ground') ? 'ground' : 'root';
+    const one = (key: string, r: { x: number; y: number; w: number; h: number }, front: boolean) => {
+      const pp = new Paint(room.width, room.height);
+      paintMasses(pp, null, [...masses, { ...r, tag }], room.width, room.height, seed, r);
+      patches.push({ key, rect: { x: r.x, y: r.y, w: r.w, h: r.h }, front, paint: pp });
+    };
+    for (const b of (room as { bark?: Array<{ id: string; x: number; y: number; w: number; h: number }> })
+      .bark ?? [])
+      one(`bark:${b.id}`, b, false);
+    for (const c of room.marks?.covers ?? []) one(`cover:${c.id}`, c, true);
+  }
+  return { paint: p, info, plan, patches };
 }
 
 function terrainInfo(room: Room, stretches: Stretch[]): TerrainInfo {

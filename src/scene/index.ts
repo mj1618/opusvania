@@ -399,6 +399,9 @@ const SceneSchema = z
         places: z
           .array(z.object({ id: z.string().min(1), x: int, y: int, note: z.string().optional() }).strict())
           .optional(),
+        backs: z
+          .array(z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict())
+          .optional(),
         chambers: z
           .array(
             z
@@ -427,6 +430,7 @@ const SceneSchema = z
       .object({
         anchorY: z.number().min(0.3).max(0.9).optional(),
         lookaheadX: z.number().min(0).optional(),
+        headroom: z.number().min(0).optional(),
         fallLookahead: z.number().min(0).optional(),
         smoothYFall: z.number().positive().optional(),
         smoothYFastFall: z.number().positive().optional(),

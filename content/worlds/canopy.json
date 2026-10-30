@@ -7,30 +7,142 @@
       "y": 0
     },
     {
-      "id": "cn-canopy",
-      "x": 7424,
-      "y": 0
-    },
-    {
-      "id": "cn-west",
-      "x": -1792,
-      "y": 2816
-    },
-    {
       "id": "cn-hub",
       "x": 4352,
       "y": 2816
     },
     {
-      "id": "cn-grove",
-      "x": 9472,
+      "id": "cn-limbs",
+      "x": 1152,
       "y": 2816
     },
     {
+      "id": "cn-trunk",
+      "x": 1152,
+      "y": 3968
+    },
+    {
+      "id": "cn-well",
+      "x": -768,
+      "y": 2816
+    },
+    {
+      "id": "cn-rot",
+      "x": 1152,
+      "y": 5888
+    },
+    {
+      "id": "cn-crawl",
+      "x": 1792,
+      "y": 7040
+    },
+    {
+      "id": "cn-elder",
+      "x": -1920,
+      "y": 5888
+    },
+    {
+      "id": "cn-fork",
+      "x": 8832,
+      "y": 2816
+    },
+    {
+      "id": "cn-cellar",
+      "x": 9600,
+      "y": 4224
+    },
+    {
+      "id": "cn-grove",
+      "x": 12032,
+      "y": 2816
+    },
+    {
+      "id": "cn-hollowroot",
+      "x": 14400,
+      "y": 4736
+    },
+    {
+      "id": "cn-spire",
+      "x": 15872,
+      "y": 2560
+    },
+    {
+      "id": "cn-nook",
+      "x": 17536,
+      "y": 3200
+    },
+    {
+      "id": "cn-bower",
+      "x": 12800,
+      "y": 896
+    },
+    {
+      "id": "cn-crown",
+      "x": 12800,
+      "y": -1024
+    },
+    {
+      "id": "cn-attic",
+      "x": 16000,
+      "y": 0
+    },
+    {
+      "id": "cn-gap",
+      "x": 8448,
+      "y": 512
+    },
+    {
+      "id": "cn-sky",
+      "x": 10880,
+      "y": -512
+    },
+    {
+      "id": "cn-tunnel",
+      "x": 5888,
+      "y": 4864
+    },
+    {
+      "id": "cn-burrow",
+      "x": 7040,
+      "y": 7040
+    },
+    {
       "id": "cn-den",
-      "x": 4352,
-      "y": 5632
+      "x": 9600,
+      "y": 5888
+    },
+    {
+      "id": "cn-out",
+      "x": 12480,
+      "y": 4736
+    },
+    {
+      "id": "cn-ledge",
+      "x": 14400,
+      "y": 5888
     }
   ],
-  "tests": []
+  "tests": [],
+  "areas": [
+    {
+      "id": "cn-heart",
+      "rooms": ["cn-hatch", "cn-hub"]
+    },
+    {
+      "id": "cn-west",
+      "rooms": ["cn-limbs", "cn-trunk", "cn-well", "cn-rot", "cn-crawl", "cn-elder"]
+    },
+    {
+      "id": "cn-east",
+      "rooms": ["cn-fork", "cn-cellar", "cn-grove", "cn-hollowroot", "cn-spire", "cn-nook"]
+    },
+    {
+      "id": "cn-high",
+      "rooms": ["cn-bower", "cn-crown", "cn-attic", "cn-gap", "cn-sky"]
+    },
+    {
+      "id": "cn-deep",
+      "rooms": ["cn-tunnel", "cn-burrow", "cn-den", "cn-out", "cn-ledge"]
+    }
+  ]
 }

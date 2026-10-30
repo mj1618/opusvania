@@ -101,7 +101,8 @@ export function clampAxis(v: number, lo: number, size: number, view: number): nu
  * The layer tree builds its coverage from this, so a change here grows the layers too.
  */
 export function viewTop(scene: Scene, ct: CameraTuning = cameraTuning): number {
-  return Math.min(0, (scene.ceilingY ?? 0) - ct.headroom);
+  const own = (scene as Room).camera?.headroom;
+  return Math.min(0, (scene.ceilingY ?? 0) - (own ?? ct.headroom));
 }
 
 /** From the view's top edge to the line her feet rest on: the safe area's anchor line (world px at the zoom). */

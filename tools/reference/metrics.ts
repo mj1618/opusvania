@@ -19,6 +19,9 @@ export interface Metrics {
   screens: number;
   cells: number;
   critScreens: number;
+  /** Rooms on the critical path, and their share of all rooms. */
+  critRooms: number;
+  critRoomShare: number;
   enemies: number;
   enemiesPerScreen: number;
   meanDifficulty: number;
@@ -119,6 +122,8 @@ export function measure(a: AreaFile): Metrics {
     screens: r2(screens),
     cells,
     critScreens: r2(critScreens),
+    critRooms: a.rooms.filter((r) => crit.has(r.id)).length,
+    critRoomShare: r2(a.rooms.filter((r) => crit.has(r.id)).length / Math.max(1, a.rooms.length)),
     enemies: a.enemies.length,
     enemiesPerScreen: r2(a.enemies.length / screens),
     meanDifficulty: r2(a.enemies.reduce((s, e) => s + e.difficulty, 0) / Math.max(1, a.enemies.length)),

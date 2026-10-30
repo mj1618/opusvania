@@ -29,7 +29,42 @@ const DIFFICULTY: Record<string, [number, string, number]> = {
 
 /** Each of our worlds' critical path, room by room (the rooms on the way to its end). */
 const CRITICAL: Record<string, string[]> = {
-  canopy: ['cn-hatch', 'cn-hub', 'cn-west', 'cn-hub', 'cn-grove', 'cn-canopy', 'cn-hub', 'cn-den'],
+  // v2 (2026-10-30): the claws in the west and back by the upper limbs, the Grove behind them, up the Spire to the
+  // crown's glide, over the gap and down into the Crossing, through the seed door to the den and out.
+  canopy: [
+    'cn-hatch',
+    'cn-hub',
+    'cn-trunk',
+    'cn-well',
+    'cn-limbs',
+    'cn-hub',
+    'cn-fork',
+    'cn-grove',
+    'cn-spire',
+    'cn-bower',
+    'cn-crown',
+    'cn-bower',
+    'cn-gap',
+    'cn-hub',
+    'cn-tunnel',
+    'cn-den',
+    'cn-out',
+  ],
+};
+
+/** Each world's rooms whose way in is hidden (a rotten panel, a plug, a cover): all they hold is a secret. */
+const HIDDEN_ROOMS: Record<string, string[]> = {
+  canopy: [
+    'cn-crawl',
+    'cn-elder',
+    'cn-cellar',
+    'cn-hollowroot',
+    'cn-nook',
+    'cn-attic',
+    'cn-sky',
+    'cn-burrow',
+    'cn-ledge',
+  ],
 };
 
 const glyph = (kind: string) => DIFFICULTY[kind] ?? [3, 'unknown kind', 1];
@@ -192,8 +227,9 @@ export function exportArea(target: string): AreaFile {
       const under = covers.some(
         (c) => tx >= ox + c.x && tx <= ox + c.x + c.w && ty >= oy + c.y && ty <= oy + c.y + c.h,
       );
-      if (under || (t.value ?? '').startsWith('upgrade:'))
-        t.hidden = { how: under ? 'behind a leaf / root cover' : 'a hollow' };
+      const room2 = (HIDDEN_ROOMS[target] ?? []).includes(room.id);
+      if (under || room2 || (t.value ?? '').startsWith('upgrade:'))
+        t.hidden = { how: under ? 'behind a cover' : room2 ? 'in a hidden room' : 'a hollow' };
     }
   }
   const first = placed[0].room;
