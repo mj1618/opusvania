@@ -75,6 +75,8 @@ export const ENEMIES = z
           taproot: z.tuple([int, int]).optional(),
           // (The flag set as its phase 2 begins: the plug first cracks, `marks.stage.den.crack`.)
           crack: z.string().min(1).optional(),
+          // (The lamp that goes out as its phase 3 begins: the den darkens as it plants.)
+          snuffs: z.string().min(1).optional(),
         })
         .strict(),
       z

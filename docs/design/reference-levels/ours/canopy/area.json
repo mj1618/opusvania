@@ -2184,28 +2184,6 @@
    "kind": "solid",
    "poly": [
     [
-     12032,
-     5088
-    ],
-    [
-     12800,
-     5088
-    ],
-    [
-     12800,
-     5152
-    ],
-    [
-     12032,
-     5152
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hub",
-   "kind": "solid",
-   "poly": [
-    [
      8320,
      4320
     ],
@@ -2228,19 +2206,19 @@
    "kind": "solid",
    "poly": [
     [
-     12672,
-     5152
+     12032,
+     5088
     ],
     [
      12800,
-     5152
+     5088
     ],
     [
      12800,
      5344
     ],
     [
-     12672,
+     12032,
      5344
     ]
    ]
@@ -2396,6 +2374,94 @@
     [
      10368,
      6048
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-hub",
+   "kind": "solid",
+   "poly": [
+    [
+     11776,
+     4128
+    ],
+    [
+     12288,
+     4128
+    ],
+    [
+     12288,
+     4192
+    ],
+    [
+     11776,
+     4192
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-hub",
+   "kind": "solid",
+   "poly": [
+    [
+     11776,
+     4384
+    ],
+    [
+     11840,
+     4384
+    ],
+    [
+     11840,
+     4832
+    ],
+    [
+     11776,
+     4832
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-hub",
+   "kind": "solid",
+   "poly": [
+    [
+     11840,
+     4640
+    ],
+    [
+     12288,
+     4640
+    ],
+    [
+     12288,
+     4704
+    ],
+    [
+     11840,
+     4704
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-hub",
+   "kind": "solid",
+   "poly": [
+    [
+     12224,
+     4192
+    ],
+    [
+     12288,
+     4192
+    ],
+    [
+     12288,
+     4640
+    ],
+    [
+     12224,
+     4640
     ]
    ]
   },
@@ -2756,20 +2822,20 @@
    "kind": "breakable",
    "poly": [
     [
-     12032,
-     5152
+     11776,
+     4192
     ],
     [
-     12096,
-     5152
+     11840,
+     4192
     ],
     [
-     12096,
-     5344
+     11840,
+     4384
     ],
     [
-     12032,
-     5344
+     11776,
+     4384
     ]
    ]
   },
@@ -2822,7 +2888,29 @@
    "kind": "solid",
    "poly": [
     [
-     7040,
+     5120,
+     5344
+    ],
+    [
+     6944,
+     5344
+    ],
+    [
+     6944,
+     5408
+    ],
+    [
+     5120,
+     5408
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-trunk",
+   "kind": "solid",
+   "poly": [
+    [
+     7136,
      5344
     ],
     [
@@ -2834,7 +2922,7 @@
      5408
     ],
     [
-     7040,
+     7136,
      5408
     ]
    ]
@@ -2867,19 +2955,19 @@
    "poly": [
     [
      5120,
-     5344
+     5408
     ],
     [
-     6848,
-     5344
+     6752,
+     5408
     ],
     [
-     6848,
-     5472
+     6752,
+     5440
     ],
     [
      5120,
-     5472
+     5440
     ]
    ]
   },
@@ -2888,19 +2976,19 @@
    "kind": "solid",
    "poly": [
     [
-     7040,
-     5408
+     6464,
+     5440
     ],
     [
-     7136,
-     5408
+     6752,
+     5440
     ],
     [
-     7136,
+     6752,
      5472
     ],
     [
-     7040,
+     6464,
      5472
     ]
    ]
@@ -2932,7 +3020,7 @@
    "kind": "solid",
    "poly": [
     [
-     5120,
+     6464,
      5472
     ],
     [
@@ -2944,7 +3032,7 @@
      5536
     ],
     [
-     5120,
+     6464,
      5536
     ]
    ]
@@ -2954,19 +3042,85 @@
    "kind": "solid",
    "poly": [
     [
-     5120,
+     6464,
      5536
     ],
     [
      6656,
      5536
+    ],
+    [
+     6656,
+     5600
+    ],
+    [
+     6464,
+     5600
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-trunk",
+   "kind": "solid",
+   "poly": [
+    [
+     5120,
+     5440
+    ],
+    [
+     6272,
+     5440
+    ],
+    [
+     6272,
+     5664
+    ],
+    [
+     5120,
+     5664
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-trunk",
+   "kind": "solid",
+   "poly": [
+    [
+     6528,
+     5600
+    ],
+    [
+     6656,
+     5600
+    ],
+    [
+     6656,
+     5664
+    ],
+    [
+     6528,
+     5664
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-trunk",
+   "kind": "solid",
+   "poly": [
+    [
+     6592,
+     5664
+    ],
+    [
+     6656,
+     5664
     ],
     [
      6656,
      5792
     ],
     [
-     5120,
+     6592,
      5792
     ]
    ]
@@ -2999,11 +3153,11 @@
    "poly": [
     [
      5120,
-     5792
+     5664
     ],
     [
      6208,
-     5792
+     5664
     ],
     [
      6208,
@@ -3218,86 +3372,20 @@
    "kind": "solid",
    "poly": [
     [
-     7040,
+     6464,
      5888
     ],
     [
-     7296,
+     6592,
      5888
     ],
     [
-     7296,
+     6592,
      5984
     ],
     [
-     7040,
+     6464,
      5984
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-trunk",
-   "kind": "solid",
-   "poly": [
-    [
-     7104,
-     5792
-    ],
-    [
-     7232,
-     5792
-    ],
-    [
-     7232,
-     5888
-    ],
-    [
-     7104,
-     5888
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-trunk",
-   "kind": "solid",
-   "poly": [
-    [
-     6784,
-     5792
-    ],
-    [
-     7040,
-     5792
-    ],
-    [
-     7040,
-     5984
-    ],
-    [
-     6784,
-     5984
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-trunk",
-   "kind": "solid",
-   "poly": [
-    [
-     6848,
-     5600
-    ],
-    [
-     6976,
-     5600
-    ],
-    [
-     6976,
-     5792
-    ],
-    [
-     6848,
-     5792
     ]
    ]
   },
@@ -3372,19 +3460,19 @@
    "kind": "breakable",
    "poly": [
     [
-     6528,
-     5792
-    ],
-    [
      6592,
      5792
     ],
     [
-     6592,
+     6656,
+     5792
+    ],
+    [
+     6656,
      5984
     ],
     [
-     6528,
+     6592,
      5984
     ]
    ]
@@ -3724,7 +3812,95 @@
    "kind": "solid",
    "poly": [
     [
-     4096,
+     2560,
+     4896
+    ],
+    [
+     4160,
+     4896
+    ],
+    [
+     4160,
+     5600
+    ],
+    [
+     2560,
+     5600
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "solid",
+   "poly": [
+    [
+     2560,
+     5600
+    ],
+    [
+     3840,
+     5600
+    ],
+    [
+     3840,
+     5792
+    ],
+    [
+     2560,
+     5792
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "solid",
+   "poly": [
+    [
+     2560,
+     5792
+    ],
+    [
+     3456,
+     5792
+    ],
+    [
+     3456,
+     5984
+    ],
+    [
+     2560,
+     5984
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "solid",
+   "poly": [
+    [
+     2560,
+     5984
+    ],
+    [
+     4160,
+     5984
+    ],
+    [
+     4160,
+     6688
+    ],
+    [
+     2560,
+     6688
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "solid",
+   "poly": [
+    [
+     4544,
      4896
     ],
     [
@@ -3733,98 +3909,10 @@
     ],
     [
      5120,
-     5600
-    ],
-    [
-     4096,
-     5600
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-well",
-   "kind": "solid",
-   "poly": [
-    [
-     4352,
-     5600
-    ],
-    [
-     5120,
-     5600
-    ],
-    [
-     5120,
-     5984
-    ],
-    [
-     4352,
-     5984
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-well",
-   "kind": "solid",
-   "poly": [
-    [
-     4096,
-     5984
-    ],
-    [
-     5120,
-     5984
-    ],
-    [
-     5120,
-     6624
-    ],
-    [
-     4096,
-     6624
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-well",
-   "kind": "solid",
-   "poly": [
-    [
-     4096,
-     6624
-    ],
-    [
-     4128,
-     6624
-    ],
-    [
-     4128,
      6688
     ],
     [
-     4096,
-     6688
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-well",
-   "kind": "solid",
-   "poly": [
-    [
-     5088,
-     6624
-    ],
-    [
-     5120,
-     6624
-    ],
-    [
-     5120,
-     6688
-    ],
-    [
-     5088,
+     4544,
      6688
     ]
    ]
@@ -3879,11 +3967,11 @@
    "poly": [
     [
      2560,
-     4896
+     6688
     ],
     [
      3584,
-     4896
+     6688
     ],
     [
      3584,
@@ -4032,7 +4120,7 @@
    "kind": "solid",
    "poly": [
     [
-     4160,
+     4608,
      4704
     ],
     [
@@ -4044,7 +4132,7 @@
      4896
     ],
     [
-     4160,
+     4608,
      4896
     ]
    ]
@@ -4076,19 +4164,19 @@
    "kind": "oneway",
    "poly": [
     [
-     3584,
+     4160,
      4896
     ],
     [
-     4096,
+     4544,
      4896
     ],
     [
-     4096,
+     4544,
      4896
     ],
     [
-     3584,
+     4160,
      4896
     ]
    ]
@@ -4098,20 +4186,20 @@
    "kind": "hazard",
    "poly": [
     [
-     4068,
-     6344
+     4160,
+     6315
     ],
     [
-     4096,
-     6344
+     4188,
+     6315
     ],
     [
-     4096,
-     6584
+     4188,
+     6495
     ],
     [
-     4068,
-     6584
+     4160,
+     6495
     ]
    ]
   },
@@ -4120,20 +4208,86 @@
    "kind": "hazard",
    "poly": [
     [
-     4068,
-     5144
+     4516,
+     6139
     ],
     [
-     4096,
-     5144
+     4544,
+     6139
     ],
     [
-     4096,
-     5394
+     4544,
+     6289
     ],
     [
-     4068,
-     5394
+     4516,
+     6289
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "hazard",
+   "poly": [
+    [
+     4516,
+     5474
+    ],
+    [
+     4544,
+     5474
+    ],
+    [
+     4544,
+     5639
+    ],
+    [
+     4516,
+     5639
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "hazard",
+   "poly": [
+    [
+     4160,
+     5261
+    ],
+    [
+     4188,
+     5261
+    ],
+    [
+     4188,
+     5441
+    ],
+    [
+     4160,
+     5441
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-well",
+   "kind": "hazard",
+   "poly": [
+    [
+     4516,
+     5038
+    ],
+    [
+     4544,
+     5038
+    ],
+    [
+     4544,
+     5218
+    ],
+    [
+     4516,
+     5218
     ]
    ]
   },
@@ -4160,6 +4314,28 @@
    ]
   },
   {
+   "roomId": "cn-well",
+   "kind": "breakable",
+   "poly": [
+    [
+     3776,
+     5792
+    ],
+    [
+     3840,
+     5792
+    ],
+    [
+     3840,
+     5984
+    ],
+    [
+     3776,
+     5984
+    ]
+   ]
+  },
+  {
    "roomId": "cn-limbs",
    "kind": "solid",
    "poly": [
@@ -4947,28 +5123,6 @@
     ],
     [
      6176,
-     5024
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-limbs",
-   "kind": "hazard",
-   "poly": [
-    [
-     7456,
-     4996
-    ],
-    [
-     7680,
-     4996
-    ],
-    [
-     7680,
-     5024
-    ],
-    [
-     7456,
      5024
     ]
    ]
@@ -6514,6 +6668,160 @@
    ]
   },
   {
+   "roomId": "cn-elder",
+   "kind": "hazard",
+   "poly": [
+    [
+     1124,
+     9555
+    ],
+    [
+     1152,
+     9555
+    ],
+    [
+     1152,
+     9920
+    ],
+    [
+     1124,
+     9920
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-elder",
+   "kind": "hazard",
+   "poly": [
+    [
+     768,
+     9332
+    ],
+    [
+     796,
+     9332
+    ],
+    [
+     796,
+     9555
+    ],
+    [
+     768,
+     9555
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-elder",
+   "kind": "hazard",
+   "poly": [
+    [
+     768,
+     9010
+    ],
+    [
+     796,
+     9010
+    ],
+    [
+     796,
+     9110
+    ],
+    [
+     768,
+     9110
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-elder",
+   "kind": "hazard",
+   "poly": [
+    [
+     1124,
+     8821
+    ],
+    [
+     1152,
+     8821
+    ],
+    [
+     1152,
+     8887
+    ],
+    [
+     1124,
+     8887
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-elder",
+   "kind": "hazard",
+   "poly": [
+    [
+     768,
+     8210
+    ],
+    [
+     796,
+     8210
+    ],
+    [
+     796,
+     8340
+    ],
+    [
+     768,
+     8340
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-elder",
+   "kind": "hazard",
+   "poly": [
+    [
+     1124,
+     7976
+    ],
+    [
+     1152,
+     7976
+    ],
+    [
+     1152,
+     8246
+    ],
+    [
+     1124,
+     8246
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-elder",
+   "kind": "breakable",
+   "poly": [
+    [
+     768,
+     8352
+    ],
+    [
+     1152,
+     8352
+    ],
+    [
+     1152,
+     8416
+    ],
+    [
+     768,
+     8416
+    ]
+   ]
+  },
+  {
    "roomId": "cn-fork",
    "kind": "solid",
    "poly": [
@@ -6730,6 +7038,28 @@
     [
      13600,
      4832
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-fork",
+   "kind": "solid",
+   "poly": [
+    [
+     14400,
+     4832
+    ],
+    [
+     14784,
+     4832
+    ],
+    [
+     14784,
+     4896
+    ],
+    [
+     14400,
+     4896
     ]
    ]
   },
@@ -7090,50 +7420,6 @@
    "kind": "solid",
    "poly": [
     [
-     14208,
-     4992
-    ],
-    [
-     14592,
-     4992
-    ],
-    [
-     14592,
-     5088
-    ],
-    [
-     14208,
-     5088
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     14304,
-     4896
-    ],
-    [
-     14496,
-     4896
-    ],
-    [
-     14496,
-     4992
-    ],
-    [
-     14304,
-     4992
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
      14592,
      4512
     ],
@@ -7143,11 +7429,11 @@
     ],
     [
      14848,
-     4560
+     4704
     ],
     [
      14592,
-     4560
+     4704
     ]
    ]
   },
@@ -7178,20 +7464,20 @@
    "kind": "breakable",
    "poly": [
     [
-     14592,
+     14400,
+     4896
+    ],
+    [
+     14464,
+     4896
+    ],
+    [
+     14464,
      5088
     ],
     [
-     14784,
+     14400,
      5088
-    ],
-    [
-     14784,
-     5152
-    ],
-    [
-     14592,
-     5152
     ]
    ]
   },
@@ -9484,6 +9770,50 @@
    ]
   },
   {
+   "roomId": "cn-grove",
+   "kind": "door",
+   "poly": [
+    [
+     19712,
+     4960
+    ],
+    [
+     19840,
+     4960
+    ],
+    [
+     19840,
+     5216
+    ],
+    [
+     19712,
+     5216
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-spire",
+   "kind": "solid",
+   "poly": [
+    [
+     19840,
+     3744
+    ],
+    [
+     20480,
+     3744
+    ],
+    [
+     20480,
+     3872
+    ],
+    [
+     19840,
+     3872
+    ]
+   ]
+  },
+  {
    "roomId": "cn-spire",
    "kind": "solid",
    "poly": [
@@ -9524,6 +9854,28 @@
     [
      21920,
      4352
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-spire",
+   "kind": "solid",
+   "poly": [
+    [
+     19840,
+     3872
+    ],
+    [
+     20736,
+     3872
+    ],
+    [
+     20736,
+     4384
+    ],
+    [
+     19840,
+     4384
     ]
    ]
   },
@@ -9577,11 +9929,11 @@
    "poly": [
     [
      19840,
-     3744
+     4384
     ],
     [
      20480,
-     3744
+     4384
     ],
     [
      20480,
@@ -9775,19 +10127,63 @@
    "poly": [
     [
      21092,
-     4044
+     3979
     ],
     [
      21120,
-     4044
+     3979
     ],
     [
      21120,
-     4344
+     4234
     ],
     [
      21092,
-     4344
+     4234
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-spire",
+   "kind": "hazard",
+   "poly": [
+    [
+     20736,
+     4204
+    ],
+    [
+     20764,
+     4204
+    ],
+    [
+     20764,
+     4364
+    ],
+    [
+     20736,
+     4364
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-spire",
+   "kind": "hazard",
+   "poly": [
+    [
+     20480,
+     4544
+    ],
+    [
+     20508,
+     4544
+    ],
+    [
+     20508,
+     4744
+    ],
+    [
+     20480,
+     4744
     ]
    ]
   },
@@ -14460,7 +14856,7 @@
    "kind": "solid",
    "poly": [
     [
-     13440,
+     13632,
      7840
     ],
     [
@@ -14472,7 +14868,7 @@
      7936
     ],
     [
-     13440,
+     13632,
      7936
     ]
    ]
@@ -14504,7 +14900,7 @@
    "kind": "solid",
    "poly": [
     [
-     13440,
+     13632,
      7936
     ],
     [
@@ -14516,30 +14912,8 @@
      8000
     ],
     [
-     13440,
+     13632,
      8000
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-den",
-   "kind": "solid",
-   "poly": [
-    [
-     13440,
-     8000
-    ],
-    [
-     13536,
-     8000
-    ],
-    [
-     13536,
-     8032
-    ],
-    [
-     13440,
-     8032
     ]
    ]
   },
@@ -14584,28 +14958,6 @@
     [
      15552,
      8032
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-den",
-   "kind": "solid",
-   "poly": [
-    [
-     13440,
-     8032
-    ],
-    [
-     13504,
-     8032
-    ],
-    [
-     13504,
-     8096
-    ],
-    [
-     13440,
-     8096
     ]
    ]
   },
@@ -14724,6 +15076,50 @@
    "kind": "solid",
    "poly": [
     [
+     13824,
+     8736
+    ],
+    [
+     14080,
+     8736
+    ],
+    [
+     14080,
+     8768
+    ],
+    [
+     13824,
+     8768
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-den",
+   "kind": "solid",
+   "poly": [
+    [
+     15040,
+     8736
+    ],
+    [
+     15296,
+     8736
+    ],
+    [
+     15296,
+     8768
+    ],
+    [
+     15040,
+     8768
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-den",
+   "kind": "solid",
+   "poly": [
+    [
      15744,
      8032
     ],
@@ -14738,50 +15134,6 @@
     [
      15744,
      8840
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-den",
-   "kind": "oneway",
-   "poly": [
-    [
-     13824,
-     8736
-    ],
-    [
-     14080,
-     8736
-    ],
-    [
-     14080,
-     8736
-    ],
-    [
-     13824,
-     8736
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-den",
-   "kind": "oneway",
-   "poly": [
-    [
-     15040,
-     8736
-    ],
-    [
-     15296,
-     8736
-    ],
-    [
-     15296,
-     8736
-    ],
-    [
-     15040,
-     8736
     ]
    ]
   },
@@ -14813,14 +15165,14 @@
    "poly": [
     [
      16640,
-     8224
+     7968
     ],
     [
-     17408,
-     8224
+     17536,
+     7968
     ],
     [
-     17408,
+     17536,
      8608
     ],
     [
@@ -14857,11 +15209,11 @@
    "poly": [
     [
      17920,
-     8224
+     7968
     ],
     [
      18432,
-     8224
+     7968
     ],
     [
      18432,
@@ -14989,11 +15341,11 @@
    "poly": [
     [
      20352,
-     7744
+     7584
     ],
     [
      20480,
-     7744
+     7584
     ],
     [
      20480,
@@ -15010,20 +15362,20 @@
    "kind": "solid",
    "poly": [
     [
-     18688,
-     7781
+     18752,
+     7636
+    ],
+    [
+     18816,
+     7636
+    ],
+    [
+     18816,
+     7716
     ],
     [
      18752,
-     7781
-    ],
-    [
-     18752,
-     7861
-    ],
-    [
-     18688,
-     7861
+     7716
     ]
    ]
   },
@@ -15032,20 +15384,20 @@
    "kind": "solid",
    "poly": [
     [
-     18752,
-     7780
+     18816,
+     7634
     ],
     [
-     18848,
-     7780
+     18912,
+     7634
     ],
     [
-     18848,
-     7860
+     18912,
+     7714
     ],
     [
-     18752,
-     7860
+     18816,
+     7714
     ]
    ]
   },
@@ -15054,20 +15406,20 @@
    "kind": "solid",
    "poly": [
     [
-     18848,
-     7779
+     18912,
+     7637
     ],
     [
-     18928,
-     7779
+     18992,
+     7637
     ],
     [
-     18928,
-     7859
+     18992,
+     7717
     ],
     [
-     18848,
-     7859
+     18912,
+     7717
     ]
    ]
   },
@@ -15076,20 +15428,20 @@
    "kind": "solid",
    "poly": [
     [
-     18928,
-     7782
+     18992,
+     7641
     ],
     [
-     19040,
-     7782
+     19104,
+     7641
     ],
     [
-     19040,
-     7862
+     19104,
+     7721
     ],
     [
-     18928,
-     7862
+     18992,
+     7721
     ]
    ]
   },
@@ -15098,20 +15450,20 @@
    "kind": "solid",
    "poly": [
     [
-     19040,
-     7785
+     19104,
+     7637
     ],
     [
-     19088,
-     7785
+     19152,
+     7637
     ],
     [
-     19088,
-     7865
+     19152,
+     7717
     ],
     [
-     19040,
-     7865
+     19104,
+     7717
     ]
    ]
   },
@@ -15120,20 +15472,20 @@
    "kind": "solid",
    "poly": [
     [
-     19088,
-     7782
+     19152,
+     7632
     ],
     [
-     19216,
-     7782
+     19280,
+     7632
     ],
     [
-     19216,
-     7862
+     19280,
+     7712
     ],
     [
-     19088,
-     7862
+     19152,
+     7712
     ]
    ]
   },
@@ -15142,20 +15494,20 @@
    "kind": "solid",
    "poly": [
     [
-     19216,
-     7771
+     19280,
+     7626
     ],
     [
-     19296,
-     7771
+     19360,
+     7626
     ],
     [
-     19296,
-     7851
+     19360,
+     7706
     ],
     [
-     19216,
-     7851
+     19280,
+     7706
     ]
    ]
   },
@@ -15164,42 +15516,20 @@
    "kind": "solid",
    "poly": [
     [
-     19296,
-     7770
-    ],
-    [
-     19392,
-     7770
-    ],
-    [
-     19392,
-     7850
-    ],
-    [
-     19296,
-     7850
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-out",
-   "kind": "solid",
-   "poly": [
-    [
-     19392,
-     7773
+     19360,
+     7628
     ],
     [
      19456,
-     7773
+     7628
     ],
     [
      19456,
-     7853
+     7708
     ],
     [
-     19392,
-     7853
+     19360,
+     7708
     ]
    ]
   },
@@ -15209,19 +15539,19 @@
    "poly": [
     [
      19456,
-     7772
+     7628
     ],
     [
-     19552,
-     7772
+     19520,
+     7628
     ],
     [
-     19552,
-     7852
+     19520,
+     7708
     ],
     [
      19456,
-     7852
+     7708
     ]
    ]
   },
@@ -15230,20 +15560,20 @@
    "kind": "solid",
    "poly": [
     [
-     19552,
-     7768
+     19520,
+     7625
     ],
     [
-     19632,
-     7768
+     19616,
+     7625
     ],
     [
-     19632,
-     7848
+     19616,
+     7705
     ],
     [
-     19552,
-     7848
+     19520,
+     7705
     ]
    ]
   },
@@ -15252,20 +15582,20 @@
    "kind": "solid",
    "poly": [
     [
-     19632,
-     7769
+     19616,
+     7624
     ],
     [
-     19744,
-     7769
+     19696,
+     7624
     ],
     [
-     19744,
-     7849
+     19696,
+     7704
     ],
     [
-     19632,
-     7849
+     19616,
+     7704
     ]
    ]
   },
@@ -15274,20 +15604,20 @@
    "kind": "solid",
    "poly": [
     [
-     19744,
-     7779
+     19696,
+     7630
     ],
     [
-     19792,
-     7779
+     19808,
+     7630
     ],
     [
-     19792,
-     7859
+     19808,
+     7710
     ],
     [
-     19744,
-     7859
+     19696,
+     7710
     ]
    ]
   },
@@ -15296,20 +15626,20 @@
    "kind": "solid",
    "poly": [
     [
-     19792,
-     7782
+     19808,
+     7639
     ],
     [
-     19920,
-     7782
+     19856,
+     7639
     ],
     [
-     19920,
-     7862
+     19856,
+     7719
     ],
     [
-     19792,
-     7862
+     19808,
+     7719
     ]
    ]
   },
@@ -15318,20 +15648,20 @@
    "kind": "solid",
    "poly": [
     [
-     19920,
-     7781
+     19856,
+     7639
     ],
     [
-     20000,
-     7781
+     19984,
+     7639
     ],
     [
-     20000,
-     7861
+     19984,
+     7719
     ],
     [
-     19920,
-     7861
+     19856,
+     7719
     ]
    ]
   },
@@ -15340,20 +15670,20 @@
    "kind": "solid",
    "poly": [
     [
-     20000,
-     7779
+     19984,
+     7635
     ],
     [
-     20096,
-     7779
+     20064,
+     7635
     ],
     [
-     20096,
-     7859
+     20064,
+     7715
     ],
     [
-     20000,
-     7859
+     19984,
+     7715
     ]
    ]
   },
@@ -15362,20 +15692,20 @@
    "kind": "solid",
    "poly": [
     [
-     20096,
-     7782
+     20064,
+     7637
     ],
     [
      20160,
-     7782
+     7637
     ],
     [
      20160,
-     7862
+     7717
     ],
     [
-     20096,
-     7862
+     20064,
+     7717
     ]
    ]
   },
@@ -15385,41 +15715,19 @@
    "poly": [
     [
      20160,
-     7784
+     7640
     ],
     [
      20192,
-     7784
+     7640
     ],
     [
      20192,
-     7864
+     7720
     ],
     [
      20160,
-     7864
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-out",
-   "kind": "solid",
-   "poly": [
-    [
-     17408,
-     8800
-    ],
-    [
-     17536,
-     8800
-    ],
-    [
-     17536,
-     8928
-    ],
-    [
-     17408,
-     8928
+     7720
     ]
    ]
   },
@@ -15451,11 +15759,11 @@
    "poly": [
     [
      17892,
-     8284
+     8404
     ],
     [
      17920,
-     8284
+     8404
     ],
     [
      17920,
@@ -15464,6 +15772,72 @@
     [
      17892,
      8584
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-out",
+   "kind": "hazard",
+   "poly": [
+    [
+     17536,
+     8139
+    ],
+    [
+     17564,
+     8139
+    ],
+    [
+     17564,
+     8274
+    ],
+    [
+     17536,
+     8274
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-out",
+   "kind": "hazard",
+   "poly": [
+    [
+     17892,
+     7984
+    ],
+    [
+     17920,
+     7984
+    ],
+    [
+     17920,
+     8154
+    ],
+    [
+     17892,
+     8154
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-out",
+   "kind": "breakable",
+   "poly": [
+    [
+     17536,
+     8288
+    ],
+    [
+     17920,
+     8288
+    ],
+    [
+     17920,
+     8352
+    ],
+    [
+     17536,
+     8352
     ]
    ]
   },
@@ -15892,8 +16266,8 @@
    "roomId": "cn-hub",
    "kind": "pickup-major",
    "at": [
-    12320,
-    5284
+    11940,
+    4584
    ],
    "src": "files",
    "value": "great",
@@ -15906,8 +16280,8 @@
    "roomId": "cn-hub",
    "kind": "pickup-minor",
    "at": [
-    12167,
-    5274
+    12040,
+    4584
    ],
    "src": "files",
    "value": "glint",
@@ -15920,22 +16294,8 @@
    "roomId": "cn-hub",
    "kind": "pickup-minor",
    "at": [
-    12220,
-    5274
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-hub:bank-3",
-   "roomId": "cn-hub",
-   "kind": "pickup-minor",
-   "at": [
-    12273,
-    5274
+    12080,
+    4584
    ],
    "src": "files",
    "value": "glint",
@@ -15948,8 +16308,8 @@
    "roomId": "cn-hub",
    "kind": "pickup-major",
    "at": [
-    12520,
-    5344
+    12120,
+    4640
    ],
    "src": "files",
    "value": "map",
@@ -16016,8 +16376,8 @@
    "roomId": "cn-trunk",
    "kind": "pickup-major",
    "at": [
-    6944,
-    5500
+    6368,
+    5570
    ],
    "src": "files",
    "value": "key"
@@ -16034,6 +16394,34 @@
    "value": "great"
   },
   {
+   "id": "cn-well:niche-w-1",
+   "roomId": "cn-well",
+   "kind": "pickup-minor",
+   "at": [
+    3740,
+    5924
+   ],
+   "src": "files",
+   "value": "glint",
+   "hidden": {
+    "how": "behind a cover"
+   }
+  },
+  {
+   "id": "cn-well:niche-w-2",
+   "roomId": "cn-well",
+   "kind": "pickup-minor",
+   "at": [
+    3780,
+    5924
+   ],
+   "src": "files",
+   "value": "glint",
+   "hidden": {
+    "how": "behind a cover"
+   }
+  },
+  {
    "id": "cn-well:glade-claws",
    "roomId": "cn-well",
    "kind": "pickup-major",
@@ -16043,6 +16431,31 @@
    ],
    "src": "files",
    "value": "ability:wallJump"
+  },
+  {
+   "id": "cn-well:shard-well",
+   "roomId": "cn-well",
+   "kind": "pickup-major",
+   "at": [
+    3600,
+    5928
+   ],
+   "src": "files",
+   "value": "upgrade:moonShard",
+   "hidden": {
+    "how": "behind a cover"
+   }
+  },
+  {
+   "id": "cn-well:stone-west",
+   "roomId": "cn-well",
+   "kind": "pickup-major",
+   "at": [
+    4810,
+    8672
+   ],
+   "src": "files",
+   "value": "map"
   },
   {
    "id": "cn-well:p-well",
@@ -16055,12 +16468,26 @@
    "src": "files"
   },
   {
+   "id": "cn-limbs:niche-great",
+   "roomId": "cn-limbs",
+   "kind": "pickup-major",
+   "at": [
+    7220,
+    4024
+   ],
+   "src": "files",
+   "value": "great",
+   "hidden": {
+    "how": "behind a cover"
+   }
+  },
+  {
    "id": "cn-limbs:niche-1",
    "roomId": "cn-limbs",
    "kind": "pickup-minor",
    "at": [
-    7045,
-    3974
+    7047,
+    3984
    ],
    "src": "files",
    "value": "glint",
@@ -16073,39 +16500,11 @@
    "roomId": "cn-limbs",
    "kind": "pickup-minor",
    "at": [
-    7095,
-    3974
+    7100,
+    3984
    ],
    "src": "files",
    "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-limbs:niche-3",
-   "roomId": "cn-limbs",
-   "kind": "pickup-minor",
-   "at": [
-    7145,
-    3974
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-limbs:stone-west",
-   "roomId": "cn-limbs",
-   "kind": "pickup-major",
-   "at": [
-    7220,
-    4064
-   ],
-   "src": "files",
-   "value": "map",
    "hidden": {
     "how": "behind a cover"
    }
@@ -16115,8 +16514,8 @@
    "roomId": "cn-rot",
    "kind": "pickup-minor",
    "at": [
-    7710,
-    8545
+    7720,
+    8570
    ],
    "src": "files",
    "value": "glint",
@@ -16129,8 +16528,8 @@
    "roomId": "cn-rot",
    "kind": "pickup-minor",
    "at": [
-    7770,
-    8545
+    7800,
+    8570
    ],
    "src": "files",
    "value": "glint",
@@ -16143,36 +16542,8 @@
    "roomId": "cn-rot",
    "kind": "pickup-minor",
    "at": [
-    7830,
-    8545
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-rot:cache-4",
-   "roomId": "cn-rot",
-   "kind": "pickup-minor",
-   "at": [
-    7890,
-    8545
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-rot:cache-5",
-   "roomId": "cn-rot",
-   "kind": "pickup-minor",
-   "at": [
-    7710,
-    8595
+    7880,
+    8570
    ],
    "src": "files",
    "value": "glint",
@@ -16237,15 +16608,15 @@
    }
   },
   {
-   "id": "cn-crawl:crawl-4",
+   "id": "cn-crawl:crawl-great",
    "roomId": "cn-crawl",
-   "kind": "pickup-minor",
+   "kind": "pickup-major",
    "at": [
     7160,
-    9191
+    9206
    ],
    "src": "files",
-   "value": "glint",
+   "value": "great",
    "hidden": {
     "how": "behind a cover"
    }
@@ -16325,7 +16696,7 @@
    "roomId": "cn-elder",
    "kind": "pickup-minor",
    "at": [
-    320,
+    327,
     7950
    ],
    "src": "files",
@@ -16339,35 +16710,7 @@
    "roomId": "cn-elder",
    "kind": "pickup-minor",
    "at": [
-    360,
-    7950
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-elder:elder-3",
-   "roomId": "cn-elder",
-   "kind": "pickup-minor",
-   "at": [
-    400,
-    7950
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-elder:elder-4",
-   "roomId": "cn-elder",
-   "kind": "pickup-minor",
-   "at": [
-    440,
+    380,
     7950
    ],
    "src": "files",
@@ -16385,7 +16728,7 @@
     7976
    ],
    "src": "files",
-   "value": "upgrade:moonDrop",
+   "value": "upgrade:moonShard",
    "hidden": {
     "how": "in a hidden room"
    }
@@ -16441,7 +16784,10 @@
     4464
    ],
    "src": "files",
-   "value": "great"
+   "value": "great",
+   "hidden": {
+    "how": "behind a cover"
+   }
   },
   {
    "id": "cn-fork:shelf-1",
@@ -16452,7 +16798,10 @@
     4464
    ],
    "src": "files",
-   "value": "glint"
+   "value": "glint",
+   "hidden": {
+    "how": "behind a cover"
+   }
   },
   {
    "id": "cn-fork:shelf-2",
@@ -16463,7 +16812,10 @@
     4464
    ],
    "src": "files",
-   "value": "glint"
+   "value": "glint",
+   "hidden": {
+    "how": "behind a cover"
+   }
   },
   {
    "id": "cn-fork:shelf-3",
@@ -16474,7 +16826,10 @@
     4464
    ],
    "src": "files",
-   "value": "glint"
+   "value": "glint",
+   "hidden": {
+    "how": "behind a cover"
+   }
   },
   {
    "id": "cn-fork:stone-east",
@@ -16495,7 +16850,7 @@
    "roomId": "cn-galleries",
    "kind": "pickup-minor",
    "at": [
-    19130,
+    19138,
     7004
    ],
    "src": "files",
@@ -16509,7 +16864,7 @@
    "roomId": "cn-galleries",
    "kind": "pickup-minor",
    "at": [
-    19190,
+    19213,
     7004
    ],
    "src": "files",
@@ -16523,35 +16878,7 @@
    "roomId": "cn-galleries",
    "kind": "pickup-minor",
    "at": [
-    19250,
-    7004
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-galleries:nest-4",
-   "roomId": "cn-galleries",
-   "kind": "pickup-minor",
-   "at": [
-    19310,
-    7004
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-galleries:nest-5",
-   "roomId": "cn-galleries",
-   "kind": "pickup-minor",
-   "at": [
-    19370,
+    19288,
     7004
    ],
    "src": "files",
@@ -16579,7 +16906,7 @@
    "roomId": "cn-larder",
    "kind": "pickup-minor",
    "at": [
-    20970,
+    20980,
     7064
    ],
    "src": "files",
@@ -16593,35 +16920,7 @@
    "roomId": "cn-larder",
    "kind": "pickup-minor",
    "at": [
-    21030,
-    7064
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-larder:larder-3",
-   "roomId": "cn-larder",
-   "kind": "pickup-minor",
-   "at": [
-    21090,
-    7064
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-larder:larder-4",
-   "roomId": "cn-larder",
-   "kind": "pickup-minor",
-   "at": [
-    21150,
+    21060,
     7064
    ],
    "src": "files",
@@ -16639,7 +16938,7 @@
     7144
    ],
    "src": "files",
-   "value": "upgrade:moonDrop",
+   "value": "upgrade:moonShard",
    "hidden": {
     "how": "in a hidden room"
    }
@@ -16650,7 +16949,7 @@
    "kind": "pickup-minor",
    "at": [
     17210,
-    5264
+    5284
    ],
    "src": "files",
    "value": "glint",
@@ -16664,7 +16963,7 @@
    "kind": "pickup-minor",
    "at": [
     17270,
-    5264
+    5284
    ],
    "src": "files",
    "value": "glint",
@@ -16678,21 +16977,7 @@
    "kind": "pickup-minor",
    "at": [
     17330,
-    5264
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-grove:pit-4",
-   "roomId": "cn-grove",
-   "kind": "pickup-minor",
-   "at": [
-    17210,
-    5304
+    5284
    ],
    "src": "files",
    "value": "glint",
@@ -16821,7 +17106,7 @@
    "roomId": "cn-nook",
    "kind": "pickup-minor",
    "at": [
-    24225,
+    24233,
     4884
    ],
    "src": "files",
@@ -16835,35 +17120,7 @@
    "roomId": "cn-nook",
    "kind": "pickup-minor",
    "at": [
-    24275,
-    4884
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-nook:nook-3",
-   "roomId": "cn-nook",
-   "kind": "pickup-minor",
-   "at": [
-    24325,
-    4884
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-nook:nook-4",
-   "roomId": "cn-nook",
-   "kind": "pickup-minor",
-   "at": [
-    24375,
+    24300,
     4884
    ],
    "src": "files",
@@ -16891,7 +17148,7 @@
    "roomId": "cn-hollowroot",
    "kind": "pickup-minor",
    "at": [
-    23530,
+    23538,
     6324
    ],
    "src": "files",
@@ -16905,7 +17162,7 @@
    "roomId": "cn-hollowroot",
    "kind": "pickup-minor",
    "at": [
-    23590,
+    23613,
     6324
    ],
    "src": "files",
@@ -16919,35 +17176,7 @@
    "roomId": "cn-hollowroot",
    "kind": "pickup-minor",
    "at": [
-    23650,
-    6324
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-hollowroot:root-4",
-   "roomId": "cn-hollowroot",
-   "kind": "pickup-minor",
-   "at": [
-    23710,
-    6324
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-hollowroot:root-5",
-   "roomId": "cn-hollowroot",
-   "kind": "pickup-minor",
-   "at": [
-    23770,
+    23688,
     6324
    ],
    "src": "files",
@@ -16989,8 +17218,8 @@
    "roomId": "cn-bower",
    "kind": "pickup-minor",
    "at": [
-    16840,
-    2975
+    16839,
+    2970
    ],
    "src": "files",
    "value": "glint",
@@ -17003,36 +17232,8 @@
    "roomId": "cn-bower",
    "kind": "pickup-minor",
    "at": [
-    16895,
-    2975
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-bower:kin-3",
-   "roomId": "cn-bower",
-   "kind": "pickup-minor",
-   "at": [
-    16950,
-    2975
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-bower:kin-4",
-   "roomId": "cn-bower",
-   "kind": "pickup-minor",
-   "at": [
-    17005,
-    2975
+    16892,
+    2970
    ],
    "src": "files",
    "value": "glint",
@@ -17053,6 +17254,16 @@
    "hidden": {
     "how": "behind a cover"
    }
+  },
+  {
+   "id": "cn-bower:p-bower",
+   "roomId": "cn-bower",
+   "kind": "save",
+   "at": [
+    20312,
+    3488
+   ],
+   "src": "files"
   },
   {
    "id": "cn-bower:wick-hall",
@@ -17081,7 +17292,7 @@
    "roomId": "cn-attic",
    "kind": "pickup-minor",
    "at": [
-    22653,
+    22661,
     3388
    ],
    "src": "files",
@@ -17092,29 +17303,7 @@
    "roomId": "cn-attic",
    "kind": "pickup-minor",
    "at": [
-    22703,
-    3404
-   ],
-   "src": "files",
-   "value": "glint"
-  },
-  {
-   "id": "cn-attic:attic-3",
-   "roomId": "cn-attic",
-   "kind": "pickup-minor",
-   "at": [
-    22753,
-    3404
-   ],
-   "src": "files",
-   "value": "glint"
-  },
-  {
-   "id": "cn-attic:attic-4",
-   "roomId": "cn-attic",
-   "kind": "pickup-minor",
-   "at": [
-    22803,
+    22728,
     3404
    ],
    "src": "files",
@@ -17261,7 +17450,7 @@
    "roomId": "cn-sky",
    "kind": "pickup-minor",
    "at": [
-    14477,
+    14485,
     800
    ],
    "src": "files",
@@ -17275,35 +17464,7 @@
    "roomId": "cn-sky",
    "kind": "pickup-minor",
    "at": [
-    14527,
-    800
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-sky:sky-3",
-   "roomId": "cn-sky",
-   "kind": "pickup-minor",
-   "at": [
-    14577,
-    800
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-sky:sky-4",
-   "roomId": "cn-sky",
-   "kind": "pickup-minor",
-   "at": [
-    14627,
+    14552,
     800
    ],
    "src": "files",
@@ -17398,7 +17559,7 @@
    "roomId": "cn-burrow",
    "kind": "pickup-minor",
    "at": [
-    10545,
+    10553,
     9276
    ],
    "src": "files",
@@ -17412,36 +17573,8 @@
    "roomId": "cn-burrow",
    "kind": "pickup-minor",
    "at": [
-    10595,
+    10620,
     9276
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-burrow:deep-3",
-   "roomId": "cn-burrow",
-   "kind": "pickup-minor",
-   "at": [
-    10645,
-    9276
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-burrow:deep-4",
-   "roomId": "cn-burrow",
-   "kind": "pickup-minor",
-   "at": [
-    10695,
-    9324
    ],
    "src": "files",
    "value": "glint",
@@ -17474,6 +17607,17 @@
    "src": "files"
   },
   {
+   "id": "cn-den:wick-taproot",
+   "roomId": "cn-den",
+   "kind": "lever",
+   "at": [
+    15660,
+    8224
+   ],
+   "src": "files",
+   "value": "lamp:wick"
+  },
+  {
    "id": "cn-den:wick-den",
    "roomId": "cn-den",
    "kind": "lever",
@@ -17490,7 +17634,7 @@
    "kind": "save",
    "at": [
     17060,
-    8224
+    7968
    ],
    "src": "files"
   },
@@ -17501,6 +17645,39 @@
    "at": [
     19920,
     8484
+   ],
+   "src": "files",
+   "value": "lamp:wick"
+  },
+  {
+   "id": "cn-out:wick-valley-1",
+   "roomId": "cn-out",
+   "kind": "lever",
+   "at": [
+    18880,
+    9664
+   ],
+   "src": "files",
+   "value": "lamp:wick"
+  },
+  {
+   "id": "cn-out:wick-valley-2",
+   "roomId": "cn-out",
+   "kind": "lever",
+   "at": [
+    19260,
+    9724
+   ],
+   "src": "files",
+   "value": "lamp:wick"
+  },
+  {
+   "id": "cn-out:wick-valley-3",
+   "roomId": "cn-out",
+   "kind": "lever",
+   "at": [
+    19600,
+    9644
    ],
    "src": "files",
    "value": "lamp:wick"
@@ -17524,8 +17701,8 @@
    "roomId": "cn-ledge",
    "kind": "pickup-minor",
    "at": [
-    14710,
-    10120
+    14720,
+    10140
    ],
    "src": "files",
    "value": "glint",
@@ -17538,8 +17715,8 @@
    "roomId": "cn-ledge",
    "kind": "pickup-minor",
    "at": [
-    14770,
-    10120
+    14800,
+    10140
    ],
    "src": "files",
    "value": "glint",
@@ -17552,36 +17729,8 @@
    "roomId": "cn-ledge",
    "kind": "pickup-minor",
    "at": [
-    14830,
-    10120
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-ledge:ledge-4",
-   "roomId": "cn-ledge",
-   "kind": "pickup-minor",
-   "at": [
-    14890,
-    10120
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-ledge:ledge-5",
-   "roomId": "cn-ledge",
-   "kind": "pickup-minor",
-   "at": [
-    14710,
-    10160
+    14880,
+    10140
    ],
    "src": "files",
    "value": "glint",
@@ -17607,19 +17756,32 @@
    "patrol": 140
   },
   {
-   "id": "cn-trunk:wing-t2",
+   "id": "cn-trunk:dang-t2a",
    "roomId": "cn-trunk",
-   "kind": "lampwing",
+   "kind": "dangler",
    "at": [
-    5880,
-    6180
+    5720,
+    6056
    ],
    "hp": 0,
    "contactDamage": 1,
-   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "behaviour": "drops from a ceiling on a thread when she passes under",
    "difficulty": 2,
-   "src": "files",
-   "patrol": 200
+   "src": "files"
+  },
+  {
+   "id": "cn-trunk:dang-t2b",
+   "roomId": "cn-trunk",
+   "kind": "dangler",
+   "at": [
+    6000,
+    6056
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "drops from a ceiling on a thread when she passes under",
+   "difficulty": 2,
+   "src": "files"
   },
   {
    "id": "cn-well:burr-am-1",
@@ -17641,7 +17803,7 @@
    "roomId": "cn-well",
    "kind": "burrback",
    "at": [
-    4520,
+    4736,
     4704
    ],
    "hp": 0,
@@ -17649,7 +17811,7 @@
    "behaviour": "ground ram with a tell and a winded beat; 5 hp",
    "difficulty": 2,
    "src": "files",
-   "patrol": 250
+   "patrol": 100
   },
   {
    "id": "cn-well:wing-am",
@@ -17657,7 +17819,7 @@
    "kind": "lampwing",
    "at": [
     3860,
-    4444
+    4644
    ],
    "hp": 0,
    "contactDamage": 1,
@@ -17665,6 +17827,21 @@
    "difficulty": 2,
    "src": "files",
    "patrol": 260
+  },
+  {
+   "id": "cn-well:wing-land",
+   "roomId": "cn-well",
+   "kind": "lampwing",
+   "at": [
+    4000,
+    5734
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 120
   },
   {
    "id": "cn-limbs:wing-g1",
@@ -17913,6 +18090,50 @@
    "patrol": 200
   },
   {
+   "id": "cn-grove:juv-wave-w",
+   "roomId": "cn-grove",
+   "kind": "juvenileBurrback",
+   "at": [
+    17640,
+    5344
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "unknown kind",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 240
+  },
+  {
+   "id": "cn-grove:juv-wave-e",
+   "roomId": "cn-grove",
+   "kind": "juvenileBurrback",
+   "at": [
+    19050,
+    5344
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "unknown kind",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 160
+  },
+  {
+   "id": "cn-grove:dang-wave",
+   "roomId": "cn-grove",
+   "kind": "dangler",
+   "at": [
+    18256,
+    5096
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "drops from a ceiling on a thread when she passes under",
+   "difficulty": 2,
+   "src": "files"
+  },
+  {
    "id": "cn-grove:wing-a",
    "roomId": "cn-grove",
    "kind": "lampwing",
@@ -17948,7 +18169,7 @@
    "kind": "hawker",
    "at": [
     20800,
-    4344
+    4464
    ],
    "hp": 0,
    "contactDamage": 1,
@@ -17956,21 +18177,6 @@
    "difficulty": 3,
    "src": "files",
    "patrol": 300
-  },
-  {
-   "id": "cn-bower:hawk-kin",
-   "roomId": "cn-bower",
-   "kind": "hawker",
-   "at": [
-    18312,
-    2840
-   ],
-   "hp": 0,
-   "contactDamage": 1,
-   "behaviour": "flier that hunts her across the room",
-   "difficulty": 3,
-   "src": "files",
-   "patrol": 280
   },
   {
    "id": "cn-bower:hawk-hall",
@@ -18031,21 +18237,6 @@
    "src": "files"
   },
   {
-   "id": "cn-gap:hawk-far",
-   "roomId": "cn-gap",
-   "kind": "hawker",
-   "at": [
-    13660,
-    2940
-   ],
-   "hp": 0,
-   "contactDamage": 1,
-   "behaviour": "flier that hunts her across the room",
-   "difficulty": 3,
-   "src": "files",
-   "patrol": 260
-  },
-  {
    "id": "cn-sky:hawk-sky1",
    "roomId": "cn-sky",
    "kind": "hawker",
@@ -18089,6 +18280,34 @@
    "difficulty": 2,
    "src": "files",
    "patrol": 160
+  },
+  {
+   "id": "cn-tunnel:ant-tu1",
+   "roomId": "cn-tunnel",
+   "kind": "carrier",
+   "at": [
+    10020,
+    7904
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-tunnel:ant-tu2",
+   "roomId": "cn-tunnel",
+   "kind": "carrier",
+   "at": [
+    10020,
+    7904
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
   },
   {
    "id": "cn-den:old-burr",

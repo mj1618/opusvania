@@ -37,6 +37,7 @@ import {
   onCap,
   onSurface,
   type SimCtx,
+  zigCandidates,
 } from './lines';
 import { Mind, type Move, moveKey, ROLL, reachFor, type Surface, topUnder, yAt } from './map';
 import type { Obs } from './observe';
@@ -1915,6 +1916,8 @@ class Planner implements Persona {
           make: () =>
             climbLine(n, scene, goal, c.faceX, { faceX: c.faceX, w: c.w, wait, next }, this.hands(), 1200),
         });
+        // A chimney with thorns on alternate faces: up it by kicks across (r4).
+        cands.push(...zigCandidates(scene, goal, c.faceX, c.faceX, c.w, mind.faces(), this.hands(), wait));
         // Out through the top into the next room: the last kick must fall just under the seam.
         if (c.exit)
           for (const kickDelay of [3, 6, 9, 12, 15, 18, 21])

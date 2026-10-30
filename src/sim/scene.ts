@@ -174,7 +174,12 @@ export interface EnemySpawn {
   taproot?: [number, number];
   /** Old burrback: the story flag set as its phase 2 begins (the plug first cracks: staging's `crack`). */
   crack?: string;
-  /** A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). */
+  /** Old burrback: the lamp (id) that goes out as its phase 3 begins (it plants: the den darkens). */
+  snuffs?: string;
+  /**
+   * A story flag set when it dies (the old burrback's root gate: src/sim/kit.ts). Several creatures may carry the
+   * same flag (a wave): it is set when the last of them is down.
+   */
   sets?: string;
   /** Dead, it comes back at its spawn this many frames later (the Gloamweaver's spiderlings: fuel in the fight). */
   respawn?: number;
@@ -386,6 +391,12 @@ export interface Scene {
    * nowhere). Default: they are walls like any other.
    */
   edgeKick?: boolean;
+  /**
+   * `true`: the top edge is solid too, except through an `n` exit's span (an enclosed room: nothing to stand on
+   * over its roof, no flight out over a wall's top into the room above; canopy review r3 #2, the tunnel's top).
+   * Default: the top is open.
+   */
+  roof?: boolean;
   solids: SolidRect[];
   oneWays: OneWay[];
   /** Collectibles, in a fixed order: `GameState.pickups.timers` is indexed like this array. */

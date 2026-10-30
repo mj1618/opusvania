@@ -636,6 +636,120 @@ export function climbLine(
   };
 }
 
+/** A rotten plug overhead (bark lying across a chimney): within an up cut's reach of her head. */
+function plugAbove(s: GameState, scene: Scene): boolean {
+  const p = s.player;
+  return (scene.bark ?? []).some(
+    (b) =>
+      !b.floor &&
+      b.w > b.h &&
+      p.x < b.x + b.w &&
+      p.x + p.w > b.x &&
+      p.y >= b.y + b.h &&
+      p.y - (b.y + b.h) < 120,
+  );
+}
+
+export interface ZigParams {
+  /** The face she jumps at first and the way she holds into it. */
+  faceX: number;
+  w: number;
+  /** Kicks on that face before she starts kicking across (0: across at once). */
+  n: number;
+  /** Frames she first jumps away (out from under a lip, then back to a face that starts over her head). */
+  away: number;
+  wait: number;
+}
+
+/**
+ * Up a chimney by kicks across (the Canopy r4, review r3 #1: thorns on alternate faces, so one face is not a
+ * ladder): a full jump at the face, then at every wall touch a kick, after the first `n` holding away from the wall
+ * she kicks off (toward the opposite face). A rotten plug overhead: up cuts through it. The explorer's `zig` macros
+ * (tools/solve/explore.ts) with a person's stand point.
+ */
+export function zigLine(
+  name: string,
+  scene: Scene,
+  goal: Goal,
+  tx: number,
+  q: ZigParams,
+  hands: Hands,
+  max = 1200,
+): Line {
+  let h = q.w;
+  let kicks = 0;
+  let started = -1;
+  let tapUntil = -1;
+  return {
+    name,
+    max,
+    act(s, k, prev) {
+      const p = s.player;
+      if (caughtNow(s)) return caughtMask(k, hands.cut);
+      if (k < q.wait) return 0;
+      const f = feet(s);
+      if (goal.kind === 'surface' && !p.grounded) {
+        const topY = topUnder(goal.surface, Math.max(goal.surface.x0, Math.min(goal.surface.x1, f.x)));
+        if (f.y < topY - 12)
+          return steer(s, goal.surface, tx, null) | (p.vy > 0 && s.save.abilities.includes('glide') ? J : 0);
+      }
+      if (p.grounded) {
+        if (started >= 0 && k - started > 20) {
+          // Down again (a kick missed): start over from the stand point.
+          h = q.w;
+          kicks = 0;
+          started = -1;
+        }
+        if (started < 0) {
+          const standX = q.away ? q.faceX + q.w * 30 : q.faceX - q.w * 170;
+          const dx = standX - f.x;
+          if (Math.abs(dx) > 12) return dirBit(Math.sign(dx));
+          started = k;
+          tapUntil = k + 20;
+          return J | dirBit(q.away ? -h : h);
+        }
+      }
+      if (started < 0) return 0;
+      let m = dirBit(k - started < q.away ? -h : h);
+      if (k < tapUntil) m |= J;
+      else if (k - started >= q.away && (p.mode === 'wallSlide' || p.wallDir === h) && !(prev & J)) {
+        kicks++;
+        if (kicks > q.n) h = -h;
+        m = dirBit(h) | J;
+        tapUntil = k + 4;
+      }
+      if (plugAbove(s, scene)) m |= U | (k % 12 < 2 ? A : 0);
+      return m;
+    },
+  };
+}
+
+/** Chimney candidates up `faceX` (held `w`): only where an opposite face stands 200-700 px across. */
+export function zigCandidates(
+  scene: Scene,
+  goal: Goal,
+  tx: number,
+  faceX: number,
+  w: number,
+  faces: readonly Face[],
+  hands: Hands,
+  wait = 0,
+): Candidate[] {
+  const across = faces.some((fc) => fc.w === -w && (fc.x - faceX) * -w >= 200 && (fc.x - faceX) * -w <= 700);
+  if (!across) return [];
+  const out: Candidate[] = [];
+  for (const [n, away] of [
+    [0, 0],
+    [1, 0],
+    [0, 12],
+    [2, 0],
+  ] as const) {
+    const nm = `kick up the chimney (${n} on the face${away ? ', out from under the lip' : ''})`;
+    out.push({ name: nm, make: () => zigLine(nm, scene, goal, tx, { faceX, w, n, away, wait }, hands) });
+  }
+  return out;
+}
+
 /** A candidate line: a fresh controller each time (one plays ahead, another for real). */
 export interface Candidate {
   name: string;
@@ -729,6 +843,7 @@ export function linesFor(
         const faceX = m.faceX ?? m.launchX + m.dir * 26;
         const n = `wall climb${wait ? ` after ${wait}f` : ''}`;
         out.push({ name: n, make: () => climbLine(n, scene, goal, tx, { faceX, w: m.dir, wait }, hands) });
+        out.push(...zigCandidates(scene, goal, tx, faceX, m.dir, opts.faces, hands, wait));
         // Across to an opposite face at a few heights (a broken face: slick or thorny higher up).
         const yA = topUnder(from, m.launchX);
         for (const fc of opts.faces) {

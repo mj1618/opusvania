@@ -527,6 +527,8 @@ export const defaultTuning = withVariants({
     /** Lanternroot (docs/design/levels/proto-1.md §3): the vault's vessel raises the glow meter's max; Bright Kindle cheapens a kindle. */
     glowVessel: { max: 24 },
     brightKindle: { kindleCost: 3 },
+    /** Moon shards (the Canopy, review r3 #9: HK's mask shards): this many make one more light. */
+    moonShard: { perLight: 3 },
   },
   /**
    * The light economy (Lanternroot, docs/design/levels/proto-1.md §3, memory/glow.md): glow, the light she

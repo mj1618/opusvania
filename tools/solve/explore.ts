@@ -112,6 +112,11 @@ export interface ExploreOpts {
   /** More macros for every node (the Downwood's `glideClimbMacros`). */
   more?: Macro[];
   /**
+   * Count a rotten bark's cuts left in a node's key (default: only broken or not). The Canopy's walls high on claw
+   * faces take one cut a climb, so three climbs must add up.
+   */
+  barkHp?: boolean;
+  /**
    * Node keys an earlier search of this room already expanded: not expanded again (an incremental search from a new
    * start only adds what is new; the Downwood's world search).
    */
@@ -135,7 +140,7 @@ function lightKey(s: GameState, scene: Scene): string {
   k += '|';
   for (const m of s.light.moss) k += m ? '1' : '0';
   k += '|';
-  for (const b of s.kit.bark) k += b > 0 ? '1' : '0';
+  for (const b of s.kit.bark) k += BARK_HP ? String(b) : b > 0 ? '1' : '0';
   return `${k}|${s.save.flags.length}|${s.save.opened.length}`;
 }
 
@@ -282,6 +287,54 @@ export function glideClimbMacros(): Macro[] {
     });
   }
   return out;
+}
+
+/**
+ * Chimney climbs (the Canopy r4: climbs as set pieces, review r3 #1): toward a face, a full jump, then a kick at
+ * every wall touch; the first `n` kicks stay on that face (one wall is enough), after that every kick goes across
+ * to the opposite face (she holds away from the wall she kicks off: a zigzag up a chimney with thorns on alternate
+ * faces). `cut` 'u': up held and a cut every 12 frames in the air (a rotten plug across the chimney, cut from a cling
+ * under it); 'f': forward cuts (a rotten panel in the face she flies at). Opt-in (`more`).
+ */
+export function chimneyMacros(
+  ns: readonly number[] = [0, 1, 2],
+  cuts: readonly ('' | 'u' | 'f')[] = ['', 'u'],
+): Macro[] {
+  const out: Macro[] = [];
+  for (const d of [-1, 1]) for (const n of ns) for (const cut of cuts) out.push(zig(d, n, cut, 0));
+  // (Out from under a lip first: a jump away for 12 frames, then back to the face over her head: a face that starts
+  // above the ledge she stands on.)
+  for (const d of [-1, 1]) for (const n of [0, 1]) out.push(zig(d, n, '', 12));
+  // (Up one face, cutting forward as she swings back in after each kick: a rotten panel higher up the face.)
+  if (cuts.some((c) => c !== '')) for (const d of [-1, 1]) out.push(zig(d, 9, 'f', 0));
+  return out;
+}
+
+function zig(d: number, n: number, cut: '' | 'u' | 'f', away: number): Macro {
+  const tag = `${d > 0 ? 'R' : 'L'}${n}${cut}${away ? 'o' : ''}`;
+  let h = d;
+  let kicks = 0;
+  return {
+    name: `zig${tag}`,
+    max: 900,
+    prog: (s, k, prev) => {
+      const p = s.player;
+      if (k === 0) {
+        h = d;
+        kicks = 0;
+      }
+      if (k > 20 && p.grounded) return -1;
+      let m = dirBit(k < away ? -h : h);
+      if (p.grounded) m |= k < 20 ? J : 0;
+      else if (k >= away && (p.mode === 'wallSlide' || p.wallDir === h) && !(prev & J)) {
+        kicks++;
+        if (kicks > n) h = -h;
+        m = dirBit(h) | J;
+      } else if (k < 20 && prev & J) m |= J;
+      if (cut && !p.grounded) m |= (cut === 'u' ? U : 0) | (k % 12 < 2 ? A : 0);
+      return m;
+    },
+  };
 }
 
 /** Dashes (only with the dash owned): a run and a dash, a jump and a dash at its top, each way. */
@@ -504,6 +557,8 @@ function makeFling(
 
 /** A burning flame (warm or a moonwick) in fling reach. */
 let SCENE: Scene | null = null;
+/** `ExploreOpts.barkHp` of the search running. */
+let BARK_HP = false;
 let TUNE: Tuning | null = null;
 function reachFlame(s: GameState): boolean {
   if (!SCENE || !TUNE) return false;
@@ -684,6 +739,7 @@ function sceneFor(scene: Scene, creatures: boolean): Scene {
 /** The breadth-first search. */
 export function explore(o: ExploreOpts): ExploreResult {
   const quant = o.quant ?? 32;
+  BARK_HP = o.barkHp ?? false;
   const maxNodes = o.maxNodes ?? 4000;
   const scene = sceneFor(o.scene, o.creatures ?? false);
   const t = o.tuning;

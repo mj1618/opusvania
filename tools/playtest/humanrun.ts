@@ -80,6 +80,10 @@ const { values: args, positionals } = parseArgs({
     at: { type: 'string' },
     /** A prototype level's own world (`proto-1`, Lanternroot): its rooms are the chunk, from its start. */
     world: { type: 'string' },
+    /** With `--world`: start in this room instead of the world's start (canopy r3 review: a run from the fork). */
+    from: { type: 'string' },
+    /** What she owns at the start (comma list, `?abilities=`), instead of the room's kit. */
+    abilities: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -89,7 +93,8 @@ const { values: args, positionals } = parseArgs({
 if (args.world) {
   const file = join(HERE, '..', '..', 'content', 'worlds', `${args.world}.json`);
   const w = JSON.parse(readFileSync(file, 'utf8')) as { start: string; rooms: Array<{ id: string }> };
-  args.chunk = [w.start, ...w.rooms.map((r) => r.id).filter((id) => id !== w.start)].join(',');
+  const first = args.from ?? w.start;
+  args.chunk = [first, ...w.rooms.map((r) => r.id).filter((id) => id !== first)].join(',');
   args.upto = '';
 }
 
@@ -141,6 +146,7 @@ async function job(): Promise<void> {
     giveUp: Number(args['give-up']),
     chunk,
     upto: args.upto ?? 'wood-well',
+    abilities: args.abilities ? args.abilities.split(',').filter(Boolean) : null,
   });
   const t = r.trace;
   mkdirSync(out, { recursive: true });
@@ -458,6 +464,7 @@ async function run(): Promise<void> {
     args.chunk ?? '',
     '--upto',
     args.upto ?? '',
+    ...(args.abilities ? ['--abilities', args.abilities] : []),
   ];
   await pool(runs, Number(args.jobs), async (r) => {
     const code = await sh(

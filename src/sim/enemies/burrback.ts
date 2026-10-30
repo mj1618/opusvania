@@ -647,6 +647,7 @@ function toPhase(e: EnemyState, info: StepInfo, B: Row, n: number): void {
     y: e.y + e.h / 2,
     phase: n,
   });
+  if (n === 3) douse(e, info);
   if (n === 2) {
     slam(e, info, B, true);
     // (The plug first cracks: the spawn's `crack` flag (staging's), else `<id>:rolled`. A retry skips the long
@@ -660,6 +661,35 @@ function toPhase(e: EnemyState, info: StepInfo, B: Row, n: number): void {
     }
     setMode(e, 'curl', frames(retry ? B.transRetryFrames : B.transFrames, 1));
   } else setMode(e, 'curl', frames(B.recurlFrames, 1));
+}
+
+/**
+ * Phase 3 plants it: the lamp its spawn names (`snuffs`) goes out (`lureSnuff`, no moths, no heal), so the den
+ * darkens for the last phase. Room-local: a retry finds the lamp burning again.
+ */
+function douse(e: EnemyState, info: StepInfo): void {
+  const id = info.scene.enemies?.find((q) => q.id === e.id)?.snuffs;
+  const lures = info.scene.lures ?? [];
+  const i = id ? lures.findIndex((l) => l.id === id) : -1;
+  const l = lures[i];
+  const L = info.state.lures;
+  if (!l || (L.hp[i] ?? 0) <= 0) return;
+  L.hp[i] = 0;
+  L.out[i] = info.state.frame + 1;
+  L.snuffed++;
+  info.events.push({
+    type: 'lureSnuff',
+    id: l.id,
+    kind: l.kind,
+    x: l.x,
+    y: l.y,
+    dir: 'down',
+    moths: 0,
+    freed: L.freed,
+    snuffed: L.snuffed,
+    heal: 0,
+    side: 0,
+  });
 }
 
 /** Curled, it rolls at her (`enemyRoll`). */

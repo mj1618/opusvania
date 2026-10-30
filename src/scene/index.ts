@@ -67,6 +67,7 @@ const SceneSchema = z
     spawn: z.object({ x: int, y: int }),
     ceilingY: int.optional(),
     edgeKick: z.boolean().optional(),
+    roof: z.boolean().optional(),
     solids: z.array(
       z.object({
         tag: TAG,

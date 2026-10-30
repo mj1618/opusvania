@@ -515,7 +515,12 @@ export function updateKit(
     const sp = spawns[i];
     const e = state.enemies[i];
     if (!sp?.sets || !e || save.flags.includes(sp.sets)) continue;
-    if (e.mode !== 'dead' && !(e.gone && e.hp <= 0)) continue;
+    if (!killed(e)) continue;
+    // (A wave: every creature carrying the same flag must be down, a hidden one not yet woken too.)
+    let all = true;
+    for (let j = 0; j < spawns.length && all; j++)
+      if (j !== i && spawns[j]?.sets === sp.sets && !killed(state.enemies[j])) all = false;
+    if (!all) continue;
     save.flags.push(sp.sets);
     events.push({ type: 'flagSet', flag: sp.sets, by: sp.id, x: e.x + e.w / 2, y: e.y + e.h });
   }
@@ -575,4 +580,9 @@ export function updateKit(
   }
   events.push({ type: 'thornHit', id: r.id, x: cx, y: p.y + p.h, hp: state.player.hp, damage, frames });
   return true;
+}
+
+/** A creature really killed (`dead`, or removed with no health left), not sent away. */
+function killed(e: { mode: string; gone: boolean; hp: number } | undefined): boolean {
+  return !!e && (e.mode === 'dead' || (e.gone && e.hp <= 0));
 }

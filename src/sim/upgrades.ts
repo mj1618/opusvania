@@ -21,6 +21,7 @@ export const UPGRADE_IDS = [
   'brightKindle',
   'moonDrop',
   'moonstep',
+  'moonShard',
 ] as const;
 export type UpgradeId = (typeof UPGRADE_IDS)[number];
 
@@ -60,6 +61,8 @@ const APPLY: Record<UpgradeId, (t: Tuning) => Tuning> = {
   // Moonstep (the boss rush, the Gloamweaver's reward): her dash goes through blows unhurt. No number: the hurt
   // checks read the flag (src/sim/index.ts `moonstepping`).
   moonstep: (t) => t,
+  // A moon shard: a third of a light (its flag is `moonShard:<room>:<hollow>`, counted below).
+  moonShard: (t) => t,
 };
 
 export function isUpgrade(id: string): id is UpgradeId {
@@ -81,13 +84,16 @@ export function withUpgrades(t: Tuning, save: Pick<SaveState, 'flags'>): Tuning 
   let out = t;
   const flags = save.flags;
   let drops = 0;
+  let shards = 0;
   for (let i = 0; i < flags.length; i++) {
     const f = flags[i] as string;
     if (f.startsWith('moonDrop:')) drops++;
+    if (f.startsWith('moonShard:')) shards++;
     if (!f.startsWith('upgrade:')) continue;
     const id = f.slice(8);
     if (isUpgrade(id)) out = APPLY[id](out);
   }
+  drops += Math.floor(shards / Math.max(1, t.upgrades.moonShard.perLight));
   if (drops > 0) out = { ...out, health: { ...out.health, max: out.health.max + drops } };
   return out;
 }

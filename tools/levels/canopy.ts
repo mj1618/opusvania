@@ -287,7 +287,8 @@ class Wood extends RoomBuilder {
     this.massTag = o.mass ?? 'root';
     this.set('marks', { trees: [], stretches: [], covers: [], landmarks: [], places: [], backs: [] });
     // (A room roofed in mass shows nothing over its top: no sky band above the view's edge.)
-    if (o.back) this.back(0, 0, P.w, P.h).set('camera', { headroom: 0 });
+    // (Nor can she stand on it or fly out over a wall's top: the top edge is solid but for its exits, `roof`.)
+    if (o.back) this.back(0, 0, P.w, P.h).set('camera', { headroom: 0 }).set('roof', true);
     const exits = EXITS.get(id) ?? [];
     this.set('exits', exits);
     this.ex = new Map(exits.map((e) => [e.id, e]));
@@ -669,13 +670,23 @@ class Wood extends RoomBuilder {
       const y = b.y as number;
       const w = b.w as number;
       const h = b.h as number;
-      const ok = b.floor
-        ? [y + 8, y + h - 8].every((yy) => this.solidAt(x - 8, yy, b) && this.solidAt(x + w + 8, yy, b))
-        : [x + 8, x + w - 8].every((xx) => this.solidAt(xx, y - 8, b) && this.solidAt(xx, y + h + 8, b));
+      const ok =
+        b.floor || this.plugs.has(b.id as string)
+          ? [y + 8, y + h - 8].every((yy) => this.solidAt(x - 8, yy, b) && this.solidAt(x + w + 8, yy, b))
+          : [x + 8, x + w - 8].every((xx) => this.solidAt(xx, y - 8, b) && this.solidAt(xx, y + h + 8, b));
       if (!ok)
         throw new Error(`${this.data.id}: rotten bark "${b.id}" does not fill its opening (air beside it)`);
     }
     return this.data;
+  }
+
+  /** Rotten plugs (bark across a chimney: solid either side, air over and under; cut from a cling under it). */
+  private readonly plugs = new Set<string>();
+
+  /** A rotten plug across a chimney (review r3 #1): a wall panel lying flat, so every cut takes it, an up cut too. */
+  plug(id: string, x: number, y: number, w: number, h = 64): this {
+    this.plugs.add(id);
+    return this.bark(id, x, y, w, h);
   }
 
   /** Rotten bark (its own solid: carved first). A wall stands on `floor`; `floor: true` makes a floor panel. */
@@ -927,7 +938,7 @@ function hatch(): Json {
 function hub(): Json {
   const r = new Wood('cn-hub', 'The Crossing', [2640, 1152], 7101, {
     mood: 'warm',
-    art: { anchorY: 1100, moon: { x: 3000, y: 330, r: 96 }, afterglow: { x: 2900, y: 700, strength: 0.5 } },
+    art: { anchorY: 1100, moon: { x: 1500, y: 300, r: 96 }, afterglow: { x: 2900, y: 700, strength: 0.5 } },
   });
   // The hall over the root floor, open to the sky; the bank east; over the high block and its limb's mouth.
   r.hole(1024, 0, 3712, 1600);
@@ -939,12 +950,16 @@ function hub(): Json {
   // The seed door and its shaft into the root tunnel.
   r.gate('seed-door', 1792, 1600, 256, 64, 'seeds:3');
   r.hole(1792, 1664, 2048, 2304);
-  // Secret: a hollow in the east root bank behind a wall of rotten heartwood (the heart's moth-stone).
-  r.cave(3776, 1408, 4352, 1600, { ceil: 0, w: 0, e: 64, corner: 0 });
-  r.bark('bank-wall', 3712, 1408, 64, 192);
+  // Secret (review r3 #8: it needs the claws, so the giant's wall is the first break): a root clump hung over the
+  // east limb's end, a hollow in it behind rotten heartwood high on its west face (the heart's moth-stone). She
+  // climbs the clump's root face from the limb; each kick throws her out, and she cuts as she swings back in.
+  r.bark('bank-wall', 3456, 448, 64, 192);
   r.back(0, 1600, 4480, 2304);
-  r.back(3712, 1344, 4480, 1600);
   r.fill();
+  r.mass(3456, 384, 512, 64);
+  r.mass(3456, 640, 64, 448);
+  r.mass(3520, 896, 448, 64);
+  r.mass(3904, 448, 64, 448);
   r.tree('lampoak', 2880, 288, -500, 1600, false);
   r.limb('land', 2240, 2880, 1152, { parent: 'lampoak', grows: 'west', end: 'snap', flat: [[2496, 2816]] });
   r.limb('east', 3168, 3712, 1280, { parent: 'lampoak', grows: 'east', end: 'knee', calm: true });
@@ -957,10 +972,10 @@ function hub(): Json {
   r.lamp('socket-3', 3020, 640, { after: 'seeds:3' });
   // The way west: a lamp in the giant's mouth (warm light under the block, seen from the landing's west end).
   r.lamp('wick-mouth', 520, 1790);
-  r.stone('stone-heart', 4200, 1600, 'cn-heart');
-  r.great('bank-great', 4000, 1540);
-  r.hoard('bank-', 3820, 1500, 160, 60, 3);
-  r.cover('bank-cover', 3712, 1344, 768, 320, 'bank-wall');
+  r.stone('stone-heart', 3800, 896, 'cn-heart');
+  r.great('bank-great', 3620, 840);
+  r.hoard('bank-', 3700, 820, 80, 40, 2);
+  r.cover('bank-cover', 3456, 384, 512, 576, 'bank-wall');
   r.set('marks', { ...(r.data.marks as Json), tatter: { x: 2300, y: 1152, facing: -1, want: [1920, 1600] } });
   r.landmark('seed-door', 'goal', 1920, 1600);
   r.landmark('mouth', 'way', 400, 1920);
@@ -975,6 +990,7 @@ function hub(): Json {
     ['west', 900, 1792],
     ['high', 600, 576],
     ['east', 3900, 1344],
+    ['clump', 3500, 1280],
   ]);
   r.route('hatch', 'land', { oneWay: true });
   r.route('gap', 'east', { oneWay: true });
@@ -987,7 +1003,7 @@ function hub(): Json {
   r.route('floor', 'high', { needs: [C] });
   r.route('high', 'floor', { oneWay: true });
   r.route('high', 'limbs');
-  r.route('floor', 'stone-heart');
+  r.route('floor', 'stone-heart', { needs: [C] });
   r.route('floor', 'door', { flags: ['seeds:3'] });
   r.route('door', 'floor', { needs: [C] });
   return r.finish();
@@ -1005,14 +1021,17 @@ function hub(): Json {
 function trunk(): Json {
   const r = new Wood('cn-trunk', 'The fallen giant', [2900, 384], 7202, { back: true, mood: 'deep' });
   r.cave(2560, 128, 3200, 384, { ceil: 64, w: 0, e: 0, corner: 0 });
-  // Tier 1: the hall inside the giant; the seed's alcove up in its roof.
-  r.cave(1536, 192, 2624, 704, { ceil: 128, w: 0, e: 0, skip: [[1600, 1984]] });
-  r.hole(1728, 64, 1920, 192);
-  // The hall's west end: a low corridor shut by rotten heartwood (the wall that teaches breaking).
-  r.hole(1280, 512, 1536, 704);
-  r.bark('giant-wall', 1408, 512, 64, 192);
+  // Tier 1: the hall inside the giant (its roof bitten).
+  r.cave(1536, 192, 2624, 704, { ceil: 128, w: 0, e: 0 });
+  // The hall's west end: a low corridor shut by rotten heartwood (the wall that teaches breaking), and behind it a
+  // chamber over the drop, the seed in an alcove up in its roof over a root burl (the wall pays at once: the seed
+  // is behind it, not before it; orchestrator r4).
+  r.hole(1472, 512, 1536, 704);
+  r.bark('giant-wall', 1472, 512, 64, 192);
+  r.cave(1088, 320, 1472, 704, { ceil: 0, w: 0, e: 0, corner: 64 });
+  r.hole(1152, 160, 1344, 320);
   // The drop to tier 2; tier 2 under a low roof (thorns under it), the rot panel where she lands.
-  r.hole(1088, 512, 1280, 1024);
+  r.hole(1088, 704, 1280, 1024);
   r.hole(448, 768, 1088, 1024);
   r.bark('rot-panel', 1088, 1024, 192, 64, true);
   r.hole(1088, 1088, 1280, 1920);
@@ -1020,25 +1039,26 @@ function trunk(): Json {
   r.hole(448, 1024, 640, 1216);
   r.cave(0, 1216, 1024, 1664, { ceil: 96, w: 0, e: 0 });
   r.fill();
-  // Root burls up to the alcove (tapered, not pillars).
-  r.burl(1920, 704, 256, 192, 2);
-  r.burl(1664, 704, 256, 384, 2);
-  r.add('moonseeds', { id: 'seed-giant', x: 1824, y: 220 });
+  // A root burl up to the alcove (one swelling, not a pillar).
+  r.burl(1344, 704, 128, 96, 1);
+  r.add('moonseeds', { id: 'seed-giant', x: 1248, y: 290 });
   r.thorns('thorn-t2', 768, 1024, 192);
   r.thornsUnder('thorn-roof', 960, 768, 128);
   r.thorns('thorn-t3', 256, 1664, 192);
   r.juvenile('juv-t1', 2480, 704, -1, 140);
-  r.flyer('lampwing', 'wing-t2', 760, 900, -1, { radius: 200 });
+  // A dangler pair under the low roof (review r3 #7: a new kind on the path, where the lampwing was).
+  r.dangler('dang-t2a', 600, 768, 1);
+  r.dangler('dang-t2b', 880, 768, -1);
   r.cover('rot-shaft', 1024, 1088, 320, 832, 'rot-panel');
-  r.landmark('giant-wall', 'teach', 1440, 704);
+  r.landmark('giant-wall', 'teach', 1504, 704);
   r.place('top', 2900, 384);
   r.place('t1', 2300, 704);
   r.place('t2', 800, 1024);
   r.place('t3', 600, 1664);
   r.shotStops([
     ['entry', 2900, 384],
-    ['seed', 1900, 704],
-    ['wall', 1500, 704],
+    ['wall', 1700, 704],
+    ['seed', 1300, 512],
     ['thorns', 800, 1024],
     ['low', 500, 1664],
   ]);
@@ -1055,44 +1075,70 @@ function trunk(): Json {
   return r.finish();
 }
 
+/** The well's chimney (legs 2 and 3): thorns on alternate faces ([id, face, y0, y1]), laid on the kicks' real line. */
+// (Measured with tools/levels/canopy-probe.ts: a kick across the 384 px chimney rises ~222 px, one up a face ~235.
+// Leg 2, a full jump west off the mouth's floor: W 2937, E 2714, W 2491, E 2269, onto the landing. Leg 3, a jump east
+// off the landing's lip: E 2300, E 2080, W 1860, E 1640, W 1415, over the top. Each strip sits on the face she does
+// NOT touch at that height, so one face alone runs into thorns within two kicks.)
+const WELL_THORNS: Array<[string, 'w' | 'e', number, number]> = [
+  ['thorn-w2a', 'w', 2571, 2751],
+  ['thorn-w2b', 'e', 2395, 2545],
+  ['thorn-w3a', 'e', 1730, 1895],
+  ['thorn-w3b', 'w', 1517, 1697],
+  ['thorn-w3c', 'e', 1294, 1474],
+];
+/** The well's chimney (legs 2 and 3): its west face. */
+const CH0 = 1600;
+
 function well(): Json {
   const r = new Wood('cn-well', "The Elder's well", [1600, 4928], 7203, {
     back: true,
     art: { anchorY: 2600 },
   });
-  // The shaft up the Elder (a claw climb: straight faces).
-  r.hole(1024, 1152, 1536, 4928);
+  // Leg 1, the first use of the claws: the wide shaft from the bottom up to the giant's mouth (its east face tops
+  // out on the mouth's floor; the west face ends under the mouth's roof).
+  r.hole(1024, 2944, 1536, 4928);
+  // Legs 2 and 3 (review r3 #1): a 384 px chimney up from the mouth's floor, thorns on alternate faces: she kicks
+  // across (the bots too: the explorer's `zig` macros), a rest on the landing between.
+  r.hole(CH0, 1152, CH0 + 384, 2944);
   // The bottom: the claws, far and low; out east to the rot hall.
   r.cave(1536, 4608, 2560, 4928, { ceil: 64, w: 0, e: 0, corner: 0 });
   // The Elder's notch off the shaft's foot, its rotten plug in the west wall.
   r.cave(128, 4672, 1024, 4928, { ceil: 64, w: 0, e: 0, corner: 0 });
   r.bark('elder-plug', 64, 4672, 64, 256);
-  // The giant's mouth on the east wall, a landing above it: rests for a climber who changes wall; the west face
-  // runs clean from the notch to the hollow (one wall is enough).
-  r.cave(1536, 2944, 2560, 3200, { ceil: 64, w: 0, e: 0, corner: 0 });
-  r.hole(1536, 1856, 1792, 2240);
+  // The giant's mouth on the east (leg 1's top, the chimney's foot), the landing in the chimney's west wall.
+  r.cave(1536, 2944, 2560, 3200, { ceil: 0, w: 0, e: 0, corner: 0 });
+  r.hole(CH0 - 320, 1856, CH0, 2240);
+  // Secret: a rotten panel at the landing's back, a niche behind it (the claws pay twice: only a climber stands here).
+  r.hole(CH0 - 704, 2048, CH0 - 320, 2240);
+  r.bark('niche-wall', CH0 - 384, 2048, 64, 192);
   // The ambush hollow: two tiers, a shelf under its roof; out east to the limbs.
   r.cave(256, 448, 2304, 1152, { ceil: 128, w: 64, e: 0 });
   r.hole(2304, 512, 2560, 768);
   r.fill();
-  r.mass(1600, 960, 704, 192);
+  r.mass(2048, 960, 256, 192);
   r.mass(1792, 704, 384, 48);
-  // A root across the shaft's mouth: she climbs through it from below, and the hollow's floor is whole.
-  r.oneWay(1024, 1152, 512, 'branch');
+  // A root across the chimney's mouth: she climbs through it from below, and the hollow's floor is whole.
+  r.oneWay(CH0, 1152, 384, 'branch');
   r.add('glades', { id: 'glade-claws', x: 1360, y: 4704, w: 216, h: 224, ability: C });
   r.patch('p-well', 1900, 4928);
+  // The west moth-stone beside the claws (review r3 #8: the rot branch is on the map the moment it matters).
+  r.stone('stone-west', 2250, 4928, 'cn-west');
   r.great('claw-prize', 1090, 3900);
-  // Thorns on the east face between its rests: the long west face is the climb.
-  r.thornsUp('thorn-w2', 1508, 2600, 240);
-  r.thornsUp('thorn-w3', 1508, 1400, 250);
-  // The ambush: woken by the claws.
+  for (const [id, f, y0, y1] of WELL_THORNS) r.thornsUp(id, f === 'w' ? CH0 : CH0 + 384 - 28, y0, y1 - y0);
+  r.hollow('shard-well', CH0 - 560, 2240, 'moonShard');
+  r.hoard('niche-w-', CH0 - 440, 2160, 80, 40, 2);
+  r.cover('niche-w-cover', CH0 - 768, 1984, 448, 320, 'niche-wall');
+  // The ambush: woken by the claws (the lampwing low enough to see her on the hollow's floor).
   r.burrback('burr-am-1', 640, 1152, 1, 300, { wakes: C, fenced: true });
-  r.burrback('burr-am-2', 1960, 960, -1, 250, { wakes: C, fenced: true });
-  r.flyer('lampwing', 'wing-am', 1300, 700, 1, { radius: 260, wakes: C });
+  r.burrback('burr-am-2', 2176, 960, -1, 100, { wakes: C, fenced: true });
+  r.flyer('lampwing', 'wing-am', 1300, 900, 1, { radius: 260, wakes: C });
+  // Its twin keeps the landing (a fight at a rest, never on the face).
+  r.flyer('lampwing', 'wing-land', CH0 - 160, 1990, 1, { radius: 120 });
   r.cover('elder-cover', 0, 4608, 128, 384, 'elder-plug');
   r.place('bottom', 1700, 4928);
   r.place('mouth', 2200, 3200);
-  r.place('mid', 1650, 2240);
+  r.place('mid', 1440, 2240);
   r.place('notch', 500, 4928);
   r.place('hollow', 600, 1152);
   r.place('top', 2400, 768);
@@ -1100,7 +1146,9 @@ function well(): Json {
     ['bottom', 1600, 4928],
     ['shaft', 1280, 3600],
     ['mouth', 2000, 3200],
-    ['landing', 1500, 2240],
+    ['chimney', 1790, 2700],
+    ['landing', 1450, 2240],
+    ['upper', 1790, 1700],
     ['hollow', 1300, 1152],
   ]);
   r.route('trunk', 'mouth');
@@ -1108,12 +1156,13 @@ function well(): Json {
   r.route('rot', 'bottom');
   r.route('bottom', 'glade-claws');
   r.route('bottom', 'p-well');
+  r.route('bottom', 'stone-west');
   r.route('bottom', 'notch');
   r.route('notch', 'elder');
   r.route('bottom', 'mouth', { needs: [C], oneWay: true });
-  r.route('bottom', 'hollow', { needs: [C], oneWay: true });
   r.route('mouth', 'mid', { needs: [C] });
   r.route('mid', 'hollow', { needs: [C] });
+  r.route('mid', 'shard-well', { needs: [C] });
   r.route('hollow', 'top');
   r.route('top', 'limbs');
   return r.finish();
@@ -1141,8 +1190,8 @@ function limbs(): Json {
   r.thorns('thorn-g1', 1056, 1280, 448);
   r.thorns('thorn-g3', 480, 1280, 320);
   r.flyer('lampwing', 'wing-g1', 1280, 520, -1, { radius: 220 });
-  r.stone('stone-west', 2100, 320, 'cn-west');
-  r.hoard('niche-', 1900, 200, 200, 60, 3);
+  r.great('niche-great', 2100, 280);
+  r.hoard('niche-', 1900, 220, 160, 40, 2);
   r.cover('niche-cover', 1664, 64, 640, 320);
   r.place('west', 200, 768);
   r.place('east', 3000, 576);
@@ -1155,7 +1204,6 @@ function limbs(): Json {
   r.route('well', 'west');
   r.route('west', 'east', { needs: [C] });
   r.route('east', 'hub');
-  r.route('west', 'stone-west');
   return r.finish();
 }
 
@@ -1188,7 +1236,7 @@ function rot(): Json {
   r.burrback('burr-rot', 1900, 1472, -1, 260, { fenced: true });
   r.thorns('thorn-r1', 2000, 1472, 128);
   r.thornsUnder('thorn-r2', 1440, 1088, 320);
-  r.hoard('cache-', 2560, 1320, 240, 100, 5);
+  r.hoard('cache-', 2560, 1320, 240, 100, 3);
   r.great('cache-great', 2860, 1420);
   r.cover('cache-cover', 2304, 1024, 768, 512, 'rot-cache');
   r.place('hall', 1500, 1472);
@@ -1221,7 +1269,8 @@ function crawl(): Json {
   r.hole(1856, 384, 2112, 512);
   r.fill();
   r.juvenile('juv-c2', 1100, 864, 1, 260);
-  r.hoard('crawl-', 1900, 430, 160, 50, 4);
+  r.hoard('crawl-', 1900, 430, 160, 50, 3);
+  r.great('crawl-great', 2040, 470);
   r.cover('crawl-cover', 1792, 320, 384, 256);
   r.place('in', 960, 160);
   r.place('out', 200, 1280);
@@ -1291,15 +1340,28 @@ function elder(): Json {
   r.cave(256, 192, 768, 512, { ceil: 96, w: 64, e: 0 });
   r.cave(1408, 896, 2560, 1152, { ceil: 64, w: 0, e: 0, corner: 0 });
   r.hole(1152, 896, 1408, 1152);
+  // The heartwood plug across the chimney over the passage's mouth (review r3 #1): cut from a cling under it.
+  r.plug('elder-heart', 768, 832, 384);
   r.fill();
-  r.hollow('drop-elder', 500, 512, 'moonDrop');
-  r.hoard('elder-', 300, 400, 160, 60, 4);
+  // Thorns on alternate faces the whole way (laid on the kicks' measured line, canopy-probe.ts): no face is a ladder.
+  for (const [id, f, y0, y1] of [
+    ['thorn-e1', 'e', 2035, 2400],
+    ['thorn-e2', 'w', 1812, 2035],
+    ['thorn-e3', 'w', 1490, 1590],
+    ['thorn-e4', 'e', 1301, 1367],
+    ['thorn-e5', 'w', 690, 820],
+    ['thorn-e6', 'e', 456, 726],
+  ] as const)
+    r.thornsUp(id, f === 'w' ? 768 : 1152 - 28, y0, y1 - y0);
+  r.hollow('drop-elder', 500, 512, 'moonShard');
+  r.hoard('elder-', 300, 400, 160, 60, 2);
   r.place('in', 2300, 2496);
   r.place('top', 700, 512);
   r.place('plug', 2400, 1152);
   r.shotStops([
     ['in', 2200, 2496],
-    ['climb', 960, 1500],
+    ['climb', 960, 1700],
+    ['plug', 960, 1000],
     ['top', 700, 512],
   ]);
   r.route('webs', 'in');
@@ -1321,16 +1383,21 @@ function elder(): Json {
 
 function fork(): Json {
   const r = new Wood('cn-fork', 'The east fork', [400, 1344], 7301, {
-    art: { anchorY: 900, moon: { x: 2700, y: 640, r: 110 }, afterglow: { x: 2600, y: 800, strength: 0.4 } },
+    art: { anchorY: 900, moon: { x: 1650, y: 380, r: 110 }, afterglow: { x: 2600, y: 800, strength: 0.4 } },
   });
-  r.hole(896, 0, 2816, 1344);
+  r.hole(896, 0, 2816, 1088);
   r.cave(0, 1088, 896, 1344, { ceil: 64, w: 0, e: 0, corner: 0 });
   r.cave(2816, 320, 3200, 576, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.back(0, 1088, 896, 1344);
   // The moth-stone's pocket up in the west wall, its mouth over a limb.
   r.cave(192, 640, 896, 896, { ceil: 64, w: 64, e: 0, corner: 64 });
-  // Secret: a rotten panel in the floor over stairs that go down west under it to the cellar.
-  r.bark('cellar-panel', 1792, 1344, 192, 64, true);
+  // Secret (review r3 #9: a wall, not a floor panel): a rotten wall in the root knoll's west face, a chamber in the
+  // knoll, stairs from its floor down west under the fork to the cellar.
+  r.hole(1984, 1088, 2816, 1344);
+  r.hole(896, 1088, 1600, 1344);
+  r.bark('cellar-panel', 1600, 1152, 64, 192);
+  r.hole(1664, 1152, 1984, 1344);
+  r.hole(1792, 1344, 1984, 1408);
   r.hole(1344, 1408, 1984, 1536);
   r.hole(832, 1536, 1472, 1728);
   r.hole(320, 1664, 960, 1856);
@@ -1339,9 +1406,11 @@ function fork(): Json {
   r.noClaws(896, 0, 1088);
   r.noClaws(2816, 0, 320);
   r.limb('perch', 896, 1344, 1088, { grows: 'east', end: 'tip', h: 80 });
-  r.burl(1408, 1344, 384, 192, 2);
   // The glide shelf: from the face's top she glides west over the fork (no claws on it: a pocket for wings only).
-  r.mass(1792, 768, 256, 48, false);
+  // Thick and sheer underneath, its great hidden by a leaf cover until she is over it (review r3 #8: from below it
+  // read as a jump she was failing).
+  r.mass(1792, 768, 256, 192, false);
+  r.cover('shelf-cover', 1728, 576, 384, 256);
   r.thorns('thorn-pit', 2560, 1344, 256);
   r.juvenile('juv-e', 2350, 1344, -1, 200);
   r.stone('stone-east', 400, 896, 'cn-east');
@@ -1349,14 +1418,14 @@ function fork(): Json {
   r.cover('stone-cover', 128, 576, 768, 384);
   r.great('shelf-great', 1920, 720);
   r.hoard('shelf-', 1830, 700, 180, 40, 3);
-  r.cover('cellar-cover', 256, 1408, 1792, 512, 'cellar-panel');
+  r.cover('cellar-cover', 256, 1088, 1792, 832, 'cellar-panel');
   r.place('mid', 1000, 1344);
   r.place('top', 3000, 576);
   r.place('shelf', 1920, 768);
   r.place('stairs', 600, 1856);
   r.shotStops([
     ['entry', 400, 1344],
-    ['knoll', 1600, 1344],
+    ['knoll', 1400, 1344],
     ['face', 2500, 1344],
     ['top', 2900, 576],
   ]);
@@ -1425,7 +1494,7 @@ function galleries(): Json {
   r.burl(1280, 1408, 512, 704, 4);
   r.ants('ant-g', 1900, 2600, 1408, 3);
   r.juvenile('juv-g', 2300, 1408, -1, 260);
-  r.hoard('nest-', 3100, 1300, 300, 80, 5);
+  r.hoard('nest-', 3100, 1300, 300, 80, 3);
   r.great('nest-great', 3450, 1360);
   r.cover('nest-cover', 2752, 1024, 896, 448, 'nest-wall');
   r.place('west', 200, 704);
@@ -1454,8 +1523,8 @@ function larder(): Json {
   r.burl(1280, 1536, 384, 192, 2);
   r.burrback('burr-larder', 1880, 1536, -1, 300, { fenced: true });
   r.ants('ant-l', 900, 1800, 1536, 2);
-  r.hollow('drop-larder', 2150, 1536, 'moonDrop');
-  r.hoard('larder-', 1100, 1360, 240, 80, 4);
+  r.hollow('drop-larder', 2150, 1536, 'moonShard');
+  r.hoard('larder-', 1100, 1360, 240, 80, 2);
   r.place('in', 200, 640);
   r.place('floor', 1800, 1536);
   r.shotStops([
@@ -1496,6 +1565,8 @@ function grove(): Json {
   r.cap('cap-w', 1536, 1536, 128, 'big');
   r.cap('cap-e', 3008, 1536, 128, 'mid');
   r.back(704, 800, 3200, 1600);
+  // The way east shut by a root gate until the pit is cleared (review r3 #7: the area's peak as an arena wave).
+  r.gate('pit-gate', 3712, 1216, 128, 256, 'cn-grove-clear');
   r.fill();
   // The Grovemother: a 480 px trunk from her root stilts over the pit up through the roof; her crown limbs grow from her (their
   // solids start 160 px off her faces: a claw climb needs room for the kick), the climb on her faces.
@@ -1524,14 +1595,22 @@ function grove(): Json {
   r.lamp('wick-a', 1760, 1180);
   r.lamp('wick-b', 2800, 1120);
   r.lamp('wick-c', 3500, 900);
-  r.burrback('burr-pit-w', 1800, 1600, 1, 260);
-  r.burrback('burr-pit-e', 2850, 1600, -1, 200, { fenced: true });
+  // The pit: two burrbacks, then a wave as she lands among them (two juveniles out of the roots, a dangler drops
+  // to the Grovemother's underside): seven creatures in ~3 screens. Every one on the floor carries the gate's flag,
+  // set as the last of them dies (src/sim/kit.ts).
+  const clear = { sets: 'cn-grove-clear' };
+  r.burrback('burr-pit-w', 1800, 1600, 1, 260, clear);
+  r.burrback('burr-pit-e', 2850, 1600, -1, 200, { fenced: true, ...clear });
+  r.add('triggers', { id: 'pit-wave', x: 1536, y: 1472, w: 1664, h: 128, sets: 'cn-grove-wave' });
+  r.juvenile('juv-wave-w', 1640, 1600, 1, 240, { wakes: 'cn-grove-wave', ...clear });
+  r.juvenile('juv-wave-e', 3050, 1600, -1, 160, { wakes: 'cn-grove-wave', ...clear });
+  r.dangler('dang-wave', 2256, 1360, 1, { wakes: 'cn-grove-wave', ...clear });
   r.flyer('lampwing', 'wing-a', 1700, 900, 1, { radius: 220 });
   r.flyer('hawker', 'hawk-e', 3600, 700, -1, { radius: 260 });
   r.thorns('thorn-p1', 2560, 1600, 140);
   r.thorns('thorn-e1', 3300, 1472, 160);
   r.thornsUnder('thorn-roof', 1400, 192, 256);
-  r.hoard('pit-', 1180, 1500, 180, 80, 4);
+  r.hoard('pit-', 1180, 1500, 180, 80, 3);
   r.great('pit-great', 1150, 1560);
   r.cover('pit-cover', 1024, 1344, 448, 320, 'pit-wall');
   r.pod('pod-crown', 2800, 704);
@@ -1565,8 +1644,10 @@ function grove(): Json {
 function spire(): Json {
   const r = new Wood('cn-spire', 'The Spire', [300, 1472], 7305, { back: true });
   r.cave(0, 1216, 640, 1472, { ceil: 64, w: 0, e: 0, corner: 0 });
-  // The chimney up the Spire's heart: 640 wide, room to dodge the hawker that crosses it on its lamp's rhythm.
-  r.hole(640, 0, 1280, 1472);
+  // The chimney up the Spire's heart: 640 wide below (room to dodge the hawker that crosses it on its lamp's rhythm),
+  // narrowing to 384 over the nook's passage (a kick across: review r3 #1).
+  r.hole(640, 640, 1280, 1472);
+  r.hole(896, 0, 1280, 640);
   // A passage through the Spire's trunk to the nook, its mouth in the east face she climbs.
   r.cave(1280, 640, 2560, 896, { ceil: 64, w: 0, e: 0, corner: 0 });
   // The foot: steps down east to a rotten wall, the hollow root behind it.
@@ -1575,10 +1656,14 @@ function spire(): Json {
   r.cave(1728, 1600, 2560, 1856, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.bark('hollow-wall', 2240, 1600, 64, 256);
   r.fill();
-  // Two legs: up the east face to the nook's mouth, then across to the west face (thorns on the east above).
-  r.thornsUp('thorn-s2', 1252, 300, 300);
+  // Two legs: up the east face to the nook's mouth (the rest), then out from under its lip and up the narrow
+  // chimney by kicks across, thorns on alternate faces, through the hawker's orbit (measured: E 650, W 430, E 210).
+  r.thornsUp('thorn-s2', 1252, 235, 255);
+  r.thornsUp('thorn-s3', 896, 460, 160);
+  // (Review r3 #1: thorns on the west face under the lamp, so the climb changes wall where the hawker crosses.)
+  r.thornsUp('thorn-s1', 640, 800, 200);
   r.lamp('wick-spire', 960, 760);
-  r.flyer('hawker', 'hawk-spire', 960, 600, -1, { orbit: 'wick-spire', period: 210, radius: 300 });
+  r.flyer('hawker', 'hawk-spire', 960, 720, -1, { orbit: 'wick-spire', period: 210, radius: 300 });
   r.cover('nook-cover', 1280, 576, 1280, 384);
   r.cover('hollow-cover', 2240, 1536, 320, 384, 'hollow-wall');
   r.place('base', 300, 1472);
@@ -1587,7 +1672,7 @@ function spire(): Json {
   r.shotStops([
     ['base', 400, 1472],
     ['climb', 960, 1000],
-    ['neck', 960, 400],
+    ['neck', 1088, 400],
     ['foot', 1900, 1856],
   ]);
   r.route('grove', 'base');
@@ -1609,7 +1694,7 @@ function nook(): Json {
   r.fill();
   r.burl(1280, 1216, 448, 384, 2);
   r.stone('stone-high', 1500, 832, 'cn-high');
-  r.hoard('nook-', 1800, 1100, 200, 80, 4);
+  r.hoard('nook-', 1800, 1100, 200, 80, 2);
   r.place('in', 200, 896);
   r.shotStops([
     ['in', 600, 896],
@@ -1627,7 +1712,7 @@ function hollowroot(): Json {
   r.cave(640, 416, 2304, 1216, { ceil: 96, w: 64, e: 64, corner: 128 });
   r.fill();
   r.hollow('wings-hollow', 1950, 1216, 'quickWings');
-  r.hoard('root-', 1100, 1100, 300, 80, 5);
+  r.hoard('root-', 1100, 1100, 300, 80, 3);
   r.great('root-great', 2150, 1150);
   r.thorns('thorn-h1', 1500, 1216, 160);
   r.place('in', 200, 416);
@@ -1672,10 +1757,11 @@ function bower(): Json {
   r.limb('over', 4192, 4384, 1152, { grows: 'east', end: 'tip', h: 64, calm: true });
   r.thornsUp('thorn-kin', 1536, 1150, 258);
   r.thorns('thorn-b1', 2400, 1408, 192);
-  r.flyer('hawker', 'hawk-kin', 1800, 760, -1, { radius: 280 });
   r.lamp('wick-hall', 3300, 860);
   r.flyer('hawker', 'hawk-hall', 3300, 660, -1, { orbit: 'wick-hall', period: 240, radius: 300 });
-  r.hoard('kin-', 300, 860, 220, 70, 4);
+  r.hoard('kin-', 300, 860, 160, 60, 2);
+  // A save at the top of the Spire (review r3 #8): the halfway point of the east loop.
+  r.patch('p-bower', 3800, 1408);
   r.great('kin-great', 200, 920);
   r.cover('kin-cover', 64, 704, 640, 320, 'kin-wall');
   r.place('arrive', 3800, 1408);
@@ -1717,7 +1803,7 @@ function crown(): Json {
   r.landmark('crown', 'landmark', 2200, 1024);
   r.place('in', 1400, 1792);
   r.shotStops([
-    ['in', 1400, 1792],
+    ['in', 1600, 1600],
     ['glade', 2100, 1024],
   ]);
   r.route('bower', 'in');
@@ -1735,7 +1821,7 @@ function attic(): Json {
   r.dangler('dang-a3', 1600, 320, 1);
   r.burl(1100, 1184, 320, 128, 2);
   r.hollow('breath-hollow', 1680, 1184, 'longBreath');
-  r.hoard('attic-', 1380, 1060, 200, 80, 4);
+  r.hoard('attic-', 1380, 1060, 200, 80, 2);
   r.place('in', 200, 1184);
   r.shotStops([
     ['in', 500, 1184],
@@ -1772,7 +1858,6 @@ function gap(): Json {
   r.add('moonseeds', { id: 'seed-far', x: 1300, y: 1790 });
   r.thorns('thorn-floor-1', 2300, 2240, 192);
   r.thorns('thorn-floor-2', 3264, 2240, 192);
-  r.flyer('hawker', 'hawk-far', 1500, 1500, 1, { radius: 260 });
   r.hoard('roost-', 3000, 1150, 100, 50, 3);
   r.cover('roost-cover', 2752, 0, 576, 1280);
   r.arc('glide-', 2300, 3350, 1480, 80, 5);
@@ -1806,7 +1891,7 @@ function sky(): Json {
   r.flyer('hawker', 'hawk-sky1', 1700, 480, -1, { orbit: 'wick-sky', period: 200, radius: 300 });
   r.hollow('eyes-hollow', 2050, 960, 'nightEyes');
   r.great('sky-great', 450, 900);
-  r.hoard('sky-', 500, 760, 200, 80, 4);
+  r.hoard('sky-', 500, 760, 200, 80, 2);
   r.place('in', 1248, 960);
   r.shotStops([
     ['in', 1248, 960],
@@ -1851,6 +1936,8 @@ function tunnel(): Json {
   r.thorns('thorn-u3', 400, 1856, 160);
   r.burrback('burr-tu-1', 1100, 1856, 1, 220, { fenced: true });
   r.burrback('burr-tu-2', 1450, 1856, -1, 160, { fenced: true });
+  // An ant trail across the floor into the burrow's crack (review r3 #7: the cellar branch's ants foreshadowed).
+  r.ants('ant-tu', 1700, 900, 1856, 2);
   r.hoard('burrow-', 860, 2020, 100, 60, 3);
   r.cover('burrow-cover', 704, 1920, 320, 256, 'burrow-panel');
   r.landmark('tracks', 'tracks', 3000, 1856);
@@ -1893,7 +1980,7 @@ function burrow(): Json {
   r.burl(1792, 1216, 512, 256, 2);
   r.stone('stone-deep', 2600, 1216, 'cn-deep');
   r.great('burrow-great', 2750, 1150);
-  r.hoard('deep-', 2200, 1060, 200, 80, 4);
+  r.hoard('deep-', 2200, 1060, 200, 80, 2);
   r.place('in', 860, 1216);
   r.shotStops([
     ['in', 900, 1216],
@@ -1914,15 +2001,21 @@ function den(): Json {
   r.cave(0, 256, 640, 512, { ceil: 64, w: 0, e: 0, corner: 0 });
   // The arena: 2688 wide (a 21:9 view sees wall to wall), 896 tall, its roof bitten.
   r.cave(576, 448, 3264, 1344, { ceil: 96, w: 0, e: 0, corner: 128, skip: [[2816, 3136]] });
+  // The balcony's lip into the arena (the bitten corner sealed it off in v3: a softlock found on video).
+  r.hole(576, 256, 832, 512);
   r.gate('root-gate', 3264, 1088, 128, 256, 'cn-den-down');
   r.hole(3392, 1088, 3840, 1344);
   r.fill();
   // The balcony's face refuses the claws: down in the arena, the fight is the way on.
   r.noClaws(576, 512, 1344);
-  // Escape ledges 192 px over the floor (its ram pulls up at a ledge's mouth), and the taproot by the gate.
-  r.oneWay(1024, 1152, 256, 'branch');
-  r.oneWay(2240, 1152, 256, 'branch');
+  // Escape ledges 192 px over the floor (review r3 #6: solid root shelves, drawn as the room's root; their faces take
+  // the claws; their undersides clear the old burrback's back, so its ram pulls up at a shelf's mouth), and the
+  // taproot by the gate.
+  r.mass(1024, 1152, 256, 32);
+  r.mass(2240, 1152, 256, 32);
   r.mass(2944, 448, 96, 808, false);
+  // A lamp over the taproot: its third phase plants it there and the lamp goes out (`snuffs`): the den darkens.
+  r.lamp('wick-taproot', 2860, 640);
   r.patch('p-den', 300, 512);
   r.lamp('wick-den', 380, 380);
   r.enemy({
@@ -1934,6 +2027,7 @@ function den(): Json {
     radius: 1300,
     sets: 'cn-den-down',
     taproot: [2944, 3040],
+    snuffs: 'wick-taproot',
   });
   r.set('camera', {
     headroom: 0,
@@ -1959,14 +2053,26 @@ function den(): Json {
   return r.finish();
 }
 
+/** The way out's plug (its top) and the chimney's thorns ([id, face, y0, y1], on the kicks' measured line). */
+const OUT_PLUG = 704;
+/** The clifftop (raised from 640 in r4: a 704 px chimney, and a higher glide to the door). */
+const TOP = 384;
+const OUT_THORNS: Array<[string, 'w' | 'e', number, number]> = [
+  ['thorn-o1', 'e', 820, 1000],
+  ['thorn-o2', 'w', 555, 690],
+  ['thorn-o3', 'e', 400, 570],
+];
+
 function out(): Json {
   const r = new Wood('cn-out', 'The way on', [300, 1344], 7504, {
-    art: { anchorY: 1000, moon: { x: 2700, y: 760, r: 200 }, afterglow: { x: 2600, y: 900, strength: 1 } },
+    art: { anchorY: 1000, moon: { x: 1450, y: 360, r: 200 }, afterglow: { x: 2600, y: 900, strength: 1 } },
   });
   r.cave(0, 1088, 1280, 1344, { ceil: 64, w: 0, e: 0, corner: 0 });
-  // The root chimney up to the top (thorns on alternate faces), the cliff's lip at 1792.
-  r.hole(768, 640, 1280, 1344);
-  r.hole(0, 0, 1792, 640);
+  // The root chimney up to the top (review r3 #1: the last climb before the reveal is the richest): 384 wide, a
+  // rotten plug across it cut from a cling under it, thorns on alternate faces; the cliff's lip at 1792.
+  r.hole(896, TOP, 1280, 1344);
+  r.plug('out-plug', 896, OUT_PLUG, 384);
+  r.hole(0, 0, 1792, TOP);
   // The valley: the cliff falls 1600 px to a thorn bed; across it the next area's door on its ledge.
   r.hole(1792, 0, 3840, 2240);
   // Secret: a rotten wall at the chimney's foot, a passage and a shaft behind it down to the ledge's way.
@@ -1975,27 +2081,35 @@ function out(): Json {
   r.hole(1472, 1344, 1728, 2304);
   r.hole(0, 2048, 1728, 2304);
   r.gate('next-door', 3520, 832, 128, 256, 'cn-next');
-  r.back(0, 640, 1792, 2432);
+  r.back(0, TOP, 1792, 2432);
   r.fill();
   r.mass(3136, 1088, 704, 1152, false);
-  r.noClaws(1792, 640, 2240);
+  r.noClaws(1792, TOP, 2240);
+  // (The block's chimney face takes the claws; its valley face refuses them.)
+  r.claws(1280, TOP, 1088, 'west');
   // The way back from the door: up the door-oak's east face, west along its high limb, a drop onto the clifftop.
-  r.tree('door-oak', 3712, 128, 160, 1088, true, 'west');
-  r.limb('return', 2048, 3552, 192, {
+  r.tree('door-oak', 3712, 128, 0, 1088, true, 'west');
+  // (The limb is 336 over the clifftop (raised to 384 in r4): out of a jump's reach from the lip.)
+  r.limb('return', 2112, 3552, 48, {
     parent: 'door-oak',
     grows: 'west',
     end: 'snap',
     h: 80,
-    from: [3712, 220],
+    from: [3712, 76],
   });
-  r.limbNoClaws(2048, 3552, 192);
+  r.limbNoClaws(2112, 3552, 48);
   r.thorns('thorn-valley', 1792, 2240, 1344);
-  r.mass(768, 1216, 128, 128);
-  r.thornsUp('thorn-o1', 1252, 700, 300);
-  r.patch('p-out', 420, 640);
+  for (const [id, f, y0, y1] of OUT_THORNS) r.thornsUp(id, f === 'w' ? 896 : 1280 - 28, y0, y1 - y0);
+  r.patch('p-out', 420, TOP);
   r.lamp('wick-door', 3280, 900);
+  // The false lights down in the valley (review r3 #5): real lamps on the thorns' far side, out of reach; the moths
+  // drift to them. A camera zone pulls back over the glide so the cliff, the valley and the door read at once.
+  r.lamp('wick-valley-1', 2240, 2080);
+  r.lamp('wick-valley-2', 2620, 2140);
+  r.lamp('wick-valley-3', 2960, 2060);
+  r.set('camera', { zones: [{ id: 'valley', x: 1792, y: 0, w: 2048, h: 1600, zoom: 0.85 }] });
   r.add('triggers', { id: 'way-on', x: 3328, y: 800, w: 160, h: 288, sets: 'cn-area-end' });
-  r.landmark('vista', 'vista', 1700, 640);
+  r.landmark('vista', 'vista', 1700, TOP);
   r.landmark('valley', 'valley', 1792, 640, 2048, 1600);
   r.landmark('mountain', 'mountain', 2900, 420);
   r.landmark('next-door', 'arch', 3584, 1088);
@@ -2003,13 +2117,13 @@ function out(): Json {
   r.cover('ledge-cover-2', 0, 1344, 1792, 1024, 'ledge-wall');
   r.place('in', 300, 1344);
   r.place('foot', 900, 1344);
-  r.place('top', 1500, 640);
+  r.place('top', 1500, TOP);
   r.place('low', 700, 2304);
   r.place('door', 3400, 1088);
   r.shotStops([
     ['in', 400, 1344],
-    ['chimney', 1000, 1000],
-    ['top', 1300, 640],
+    ['chimney', 1088, 900],
+    ['top', 1300, TOP],
     ['valley', 2500, 1000],
     ['door', 3400, 1088],
   ]);
@@ -2035,7 +2149,7 @@ function ledge(): Json {
   r.burl(1536, 1152, 384, 384, 2);
   r.burrback('burr-ledge', 900, 1152, 1, 300, { fenced: true });
   r.great('ledge-great', 450, 1080);
-  r.hoard('ledge-', 600, 980, 240, 80, 5);
+  r.hoard('ledge-', 600, 980, 240, 80, 3);
   r.place('in', 2400, 768);
   r.place('floor', 800, 1152);
   r.shotStops([

@@ -82,6 +82,8 @@ export function updateFinds(state: GameState, scene: Scene, t: Tuning, events: S
     if (!remember(save.taken, key(h.id))) continue;
     // (A moon-drop, Lanternroot: one more light per hollow, counted by `withUpgrades` from its own flag.)
     if (h.upgrade === 'moonDrop') remember(save.flags, `moonDrop:${key(h.id)}`);
+    // (A moon shard, the Canopy: three make a light, counted by `withUpgrades` the same way.)
+    else if (h.upgrade === 'moonShard') remember(save.flags, `moonShard:${key(h.id)}`);
     else if (isUpgrade(h.upgrade)) remember(save.flags, upgradeFlag(h.upgrade));
     events.push({ type: 'hollowGrant', id: h.id, upgrade: h.upgrade, x: h.x + h.w / 2, y: h.y + h.h });
   }
