@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v6, 2026-10-31)
+# The Canopy: a first area built to the reference numbers (v7, 2026-10-31)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -225,46 +225,167 @@ the render builder's.
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
 
+## v7: the level side of review round 6 (`reviews/canopy-r6.md`, 6/10)
+Round 6's verdict: v6 met every number and the area got flatter: the furniture was one recipe stamped in every hall
+(room density CV 0.41 against about 1.0 in HK, Silksong and Nine Sols, no quiet room, the thorns 20% in long runs),
+leg 3's lampwing was a toll in a slot with a leg-long runback, the fling was in her hands and nowhere in the level,
+the rewards were all the same glow. v7 takes the six [level] items; the render items (#2, #5, #8, #9) and the kin's
+restyle are the render builder's. Same totals, new shape: furniture moved, not added.
+- **#1, peaks and quiet.** `canopy-furniture.ts` now measures the spread the review measured (it reproduces its v6
+  numbers exactly) and `--check` holds round 7's bar; v7 meets it (table below).
+  - *Six quiet rooms* (under 0.5 things a screen): the hatch (its dark-edge pocket holds one pod), the crown (the
+    glide learned in a calm room: no lampwing, strip or pod), the crawl (one juvenile in the winding dark), the cellar
+    (one ant), the burrow (the deep's map alone, grown west, below), the hollow root (grown 480 down: a dark well with
+    quick wings at its foot). The hub's clearing is stripped too (#10). The middle thinned: the nook, the ledge, the
+    attic, the sky, the larder, the webs and the rot hall each keep their one find or fight and lose their hoard and
+    tray.
+  - *The peak*: the Grove's pit, 34 things in 3.6 screens (9.6 a screen, 5.7x the median): the wave, two low lamps,
+    six pods, two root steps, an arc of six glints the fling and the big cap reach (#6). The busy middle: the gap's
+    pod garden, the trunk's bed, the tunnel's west hall, the well.
+  - *Thorns in composed runs* (76% of the length in runs of 640+; 21 strips in 10 rooms, v6 41 in 20): the tunnel's
+    west hall 1,856 (a new hall, below), the way out's valley 1,344, the limbs 1,408 (v6's three trays joined under
+    the gap and the second limb), the bower's hall 1,088 (one pit under two knuckles and the upper limb), the tunnel's
+    pit 1,024, the gap's floor 944 (the fall is the cost: from the west wall to the drop to the fork, which moved to
+    the floor's east end, by the shelf's foot), the trunk's tier 1 640 (under two knuckles; v6's tier 2 and tier 3
+    trays gone, so nothing on the walk to the well's door). The short strips left are the climbs' (well, Elder, way
+    out, Spire, kin) and the Grove's. 10,875 px in all (v6 12,000: within 10%).
+  - *Pods in clusters* (29 stay 29): the gap's garden (four on knuckles over the run), the tunnel's (three on knuckles,
+    two under root hangs over its run), the Grove's six; out of the quiet rooms.
+  - What the proofs threw back: a knuckle by the trunk's top lip was a hop up to the top without the claws (the bed
+    shortened to 640, two knuckles); the gap's pods hung under the roost were pogoed across to the far limb without
+    wings, and a pod on a knuckle near the west wall is a step 44 px higher (the knuckles moved east of 2,816 and down).
+- **#3, leg 3 as a choice, not a toll.**
+  - *A mid rest and window* in the west wall at 1,536-1,920 x 1,536-1,856 (320 tall: the 384 the review asked let a
+    kick across from the east face slide under the west face and back into the rest), a root lip into the chimney.
+    Leg 3 is 3a (the landing to the rest, clean, up the east face and across into the rest) and 3b (the rest to the
+    hollow: up the east face, across over the rest's opening, up the west face; `thorn-w3b` on the east face under the
+    hollow, re-laid to 1,152-1,340 from `climbs.ts`). v6's `thorn-w3a` is gone (the rest took its face).
+  - *The lampwing* at (2,112, 1,400), radius 140, 456 px over the rest's floor.
+  - *The ambush wakes on a trigger* (`ambush`, 704-1,408 x 960-1,152, flag `cn-well-ambush`), not the claws: the
+    arrival over the chimney's top is quiet. The second burrback moved off the block onto the floor west of it.
+  - *A save at the top* (`p-hollow`, 1,856 x 1,152, between the block and the chimney's mouth, where 3b's west face
+    tops out; 556 px from the nearer burrback's ground): a fade in the ambush costs the ambush. (A save stands on solid
+    ground 128 wide: not on the root across the chimney's mouth.)
+  - *`climbs.ts` with the creatures in* (`runClimb(..., { creatures: true })`, `--creatures`, `CREATURE_CLIMBS`,
+    `restSafe`; in `canopy-climbs.test.ts`): the rest is safe (10 s on it with the lampwing in: no hit, from all three
+    starts: at 456 px it never sees her there); the plain plan straight past it takes at most one hit from two starts
+    of three at delays 6 and 10 (the third: 0 and 4 hits); hops with up cuts on the rest's lip draw it down and kill
+    it, unhurt, from all three. The review wanted her to watch its dive from the rest: at its sight (260 px) it never
+    dives at her there, so the choice is draw it and kill it, or climb past it. Leg 2's strip stays 84 tall (the
+    review asked 160-200; the risk glints over it and the kick across at its foot leave 84 at a 64 px margin).
+- **#4, five fling lines** (lamps lit in the proofs: every lock claim in a room with a lamp runs again with the lamps
+  burning, `tools/solve/canopy.ts`; all hold):
+  - *the trunk's tiers*: a lamp in the drop's shaft (1,184 x 800), a jump over tier 2's floor: flung up she is back
+    in the wall's chamber and on to tier 1 (`t2 -> t1` was the claws' only); the hall's way out stays the claws';
+  - *the limbs' high line*: a lamp a jump off the first limb's end (1,240 x 600), another a jump off the second (1,640
+    x 450); flung up off the second she is in the niche over the second limb (three glints; the claws reach it too);
+  - *the gap*: three lamps down from the shelf's lip over the run's east end (3,380 x 1,240, 3,240 x 1,600, 3,100 x
+    1,920): flung west off the first into the roost's mouth (three glints now), or down the chain into the pod
+    garden. (West of x 3,080 at 1,580 a chain carried a clawed player over to the far limb: the lamps sit 840+ px
+    east of its lip.)
+  - *the well's hollow*: a lamp over the ambush floor (1,400 x 880), a jump's reach: the throw-cut in the fight and
+    the way up to the east shelf (1,792 x 704);
+  - *the Grove*: `wick-a` and `wick-b` at 1,380 (220 over the pit floor; a test checks a jump from the floor puts each
+    in fling reach).
+  - And one old skip the lit proofs found: flung west off the fork's lamp over the face's top, a clawed player reached
+    the glide shelf (the lamp moved east and up in the top's cave, 3,120 x 400).
+- **#6, the Grove's arena is the pit.** Two root gates (`arena-w` 1,472-2,016, `arena-e` 2,496-3,840, both 64 tall
+  under y 1,088) shut on `cn-grove-wave` with `pit-door` and open on `cn-grove-clear`: she fights in 1,472-3,840 x
+  1,088-1,600 (the east floor and its gate out inside it) and cannot climb out to kite. A camera zone fits the arena
+  while the wave runs (`fit`, `until: cn-grove-clear`). Beat 2's dangler hangs under the Grovemother's trunk (a gate
+  does not tie a thread), the lampwing over the east floor. The proofs: in the pit with the wave on, the tiers, the
+  crown, the seed, the keen hollow and the save are out of reach (with the lamps lit too); once clear, she climbs out
+  without the claws (the lamps and the caps). The crown's seed now comes after the wave (it is over the arena's east
+  gate). The release is render's (the gates draw as the existing root gates; they need their own drop and draw-back).
+- **#7, rewards that matter.** Majors 35 -> 23 (the references 8-23): greats 18 -> 3 (`claw-prize`, the hub's wings
+  shelf, the ledge after the boss), moon shards 3 -> 6 (two lights: the hub's high chamber, the Grove's pit wall, the
+  kin's chamber join the well's niche, the Elder and the larder). The review's "greats 6" and "majors <= 23" cannot
+  both hold with 2 abilities, 4 upgrades, 3 seeds, 5 maps and 6 shards (20). Glints 58 -> 39, hidden 47 -> 19, hidden
+  share 0.34 (metrics.ts; the references 0.18-0.35). Pockets pay one thing: a shard, a map, a great or a pile (the
+  fork's shelf, the galleries' nest, the roost, the limbs' niche: three each; the tunnel's west end: five, in the
+  open; the rot cache: a pod). No trade: a clear spot by the hub's save (`place:trader`, 3,240 x 1,600) where a
+  trader could stand, when Matt says yes to the sim work.
+- **#10, the hub as the quiet place.** The clearing stripped (v6's four knuckles, three pods and thorn pit gone): the
+  root floor, two low swellings, the save, the kin, the trader's spot; the hub is 1.35 things a screen (12: the
+  lampoak's three sockets and the mouth's lamp, the two shown locks and their finds, the wings shelf, two knuckles, two
+  pods). Not under 0.5: its sockets and locks are things. The moon placed over the clearing's frame from the save
+  (view 1,180 x 200, r 120); the clearing's sky is open to the room's top, but render's backdrop covers the moon in
+  every hub frame (a render item). **The notch is closed**: the tunnel and the burrow grew 3,520 west under the hub's
+  west half (`TX`; their old content east of it, the links unchanged in world px). The tunnel's new west hall is its
+  bramble run (1,856 in a shallow pit under three knuckles and two root hangs with pods) to a pile of five glints in
+  the open at its west end; the burrow's west is mass.
+
 ## Measured (tools/reference/metrics.ts, against the references)
 
-| metric | HK | Ori | Nine Sols | Canopy v2 | Canopy v3 | Canopy v4 | **Canopy v5** | **Canopy v6** |
-|---|---|---|---|---|---|---|---|---|
-| rooms | 48 | 22 | 39 | 24 | 27 | 27 | **27** | **27** |
-| screens | 329 | 88 | 172 | 60 | 83 | 83 | **83** | **87** (the hub 8.9) |
-| rooms on the critical path | 25% | 77% | 72% | 58% | 52% | 52% (14) | **52%** (14) | **52%** (14) |
-| solid share of the room boxes | 0.35 | 0.5 | (traced) | 0.43 | 0.51 | 0.51 | **0.51** | **0.49** |
-| enemies per screen | 0.31 | 0.18 | 0.27 | 0.58 | 0.43 | 0.49 (41: the wave, the tunnel's ants) | **0.48** (40: the wave is 2 + 4, the landing lampwing gone) | **0.47** (41: a lampwing on the well's leg 3) |
-| enemy kinds | 30 | 9 | 11 | 6 | 9 | 9 (the path now meets the dangler too) | **9** | **9** |
-| majors | 23 | 21 | 15 | 25 | 28 | 31 (three moon shards) | **31** | **35** (greats in the hub's chamber and shelf, the stone pocket, the kin chamber) |
-| minor pickups | 6 | 10 | 8 | 193 | 82 | 58 | **58** | **58** (pods paid out of the hoards) |
-| saves | 8 | 2 | 5 | 5 | 4 | 5 (the bower) | **6** (the well's landing) | **7** (the Grove's entry; the well's up on the mouth) |
-| hazard runs | 0 | 6 | 5 | 29 | 25 | 37 (the chimneys' strips) | **25** (one strip a leg-half) | **41** (12,000 px) |
-| screens with nothing in them | 65% | 63% | 66% | 35% | 57% | 53% | **54%** | **40%** (29 pods) |
-| longest run of empty screens | 15 | 6 | 9 | 5 | 8 | 8 | **8** | **5** |
+| metric | HK | Ori | Nine Sols | Canopy v2 | Canopy v3 | Canopy v4 | Canopy v5 | Canopy v6 | **Canopy v7** |
+|---|---|---|---|---|---|---|---|---|---|
+| rooms | 48 | 22 | 39 | 24 | 27 | 27 | 27 | 27 | **27** |
+| screens | 329 | 88 | 172 | 60 | 83 | 83 | 83 | 87 (the hub 8.9) | **94** (the tunnel and burrow grown under the hub, the hollow root down) |
+| rooms on the critical path | 25% | 77% | 72% | 58% | 52% | 52% (14) | 52% (14) | 52% (14) | **52%** (14) |
+| solid share of the room boxes | 0.35 | 0.5 | (traced) | 0.43 | 0.51 | 0.51 | 0.51 | 0.49 | **0.52** |
+| enemies per screen | 0.31 | 0.18 | 0.27 | 0.58 | 0.43 | 0.49 (41: the wave, the tunnel's ants) | 0.48 (40: the wave is 2 + 4, the landing lampwing gone) | 0.47 (41: a lampwing on the well's leg 3) | **0.42** (39: the crown's lampwing and a cellar ant gone) |
+| enemy kinds | 30 | 9 | 11 | 6 | 9 | 9 (the path now meets the dangler too) | 9 | 9 | **9** |
+| majors | 23 | 21 | 15 | 25 | 28 | 31 (three moon shards) | 31 | 35 (greats in the hub's chamber and shelf, the stone pocket, the kin chamber) | **23** (3 greats, 6 moon shards) |
+| minor pickups | 6 | 10 | 8 | 193 | 82 | 58 | 58 | 58 (pods paid out of the hoards) | **39** (19 hidden; hidden share 0.34) |
+| saves | 8 | 2 | 5 | 5 | 4 | 5 (the bower) | 6 (the well's landing) | 7 (the Grove's entry; the well's up on the mouth) | **8** (the well's hollow) |
+| hazard runs | 0 | 6 | 5 | 29 | 25 | 37 (the chimneys' strips) | 25 (one strip a leg-half) | 41 (12,000 px) | **21** (10,875 px, 76% in runs of 640+) |
+| screens with nothing in them | 65% | 63% | 66% | 35% | 57% | 53% | 54% | 40% (29 pods) | **46%** |
+| longest run of empty screens | 15 | 6 | 9 | 5 | 8 | 8 | 8 | 5 | **5** |
 
 The furniture against the four exact references (`tools/levels/canopy-furniture.ts`; air = room boxes minus solids,
 in hero heights: Silksong x0.58, Nine Sols x0.8, HK and Ori as a screen; the Nine Sols props are its 148 from the
 README, not in its area.json):
 
-| measure | HK | Silksong | Nine Sols | Ori | Canopy v5 | **Canopy v6** |
-|---|---|---|---|---|---|---|
-| air screens (hero heights) | 132 | 44 | 56 | 48 | 41 | **44** |
-| thorn / hazard strips | 93 | 127 | 37 | 54 | 25 | **41** |
-| hazard length, px | 45,000 | 67,700 | 26,000 | 15,600 | 6,800 | **12,000** |
-| hazard px per air screen | 340 | 478-877 | 330-374 | 328 | 166 | **272** |
-| things to hit (breakables + pods) | 90 | 9 | 21 (+148 props) | 42 | 18 | **45** (29 pods) |
-| one-way ledges | 0 | 0 | 143 | 11 | 8 | **33** |
-| hit + ledges per air screen | 0.68 | 0.2 | 1.9 (3.6 with props) | 1.11 | 0.6 | **1.77** |
+| measure | HK | Silksong | Nine Sols | Ori | Canopy v5 | Canopy v6 | **Canopy v7** |
+|---|---|---|---|---|---|---|---|
+| air screens (hero heights) | 132 | 44 | 56 | 48 | 41 | 44 | **45** |
+| thorn / hazard strips | 93 | 127 | 37 | 54 | 25 | 41 | **21** |
+| hazard length, px | 45,000 | 67,700 | 26,000 | 15,600 | 6,800 | 12,000 | **10,875** |
+| hazard px per air screen | 340 | 478-877 | 330-374 | 328 | 166 | 272 | **240** |
+| things to hit (breakables + pods) | 90 | 9 | 21 (+148 props) | 42 | 18 | 45 (29 pods) | **45** (29 pods) |
+| one-way ledges | 0 | 0 | 143 | 11 | 8 | 33 | **32** |
+| hit + ledges per air screen | 0.68 | 0.2 | 1.9 (3.6 with props) | 1.11 | 0.6 | 1.77 | **1.70** |
 
-Rooms all at least 2560 x 1440; the world's rects share edges (no holes between rooms; one notch under the burrow
-opens to the outside). Secrets: the hub's bank wall (heart moth-stone), the giant's rot panel (the rot branch), the
+**The spread** (review r6 #1, `canopy-furniture.ts --check --rooms`; things = enemies, pickups, pods, rotten bark,
+lamps, thorn strips and one-ways in a room, per box screen of it; long runs hero-scaled):
+
+| measure | HK | Silksong | Nine Sols | Ori | Canopy v6 | **Canopy v7** | round 7's bar |
+|---|---|---|---|---|---|---|---|
+| room density, mean / median | 1.31 / 0.86 | 0.85 / 0.71 | 2.51 / 1.69 | 2.40 / 2.16 | 3.12 / 2.95 | **2.23 / 1.69** | |
+| spread across rooms (CV) | 1.10 | 0.96 | 1.08 | 0.59 | 0.41 | **0.84** | >= 0.8 |
+| quietest tenth (p10) | 0 | 0.13 | 0 | 0.40 | 1.41 | **0.34** | |
+| rooms under 0.5 a screen | 16 / 48 | 9 / 34 | 7 / 39 | 2 / 17 | 0 / 27 | **6 / 27** | >= 6 |
+| busiest room / median | 8.9 | 5.4 | 7.7 | 2.6 | 2.5 | **5.7** (the Grove, 9.6) | >= 5 |
+| hazard runs >= 640 (share of length) | 18 (71%) | 8 (55%) | 13 (71%) | 3 (34%) | 2 (20%) | **7 (76%)** | >= 50% |
+| hazard runs <= 256 | 62 | 104 | 16 | 34 | 28 | **13** | |
+| rooms with any hazard | 16 / 48 | 20 / 34 | 16 / 39 | 11 / 17 | 20 / 27 | **10 / 27** | <= 14 |
+
+Room by room (v7): the Grove 9.6; the gap 4.3; the trunk 3.7; the tunnel and the well 3.6; the limbs and the fork 3.4;
+the galleries, the Elder, the bower, the Spire and the way out 2.4-2.8; the rot hall, the webs, the larder, the attic
+and the sky 1.7; the den 1.4; the hub 1.35; the nook and the ledge 1.1; the crawl, the hollow root, the crown, the
+cellar, the burrow and the hatch 0.2-0.45.
+
+Rooms all at least 2560 x 1440; the world's rects share edges (no holes between rooms; v7 closed the notch under the
+hub's west half). Secrets: the hub's bank wall (heart moth-stone), the giant's rot panel (the rot branch), the
 Elder's plug, the limbs' niche, rot's two walls, the crawl's roof niche, the web room's niche, the fork's stone
 pocket and its cellar panel (the cellar branch), the galleries' nest wall, the Grove's pit wall, the Spire's nook
 and its foot wall (the hollow root), the bower's kin wall, the gap's roost (the sky room), the burrow panel, the way
 out's ledge wall. Majors: two moonDrops (the two branch ends), five moth-stones, the keen blade, long breath, night
 eyes, quick wings, three seeds, the two abilities.
 
-## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~15 min since v6)
+## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~7 min with a room a process, 8 at once)
+v7: 69 claims, 92 runs: every lock claim in a room with a lamp runs a second time with the lamps burning (flings,
+chains, eight aims), and all hold. New: the five fling lines (the trunk's tier 2 back to tier 1 without the claws,
+never out of the hall; the limbs' niche without the claws off the two lamps; the gap's roost and pod garden off the
+shelf's chain, never the far limb; the well's hollow lamp to the east shelf; the Grove cleared, out of the pit without
+the claws); the Grove's arena (in the pit with the wave on: no tiers, no crown, no seed, no keen hollow, no save,
+with the lamps lit too; the seed after the wave); the well's mid rest, the ambush trigger and `p-hollow`; the hub's
+shard chamber and the trader's spot; the tunnel's west hall both ways and its pile. What the lit proofs found: the
+gap's first chain (west of x 3,080) and the fork's lamp over the face (to the glide shelf, an old skip), both moved.
+`canopy-climbs.test.ts`: 14 climbs (the well's leg 3 is 3a and 3b), and with the creatures in: the mid rest is safe,
+the plain plan past the lampwing at most one hit from two starts of three, the up-cut plan kills it unhurt.
+`canopy-arena.test.ts`: the root gates shut with the door, and both pit lamps are in a jump's fling reach.
+
 v6: 63 claims hold (the full run, then the rooms changed after it: the trunk, galleries, gap, hub). New: the well's bottom a pit with the claws in it (the rot hall's door and the Elder's shut from
 the well), its save and stone up on the mouth; the Grove's arena (in the pit with the wave on, neither door, the save
 outside the west one); the way out's rests E and W, no glide from the way in skipping leg 1, the plug holding without
@@ -285,7 +406,20 @@ seed only through its wall (`cuts: false`), the Grove's gate only once the pit i
 the arena floor and not climbable back (`place:` claims), the giant's tier 3 back up with the claws). r4 counts bark
 cuts in the search's keys (`barkHp`), which made it ~5x slower. The world check passes (claws, then glide).
 
-## Played by the human-like bots (v6: playtest-reports/canopy-r6, canopy-r6-fork)
+## Played by the human-like bots (v7: playtest-reports/canopy-r7)
+The start command on 9f0d77a (25 min, give up after 180 s; for bugs and softlocks only, never a difficulty bar):
+
+| bot | claws at | furthest | where it went |
+|---|---|---|---|
+| casual | 1:47 | **the hollow at 8:36**, the ambush, the chimney's lampwing killed | well <-> trunk loops; leg 2's strip 15 hits; two fades in the ambush re-formed it on the mouth (it never rested at `p-hollow`) |
+| average | 1:23 | **the hollow at 23:12** | well <-> trunk loops; leg 2's strip 11 hits |
+| skilled | 2:06 | **the hollow at 8:55**, the ambush, out to the limbs (16:39) | the limbs' bed 10 hits (three fades missing the jump between the limbs), back to the well; later fades re-formed at `p-hollow` |
+
+No softlock, no stuck spot. Against r6: all three bots up leg 3 to the hollow (r6: none, all stopped at 2,070-2,170
+under v6's lampwing), the first to fight the ambush and to leave by the limbs. The casual bot never stood still on the hollow's
+save, so its ambush fades cost legs 2 and 3 again: a patch rests her only when she stands in it (or presses up).
+
+### v6 (playtest-reports/canopy-r6, canopy-r6-fork)
 The same commands on 82ae204 (25 min, give up after 180 s without progress; then from the fork with the claws):
 
 | bot | claws at | on the landing at | where it stopped |
@@ -345,7 +479,22 @@ and the giant's tier 3 was a pocket (its shaft started 448 px over the floor). N
 two or three tries and leave (a thorn there returns them to the well's bottom when they never stood on the mouth's
 floor), none climbed the fork's claw face in 20 min, and the rot branch still swallows the no-claws bot.
 
-## What is still weak (for round 7)
+## What is still weak (for round 8)
+- **No person has played it.** Round 7's evidence was to be Matt's run from the hatch to the Grove; the numbers now
+  meet the review's shape bar, which is still not fun measured.
+- **The hub is not quiet by the measure** (1.35 a screen): its sockets, shown locks and their finds are things. The
+  clearing is empty, but the moon is not in its frame (render's backdrop covers the open sky).
+- **The watchable dive was not built**: the leg-3b lampwing does not see her on the rest (260 px sight), so the choice
+  is draw it from the lip and kill it, or climb past it; "watch it dive, go while it climbs" needs it lower or a
+  wider sight, which crowds the rest.
+- **Leg 2's strip is still 84 px** (the risk glints over it and the kick across at its foot fix both ends).
+- **Rewards: 3 greats, not 6**, to hold majors at 23; glints 58 -> 39 with nothing to buy (the trade is Matt's call);
+  the trader's spot is empty.
+- **The arena gates have no art of their own** (they draw as root gates and pop: a drop and a draw-back are render's).
+- **The tunnel's west hall** is long and plain past its run (a dead end paying a pile); the burrow's 3,520 px west of
+  its cave are solid mass (a closed notch, not a place).
+
+## What was weak after v6 (round 7 answered most)
 - **Leg 3 stops the bots** (2,070-2,170 of 2,432 -> 1,152): the strips and now the lampwing; no bot has reached the
   hollow in two rounds. A person's run is the evidence that matters; the bot's chimney lines still pick a face from
   the map more often than from the strips.
