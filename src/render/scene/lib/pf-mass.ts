@@ -308,6 +308,7 @@ function edgeTone(): EdgeTone {
     mossLit: shaft
       ? 0
       : (face?.lit ?? (T.crustA > 0 ? lerp3(BRANCH.walkLit, T.crust, 0.35) : BRANCH.walkLit)),
+    fronds: fam === 'lime',
   };
 }
 

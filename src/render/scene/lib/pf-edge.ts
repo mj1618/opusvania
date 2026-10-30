@@ -15,7 +15,7 @@
 import { BRANCH, lineLimb, paintLimb, strand } from './pf-branch';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, rngFor, smoothstep, wobble } from './pf-shape';
-import { paintGrowth, topFamily } from './top-growth';
+import { paintGrowth, topFamily, tuft } from './top-growth';
 
 export interface LobeSpec {
   /** Offset of the notch between two lobes, px (+ = out into the air). */
@@ -163,6 +163,8 @@ export interface EdgeTone {
   /** Moss on the upper arc of a face's lobes (0 = none: earth, frost) and its lit caps (0 = none). */
   moss: number;
   mossLit?: number;
+  /** The moss is fronds (tufts of blades in clumps), not cushions (the lime family, canopy review r9 #8). */
+  fronds?: boolean;
 }
 
 /**
@@ -244,8 +246,53 @@ export function paintFaceLobes(
         mb.push(x - dir * w, u + w * 0.3);
       }
       for (let k = mb.length / 2 - 1; k >= 0; k--) m.push(mb[k * 2] as number, mb[k * 2 + 1] as number);
-      p.solid(m, tone.moss, h + 0.1, { moss: 0.9 });
       const span = (u1 - u0) * top;
+      if (tone.fronds) {
+        // Fronds in clumps on the upper arc, bare bark between (r9 #8: lime cushions down a face read as bubble wrap).
+        if (r() < 0.55) {
+          let u = u0 + range(r, 0, span * 0.3);
+          const end = u0 + span;
+          while (u < end) {
+            for (let q = 0, nt = 1 + Math.floor(r() * 3); q < nt && u < end; q++) {
+              const x = at(u);
+              const len = range(r, 10, 26) * Math.min(1, scale + 0.2);
+              const ang = dir * range(r, 0.6, 1.15);
+              tuft(
+                p,
+                x - dir * 3,
+                u,
+                ang,
+                3 + Math.floor(r() * 4),
+                len,
+                range(r, 2, 3.2),
+                tone.moss,
+                h + 0.14,
+                0.6,
+                r,
+              );
+              if (tone.mossLit && r() < 0.5)
+                tuft(
+                  p,
+                  x - dir * 2,
+                  u - 2,
+                  ang - dir * 0.2,
+                  2,
+                  len * 0.7,
+                  1.8,
+                  tone.mossLit,
+                  h + 0.18,
+                  0.6,
+                  r,
+                  0.6,
+                );
+              u += range(r, 9, 18);
+            }
+            u += range(r, 40, 120);
+          }
+        }
+        continue;
+      }
+      p.solid(m, tone.moss, h + 0.1, { moss: 0.9 });
       // (Evenly sized cushions spaced along a face read as a string of beads: sizes 5-22 px, overlapping.)
       for (let q = 0, nq = Math.max(1, Math.round(span / 20)); q < nq; q++) {
         const u = u0 + span * ((q + range(r, 0, 1)) / nq);
