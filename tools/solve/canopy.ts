@@ -1,5 +1,5 @@
 /**
- * The Canopy v2's proofs (docs/design/levels/first-area.md): `npx tsx tools/solve/canopy.ts [room ...]`. For each
+ * The Canopy's proofs (v3) (docs/design/levels/first-area.md): `npx tsx tools/solve/canopy.ts [room ...]`. For each
  * claim, the explorer (moves in the real sim, creatures out) from a feet point with a kit must reach what the claim
  * says (exits she leaves by, finds she takes: `room:id` in save.taken, abilities, flags, patches she stands at), and
  * each lock must hold: with the kit short of the key, the locked thing must NOT be reached. Lamps spent (traversal
@@ -33,83 +33,98 @@ const C = 'wallJump';
 const G = 'glide';
 
 const CLAIMS: Claim[] = [
-  // The Crossing: from the landing the low west and the fork are open, and the two secrets; the high limb (claws)
+  // The Crossing: from the landing the low west and the fork are open, and the bank's secret; the high limb (claws)
   // and the door (three seeds) are shut.
   {
     room: 'cn-hub',
-    from: [2000, 1152],
+    from: [2640, 1152],
     kit: [],
     reach: ['trunk', 'fork', 'cn-hub:p-crossing', 'cn-hub:stone-heart', 'cn-hub:bank-great'],
     not: ['limbs', 'door'],
   },
-  { room: 'cn-hub', from: [2000, 1152], kit: [C], reach: ['limbs', 'trunk', 'fork'], not: ['door'] },
-  { room: 'cn-hub', from: [1700, 1536], kit: [C, G], flags: ['seeds:3'], reach: ['door'] },
-  // The fallen giant: in from the hub, the seed in the roof, down to the well; the rot panel; no way back up from
-  // the low tiers.
-  {
-    room: 'cn-trunk',
-    from: [2900, 384],
-    kit: [],
-    reach: ['hub', 'well', 'rot', 'cn-trunk:seed-giant'],
-  },
+  { room: 'cn-hub', from: [2640, 1152], kit: [C], reach: ['limbs', 'trunk', 'fork'], not: ['door'] },
+  { room: 'cn-hub', from: [2400, 1600], kit: [C, G], flags: ['seeds:3'], reach: ['door'] },
+  // The fallen giant: in from the hub, through the rotten wall, the seed in the roof, down to the well; the rot
+  // panel; no way back up from the low tiers.
+  { room: 'cn-trunk', from: [2900, 384], kit: [], reach: ['hub', 'well', 'rot', 'cn-trunk:seed-giant'] },
+  { room: 'cn-trunk', from: [1600, 704], kit: [], reach: ['well'], not: ['hub'] },
   { room: 'cn-trunk', from: [600, 1664], kit: [], reach: ['well'], not: ['hub', 'rot'] },
   // The well: without the claws the bottom is a pit (out only east to the rot hall); with them, everything.
   {
     room: 'cn-well',
-    from: [900, 4160],
+    from: [1700, 4928],
     kit: [],
     reach: ['rot', 'cn-well:p-well'],
     not: ['limbs', 'trunk', 'elder'],
   },
   {
     room: 'cn-well',
-    from: [900, 4160],
+    from: [1700, 4928],
     kit: [C],
     reach: ['limbs', 'trunk', 'elder', 'rot', 'cn-well:claw-prize'],
+    max: 9000,
   },
-  { room: 'cn-well', from: [1600, 2816], kit: [], reach: ['trunk', 'rot', 'wallJump'] },
+  { room: 'cn-well', from: [2200, 3200], kit: [], reach: ['trunk', 'rot', 'wallJump'] },
   // The upper limbs: both ways with the claws, the niche.
   { room: 'cn-limbs', from: [200, 768], kit: [C], reach: ['hub', 'well', 'cn-limbs:stone-west'] },
   { room: 'cn-limbs', from: [3000, 576], kit: [C], reach: ['well'] },
-  // The rot hall: down from the giant, through the rotten wall to the well; the crawlspace and the cache.
+  // The rot branch: down from the giant, through the rotten walls; the crawl there and back without the claws; the
+  // web; the Elder's room (its climb and the plug into the well need the claws).
   {
     room: 'cn-rot',
-    from: [1440, 1088],
+    from: [1500, 1472],
     kit: [],
     reach: ['well', 'crawl', 'cn-rot:cache-great'],
     not: ['trunk'],
   },
-  { room: 'cn-crawl', from: [352, 160], kit: [], reach: ['rot', 'cn-crawl:drop-crawl'] },
-  { room: 'cn-elder', from: [1000, 640], kit: [C], reach: ['well', 'cn-elder:drop-elder'] },
-  // The east fork: the hub, the cellar and the moth-stone open; the Grove only with the claws.
+  { room: 'cn-crawl', from: [960, 160], kit: [], reach: ['rot', 'webs'] },
+  { room: 'cn-crawl', from: [200, 1280], kit: [], reach: ['rot'] },
+  { room: 'cn-webs', from: [2300, 1280], kit: [], reach: ['crawl', 'elder'] },
+  { room: 'cn-elder', from: [2300, 2496], kit: [], reach: ['webs'], not: ['well', 'cn-elder:drop-elder'] },
+  { room: 'cn-elder', from: [2300, 2496], kit: [C], reach: ['webs', 'well', 'cn-elder:drop-elder'] },
+  // The east fork: the hub, the cellar stairs and the moth-stone open; the Grove only with the claws; the sky's
+  // shelf only gliding from the face's top.
   {
     room: 'cn-fork',
-    from: [400, 1280],
+    from: [400, 1344],
     kit: [],
     reach: ['hub', 'cellar', 'cn-fork:stone-east'],
-    not: ['grove'],
+    not: ['grove', 'cn-fork:shelf-great'],
   },
-  { room: 'cn-fork', from: [400, 1280], kit: [C], reach: ['grove'] },
-  { room: 'cn-cellar', from: [480, 128], kit: [], reach: ['fork', 'cn-cellar:drop-cellar'] },
+  { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'], not: ['cn-fork:shelf-great'] },
+  { room: 'cn-fork', from: [3000, 576], kit: [C, G], reach: ['cn-fork:shelf-great'] },
+  // The cellar branch: there and back without the claws; the larder needs them; the tunnel's shortcut and the
+  // trapdoor open from below only.
+  { room: 'cn-cellar', from: [480, 128], kit: [], reach: ['fork', 'galleries'], not: ['tunnel'] },
+  { room: 'cn-cellar', from: [900, 1792], kit: [C], reach: ['fork', 'galleries', 'tunnel'] },
+  {
+    room: 'cn-galleries',
+    from: [200, 704],
+    kit: [],
+    reach: ['cellar', 'cn-galleries:nest-great'],
+    not: ['larder'],
+  },
+  { room: 'cn-galleries', from: [200, 704], kit: [C], reach: ['larder'] },
+  { room: 'cn-larder', from: [200, 640], kit: [C], reach: ['galleries', 'cn-larder:drop-larder'] },
   // The Grove: everything with the claws; the crown's seed needs them even inside.
   {
     room: 'cn-grove',
     from: [300, 576],
     kit: [C],
-    reach: ['spire', 'fork', 'hollowroot', 'cn-grove:seed-grove', 'cn-grove:keen-hollow'],
+    reach: ['spire', 'fork', 'cn-grove:seed-grove', 'cn-grove:keen-hollow', 'cn-grove:pit-great'],
   },
-  // (Fallen into the west pit, the caps throw her back up to the tiers.)
-  { room: 'cn-grove', from: [2000, 1600], kit: [C], reach: ['fork', 'spire'] },
-  { room: 'cn-hollowroot', from: [600, 832], kit: [C], reach: ['grove', 'cn-hollowroot:wings-hollow'] },
-  // The Spire: the climb to the bower and the nook in the trunk.
-  { room: 'cn-spire', from: [200, 1728], kit: [C], reach: ['bower', 'nook', 'grove'] },
-  { room: 'cn-spire', from: [200, 1728], kit: [], reach: ['grove'], not: ['bower', 'nook'] },
-  { room: 'cn-nook', from: [200, 640], kit: [C], reach: ['spire', 'cn-nook:stone-high'] },
-  // The bower: up the kin column to the crown, west to the gap; the attic up the east wall.
-  { room: 'cn-bower', from: [4250, 1536], kit: [C], reach: ['crown', 'gap', 'attic', 'spire'] },
-  { room: 'cn-bower', from: [600, 960], kit: [C, G], reach: ['gap', 'crown', 'spire', 'cn-bower:kin-great'] },
-  { room: 'cn-crown', from: [1150, 1792], kit: [C], reach: ['bower', 'glide', 'cn-crown:p-crown'] },
-  { room: 'cn-attic', from: [1000, 832], kit: [C], reach: ['bower', 'cn-attic:breath-hollow'] },
+  // (Fallen into the pit, the caps throw her back up to the tiers.)
+  { room: 'cn-grove', from: [1800, 1600], kit: [C], reach: ['fork', 'spire'] },
+  // The Spire: the climb to the bower and the nook; the hollow root behind the foot's wall.
+  { room: 'cn-spire', from: [300, 1472], kit: [C], reach: ['bower', 'nook', 'grove', 'hollowroot'] },
+  { room: 'cn-spire', from: [300, 1472], kit: [], reach: ['grove', 'hollowroot'], not: ['bower', 'nook'] },
+  { room: 'cn-nook', from: [200, 896], kit: [C], reach: ['spire', 'cn-nook:stone-high'] },
+  { room: 'cn-hollowroot', from: [200, 416], kit: [C], reach: ['spire', 'cn-hollowroot:wings-hollow'] },
+  // The bower: up the kin to the crown, west to the gap; the attic up the east wall.
+  { room: 'cn-bower', from: [3800, 1408], kit: [C], reach: ['crown', 'gap', 'attic', 'spire'], max: 9000 },
+  { room: 'cn-bower', from: [400, 704], kit: [C, G], reach: ['gap', 'crown', 'spire', 'cn-bower:kin-great'] },
+  { room: 'cn-crown', from: [1400, 1792], kit: [C], reach: ['bower', 'glide'] },
+  { room: 'cn-attic', from: [200, 1184], kit: [], reach: ['bower', 'cn-attic:breath-hollow'] },
   // The gap: without the glide the far limb is out of reach (a fall drops to the fork or climbs back); with it, the
   // seed and the drop into the Crossing.
   {
@@ -120,21 +135,23 @@ const CLAIMS: Claim[] = [
     not: ['hub', 'cn-gap:seed-far'],
   },
   { room: 'cn-gap', from: [4000, 1344], kit: [C, G], reach: ['hub', 'cn-gap:seed-far'] },
-  { room: 'cn-sky', from: [900, 960], kit: [C], reach: ['gap', 'cn-sky:eyes-hollow'] },
-  // Deep: the tunnel (back up the door's shaft with the claws), the burrow, the den (the gate opens on the old
-  // burrback's death), the way out.
-  { room: 'cn-tunnel', from: [830, 1856], kit: [C, G], reach: ['hub', 'den', 'burrow'] },
-  { room: 'cn-burrow', from: [544, 800], kit: [C], reach: ['tunnel', 'cn-burrow:stone-deep'] },
+  { room: 'cn-sky', from: [1248, 960], kit: [C], reach: ['gap', 'cn-sky:eyes-hollow'] },
+  // Deep: the tunnel (back up the door's shaft with the claws; the pit only with the glide; the shortcut to the
+  // cellar from its block), the burrow, the den (the gate opens on the old burrback's death), the way out (the
+  // door's ledge only gliding off the cliff; back by the door-oak).
   {
-    room: 'cn-den',
-    from: [300, 832],
+    room: 'cn-tunnel',
+    from: [1920, 1856],
     kit: [C, G],
-    reach: ['tunnel', 'cn-den:p-den'],
-    not: ['out'],
+    reach: ['hub', 'den', 'burrow', 'cellar'],
+    max: 9000,
   },
+  { room: 'cn-tunnel', from: [1920, 1856], kit: [C], reach: ['hub', 'burrow'], not: ['den', 'cellar'] },
+  { room: 'cn-burrow', from: [860, 1216], kit: [C], reach: ['tunnel', 'cn-burrow:stone-deep'] },
+  { room: 'cn-den', from: [300, 512], kit: [C, G], reach: ['tunnel', 'cn-den:p-den'], not: ['out'] },
   {
     room: 'cn-den',
-    from: [1600, 1280],
+    from: [1700, 1344],
     kit: [C, G],
     flags: ['cn-den-down'],
     reach: ['out'],
@@ -142,12 +159,21 @@ const CLAIMS: Claim[] = [
   },
   {
     room: 'cn-out',
-    from: [300, 2432],
+    from: [300, 1344],
     kit: [C, G],
     reach: ['den', 'ledge', 'cn-out:p-out', 'cn-area-end'],
     not: ['cn-next'],
+    max: 9000,
   },
-  { room: 'cn-ledge', from: [200, 448], kit: [C], reach: ['out', 'cn-ledge:ledge-great'] },
+  {
+    room: 'cn-out',
+    from: [300, 1344],
+    kit: [C],
+    reach: ['den', 'ledge', 'cn-out:p-out'],
+    not: ['cn-area-end'],
+  },
+  { room: 'cn-out', from: [3400, 1088], kit: [C, G], reach: ['cn-out:p-out', 'den'] },
+  { room: 'cn-ledge', from: [2400, 768], kit: [C], reach: ['out', 'cn-ledge:ledge-great'] },
 ];
 
 function startState(c: Claim, room: ReturnType<typeof getRoom>): GameState {
@@ -165,6 +191,37 @@ function startState(c: Claim, room: ReturnType<typeof getRoom>): GameState {
     }
   });
   return s;
+}
+
+/**
+ * The room in 64 px cells (CANOPY_MAP=1 on a failing claim): `#` solid, `=` one-way, `^` thorns, `B` rotten bark,
+ * `G` gate or shortcut, `o` where the explorer stood (feet), `.` air.
+ */
+function asciiMap(room: ReturnType<typeof getRoom>, states: GameState[]): string {
+  const S = 64;
+  const W = Math.ceil(room.width / S);
+  const H = Math.ceil(room.height / S);
+  const g = Array.from({ length: H }, () => Array.from({ length: W }, () => '.'));
+  const paint = (r: { x: number; y: number; w: number; h: number }, c: string) => {
+    for (let y = Math.floor(r.y / S); y < Math.ceil((r.y + r.h) / S); y++)
+      for (let x = Math.floor(r.x / S); x < Math.ceil((r.x + r.w) / S); x++)
+        if (g[y]?.[x] !== undefined) (g[y] as string[])[x] = c;
+  };
+  const rr = room as unknown as Record<
+    string,
+    Array<{ x: number; y: number; w: number; h: number }> | undefined
+  >;
+  for (const q of room.solids) paint(q, '#');
+  for (const q of room.oneWays) paint({ ...q, h: 8 }, '=');
+  for (const q of rr.thorns ?? []) paint(q, '^');
+  for (const q of rr.bark ?? []) paint(q, 'B');
+  for (const q of [...(rr.gates ?? []), ...(rr.shortcuts ?? [])]) paint(q, 'G');
+  for (const st of states) {
+    const fx = Math.floor((st.player.x + st.player.w / 2) / S);
+    const fy = Math.floor((st.player.y + st.player.h - 1) / S);
+    if (g[fy]?.[fx] !== undefined) (g[fy] as string[])[fx] = 'o';
+  }
+  return g.map((row, i) => `${String(i * S).padStart(5)} ${row.join('')}`).join('\n');
 }
 
 const only = process.argv.slice(2);
@@ -210,6 +267,13 @@ for (const c of CLAIMS) {
       (missing.length ? `; missing ${missing.join(' ')}` : '') +
       (leaked.length ? `; LEAKS ${leaked.join(' ')}` : ''),
   );
+  if (!ok && process.env.CANOPY_MAP)
+    console.log(
+      asciiMap(
+        room,
+        [...r.nodes.values()].map((n) => n.state),
+      ),
+    );
   if (!ok)
     console.log(
       `     reached: ${[...got]

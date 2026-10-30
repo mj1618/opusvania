@@ -29,7 +29,7 @@ const DIFFICULTY: Record<string, [number, string, number]> = {
 
 /** Each of our worlds' critical path, room by room (the rooms on the way to its end). */
 const CRITICAL: Record<string, string[]> = {
-  // v2 (2026-10-30): the claws in the west and back by the upper limbs, the Grove behind them, up the Spire to the
+  // v2 / v3 (2026-10-30): the claws in the west and back by the upper limbs, the Grove behind them, up the Spire to the
   // crown's glide, over the gap and down into the Crossing, through the seed door to the den and out.
   canopy: [
     'cn-hatch',
@@ -54,13 +54,18 @@ const CRITICAL: Record<string, string[]> = {
 
 /** Each world's rooms whose way in is hidden (a rotten panel, a plug, a cover): all they hold is a secret. */
 const HIDDEN_ROOMS: Record<string, string[]> = {
+  // v3: the two branches behind rotten bark (the rot branch past the giant's panel, the cellar branch past the
+  // fork's), and the pockets behind walls, covers and panels.
   canopy: [
+    'cn-rot',
     'cn-crawl',
+    'cn-webs',
     'cn-elder',
     'cn-cellar',
+    'cn-galleries',
+    'cn-larder',
     'cn-hollowroot',
     'cn-nook',
-    'cn-attic',
     'cn-sky',
     'cn-burrow',
     'cn-ledge',
@@ -208,7 +213,7 @@ export function exportArea(target: string): AreaFile {
       rect: [ox, oy, room.width, room.height],
       screens: +((room.width * room.height) / (1920 * 1080)).toFixed(2),
       shape: 'hall',
-      onCriticalPath: false,
+      onCriticalPath: (CRITICAL[target] ?? []).includes(room.id),
       exits,
     });
     exportRoom(room, ox, oy, out);
