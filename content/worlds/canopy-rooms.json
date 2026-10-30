@@ -5982,10 +5982,10 @@
       {
         "id": "juv-wave-w",
         "kind": "juvenileBurrback",
-        "x": 1640,
+        "x": 1740,
         "y": 1600,
         "facing": 1,
-        "radius": 240,
+        "radius": 200,
         "senses": "always",
         "wakes": "cn-grove-wave",
         "sets": "cn-grove-clear"
@@ -5993,10 +5993,10 @@
       {
         "id": "juv-wave-e",
         "kind": "juvenileBurrback",
-        "x": 3050,
+        "x": 2910,
         "y": 1600,
         "facing": -1,
-        "radius": 160,
+        "radius": 80,
         "senses": "always",
         "wakes": "cn-grove-wave",
         "sets": "cn-grove-clear"

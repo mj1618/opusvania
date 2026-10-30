@@ -1614,8 +1614,8 @@ function grove(): Json {
   r.burrback('burr-pit-w', 1800, 1600, 1, 260, clear);
   r.burrback('burr-pit-e', 2850, 1600, -1, 200, { fenced: true, ...clear });
   r.add('triggers', { id: 'pit-wave', x: 1536, y: 1472, w: 1664, h: 128, sets: 'cn-grove-wave' });
-  r.juvenile('juv-wave-w', 1640, 1600, 1, 240, { wakes: 'cn-grove-wave', ...clear });
-  r.juvenile('juv-wave-e', 3050, 1600, -1, 160, { wakes: 'cn-grove-wave', ...clear });
+  r.juvenile('juv-wave-w', 1740, 1600, 1, 200, { wakes: 'cn-grove-wave', ...clear });
+  r.juvenile('juv-wave-e', 2910, 1600, -1, 80, { wakes: 'cn-grove-wave', ...clear });
   r.dangler('dang-wave', 2256, 1360, 1, { wakes: 'cn-grove-wave', ...clear });
   r.flyer('lampwing', 'wing-a', 1700, 900, 1, { radius: 220 });
   r.flyer('hawker', 'hawk-e', 3600, 700, -1, { radius: 260 });
