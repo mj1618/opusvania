@@ -7,7 +7,7 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 ## How it is made (tools/levels/canopy.ts)
 - `npx tsx tools/levels/canopy.ts && npx biome format --write content/worlds/canopy*.json`, then
   `npx tsx tools/levels/canopy-check.ts` (world check + progression) and `npx tsx tools/solve/canopy.ts [room ...]`
-  (~2 min for all 50 claims). Edit the generator, never the JSON.
+  (~10 min for all 55 claims since r4 counts bark cuts). Edit the generator, never the JSON.
 - `PLACE`: each room's world rect, **at least 2560 x 1440** (throws otherwise), packed in bands that share edges (no
   holes between rooms). `LINKS`: room pairs and the shared opening (`at` = floor y on a side edge, west x on a top /
   bottom edge; `span`; `one` = the side she drops from). The constructor carves 128 px into every opening.
