@@ -12,6 +12,8 @@
  */
 import { ROOMS } from '../../../scene/index';
 import type { Room } from '../../../scene/room';
+import { gradeLookOf } from './looks';
+import { withSealedMass } from './sealed';
 import { shelfFor } from './wood-claims';
 
 export type ShelfMount = 'wall' | 'near' | 'floor' | 'hung';
@@ -19,9 +21,23 @@ export type ShelfMount = 'wall' | 'near' | 'floor' | 'hung';
 export const SHELF_FAMILIES: Record<ShelfMount, readonly string[]> = {
   wall: ['bracket', 'tiers', 'stub'],
   near: ['elbow', 'knuckle', 'braid', 'fork'],
-  floor: ['snag', 'fallen', 'burl', 'arch', 'stump', 'heap'],
+  floor: ['snag', 'fallen', 'burl', 'arch', 'stump', 'heap', 'hump'],
   hung: ['clump', 'beard'],
 };
+
+/**
+ * `hump` is never picked by the spread: it is the fight furniture of an earth room's arena (a floor-mounted ledge
+ * inside a `fit` camera zone of a den or nest room, canopy r9b: the den's warning, whose snags read as stools): a root
+ * knuckling up out of the floor with the ledge on its crown.
+ */
+function arenaKnuckle(room: Room, o: { x: number; y: number; w: number }): boolean {
+  const look = gradeLookOf(room);
+  if (look !== 'den' && look !== 'nest') return false;
+  const zones = ((
+    room.camera as { zones?: Array<{ x: number; y: number; w: number; h: number; fit?: boolean }> }
+  )?.zones ?? []) as Array<{ x: number; y: number; w: number; h: number; fit?: boolean }>;
+  return zones.some((z) => z.fit && o.x >= z.x && o.x + o.w <= z.x + z.w && o.y >= z.y && o.y <= z.y + z.h);
+}
 
 /** The tallest drop under a ledge an old stump may carry (px). */
 export const STUMP_MAX_H = 320;
@@ -43,6 +59,7 @@ export function shelfMount(room: Room, o: { x: number; y: number; w: number }): 
 function woodRooms(): Room[] {
   return Object.values(ROOMS)
     .filter((q) => q.art?.kit === 'wood')
+    .map((q) => withSealedMass(q))
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
@@ -70,8 +87,12 @@ export function shelfFamilies(): Map<string, string> {
       // (An old stump under a high ledge is a column: a stump only over a low drop.)
       const fl = shelfFor(room, o).floor;
       const list = SHELF_FAMILIES[mount].filter(
-        (f) => f !== 'stump' || (fl !== null && fl - o.y <= STUMP_MAX_H),
+        (f) => f !== 'hump' && (f !== 'stump' || (fl !== null && fl - o.y <= STUMP_MAX_H)),
       );
+      if (mount === 'floor' && arenaKnuckle(room, o)) {
+        out.set(shelfKey(room.id, i), 'hump');
+        return;
+      }
       const f = pick(list, used, count);
       if (!used.has(f)) count.set(f, (count.get(f) ?? 0) + 1);
       used.add(f);

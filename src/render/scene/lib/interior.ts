@@ -18,6 +18,7 @@ import { BRANCH, strand } from './pf-branch';
 import { exposedSides, type MassRect } from './pf-mass';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
+import { sealedOf } from './sealed';
 
 export const INTERIOR = {
   /** The deep back's parallax (between the mid layer's 0.68 and the playfield). */
@@ -269,7 +270,11 @@ function freeEdges(b: Rect, room: Room, masses: readonly MassRect[]): BackEdges 
 
 /** The plan for a wood room with backs, or null (no backs: a vista). */
 export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
-  const marked = (room.marks?.backs ?? []) as Rect[];
+  // (Sealed air is drawn as a hollow in the mass, sealed.ts: its backs at parallax drew displaced ruled rectangles.)
+  const sealed = sealedOf(room);
+  const marked = ((room.marks?.backs ?? []) as Rect[]).filter(
+    (b) => !sealed.some((s) => s.x === b.x && s.y === b.y && s.w === b.w && s.h === b.h),
+  );
   if (!marked.length) return null;
   // A cover's hollow is inside the wood too (review r3 #2: the hub's bank hollow showed open sky, then flat mint):
   // its rect is a back, unless the room's backs already hold it.
@@ -437,7 +442,16 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
       }
     }
   }
-  return { look, mat, tone, backs, edges, lights, masses };
+  // (Nothing glows inside sealed air: it is wood with a hollow cut in it, sealed.ts. A shaft or beam is out when any
+  // of its length crosses one.)
+  const sealedHit = (l: Glow): boolean => {
+    const ys =
+      l.kind === 'shaft' || l.kind === 'beam' ? [0, 0.25, 0.5, 0.75, 1].map((t) => l.y + t * l.len) : [l.y];
+    return ys.some((y) =>
+      sealed.some((q) => l.x > q.x - 24 && l.x < q.x + q.w + 24 && y > q.y && y < q.y + q.h),
+    );
+  };
+  return { look, mat, tone, backs, edges, lights: lights.filter((l) => !sealedHit(l)), masses };
 }
 
 /** How far into the back the torn edge reaches at (x, y): 0 at a free edge, 1 deep inside or along a closed edge. */

@@ -8,6 +8,8 @@
  * faint (their shape only), with the area's count of lamps she has not seen.
  *
  * Tab opens and closes it (main.ts pauses the game while it is open). Screen space, over the HUD.
+ * A map station (`mapStation`: resting at the hub's patch, the Canopy r9) shows it for a few seconds without pausing
+ * (`MAP.flash`): it fades in over the scene, holds, and fades out; Tab during it opens it for good.
  * Reads the game; never writes it.
  */
 import { Container, Graphics, Text } from 'pixi.js';
@@ -40,6 +42,8 @@ const MAP = {
   maxScale: 1 / 8,
   /** Seconds between redraws while open (the player marker pulses). */
   redraw: 1 / 30,
+  /** A map station's glimpse: seconds in, held, out, and the backdrop's alpha (the scene shows through a little). */
+  flash: { in: 0.4, hold: 2.6, out: 0.8, backdrop: 0.82 },
 } as const;
 
 export class MapOverlay {
@@ -50,6 +54,9 @@ export class MapOverlay {
   private readonly title: Text;
   private since = 1;
   open = false;
+  /** A map station's glimpse: seconds since it began (null: none). */
+  private flashT: number | null = null;
+  private hooked: Game | null = null;
 
   constructor() {
     this.title = new Text({
@@ -65,12 +72,45 @@ export class MapOverlay {
   toggle(on = !this.open): boolean {
     this.open = on;
     this.layer.visible = on;
+    this.layer.alpha = 1;
+    this.flashT = null;
+    this.title.text = 'MAP   (Tab to close)';
     this.since = 1;
     return on;
   }
 
-  /** Redraws while open (render time `dt`, `clock` s). */
+  /** Redraws while open (render time `dt`, `clock` s); runs a map station's glimpse. */
   update(dt: number, clock: number, game: Game, v: ViewSize): void {
+    // (Listens for the station on the game's steps: read only.)
+    if (this.hooked !== game) {
+      this.hooked = game;
+      game.afterStep.add((events) => {
+        if (!this.open && events.some((e) => e.type === 'mapStation')) {
+          this.flashT = 0;
+          this.since = 1;
+        }
+      });
+    }
+    if (!this.open && this.flashT !== null) {
+      const F = MAP.flash;
+      this.flashT += dt;
+      const t = this.flashT;
+      const a = t < F.in ? t / F.in : t < F.in + F.hold ? 1 : 1 - (t - F.in - F.hold) / F.out;
+      if (a <= 0) {
+        this.flashT = null;
+        this.layer.visible = false;
+        this.layer.alpha = 1;
+        return;
+      }
+      this.layer.visible = true;
+      this.layer.alpha = a * a * (3 - 2 * a);
+      this.title.text = 'MAP';
+      this.since += dt;
+      if (this.since < MAP.redraw && dt > 0) return;
+      this.since = 0;
+      this.draw(clock, game, v, F.backdrop);
+      return;
+    }
     if (!this.open) return;
     this.since += dt;
     if (this.since < MAP.redraw && dt > 0) return;
@@ -93,9 +133,9 @@ export class MapOverlay {
     return t;
   }
 
-  private draw(clock: number, game: Game, v: ViewSize): void {
+  private draw(clock: number, game: Game, v: ViewSize, backdrop: number = MAP.backdropAlpha): void {
     const g = this.g.clear();
-    g.rect(v.left, v.top, v.w, v.h).fill({ color: MAP.backdrop, alpha: MAP.backdropAlpha });
+    g.rect(v.left, v.top, v.w, v.h).fill({ color: MAP.backdrop, alpha: backdrop });
     this.title.position.set(MAP.margin / 2, MAP.margin / 3);
     for (const t of this.texts.values()) t.visible = false;
     const save = game.state.save;
@@ -167,6 +207,9 @@ export class MapOverlay {
         .fill({ color: MAP.room })
         .stroke({ color: r.id === here ? MAP.here : MAP.roomEdge, width: r.id === here ? 2 : 1 });
       for (const q of s.solids) g.rect(X(r, q.x), Y(r, q.y), Math.max(1, q.w * k), Math.max(1, q.h * k));
+      // (Sealed air, the Canopy v9, is rock to the map: she can never be there.)
+      for (const q of s.marks?.sealed ?? [])
+        g.rect(X(r, q.x), Y(r, q.y), Math.max(1, q.w * k), Math.max(1, q.h * k));
       g.fill({ color: MAP.solid, alpha: 0.9 });
       for (const o of s.oneWays) g.rect(X(r, o.x), Y(r, o.y), Math.max(1, o.w * k), 1.5);
       g.fill({ color: MAP.oneWay });

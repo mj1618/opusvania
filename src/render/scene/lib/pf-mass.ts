@@ -44,7 +44,8 @@ import {
 } from './pf-edge';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
-import { FACE_FAMILY, paintFaceWrap, paintUnderWrap, topFamily } from './top-growth';
+import { withSealedMass } from './sealed';
+import { FACE_FAMILY, GROWTH, paintFaceWrap, paintUnderWrap, topFamily } from './top-growth';
 import { shelfFor } from './wood-claims';
 
 export const MASS = {
@@ -83,6 +84,8 @@ export const MASS = {
   /** Faces of masses narrower than this keep a bark column (a root post), not lobes. */
   lobeMinW: 220,
   hangMinH: 160,
+  /** A hang at least this long (px) is a root hanging free (`hangingRoot`), not a clump. */
+  longHang: 900,
   clawTaper: 400,
   /** The lift near the playfield (review r3 #10): the shadow family's teal, how far in from a lit edge (px). */
   lift: 0x0f2a36,
@@ -1522,7 +1525,9 @@ function paintTaper(
     return pts;
   };
   if (!up) {
-    hangClump(p, plan, masses, sides, t, seed, family);
+    // (A hang longer than `longHang` is a root hanging free through the air, the gap's slick root: canopy r9b.)
+    if (yTip - yFar >= MASS.longHang) hangingRoot(p, ms, seed);
+    else hangClump(p, plan, masses, sides, t, seed, family);
     return;
   }
   if (family === 'knee' || family === 'fungus' || family === 'fallen') {
@@ -1712,6 +1717,216 @@ function paintTaper(
       plan?.stretches.push(topStretch(`taper-${i}-${x0}`, x0, x1, m.y, 60, false, false));
     }
   });
+}
+
+/**
+ * A long root hanging free through the air (the gap's slick root, canopy r9b: the stepped black column across the
+ * area's best still): a bundle of three or four roots wound round each other, thinning with the collision's tiers,
+ * lit along their edges, parting at the foot into ragged tips; and life on it: knots with cushions of the room's
+ * growth and beards hanging off them, small leaves in pairs, pale lichen, a few glow beads. Slick: no claw moss down
+ * its faces. Painted over nothing (the hang has no core): the bundle IS its silhouette, so its edges wander.
+ */
+function hangingRoot(p: Paint, ms: readonly MassRect[], seed: number): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 263);
+  const base = ms[0] as MassRect;
+  const tip = ms[ms.length - 1] as MassRect;
+  const y0 = base.y - 40;
+  const y1 = tip.y + tip.h;
+  const len = y1 - y0;
+  const fam = topFamily() ?? 'lime';
+  const G = GROWTH[fam];
+  // The width at y: the tier's, eased between tiers (no steps).
+  const widthAt = (y: number): number => {
+    let w = (base.w as number) + 10;
+    for (let k = 0; k < ms.length; k++) {
+      const m = ms[k] as MassRect;
+      const nx = ms[k + 1];
+      if (y < m.y + m.h) {
+        const t = nx ? clamp((y - (m.y + m.h - 160)) / 160, 0, 1) : 0;
+        w = lerp(m.w, nx ? nx.w : m.w, t * t * (3 - 2 * t));
+        break;
+      }
+      w = m.w;
+    }
+    return w;
+  };
+  const cxAt = (y: number): number => {
+    const m = ms.find((q) => y < q.y + q.h) ?? tip;
+    return m.x + m.w / 2;
+  };
+  const line: number[] = [];
+  for (let q = 0; q <= 40; q++) {
+    const y = y0 + (len * q) / 40;
+    line.push(cxAt(y) + 8 * Math.sin((q / 40) * 5.3 + 1) + 6 * wobble(y, seed + 3, 160), y);
+  }
+  const smooth = wander(line, 0, seed, 100);
+  // The core and the wound strands (each a limb: the limb painter's bark, lit rim and shading).
+  paintLimb(
+    p,
+    lineLimb(smooth, (t) => Math.max(10, widthAt(y0 + t * len) * 0.62), B.walkH - 0.02, seed + 5, 0, 1),
+  );
+  const nStr = 3 + (r() < 0.5 ? 1 : 0);
+  for (let k = 0; k < nStr; k++) {
+    const ph = k * 2.1 + range(r, 0, 1.2);
+    const turns = range(r, 5, 9);
+    const w = smooth.map((v, j) => {
+      if (!(j % 2)) {
+        const y = smooth[j + 1] as number;
+        const tt = (y - y0) / len;
+        return v + Math.sin(tt * turns + ph) * widthAt(y) * 0.32;
+      }
+      return v;
+    });
+    paintLimb(
+      p,
+      lineLimb(
+        w,
+        (t) => Math.max(4, widthAt(y0 + t * len) * range(r, 0.24, 0.34) * (1 - 0.3 * t)),
+        B.walkH + 0.01 + k * 0.01,
+        seed + 13 + k,
+        0,
+        0.9,
+      ),
+    );
+  }
+  // The foot: the bundle parts into ragged tips of very different lengths.
+  const fw = widthAt(y1 - 10);
+  const fx = cxAt(y1 - 10);
+  const nTip = 4 + Math.floor(r() * 2);
+  for (let k = 0; k < nTip; k++) {
+    const u = (k + 0.5) / nTip - 0.5;
+    const drop = range(r, 30, 140) * (k % 2 ? 0.5 : 1);
+    const tl = chaikinLine([
+      fx + u * fw * 0.5,
+      y1 - 60,
+      fx + u * fw * 0.9 + range(r, -6, 6),
+      y1 - 8,
+      fx + u * fw * 1.3 + range(r, -10, 10),
+      y1 + drop * 0.6,
+      fx + u * fw * 1.2 + range(r, -16, 16),
+      y1 + drop,
+    ]);
+    paintLimb(
+      p,
+      lineLimb(tl, (t) => Math.max(2, fw * 0.32 * (1 - t * 0.92)), B.walkH + 0.03, seed + 51 + k, 0, 0.8),
+    );
+  }
+  // Life on it, down its length: knots with growth and beards, leaf pairs, lichen, glow beads.
+  let y = y0 + range(r, 120, 220);
+  let k = 0;
+  while (y < y1 - 80) {
+    const w = widthAt(y);
+    const x = cxAt(y) + 8 * Math.sin(((y - y0) / len) * 5.3 + 1);
+    const side = k % 2 ? 1 : -1;
+    const kind = r();
+    if (kind < 0.45) {
+      // Growth draped round the bundle (a band hugging it, lumpy along its top), beards hanging off it at different
+      // lengths, wide almost to their ends, then round. (A round cushion with one beard under it read as a mushroom.)
+      // (Lopsided and slanting, thick on one side and thinning round the other: an even collar read as a ring.)
+      const cx = x;
+      const bh = range(r, 9, 16);
+      const xa = cx - side * w * 0.46;
+      const xb = cx + side * w * range(r, -0.1, 0.3);
+      const slope = range(r, -0.35, 0.35);
+      const band: number[] = [];
+      for (let q = 0; q <= 12; q++) {
+        const u = q / 12;
+        const bx = lerp(xa, xb, u);
+        band.push(
+          bx,
+          y + slope * (bx - cx) - bh * (1 - u * 0.7) * 0.5 - Math.sin(u * Math.PI) * 3 + range(r, -3, 3),
+        );
+      }
+      for (let q = 12; q >= 0; q--) {
+        const u = q / 12;
+        const bx = lerp(xa, xb, u);
+        band.push(bx, y + slope * (bx - cx) + bh * (1 - u * 0.7) * 0.5 + (1 - u) * range(r, 4, 14));
+      }
+      p.solid(chaikin(band, 1), r() < 0.5 ? G.deep : G.body, B.walkH + 0.08, { moss: G.moss });
+      for (let q = 0; q < 4; q++) {
+        const dx = lerp(xa, xb, range(r, 0, 0.6));
+        p.solid(
+          blob(
+            dx,
+            y + slope * (dx - cx) - bh * 0.4 + range(r, -3, 3),
+            range(r, 3, 6),
+            range(r, 3, 5),
+            seed + q,
+            0.2,
+            8,
+          ),
+          r() < 0.5 ? G.high : G.lit,
+          B.walkH + 0.1,
+          { moss: G.moss },
+          0.9,
+        );
+      }
+      const nb = 2 + Math.floor(r() * 3);
+      for (let q = 0; q < nb; q++) {
+        const bx = lerp(xa, xb, (q + 0.3) / nb);
+        const bl = range(r, 24, 110) * (q % 2 ? 0.6 : 1);
+        const bw = range(r, 6, 13);
+        const beard: number[] = [];
+        for (let j = 0; j <= 8; j++)
+          beard.push(
+            bx + Math.sin(j * 0.8 + k + q) * 2.5 * (j / 8),
+            y + slope * (bx - cx) + bh * 0.3 + (bl * j) / 8,
+          );
+        p.solid(
+          ribbon(beard, (t) => bw * (t < 0.8 ? 1 - t * 0.25 : (1 - t) * 4 * 0.8)),
+          r() < 0.6 ? G.deep : G.body,
+          B.walkH + 0.07,
+          { moss: G.moss },
+          0.95,
+        );
+      }
+    } else if (kind < 0.75) {
+      // A pair of small leaves on a sprig.
+      const sx = x + side * w * 0.3;
+      const ex = sx + side * range(r, 10, 20);
+      const ey = y - range(r, 6, 14);
+      p.solid(strand([sx, y, (sx + ex) / 2, y - 4, ex, ey], 3, 0.3), T.vein, B.walkH + 0.06, { bark: 0.4 });
+      for (const [lx, ly, a] of [
+        [ex, ey, -0.6],
+        [(sx + ex) / 2, y - 2, 0.7],
+      ] as const)
+        p.solid(
+          blob(lx + side * 6, ly - 2, range(r, 8, 12), range(r, 3.5, 5), seed + k + lx, 0.15, 10, side * a),
+          r() < 0.5 ? G.body : G.high,
+          B.walkH + 0.09,
+          { moss: G.moss * 0.7 },
+        );
+    } else if (kind < 0.9) {
+      // Pale lichen on the bark.
+      for (let q = 0; q < 5; q++)
+        p.tint(
+          blob(
+            x + range(r, -w * 0.3, w * 0.3),
+            y + range(r, -16, 16),
+            range(r, 4, 9),
+            range(r, 3, 6),
+            seed + q * 5,
+            0.3,
+            9,
+          ),
+          G.lit,
+          0.45,
+        );
+    } else {
+      // Glow beads hanging on a thread from the bundle's edge.
+      const bx = x + side * w * 0.35;
+      const n = 3 + Math.floor(r() * 3);
+      for (let q = 1; q <= n; q++)
+        p.tint(
+          blob(bx + Math.sin(q) * 1.5, y + q * 11, 3 - q * 0.3, 3 - q * 0.3, seed + q, 0.1, 8),
+          0xd8fcff,
+          0.95,
+        );
+    }
+    y += range(r, 70, 170);
+    k++;
+  }
 }
 
 /** A hanging taper as a clump of strands over a dark ragged core (see `paintTaper`). */
@@ -2122,6 +2337,7 @@ export function propFamilies(): Map<string, string> {
   const out = new Map<string, string>();
   const rooms = Object.values(ROOMS)
     .filter((q) => q.art?.kit === 'wood')
+    .map((q) => withSealedMass(q))
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const count = new Map<string, number>();
   for (const room of rooms) {
@@ -2332,6 +2548,8 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
     // knuckle of roots rising from the floor under it; hung only when nothing is near.
     const fam = shelfFamilies().get(shelfKey(room.id, i)) ?? '';
     if (!sh.wall && sh.near) paintNearMount(p, fam, sh, sh.near, y, th, rr, seed + i * 41);
+    else if (!sh.wall && sh.floor !== null && fam === 'hump')
+      paintFloorMount(p, fam, sh, sh.floor, y, th, rr, seed + i * 43);
     else if (!sh.wall && sh.floor !== null) {
       paintFloorMount(p, fam, sh, sh.floor, y, th, rr, seed + i * 43);
       // (Canopy review r8 #10: a pad on a stalk read as a stool or a birdbath.) Roots fan up out of the mount from
@@ -2666,6 +2884,118 @@ function paintFloorMount(
         { bark: 0.6 },
       );
     }
+    return;
+  }
+  if (fam === 'hump') {
+    // A root knuckle (canopy r9b: the den's warning, whose snags read as stools; an open arch read as a hoop): the
+    // great root's knee bulging up out of the floor, a lumpy body from the floor to the ledge (the ledge is its
+    // crown), two roots running over it from the floor on either side into the crown, a knob of bone at each of the
+    // crown's ends, earth heaped at its feet. Lopsided: one shoulder runs out further and lower.
+    const a = range(rr, 60, 110) * (side < 0 ? 1.5 : 1);
+    const b = range(rr, 60, 110) * (side < 0 ? 1 : 1.5);
+    const xl = sh.x0 - a;
+    const xr = sh.x1 + b;
+    const crown = y + th * 0.55;
+    const body: number[] = [];
+    const nb = 16;
+    for (let k = 0; k <= nb; k++) {
+      const t = k / nb;
+      const x = lerp(xl, xr, t);
+      // A rounded hump: full height over the ledge, shoulders easing down to the floor.
+      const inLedge = x >= sh.x0 && x <= sh.x1;
+      const sx = x < sh.x0 ? (sh.x0 - x) / a : x > sh.x1 ? (x - sh.x1) / b : 0;
+      const top = inLedge ? crown + 6 : lerp(crown + 6, fy, Math.min(1, sx) ** 1.6);
+      body.push(x, top + range(rr, -6, 6));
+    }
+    // (Its belly is open: the body hangs only 45-60% of the way down under the crown, ragged, so she reads in front of
+    // the dark under it and passes under; a hump to the floor read as a loaf she would bump into.)
+    const belly = (x: number): number => {
+      const sx = x < sh.x0 ? (sh.x0 - x) / a : x > sh.x1 ? (x - sh.x1) / b : 0;
+      const open = lerp(crown, fy, range(rr, 0.45, 0.6));
+      return lerp(open, fy + 10, Math.min(1, sx) ** 0.8) + 10 * Math.sin(x / 23 + seed);
+    };
+    for (let k = nb; k >= 0; k--) {
+      const x = lerp(xl, xr, k / nb);
+      body.push(x, belly(x));
+    }
+    p.solid(chaikin(body, 2), T.body, B.walkH - 0.08, { bark: 0.5 });
+    // Roots hanging out of its belly into the gap.
+    for (let k = 0; k < 6; k++) {
+      const x = lerp(sh.x0, sh.x1, range(rr, 0, 1));
+      const yb = belly(x) - 4;
+      const len = range(rr, 12, 40);
+      limb(
+        [x, yb, x + range(rr, -6, 6), yb + len * 0.5, x + range(rr, -10, 10), yb + len],
+        (q) => 6 * (1 - q),
+        60 + k,
+      );
+    }
+    // The roots over it: out of the floor beyond each shoulder, up over the body into the crown.
+    const w0 = range(rr, 30, 44);
+    for (const [k, x0f, x1f] of [
+      [1, xl - range(rr, 10, 40), sh.x1 - range(rr, 10, 30)],
+      [2, xr + range(rr, 10, 40), sh.x0 + range(rr, 10, 30)],
+    ] as const) {
+      const xm = lerp(x0f, x1f, 0.45);
+      limb(
+        [
+          x0f,
+          fy + 14,
+          lerp(x0f, xm, 0.5),
+          lerp(fy, crown, 0.4),
+          xm,
+          crown + 20,
+          lerp(xm, x1f, 0.6),
+          crown + 8,
+          x1f,
+          crown + 4,
+        ],
+        (t) => Math.max(10, w0 * (1.15 - 0.55 * t)),
+        k,
+        B.walkH - 0.04,
+      );
+    }
+    // The knuckle bones at the crown's ends: lumps of root, lit along their tops.
+    for (const [k, kx] of [
+      [0, sh.x0 + range(rr, -10, 10)],
+      [1, sh.x1 - range(rr, -10, 10)],
+    ] as const) {
+      const R = range(rr, 26, 38);
+      const ky = crown + range(rr, 8, 20);
+      const knob = chaikin(blob(kx, ky, R * 1.2, R, seed + 701 + k, 0.25, 14), 1);
+      p.solid(knob, T.body, B.walkH - 0.01, { bark: 0.5 });
+      p.tint(
+        strand(
+          chaikinLine([kx - R * 0.9, ky - R * 0.35, kx - R * 0.2, ky - R * 0.95, kx + R * 0.6, ky - R * 0.7]),
+          range(rr, 4, 7),
+          0.35,
+        ),
+        T.veinLit,
+        0.55,
+      );
+    }
+    feet(xl + 10, 30, 0.8);
+    feet(xr - 10, 34, 0.8);
+    // Earth heaped round its feet.
+    for (const fx of [xl, xr])
+      for (let k = 0; k < 4; k++)
+        p.solid(
+          chaikin(
+            blob(
+              fx + range(rr, -40, 40),
+              fy + 4,
+              range(rr, 16, 30),
+              range(rr, 9, 16),
+              seed + fx + k,
+              0.35,
+              12,
+            ),
+            1,
+          ),
+          T.deep,
+          B.walkH - 0.04,
+          { bark: 0.2 },
+        );
     return;
   }
   if (fam === 'arch') {

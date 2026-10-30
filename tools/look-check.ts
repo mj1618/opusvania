@@ -14,6 +14,9 @@
  *     Frames with under `solidMinShare` of interior skip both.
  *   - the air (review r8 #6): its mean luma <= `airMax`, its mean HSV saturation >= `airSat`;
  *   - deep solid (review r8 #2): at most 30% of a stop, a room's median <= 20%: reported (`--share-fails` fails).
+ *   - sealed air (`marks.sealed`, canopy r9b: a hollow in the wood she cannot enter) is neither air nor solid: left out
+ *     of both, and its mean must stay under the air's median (`hollowK` x): a hollow as light as the air reads as a
+ *     space she could fall into.
  *
  *   npm run look:check                                  every Canopy room with wide stops (dev server on 5180)
  *   npm run look:check -- --rooms=cn-hub,cn-well --url=http://localhost:5212 [--out=dir] [--sizes=1920x1080] [--masks]
@@ -68,6 +71,8 @@ export const LOOK_CHECK = {
   airMax: 85,
   /** ... and its mean HSV saturation at least this (the den and the nest were grey). */
   airSat: 0.12,
+  /** Sealed air's mean luma at most this share of the air's median (frames with >= `solidMinShare` of it). */
+  hollowK: 0.8,
 };
 
 interface Box {
@@ -82,11 +87,13 @@ interface Frame {
   view: { w: number; h: number };
   solids: Box[];
   hero: Box;
+  /** The room's sealed air (`marks.sealed`). */
+  sealed?: Box[];
 }
 
 /**
  * Per pixel of the 480 px frame: 1 = air, 2 = solid interior, 3 = the rest of the ground (a solid's outer band, the
- * wood beyond the room's box), 0 = her box.
+ * wood beyond the room's box), 4 = sealed air (a hollow in the wood), 0 = her box.
  * Screen to world: the view's centre is the camera, `view.w` logical px across the frame, divided by the zoom.
  */
 export function splitByCollision(f: Frame, w: number, h: number, deep: number): Uint8Array {
@@ -113,6 +120,10 @@ export function splitByCollision(f: Frame, w: number, h: number, deep: number): 
       }
       if (x < 0 || y < 0 || x > f.room.w || y > f.room.h) {
         out[j * w + i] = 3;
+        continue;
+      }
+      if ((f.sealed ?? []).some((s) => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h)) {
+        out[j * w + i] = 4;
         continue;
       }
       if (!inside(x, y)) {
@@ -260,6 +271,12 @@ async function main(): Promise<void> {
                 cam: { x: c.x, y: c.y, zoom: c.zoom },
                 view: { w: v.w, h: v.h },
                 solids: sc.solids.map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h })),
+                sealed: ((sc as { marks?: { sealed?: Box[] } }).marks?.sealed ?? []).map((s) => ({
+                  x: s.x,
+                  y: s.y,
+                  w: s.w,
+                  h: s.h,
+                })),
                 hero: { x: p.x, y: p.y, w: p.w, h: p.h },
               };
             },
@@ -315,6 +332,20 @@ async function main(): Promise<void> {
           if (shareBad && args['share-fails']) bad.push(`deep solid ${Math.round(100 * share)}%`);
           const want = MIN_MEAN[`${id}:${stop.name}`];
           if (want !== undefined && mean < want) bad.push(`mean ${mean.toFixed(1)} < ${want}`);
+          let hollowSum = 0;
+          let hollowN = 0;
+          for (let p = 0; p < y.length; p++)
+            if (split[p] === 4) {
+              hollowSum += y[p] as number;
+              hollowN++;
+            }
+          let hollowText = '';
+          if (hollowN / y.length >= LOOK_CHECK.solidMinShare) {
+            const hm = hollowSum / hollowN;
+            hollowText = `, hollow ${hm.toFixed(1)} (${Math.round((100 * hollowN) / y.length)}%)`;
+            if (hm > LOOK_CHECK.hollowK * fg.air)
+              bad.push(`hollow ${hm.toFixed(0)} > ${LOOK_CHECK.hollowK} x air ${fg.air.toFixed(0)}`);
+          }
           let fgText = 'solid -';
           if (fg.share >= LOOK_CHECK.solidMinShare) {
             const ratio = fg.air / Math.max(1, fg.solid);
@@ -324,7 +355,7 @@ async function main(): Promise<void> {
             if (fg.air < LOOK_CHECK.airK * Math.max(1, fg.solid))
               bad.push(`air ${fg.air.toFixed(0)} < ${LOOK_CHECK.airK}x solid`);
           }
-          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, air: mean ${airMean.toFixed(1)} sat ${airSat.toFixed(2)}, deep ${Math.round(100 * share)}%${shareBad ? ' (over 30%)' : ''}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}`;
+          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, air: mean ${airMean.toFixed(1)} sat ${airSat.toFixed(2)}, deep ${Math.round(100 * share)}%${shareBad ? ' (over 30%)' : ''}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}${hollowText}`;
           console.log(bad.length ? `FAIL ${line} (${bad.join(', ')})` : `ok   ${line}`);
           if (bad.length) fails.push(line);
           frames++;

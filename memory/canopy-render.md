@@ -348,3 +348,45 @@ reference crops as r6-r8), `compare/before-after.png` (well chimney, hub door, t
   `openGame` + `g.cam({x, y, zoom})` + `g.step(n)` + canvas screenshots). `?nopickups` removes the enemies too.
 - Weak still: claw faces' lobes stay +-24 (the review asks +-40-80 on long faces: it would move the drawn wall off her
   hand); the deep-solid share is geometry (the level builder's hollowing); the arrivals are small at play zoom.
+
+## Round 9b: sealed air, the well's door, the map station, the gap's root, the den's warning
+Shots: `shots/canopy-r9b-render/before|after/<room>/` (16:9), the before / after sheet `shots/canopy-r9b-render/sealed-before-after.png`
+(each row: before | after), `look-check/<WxH>/<room>/`.
+- **Sealed air** (`marks.sealed`, level side memory/canopy.md v9) is a hollow INSIDE the wood (lib/sealed.ts). Every
+  environment painter sees it as mass: `withSealedMass(room)` appends the rects to the solids (after the real ones:
+  kit indices unchanged) in `SceneRenderer.init` (the env modules' `ctx.scene` only; enemies, character, goal keep
+  the sim's scene), in `paintBranchTerrain`, `propFamilies` and `shelfFamilies` (they must agree on tapers / shelves).
+  `interiorPlan` leaves sealed rects out of the backs (**their deep / mid backs at parallax 0.86 / 0.93 were drawn
+  per rect and showed displaced, as the ruled light rectangles in the well's gallery; in the hub as the sky's
+  hills**) and drops lights inside them. `paintSealed` (baked after the masses) cuts the hollow back in per group of
+  touching rects (`sealedGroups`, union edges `sealedEdges`): a far wall (`HOLLOW` per grade look, `night` for open
+  rooms: albedo 3-4x the luma it comes out at, the bake's interior term takes a covered plane to about a third),
+  grain along the long axis in broken fibres (full-length even ribbons read as planks), shadow bands in from every
+  lip (deepest under the ceiling), a haze in the middle depth, roots across (behind the lips), rootlets, a dim glow
+  per ~1100 px; the lips as **knobs** (HK's stacked lumps, a lit crescent strongest on the floor lip) over a band
+  that sinks into the core (a lighter band all the way out drew a picture frame with a ruled outer edge); corner
+  fillets; the family's under-wrap / face-wrap, dull cushions on the floor lip (never the walk band: nothing in a
+  hollow may read as a ledge). Groups whose largest rect is under 150 both ways stay wood.
+- **look:check** gives sealed air its own class (4): out of the air bars and the solid interior, and its mean must
+  stay under 0.8x the air's median (`hollowK`: a hollow as light as the air reads as a space to fall into). Hollow
+  means 5-25 luma against air medians 40-70.
+- **The map** (render/map): sealed rects draw as rock; a `mapStation` event (a step's events, via `game.afterStep`,
+  hooked lazily in `update`) shows the map for 0.4 + 2.6 + 0.8 s over the scene (backdrop 0.82) without pausing;
+  Tab during it opens it for good.
+- **Acts** (lantern/acts.ts): `door` landmarks (the well's `door-limbs`): moonlight glowing in the opening, a beam of
+  16 rotated soft ellipses spilling down and in to a pool on the floor, motes drawn up out of the hollow along it and
+  out, a point light `door-<id>`. `stones`: a map station's `hangs` on a tapering crook over the kin's husk, each
+  hung flag a slab with a moth cut pale on it (two dark wings read as a mask), swinging and glinting on `stoneHung`.
+  Arrivals: a way `mouth` (start within 260 px of a side edge at an exit's height: the den's warning's beat 2 out of
+  the den passage): dust breathing out and **eyes in the dark** as the tell, nested soft ovals of dark over the mouth
+  while they come (strips read as a curtain), and the path runs along the passage floor, hops the step its ground
+  stands on (`stepX`), then scurries (the straight line went through the arena's floor block).
+- **The gap's root** (pf-mass `hangingRoot`, a hang longer than `MASS.longHang` 900): a wound bundle thinning with
+  the tiers (no steps), ragged tips, and life down it: lopsided slanting moss drapes with beards (a round cushion
+  with one beard read as a mushroom; an even band as a ring), leaf pairs close on the bark, lichen, glow beads.
+- **Arena knuckles** (families `hump`, never picked by the spread: a floor-mounted ledge in a `fit` zone of a den or
+  nest room): a lumpy body under the ledge with an **open belly** (to the floor it read as a loaf she would bump),
+  two roots running over it from beyond the shoulders into the crown, knobs at the crown's ends, earth at the feet.
+  (Two thick arches crossing read as croquet hoops.)
+- Weak still: see the round's reply (hollows are flat bake, no parallax of their own; the den's mouth sits on the
+  `fit` frame's bottom edge so the arrivals come in at the edge of the picture: a camera-zone change, level side).

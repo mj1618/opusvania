@@ -23,6 +23,7 @@ import type { BakeLook, MistFill } from './pf-bake';
 import {
   MASS,
   type MassRect,
+  massCore,
   massOutline,
   massTone,
   paintMasses,
@@ -46,6 +47,7 @@ import {
   wobble,
 } from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
+import { paintSealed, withSealedMass } from './sealed';
 import { paintGrowth, paintUnderWrap, setTopFamily, topFamily, topFamilyOf } from './top-growth';
 
 export const BRANCH = {
@@ -2172,6 +2174,8 @@ export function paintBranchTerrain(
   seed: number,
 ): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const B = BRANCH;
+  // Sealed air is mass to every painter; its hollow is cut back in after the masses (sealed.ts).
+  room = withSealedMass(room);
   const p = new Paint(room.width, room.height);
   // What grows on the tops: the room's look's family (top-growth.ts), for every painter below.
   setTopFamily(topFamilyOf(room));
@@ -2274,6 +2278,8 @@ function paintBranchBody(
   paintTaproot(p, room, seed + 67);
   // Root columns hung off a face (the Spire's neck).
   paintRootColumns(p, room, seed + 71);
+  // The hollows in the wood where the level sealed air off (canopy r9b).
+  paintSealed(p, room, { ...massTone(room), core: massCore(massTone(room)) }, seed + 79);
   // The one-way ledges: root shelves (review r3 #2).
   paintShelves(p, massPlan, room, seed + 61);
   // The glowing growth on them (its light is live: layers/interior.ts).

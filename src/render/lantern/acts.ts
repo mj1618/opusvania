@@ -14,6 +14,13 @@
  *             breathes up and a few motes lift: the save took.
  *   kept      the kin's lights (`light` landmarks: `kin-lamp` in the hub, `kin-light` in the bower): a small warm
  *             flame in a split seed husk, kept low and steady, the room's one warm light (a point light too).
+ *   stones    a map station's hung moth-stones (`MoonPatch.hangs`, the hub's `p-crossing` by the kin's lamp): a crook of
+ *             root arching over the kin's husk, each stone she has brought back (`cn-stone-*` flags) hanging from it on a
+ *             thread, warm on the flame's side; one just hung (`stoneHung`) swings in and glints.
+ *   door      a way out lit from beyond (`door` landmarks, `door-limbs` in the well's hollow; canopy r9b): the open night
+ *             past the doorway glows, its moonlight spills down and in across the hollow in a slow breathing beam that
+ *             pools on the floor below, and motes drift up out of the hollow along that light and out through it. A
+ *             pull, not an arrow: the brightest, liveliest thing in the hollow is the way on.
  *
  * Render only: reads the sim view and the room, never writes. Deterministic: hashes and the render clock.
  */
@@ -58,6 +65,10 @@ export const ACTS = {
     earth: 0x0c0806,
     hole: 0x020101,
     dust: 0x9a8468,
+    /** A way on's mouth: how near a side edge an arrive point must be (px); the passage's dark (px deep, alpha). */
+    mouthReach: 260,
+    mouthDark: [260, 0.9] as const,
+    eyes: 0xffb35a,
     lit: 0x6a5238,
     /** The burst's cloud (dark earth, soft) and a hole's crumbled rim. */
     cloud: 0x2a2620,
@@ -73,6 +84,39 @@ export const ACTS = {
     color: 0xdce8ff,
     core: 0xf4f8ff,
   },
+  door: {
+    /** The opening's half height (px over the landmark, which sits on its floor) and the glow in it. */
+    half: 120,
+    moon: 0xcfe4f2,
+    core: 0xf2f8ff,
+    glow: 0.42,
+    /** The spill: its length (px), its angle down from level (radians), how strongly it shows. */
+    beam: 820,
+    angle: 0.55,
+    beamA: 0.1,
+    /** Motes drawn up out of the hollow: count, seconds per trip, how far back into the hollow they start (px). */
+    motes: 22,
+    trip: [6, 10] as const,
+    reach: [380, 1150] as const,
+    /** The point light at the door. */
+    light: 0.55,
+    radius: 560,
+  },
+  stones: {
+    /** The crook: how high it rises over the husk and how far it reaches across (px); a stone's size; threads. */
+    rise: 150,
+    reach: 120,
+    size: [9, 13] as const,
+    thread: [26, 64] as const,
+    stone: 0x2a2a32,
+    lit: 0x6a6c78,
+    carve: 0x0c0c10,
+    carveLit: 0x9fb8cc,
+    /** Seconds a stone just hung swings and glints. */
+    swing: 3.2,
+    wood: 0x140d09,
+    woodLit: 0x4a3420,
+  },
   kept: {
     /** The husk's size, the flame's height (px), its light's reach and strength. */
     husk: 24,
@@ -87,7 +131,7 @@ export const ACTS = {
   },
 };
 
-type ArriveWay = 'drop' | 'wall' | 'ground' | 'fly';
+type ArriveWay = 'drop' | 'wall' | 'ground' | 'fly' | 'mouth';
 interface Arrival {
   i: number;
   kind: string;
@@ -126,6 +170,18 @@ export function arriveWay(
   const flyer = kind === 'lampwing' || kind === 'hawker';
   if (y - fy > 150) return { way: 'drop', wallX: 0, dir: 0 };
   const dir = x >= fx ? 1 : -1;
+  // Out of a way on (canopy r9b: the den's warning's beat 2 comes out of the den's mouth): it starts by an exit on a
+  // side edge, at its height. It comes out of the dark of the passage.
+  if (!flyer) {
+    const W = sim.scene.width;
+    const side = fx > W - ACTS.arrive.mouthReach ? 1 : fx < ACTS.arrive.mouthReach ? -1 : 0;
+    const exit = side
+      ? (sim.scene.exits ?? []).find(
+          (e) => e.edge === (side > 0 ? 'e' : 'w') && fy >= e.from - 8 && fy <= e.to + 8,
+        )
+      : undefined;
+    if (exit) return { way: 'mouth', wallX: side > 0 ? W : 0, dir: -side };
+  }
   // A wall face just behind where it starts (the side away from where it goes), at its height.
   for (const r of sim.scene.solids) {
     if (fy < r.y - 8 || fy - 40 > r.y + r.h) continue;
@@ -192,6 +248,8 @@ export class Acts {
   /** The first fling's stream: its lamp, its end on the far limb, how present (0..1). */
   private spill: { lure: number; l: Lure; ex: number; ey: number; k: number } | null = null;
   private readonly lights: string[] = [];
+  /** Moth-stones just hung (their flag) and seconds since. */
+  private readonly hung = new Map<string, number>();
 
   constructor(
     sim: { scene: SimView['scene'] },
@@ -274,6 +332,7 @@ export class Acts {
           hh,
         });
       } else if (e.type === 'patchMark') this.flares.push({ x: e.x, y: e.y, t: 0 });
+      else if (e.type === 'stoneHung') this.hung.set(e.flag, 0);
     }
   }
 
@@ -296,6 +355,187 @@ export class Acts {
     this.drawArrivals(dt, clock, sim, back, front, glowBack, seen);
     this.drawFlares(dt, clock, back, glowBack, glowFront);
     this.drawKept(clock, sim, back, glowBack, glowFront, seen);
+    for (const [f, t] of this.hung) this.hung.set(f, t + dt);
+    this.drawStones(clock, sim, back, glowFront, seen);
+    this.drawDoors(clock, sim, back, glowBack, glowFront, seen);
+  }
+
+  // --- A map station's hung moth-stones, on a crook over the kin's lamp (or over the patch, with no lamp near).
+  private drawStones(
+    clock: number,
+    sim: SimView,
+    back: Graphics,
+    glow: GlowPool,
+    seen: (x: number, y: number, pad?: number) => boolean,
+  ): void {
+    const St = ACTS.stones;
+    const lms = (
+      sim.scene.marks as { landmarks?: Array<{ id: string; kind: string; x: number; y: number }> } | undefined
+    )?.landmarks;
+    for (const p of sim.scene.patches ?? []) {
+      const hangs = (p as { hangs?: Array<{ stone: string; flag: string }> }).hangs ?? [];
+      if (!hangs.length) continue;
+      // The kin's lamp beside it, if there is one (within 420 px).
+      const lamp = (lms ?? []).find((l) => l.kind === 'light' && Math.abs(l.x - p.x) < 420);
+      const bx = lamp ? lamp.x : p.x;
+      const by = floorUnder(sim, bx, (lamp ? lamp.y : p.y) - 30);
+      if (!seen(bx, by - 100, 200)) continue;
+      // The crook: a root out of the ground behind the husk, up and over, its tip curling down.
+      const side = lamp && lamp.x < p.x ? 1 : -1;
+      const x0 = bx - side * 38;
+      const top = by - St.rise;
+      const x1 = bx + side * (St.reach - 38);
+      const sway = Math.sin(clock * 0.6) * 2;
+      const pt = (t: number): [number, number] => {
+        // Up the stem (t 0-0.4), then across the arc (0.4-1).
+        if (t < 0.4) {
+          const u = t / 0.4;
+          return [x0 - side * 6 * Math.sin(u * Math.PI), by - (by - top) * (1 - (1 - u) ** 2)];
+        }
+        const u = (t - 0.4) / 0.6;
+        return [x0 + (x1 - x0) * u + sway * u, top - 18 * Math.sin(u * Math.PI) + 26 * u ** 3];
+      };
+      const n = 18;
+      const line: Array<[number, number]> = [];
+      for (let k = 0; k <= n; k++) line.push(pt(k / n));
+      // (Tapering in three runs, a knot where a run ends: one even stroke read as a lamp post.)
+      for (const [i0, i1, w] of [
+        [0, 8, 8],
+        [8, 14, 5.5],
+        [14, n, 3],
+      ] as const) {
+        const seg = line.slice(i0, i1 + 1);
+        for (const [ww, c, a, dy] of [
+          [w, St.wood, 1, 0],
+          [w * 0.3, St.woodLit, 0.6, -w * 0.3],
+        ] as const) {
+          back.moveTo(seg[0]?.[0] ?? x0, (seg[0]?.[1] ?? by) + dy);
+          for (const [x, y] of seg.slice(1)) back.lineTo(x, y + dy);
+          back.stroke({ color: c, width: ww, alpha: a, cap: 'round', join: 'round' });
+        }
+        const [kx, ky] = seg[seg.length - 1] ?? [x0, by];
+        if (i1 < n) back.circle(kx, ky, w * 0.7).fill(St.wood);
+      }
+      // The stones hung so far, in the order of `hangs`, spread along the arc.
+      const hungList = hangs.filter((h) => sim.save.flags.includes(h.flag));
+      hungList.forEach((h, k) => {
+        const t = 0.5 + (0.45 * (k + 0.5)) / Math.max(hangs.length, 1);
+        const [hx, hy] = pt(t);
+        const q = hash01(h.flag, 3);
+        const len = St.thread[0] + (St.thread[1] - St.thread[0]) * q;
+        const since = this.hung.get(h.flag);
+        const fresh = since !== undefined && since < St.swing ? 1 - since / St.swing : 0;
+        const ang =
+          Math.sin(clock * (1.1 + q * 0.6) + q * 6) * 0.06 +
+          fresh * Math.sin((since ?? 0) * 5.5) * 0.5 * fresh;
+        const sx = hx + Math.sin(ang) * len;
+        const sy = hy + Math.cos(ang) * len;
+        back.moveTo(hx, hy).lineTo(sx, sy).stroke({ color: 0xa89a86, width: 1, alpha: 0.6 });
+        const sz = St.size[0] + (St.size[1] - St.size[0]) * hash01(h.flag, 5);
+        // A small slab, rounded, a little turned; warm on the flame's side, moth wings cut in its face.
+        const tilt = ang * 0.6;
+        const slab = [-0.55, 0, 0.5, 0.15, 0.6, 1.0, 0.45, 1.9, -0.05, 2.05, -0.6, 1.7, -0.62, 0.7].map(
+          (v, j) => (j % 2 ? sy + v * sz + Math.sin(tilt) * 0 : sx + v * sz),
+        );
+        back.poly(slab).fill(St.stone);
+        back
+          .poly(slab.map((v, j) => (j % 2 ? v + 1 : sx + (v - sx) * 0.7 - side * 1.5)))
+          .fill({ color: St.lit, alpha: 0.4 });
+        back
+          .ellipse(sx - side * sz * 0.42, sy + sz * 1.0, sz * 0.16, sz * 0.75)
+          .fill({ color: ACTS.kept.warm, alpha: 0.35 });
+        const wy = sy + sz * 0.95;
+        const ws = sz * 0.32;
+        back
+          // (A moth, cut pale in the dark face: two dark eyes read as a mask.)
+          .poly([sx, wy, sx - ws * 1.4, wy - ws * 1.0, sx - ws * 1.2, wy + ws * 0.3])
+          .poly([sx, wy, sx + ws * 1.4, wy - ws * 1.0, sx + ws * 1.2, wy + ws * 0.3])
+          .poly([sx, wy + 1, sx - ws * 0.9, wy + ws * 1.1, sx - ws * 0.3, wy + ws * 0.4])
+          .poly([sx, wy + 1, sx + ws * 0.9, wy + ws * 1.1, sx + ws * 0.3, wy + ws * 0.4])
+          .rect(sx - 0.7, wy - ws * 0.5, 1.4, ws * 1.6)
+          .fill({ color: St.carveLit, alpha: 0.7 });
+        glow.add(sx, wy, 10 + 6 * q, 0xcfe0ff, 0.12 + 0.05 * Math.sin(clock * 1.4 + k));
+        if (fresh > 0) glow.add(sx, wy, 46, 0xe8f0ff, 0.5 * fresh * fresh);
+      });
+    }
+  }
+
+  // --- The way out lit from beyond.
+  private drawDoors(
+    clock: number,
+    sim: SimView,
+    back: Graphics,
+    glowBack: GlowPool,
+    glowFront: GlowPool,
+    seen: (x: number, y: number, pad?: number) => boolean,
+  ): void {
+    const D = ACTS.door;
+    const lms = (
+      sim.scene.marks as { landmarks?: Array<{ id: string; kind: string; x: number; y: number }> } | undefined
+    )?.landmarks;
+    for (const l of lms ?? []) {
+      if (l.kind !== 'door') continue;
+      // Out is toward the nearer side wall of the room.
+      const dir = l.x > sim.scene.width / 2 ? 1 : -1;
+      const cx = l.x;
+      const cy = l.y - D.half;
+      const breathe = 0.85 + 0.1 * Math.sin(clock * 0.8) + 0.05 * Math.sin(clock * 2.3 + 1);
+      const id = `door-${l.id}`;
+      const light = this.reg.get(id);
+      if (light) light.intensity = D.light * breathe;
+      else {
+        this.reg.set(id, { x: cx, y: cy, radius: D.radius, color: D.moon, intensity: D.light * breathe });
+        this.lights.push(id);
+      }
+      // Where the spill lands: down and in from the doorway.
+      const ca = Math.cos(D.angle);
+      const sa = Math.sin(D.angle);
+      if (!seen(cx, cy, 200) && !seen(cx - dir * ca * D.beam, cy + sa * D.beam, 200)) continue;
+      // The opening: the night beyond, brightest past the threshold.
+      glowBack.add(cx + dir * 30, cy, 150, D.moon, D.glow * breathe, D.half * 1.1);
+      glowBack.add(cx + dir * 110, cy - 10, 80, D.core, 0.32 * breathe, D.half * 0.8);
+      glowFront.add(cx + dir * 120, cy, 46, D.core, 0.22 * breathe, D.half * 0.6);
+      // The spill: overlapping soft ellipses along the beam, widening and fading as it falls into the hollow.
+      const rot = dir > 0 ? -D.angle : D.angle;
+      for (let k = 0; k < 16; k++) {
+        const t = (k + 0.5) / 16;
+        const sway = Math.sin(clock * 0.5 + t * 4) * 8 * t;
+        const bx = cx - dir * (ca * D.beam * t) + sway;
+        const by = cy + sa * D.beam * t;
+        glowBack.add(
+          bx,
+          by,
+          80 + 120 * t,
+          D.moon,
+          D.beamA * 0.6 * breathe * (1 - 0.55 * t),
+          34 + 44 * t,
+          rot,
+        );
+      }
+      const fx = cx - dir * ca * D.beam * 0.95;
+      const fy = floorUnder(sim, fx, cy + 40);
+      if (fy - cy < D.beam * 1.2) glowBack.add(fx, fy - 6, 230, D.moon, 0.12 * breathe, 26);
+      // The motes: up out of the hollow along the light, quickening and brightening toward the door, out through it.
+      for (let m = 0; m < D.motes; m++) {
+        const q = hash01(`${l.id}m`, m);
+        const q2 = hash01(`${l.id}n`, m);
+        const trip = D.trip[0] + (D.trip[1] - D.trip[0]) * q2;
+        const v = (clock / trip + q) % 1;
+        const t = v ** 1.35;
+        const sx = cx - dir * (D.reach[0] + (D.reach[1] - D.reach[0]) * q);
+        const sy = Math.min(fy - 40, cy + 240 + 260 * q2);
+        const ex = cx + dir * (90 + 60 * q);
+        const ey = cy - 30 + 60 * q2;
+        // An arc rising over the straight line, a wander across it.
+        const lift = 120 + 120 * q2;
+        const x = sx + (ex - sx) * t + Math.sin(clock * 0.9 + m * 1.7) * 14 * (1 - t);
+        const y = sy + (ey - sy) * t - lift * Math.sin(Math.PI * t) + Math.cos(clock * 1.1 + m) * 8 * (1 - t);
+        const a = Math.sin(Math.PI * Math.min(1, v * 1.15)) * (0.35 + 0.65 * t);
+        if (a <= 0.02 || !seen(x, y)) continue;
+        back.circle(x, y, 1.3 + 1.4 * q).fill({ color: D.core, alpha: 0.9 * a });
+        if (m % 3 === 0) glowFront.add(x, y, 14 + 8 * q, D.moon, 0.3 * a);
+      }
+    }
   }
 
   // --- The first fling's stream of moths.
@@ -411,6 +651,23 @@ export class Acts {
             .rect(gx, gy, 2.2, 3 + 4 * v)
             .fill({ color: k % 3 ? A.dust : A.cloud, alpha: 0.85 * u * (1 - v * 0.7) });
         }
+      } else if (w.way === 'mouth') {
+        // Out of the passage's dark: dust breathing out along the floor, and eyes catching the light in there.
+        const floor = floorUnder(sim, fx, fy - 30);
+        for (let k = 0; k < n; k++) {
+          const r = hash01('tell', k + i * 31);
+          const v = (clock * (0.5 + 0.5 * r) + r) % 1;
+          const px = w.wallX + w.dir * (20 + v * 160 * (0.4 + r));
+          const py = floor - 4 - v * (10 + 26 * r);
+          back.circle(px, py, 3 + 7 * v).fill({ color: k % 2 ? A.cloud : A.dust, alpha: 0.5 * u * (1 - v) });
+        }
+        // (Each creature its own pair, deeper in for the later ones; a blink now and then.)
+        const deep = 40 + 30 * (i % 3);
+        const ex = w.wallX + w.dir * (A.mouthDark[0] * 0.5 - deep);
+        const ey = floor - 18 - 14 * (i % 2) - (s.kind === 'burrback' ? 14 : 0);
+        const blink = Math.sin(clock * 2.3 + i * 1.7) > 0.93 ? 0.1 : 1;
+        const ea = smooth(0.15, 0.6, u) * blink;
+        for (const sd of [-1, 1]) back.circle(ex + sd * 6, ey, 2.2).fill({ color: A.eyes, alpha: 0.9 * ea });
       } else {
         // Dust breathing out of the wall's foot or the ground where it will break through.
         const gx = w.way === 'wall' ? w.wallX : fx;
@@ -504,6 +761,23 @@ export class Acts {
               )
               .fill({ color: A.earth, alpha: lip });
           }
+      } else if (a.way === 'mouth') {
+        // It comes out of the passage's dark (a shadow over the mouth while the wave comes, in front of it), kicking
+        // dust out along the floor.
+        const floor = floorUnder(sim, a.fromX, a.fromY - 30);
+        const dark = smooth(0, 0.2, a.t) * (1 - smooth(a.secs, a.secs + 0.8, a.t));
+        if (dark > 0.01) {
+          // (Nested soft ovals round the passage's foot: strips with ruled edges read as a curtain.)
+          const D = A.mouthDark[0];
+          for (let k = 0; k < 8; k++) {
+            const q = 1 - k / 8;
+            front
+              .ellipse(a.wallX, floor - 70, D * q, 170 * q)
+              .fill({ color: A.hole, alpha: A.mouthDark[1] * dark * 0.16 });
+          }
+        }
+        if (u < 0.7) this.spray(back, a.wallX + a.dir * 90, floor - 8, a.dir, a.t, a.i);
+        this.cloud(back, a.wallX + a.dir * 120, floor - 20, a.dir, a.t, a.i, Math.max(40, a.hh * 2));
       } else if (a.way === 'ground') {
         // It digs out of the floor: a mound thrown up, a hole left, dust.
         const open = smooth(0, 0.15, a.t) * (1 - smooth(a.secs + A.open - 0.8, a.secs + A.open, a.t));

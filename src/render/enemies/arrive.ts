@@ -6,7 +6,8 @@
  *   drop    falls: slow off the roof, fast at the floor (distance as the square of time);
  *   wall    out of a burrow mouth quickly, a beat to look, then a scurry to its ground;
  *   ground  heaves itself up out of the floor where it digs out, then scurries;
- *   fly     eases in on the wing.
+ *   fly     eases in on the wing;
+ *   mouth   out of a way on's passage along its floor, up the step to its ground if it stands higher, then a scurry.
  *
  * A beetle's legs run while it travels (its stride follows the distance), facing the way it goes. The returned
  * state is a copy: the sim's is never touched.
@@ -39,6 +40,14 @@ function eased(way: string, p: number): { d: number; rise: number } {
 
 const WAYS = new Map<string, string>();
 
+/** The edge, toward `fx`, of the solid under a creature at home (hx, hy centre, h tall): where it climbs up. */
+function stepX(sim: SimView, hx: number, hy: number, h: number, fx: number): number {
+  const foot = hy + h / 2;
+  const under = sim.scene.solids.find((r) => hx >= r.x && hx <= r.x + r.w && Math.abs(r.y - foot) < 24);
+  if (!under) return hx;
+  return fx > hx ? under.x + under.w : under.x;
+}
+
 /** The creature as drawn while it arrives (a copy), or `e` itself when it is not arriving. */
 export function arrivalView(e: Readonly<EnemyState>, sim: SimView, beetle: boolean): Readonly<EnemyState> {
   if (!(e.arrive > 0)) return e;
@@ -55,8 +64,28 @@ export function arrivalView(e: Readonly<EnemyState>, sim: SimView, beetle: boole
     WAYS.set(key, way);
   }
   const { d, rise } = eased(way, p);
-  const cx = fx + (hx - fx) * d;
-  const cy = fy + (hy - fy) * d + rise * e.h * 0.9;
+  let cx = fx + (hx - fx) * d;
+  let cy = fy + (hy - fy) * d + rise * e.h * 0.9;
+  if (way === 'mouth' && hy < fy - 8) {
+    // Along the passage floor to the foot of the step its ground stands on, a hop up it, then on.
+    const step = stepX(sim, hx, hy, e.h, fx);
+    const total = Math.abs(step - fx) + (fy - hy) + Math.abs(hx - step);
+    const s = smooth(p) * total;
+    const a = Math.abs(step - fx);
+    const b = a + (fy - hy);
+    const dir = hx >= fx ? 1 : -1;
+    if (s < a) {
+      cx = fx + dir * s;
+      cy = fy;
+    } else if (s < b) {
+      const t = (s - a) / (fy - hy);
+      cx = step + dir * t * 30;
+      cy = fy - (fy - hy) * t - Math.sin(Math.PI * t) * 24;
+    } else {
+      cx = step + dir * 30 + (hx - step - dir * 30) * ((s - b) / Math.max(1, total - b));
+      cy = hy;
+    }
+  }
   const dir = hx >= fx ? 1 : -1;
   const out: EnemyState = { ...e, x: Math.round(cx - e.w / 2), y: Math.round(cy - e.h / 2), rx: 0, ry: 0 };
   if (beetle && way !== 'drop') {
