@@ -26,7 +26,7 @@
  *   Shared helpers that more than one module needs go in src/render/scene/lib/ (create it).
  *   Colours and the value ladder come from docs/art-direction.md.
  */
-import { isGreybox } from '../../scene/room';
+import { isGreybox, type Room } from '../../scene/room';
 import type { Scene } from '../../sim/scene';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { GreyboxLayer } from '../greybox/index';
@@ -86,6 +86,8 @@ function modulesFor(scene: Scene): ReadonlyArray<new () => EnvModule> {
   if (isGreybox(scene as Parameters<typeof isGreybox>[0])) return [GreyboxLayer];
   if (isInterior()) return LANTERN_INSIDE;
   if (isLantern()) return LANTERN_NIGHT;
+  // A wood room with the level's pieces (art.pieces): the wood's modules and Lanternroot's pieces.
+  if ((scene as Room).art?.pieces) return LANTERN_NIGHT;
   return MODULES;
 }
 

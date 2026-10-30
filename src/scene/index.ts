@@ -30,6 +30,8 @@ import woodSilkJson from '../../content/rooms/wood-silk.json' with { type: 'json
 import woodWellJson from '../../content/rooms/wood-well.json' with { type: 'json' };
 import woodWicksJson from '../../content/rooms/wood-wicks.json' with { type: 'json' };
 import worldJson from '../../content/world.json' with { type: 'json' };
+import canopyJson from '../../content/worlds/canopy.json' with { type: 'json' };
+import canopyRoomsJson from '../../content/worlds/canopy-rooms.json' with { type: 'json' };
 import bossrushJson from '../../content/worlds/demo-bossrush.json' with { type: 'json' };
 import downwoodJson from '../../content/worlds/downwood.json' with { type: 'json' };
 import downwoodRoomsJson from '../../content/worlds/downwood-rooms.json' with { type: 'json' };
@@ -288,6 +290,7 @@ const SceneSchema = z
         moods: z.array(z.object({ x: int, mood: z.enum(['cool', 'warm', 'deep']) }).strict()).optional(),
         anchorY: int.optional(),
         anchorX: int.optional(),
+        pieces: z.boolean().optional(),
       })
       .strict()
       .optional(),
@@ -345,6 +348,8 @@ const SceneSchema = z
                 from: z.tuple([int, int]),
                 grows: z.enum(['east', 'west']),
                 end: z.enum(['burl', 'knee', 'fork', 'snap', 'trunk', 'tip']),
+                y0: int.optional(),
+                y1: int.optional(),
               })
               .strict(),
           )
@@ -713,6 +718,9 @@ const FILES: readonly unknown[] = [
   // The Downwood (docs/design/places/1-downwood.md, memory/downwood.md): its own world, content/worlds/downwood.json;
   // its 46 rooms are one generated file (tools/levels/downwood.ts).
   ...(downwoodRoomsJson as unknown[]),
+  // The Canopy (docs/design/levels/first-area.md): a first area built to the reference games' numbers, its own
+  // world, content/worlds/canopy.json; one generated file (tools/levels/canopy.ts).
+  ...(canopyRoomsJson as unknown[]),
 ];
 
 /** Every room, by id. */
@@ -755,6 +763,7 @@ export const WORLD_FILES: Readonly<Record<string, WorldFile>> = {
   'proto-1': WorldSchema.parse(proto1Json),
   'demo-bossrush': WorldSchema.parse(bossrushJson),
   downwood: WorldSchema.parse(downwoodJson),
+  canopy: WorldSchema.parse(canopyJson),
 };
 for (const [wid, w] of Object.entries(WORLD_FILES))
   for (const id of [w.start, ...w.rooms.map((r) => r.id), ...w.tests])

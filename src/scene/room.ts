@@ -152,6 +152,11 @@ export interface RoomArt {
    * backdrop composed for one room width in place when the room grows.
    */
   anchorX?: number;
+  /**
+   * A wood room that also draws the level's pieces (bark, thorns, gates, covers, seeds, patches, glades, lamps,
+   * the hawker and the dangler: render/lantern), as Lanternroot's night rooms do.
+   */
+  pieces?: boolean;
 }
 
 /** A cocoon on the hatching branch: `x`, `y` = where its thread is tied (the hang point), `len` its length. */
@@ -244,6 +249,9 @@ export interface StretchMark {
   from: [number, number];
   grows: 'east' | 'west';
   end: 'burl' | 'knee' | 'fork' | 'snap' | 'trunk' | 'tip';
+  /** Only rects whose top is in [y0, y1) (absent: any): limbs stacked over the same x stay apart. */
+  y0?: number;
+  y1?: number;
 }
 
 /** A camera stop: where she stands (feet centre); the follow camera frames her. */

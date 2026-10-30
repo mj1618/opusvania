@@ -1,0 +1,1887 @@
+{
+ "game": "Lampfall",
+ "area": "test-grove",
+ "sources": [
+  "our files: content/rooms, content/worlds"
+ ],
+ "units": {
+  "native": "our px",
+  "pxPerUnit": 1,
+  "viewNative": [
+   1920,
+   1080
+  ],
+  "how": "identity"
+ },
+ "hero": {
+  "box": [
+   40,
+   80
+  ],
+  "run": 576,
+  "jump": 272,
+  "startAbilities": [
+   "glide",
+   "wallJump",
+   "doubleJump",
+   "dash"
+  ],
+  "abilityOrder": []
+ },
+ "rooms": [
+  {
+   "id": "test-grove",
+   "name": "Test grove (the old demo level)",
+   "rect": [
+    0,
+    0,
+    5760,
+    1600
+   ],
+   "screens": 4.44,
+   "shape": "hall",
+   "onCriticalPath": false,
+   "exits": []
+  }
+ ],
+ "terrain": [
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     0,
+     1088
+    ],
+    [
+     384,
+     1088
+    ],
+    [
+     384,
+     1600
+    ],
+    [
+     0,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     384,
+     1280
+    ],
+    [
+     1536,
+     1280
+    ],
+    [
+     1536,
+     1600
+    ],
+    [
+     384,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     384,
+     1184
+    ],
+    [
+     448,
+     1184
+    ],
+    [
+     448,
+     1280
+    ],
+    [
+     384,
+     1280
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     1536,
+     1408
+    ],
+    [
+     1856,
+     1408
+    ],
+    [
+     1856,
+     1600
+    ],
+    [
+     1536,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     1856,
+     1280
+    ],
+    [
+     2432,
+     1280
+    ],
+    [
+     2432,
+     1600
+    ],
+    [
+     1856,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     2432,
+     960
+    ],
+    [
+     2624,
+     960
+    ],
+    [
+     2624,
+     1600
+    ],
+    [
+     2432,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     2624,
+     1152
+    ],
+    [
+     3072,
+     1152
+    ],
+    [
+     3072,
+     1600
+    ],
+    [
+     2624,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     3072,
+     1280
+    ],
+    [
+     3744,
+     1280
+    ],
+    [
+     3744,
+     1600
+    ],
+    [
+     3072,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     3744,
+     1376
+    ],
+    [
+     3968,
+     1376
+    ],
+    [
+     3968,
+     1600
+    ],
+    [
+     3744,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     3968,
+     1280
+    ],
+    [
+     4608,
+     1280
+    ],
+    [
+     4608,
+     1600
+    ],
+    [
+     3968,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     4608,
+     1088
+    ],
+    [
+     5472,
+     1088
+    ],
+    [
+     5472,
+     1600
+    ],
+    [
+     4608,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     5472,
+     768
+    ],
+    [
+     5760,
+     768
+    ],
+    [
+     5760,
+     1600
+    ],
+    [
+     5472,
+     1600
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     640,
+     960
+    ],
+    [
+     896,
+     960
+    ],
+    [
+     896,
+     1008
+    ],
+    [
+     640,
+     1008
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     1024,
+     832
+    ],
+    [
+     1248,
+     832
+    ],
+    [
+     1248,
+     880
+    ],
+    [
+     1024,
+     880
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     1344,
+     704
+    ],
+    [
+     1600,
+     704
+    ],
+    [
+     1600,
+     752
+    ],
+    [
+     1344,
+     752
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     1760,
+     608
+    ],
+    [
+     2016,
+     608
+    ],
+    [
+     2016,
+     656
+    ],
+    [
+     1760,
+     656
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     2336,
+     528
+    ],
+    [
+     2592,
+     528
+    ],
+    [
+     2592,
+     576
+    ],
+    [
+     2336,
+     576
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     2816,
+     448
+    ],
+    [
+     2976,
+     448
+    ],
+    [
+     2976,
+     512
+    ],
+    [
+     2816,
+     512
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     3200,
+     448
+    ],
+    [
+     3328,
+     448
+    ],
+    [
+     3328,
+     1168
+    ],
+    [
+     3200,
+     1168
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     3584,
+     192
+    ],
+    [
+     3712,
+     192
+    ],
+    [
+     3712,
+     1280
+    ],
+    [
+     3584,
+     1280
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     3968,
+     1184
+    ],
+    [
+     4160,
+     1184
+    ],
+    [
+     4160,
+     1280
+    ],
+    [
+     3968,
+     1280
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     4736,
+     736
+    ],
+    [
+     4992,
+     736
+    ],
+    [
+     4992,
+     784
+    ],
+    [
+     4736,
+     784
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "solid",
+   "poly": [
+    [
+     5056,
+     592
+    ],
+    [
+     5232,
+     592
+    ],
+    [
+     5232,
+     640
+    ],
+    [
+     5056,
+     640
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "oneway",
+   "poly": [
+    [
+     2048,
+     1024
+    ],
+    [
+     2304,
+     1024
+    ],
+    [
+     2304,
+     1024
+    ],
+    [
+     2048,
+     1024
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "oneway",
+   "poly": [
+    [
+     4256,
+     912
+    ],
+    [
+     4608,
+     912
+    ],
+    [
+     4608,
+     912
+    ],
+    [
+     4256,
+     912
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "oneway",
+   "poly": [
+    [
+     3712,
+     192
+    ],
+    [
+     3904,
+     192
+    ],
+    [
+     3904,
+     192
+    ],
+    [
+     3712,
+     192
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "oneway",
+   "poly": [
+    [
+     3808,
+     448
+    ],
+    [
+     4128,
+     448
+    ],
+    [
+     4128,
+     448
+    ],
+    [
+     3808,
+     448
+    ]
+   ]
+  },
+  {
+   "roomId": "test-grove",
+   "kind": "oneway",
+   "poly": [
+    [
+     2976,
+     448
+    ],
+    [
+     3200,
+     448
+    ],
+    [
+     3200,
+     448
+    ],
+    [
+     2976,
+     448
+    ]
+   ]
+  }
+ ],
+ "things": [
+  {
+   "id": "test-grove:spawn-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1250,
+    1238
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:spawn-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1320,
+    1238
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:spawn-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1390,
+    1238
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-arc-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2660,
+    1000
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-arc-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2705,
+    1040
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-arc-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2750,
+    1072
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-arc-4",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2800,
+    1095
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-arc-5",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2855,
+    1110
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2905,
+    1110
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2965,
+    1110
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:pool-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2652,
+    955
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:bank-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5495,
+    726
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:bank-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5555,
+    726
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f1-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1085,
+    790
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f1-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1185,
+    790
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f3-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1270,
+    655
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f3-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1345,
+    560
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f4-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1595,
+    564
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f4-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1672,
+    452
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f4-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    1749,
+    397
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:ledge-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2640,
+    320
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:ledge-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2715,
+    240
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:crown-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3372,
+    250
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:crown-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3425,
+    185
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:crown-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3480,
+    145
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:crown-4",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3540,
+    125
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3470,
+    1150
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3540,
+    985
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3455,
+    850
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-4",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3372,
+    720
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-5",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3455,
+    575
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-6",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3540,
+    440
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:branch-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2112,
+    982
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:branch-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2240,
+    982
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:rise-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2345,
+    880
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:rise-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2400,
+    800
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:rise-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2460,
+    770
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:root-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4165,
+    1070
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:root-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4215,
+    975
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:root-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4275,
+    905
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f6-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4560,
+    735
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f6-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4625,
+    650
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:f6-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4700,
+    603
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:far-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5290,
+    540
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:far-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5360,
+    580
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:far-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5430,
+    660
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:hollow-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3800,
+    1330
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:hollow-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3856,
+    1345
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:hollow-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3912,
+    1330
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:sky-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3900,
+    -115
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:sky-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4150,
+    -300
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:sky-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4400,
+    -235
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:sky-4",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    4610,
+    -140
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:sky-5",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5000,
+    35
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:sky-6",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5200,
+    125
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:leap-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2700,
+    885
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:leap-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2790,
+    920
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:leap-3",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2880,
+    960
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:leap-4",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    2970,
+    1000
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:shaft-7",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3545,
+    300
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:well-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3236,
+    1236
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:well-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3292,
+    1236
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:back-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3752,
+    900
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:back-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    3752,
+    600
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:cliff-1",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5432,
+    980
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:cliff-2",
+   "roomId": "test-grove",
+   "kind": "pickup-minor",
+   "at": [
+    5432,
+    860
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "test-grove:great-bank",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    120,
+    1030
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:great-crown",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    3768,
+    134
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:great-arch",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    3536,
+    1222
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:great-far",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    5600,
+    710
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:great-hang",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    1984,
+    760
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:great-sky",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    4800,
+    -57
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:great-ember",
+   "roomId": "test-grove",
+   "kind": "pickup-major",
+   "at": [
+    1500,
+    650
+   ],
+   "src": "files",
+   "value": "great"
+  },
+  {
+   "id": "test-grove:pod-shaft",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    3400,
+    1258
+   ],
+   "src": "files",
+   "value": "pod 2hp"
+  },
+  {
+   "id": "test-grove:pod-bough",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    3850,
+    170
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "test-grove:pod-catch",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    4010,
+    426
+   ],
+   "src": "files",
+   "value": "pod 2hp"
+  },
+  {
+   "id": "test-grove:pod-stone",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    1500,
+    1258
+   ],
+   "src": "files",
+   "value": "pod 3hp"
+  },
+  {
+   "id": "test-grove:pod-branch-l",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    2176,
+    1130
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "test-grove:pod-rise",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    2570,
+    938
+   ],
+   "src": "files",
+   "value": "pod 2hp"
+  },
+  {
+   "id": "test-grove:pod-ledge",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    3050,
+    426
+   ],
+   "src": "files",
+   "value": "pod 3hp"
+  },
+  {
+   "id": "test-grove:pod-branch-r",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    4470,
+    890
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "test-grove:pod-f6",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    4830,
+    930
+   ],
+   "src": "files",
+   "value": "pod 2hp"
+  },
+  {
+   "id": "test-grove:pod-row-1",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    5060,
+    1066
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "test-grove:pod-row-2",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    5350,
+    1066
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "test-grove:pod-far",
+   "roomId": "test-grove",
+   "kind": "breakable",
+   "at": [
+    5690,
+    746
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "test-grove:lantern-stone",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    1448,
+    1280
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:lantern-crown",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    3684,
+    192
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:lantern-far",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    5524,
+    768
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:lamp-trunk",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    3160,
+    1280
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:lamp-root",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    4350,
+    1280
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:lamp-high",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    3264,
+    448
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:lamp-rise",
+   "roomId": "test-grove",
+   "kind": "lever",
+   "at": [
+    4760,
+    1088
+   ],
+   "src": "files",
+   "value": "lantern"
+  },
+  {
+   "id": "test-grove:heart",
+   "roomId": "test-grove",
+   "kind": "landmark",
+   "at": [
+    5212,
+    1088
+   ],
+   "src": "files",
+   "value": "goal"
+  }
+ ],
+ "enemies": [
+  {
+   "id": "test-grove:burr-bank",
+   "roomId": "test-grove",
+   "kind": "burrback",
+   "at": [
+    200,
+    1088
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "ground ram with a tell and a winded beat; 5 hp",
+   "difficulty": 2,
+   "src": "files"
+  },
+  {
+   "id": "test-grove:burr-path",
+   "roomId": "test-grove",
+   "kind": "burrback",
+   "at": [
+    2160,
+    1280
+   ],
+   "hp": 4,
+   "contactDamage": 1,
+   "behaviour": "ground ram with a tell and a winded beat; 5 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 130
+  },
+  {
+   "id": "test-grove:burr-ledge",
+   "roomId": "test-grove",
+   "kind": "burrback",
+   "at": [
+    3090,
+    448
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "ground ram with a tell and a winded beat; 5 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 60
+  },
+  {
+   "id": "test-grove:burr-root",
+   "roomId": "test-grove",
+   "kind": "burrback",
+   "at": [
+    4572,
+    1280
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "ground ram with a tell and a winded beat; 5 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 40
+  },
+  {
+   "id": "test-grove:burr-shaft",
+   "roomId": "test-grove",
+   "kind": "burrback",
+   "at": [
+    3450,
+    1280
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "ground ram with a tell and a winded beat; 5 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 46
+  },
+  {
+   "id": "test-grove:burr-rise",
+   "roomId": "test-grove",
+   "kind": "burrback",
+   "at": [
+    5010,
+    1088
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "ground ram with a tell and a winded beat; 5 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 70
+  },
+  {
+   "id": "test-grove:lamp-glade",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    800,
+    690
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 100
+  },
+  {
+   "id": "test-grove:lamp-f3",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    1470,
+    420
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 60
+  },
+  {
+   "id": "test-grove:lamp-ledge",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    2700,
+    150
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 90
+  },
+  {
+   "id": "test-grove:lamp-glide-1",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    4620,
+    200
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 60
+  },
+  {
+   "id": "test-grove:lamp-glide-2",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    4900,
+    250
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 60
+  },
+  {
+   "id": "test-grove:lamp-sky",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    5180,
+    105
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 50
+  },
+  {
+   "id": "test-grove:wing-rise",
+   "roomId": "test-grove",
+   "kind": "lampwing",
+   "at": [
+    5090,
+    900
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 50
+  }
+ ],
+ "criticalPath": []
+}

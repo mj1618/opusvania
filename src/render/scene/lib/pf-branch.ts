@@ -629,7 +629,9 @@ function planStretches(room: Room, trees: TreeLike[]): Stretch[] {
   }
   const out: Stretch[] = [];
   for (const m of marks) {
-    const rects = branches.filter((s) => s.x >= m.x0 && s.x < m.x1);
+    const inBand = (s: SolidRect) =>
+      (m.y0 === undefined || s.y >= m.y0) && (m.y1 === undefined || s.y < m.y1);
+    const rects = branches.filter((s) => s.x >= m.x0 && s.x < m.x1 && inBand(s));
     if (!rects.length) continue;
     const first = rects[0] as SolidRect;
     const last = rects[rects.length - 1] as SolidRect;

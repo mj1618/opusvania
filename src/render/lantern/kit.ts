@@ -42,6 +42,8 @@ export const KIT = {
   thorn: { cane: 0x1a0e12, caneLit: 0x4a2a2a, tip: 0xe0d0c0 },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
   cover: { body: 0x040302, root: 0x120c08, edge: 0x2a1c12 },
+  /** The wood's leaf cover: the canopy clumps' near-black blue-green, a lighter tone inside, moonlit leaf tips. */
+  leafCover: { body: 0x070d14, mid: 0x0d1822, lit: 0x2e4a5c },
   sign: { stone: 0x26262c, stoneLit: 0x5a5c68, carve: 0x0c0c10, flash: 0xffc070, glyph: 0x9fd8e0 },
   bell: {
     cap: 0xd8ceb8,
@@ -785,6 +787,59 @@ export class Kit {
     g.ellipse(cx, cy, 10, ry * 0.32).fill({ color: 0x020304, alpha: a });
   }
 
+  /**
+   * The wood's cover (a wood room with `art.pieces`): a clump of leaves in front of the hidden space, like the
+   * canopy's own clumps (no box: overlapping leaf blobs whose edge breaks into single leaves that stir).
+   */
+  private leafCover(
+    g: Graphics,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    k: number,
+    id: string,
+    clock: number,
+  ): void {
+    const L = KIT.leafCover;
+    const cols = Math.max(2, Math.round(w / 70));
+    const rows = Math.max(2, Math.round(h / 70));
+    for (let j = 0; j < rows; j++)
+      for (let i = 0; i < cols; i++) {
+        const r = hash01(id, i * 31 + j * 7);
+        const cx = x + ((i + 0.5) * w) / cols + (r - 0.5) * 30;
+        const cy = y + ((j + 0.5) * h) / rows + (hash01(id, i + j * 13 + 5) - 0.5) * 24;
+        const rad = 52 + 30 * hash01(id, i * 3 + j * 17 + 9);
+        g.ellipse(cx, cy, rad, rad * 0.8).fill({ color: r < 0.25 ? L.mid : L.body, alpha: 0.98 * k });
+      }
+    // Single leaves round the edge, stirring a little: the clump's outline is leaves, never a line.
+    const n = Math.round((w + h) / 14);
+    for (let c = 0; c < n; c++) {
+      const u = hash01(id, c + 200);
+      const side = c % 4;
+      const px = side < 2 ? x + u * w : side === 2 ? x - 6 : x + w + 6;
+      const py = side === 0 ? y - 6 : side === 1 ? y + h + 4 : y + u * h;
+      const a = hash01(id, c + 300) * Math.PI * 2 + Math.sin(clock * 0.9 + c) * 0.15;
+      const len = 14 + 14 * hash01(id, c + 400);
+      const wd = len * 0.38;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      g.poly([
+        px,
+        py,
+        px + ca * len * 0.5 - sa * wd,
+        py + sa * len * 0.5 + ca * wd,
+        px + ca * len,
+        py + sa * len,
+        px + ca * len * 0.5 + sa * wd,
+        py + sa * len * 0.5 - ca * wd,
+      ]).fill({
+        color: hash01(id, c + 500) < 0.2 ? L.lit : L.body,
+        alpha: 0.95 * k,
+      });
+    }
+  }
+
   private cover(
     g: Graphics,
     x: number,
@@ -798,6 +853,10 @@ export class Kit {
     const C = KIT.cover;
     if (LOOK.band === 'night') {
       this.logCover(g, x, y, w, h, k, id);
+      return;
+    }
+    if (LOOK.kit === 'wood') {
+      this.leafCover(g, x, y, w, h, k, id, clock);
       return;
     }
     // A curtain of roots in front of the hidden space: a dark mass, its lower edge breaking into hanging strands
