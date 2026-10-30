@@ -392,7 +392,7 @@ const CLAIMS: Claim[] = [
     from: [5440, 1856],
     kit: [C],
     reach: ['hub', 'burrow', 'place:pile', 'cn-tunnel:pile-1'],
-    not: ['den', 'cellar'],
+    not: ['den', 'cellar', 'place:east'],
     max: 9000,
   },
   { room: 'cn-tunnel', from: [800, 1856], kit: [], reach: ['place:floor'], max: 9000 },

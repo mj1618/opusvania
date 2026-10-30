@@ -225,6 +225,28 @@ the render builder's.
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
 
+## v9b: round 9's weak list, a fix pass before deploy
+- **The tunnel's glide is clear.** The hump steps up from the west to a plumb east face that is the pit's west wall:
+  the take-off (6,080 x 1,472) is the highest ground, 384 over the warning's floor (v9: 256), over a 960 pit whose far
+  face is slick. `tools/levels/glide-probe.ts`: a jump reaches the thorns at 6,790, a walk-off jump late in coyote time
+  at 6,828, a jump and a pogo off the thorns ~7,000 (all short of 7,040, no kick up the far face); a jump held through
+  lands at 7,255, a late glide 7,116, a glide from the apex 7,677, a walk-off glide 7,746. The solver's claws-only claim
+  now also holds `place:east` (a first try with the lamp where it was let a jump pogo off it onto the lip: the lamp is
+  at the far lip, 7,000 x 1,560, where only a glide passes). The route's tunnel peak still 3.0x (9.0 a screen).
+- **The hawker is fair.** It hunts her, not its lamp's clock: from under the roof it sees her a third of the way across
+  (`sight` 520), tells 30 frames (`hawker.curiousFrames`, the fairness test's floor) and strikes where her glide will
+  be (a 15-34 frame strike). A blow on a glider throws her on along it (`hawker.glideKnockVx` 8, `glideKnockLift` 5):
+  over 36 arrival phases every glide still lands across (a light lost), and a check back, a drop and a fresh glide, or a
+  cut answers it with no hit (36 of 36 each). Driven in the page: held through, hit at x 6,920, landed at 7,315 with 3
+  of 4 lights.
+- **The gap's chain keeps an early press** (`lures.flingBufferFrames` 8): a press held from 1-7 frames after lamp 1's
+  release (in the cooldown, before lamp 2 is in reach at +5) flings lamp 2 (v9: none before +8). Driven: pressed at +3,
+  lamp 2 flung at +8.
+- **Bots** (`giveUpGround`): an unwalked cell given up after 45 s takes the rest of that ground with it (r9's skilled
+  bot spent 45 s on each cell of the shard's shelf in turn). Their explorer still walks every reachable cell of a room
+  before an exit; that is the bots, not a reading of the door.
+- `canopy-r9b.test.ts` (4): the jumps short and the glides clear, the hawker's blow and its answers, the chain's press.
+
 ## v9: the level side of review round 8 (`reviews/canopy-r8.md`, 7/10)
 Round 8's verdict: the first ten minutes are fair; what holds it at 7 is shape. The well was a vertical sink with an
 unlit door, the frames half black boxes, the second peak on a branch, 51 glints buying nothing. v9 takes the [level]
@@ -713,18 +735,11 @@ floor), none climbed the fork's claw face in 20 min, and the rot branch still sw
 
 ## What is still weak (for round 10)
 - **No person has played it.** Matt's run from the hatch to the Grove is still the gate.
-- **The tunnel's glide.** A jump held through (the carried glide opens 16 px under the hump's top, already falling
-  fast) is barely longer than a jump and drops into the pit; the clean crossing is a glide from the apex (let go, press
-  again) to the pit's east face and a kick up it. A lower warning floor let the apex glide land clean but opened the
-  pit to a jump and a kick (the lock leaked). The hawker's strike mid-glide nearly always knocks her into the pit
-  (a 6-frame tell).
 - **Route peaks at 3x, not 4x.** The middle (the trunk, the well's gallery and mouth, the bower and the gap) is 3-6
   things a screen along the line; 4x needs it thinner, a density call.
 - **The bots don't leave the hollow.** The door is two jumps and in frame, but their explorer chases the shard's
   shelf and the well's bottom; a person's read of it is unmeasured.
 - **The gap's hanging root** is a stark black column across the area's best still until render dresses it.
-- **The second lamp is in reach 5 frames after the first's release**, inside the fling's 8-frame cooldown: an early
-  press is eaten (a re-press works).
 
 ## What was weak after v8 (round 9 answered most)
 - **No person has played it.** The first ten minutes now teach the fling, arrive instead of spawning and keep her save;

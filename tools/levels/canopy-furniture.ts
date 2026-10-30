@@ -319,7 +319,10 @@ export const ROUTE: Array<[string, Array<[number, number]>]> = [
     [
       [5440, 0],
       [5440, 1856],
-      [6016, 1600],
+      // (r9b: up the hump to its lip, the jump's apex, the glide down onto the warning's floor.)
+      [5984, 1472],
+      [6080, 1472],
+      [6400, 1220],
       [7420, 1856],
       [7820, 2048],
       [8000, 2048],

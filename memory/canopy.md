@@ -24,6 +24,37 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
 
+## v9b (round 9's weak list): the tunnel's glide, the hawker, the chain's press
+- **A glide lock wants a high take-off**: the glide gains ~2 px across for each px of drop, a jump ~0.4. v9's hump
+  (256 over the far floor) let a jump held through land 25 px past the lip. v9b: the hump steps up from the west to a
+  plumb east face that IS the pit's west wall (`PIT_W` 6080, top 1472, 384 over the far floor), pit 960, far face slick
+  (`noClaws(PIT_E, ...)`). Highest ground at the lip: a step down by the lip is where people jump from.
+- **`tools/levels/glide-probe.ts <room> <x> <y> <lipX> [--kit=] [--creatures] [--sweep --far=<x>]`**: every way across
+  off a lip (jump, held, apex glide, late glide, walk-off glide, coyote jump + kick, jump + kick, and with `--creatures`
+  the answers to a strike: check back, drop and re-glide, cut). The tunnel's numbers: jumps reach the thorns at
+  6790-6828; glides land 7116 (late) to 7746 (walk-off); `--sweep` runs 36 arrival phases.
+- **Thorns are a pogo** (HK's spike pogo: a down cut on them bounces her ~230 px on; the next touch hurts). A jump that
+  reaches the thorns within ~250 px of the far lip crosses on one bounce: the explorer found it (`pogoR`). And **a lamp
+  on a jump's descent is a pogo target too** (v9b's first try: the higher jump passed over `wick-pit` and bounced onto
+  the lip). A lamp over a glide lock goes where only the glide passes (the far lip, 7000 x 1560).
+- **The pit's hawker hunts her** (no `orbit`: on its clock the strike came whenever, and what she saw was the 6-frame
+  pull-back): home under the roof over the pit's east half, `sight` 520 (the lip is 760 off), `guards` its lamp. Tell
+  30 (`hawker.curiousFrames`; `creatures.test` holds it >= 30), a strike led to where her glide will be. Struck while
+  gliding she is thrown on along it (`hawker.glideKnockVx` 8 / `glideKnockLift` 5; `touched(..., glide)`): every
+  sweep phase still lands across. A check back (10 frames), a drop and a fresh glide, or a cut (an up cut when it is
+  above) take no hit at all 36 phases of 36.
+- **The fling keeps an early press** (`lures.flingBufferFrames` 8, `player.flingBuf`): a Lamp press in the cooldown
+  after a fling still starts one for 8 frames while Lamp is held. The gap's lamp 2 (in reach 5 frames after lamp 1's
+  release) took no press before +8; now any from +1. Only in the cooldown: a buffer on every unanswered press broke
+  four of Lanternroot's stored lines (its glow rooms' Lamp verbs, mend / gust, take a press with no flame in reach).
+- **Sim changes replay Lanternroot's tapes** (`proto-1-solve.test.ts`): the hawker's 30-frame tell moved one edge;
+  `npx tsx tools/solve/proto-1.ts --write --edge=<id>` re-records it.
+- **Bots**: a cell given up as "not reached in 45 s" gives up the rest of that ground (`giveUpGround`). The r9 run's
+  skilled bot spent 45 s on each cell of the well's shard shelf in turn (100+ s). Their explorer still ranks every
+  unwalked cell (rank 1) over exits (rank 3), so a door in frame waits until the room is walked.
+- **route-video.ts v6**: the v9 route (gallery legs, the hollow's shard, the gap's chain and out by the fork, the
+  warning's fight `until` `cn-tunnel-clear`).
+
 ## v9 (review r8): shape, frames, the second peak
 - **Sealed air** (`sealDeep(d)` before `fill()`, `sealed(x0, y0, x1, y1)` by hand): mass more than `d` from any carved
   air or the room's edge becomes air she can never reach, with a back, listed in `marks.sealed`. The sim and the
@@ -40,10 +71,10 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - **Fling lines**: `npx tsx tools/levels/fling-probe.ts <room> <lamp> <x> <y> [--set=<lamp>=x,y] [--glide] [--hold=]`
   prints every aim's flight off a lamp (lamps it brings into reach, landing, thorns). Reach is 110 px from her centre,
   so two aims off one lamp only share a third lamp within ~300 px of it (the paths fan out). After a fling, the next
-  lamp can be in reach inside the 8-frame `flingCooldown` (a press eaten).
+  lamp can be in reach inside the 8-frame `flingCooldown` (v9b: the press is kept, `flingBufferFrames`).
 - **The glide is weak over a shallow drop**: a held ground jump opens the wings 16 px under the take-off, already
-  falling fast; over the tunnel's pit it lands where a plain jump does. The long glide is from the apex (let go, press
-  again) or a walk-off. A glide lock over a pit 256 under the take-off has ~150 px between a jump and an apex glide.
+  falling fast. The long glide is from the apex (let go, press again) or a walk-off. v9b raised the tunnel's take-off
+  to 384 over the far floor (above).
 - **Peaks along the route**: `canopy-furniture.ts --route` (`ROUTE`: room-local points from the hatch to the den;
   sliding 2-screen windows, things within 640 x 360 of her line, glints out) and the hub-to-Grove climbing share.
   A full-frame window counted every room's walls and flattened everything (median 4.8).

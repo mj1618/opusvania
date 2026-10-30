@@ -610,7 +610,10 @@ export function contactDamage(state: GameState, i: number, t: Tuning): number {
   return e ? KINDS[e.kind].contactDamage(t) : 0;
 }
 
-/** Enemy `i` touched her and she was hurt (thrown toward `dir`): its own reaction, if its kind has one. */
+/**
+ * Enemy `i` touched her and she was hurt (thrown toward `dir`): its own reaction, if its kind has one. `glide` = the
+ * way she was gliding as it met her (-1 / 1), 0 if she was not.
+ */
 export function enemyTouched(
   state: GameState,
   scene: Scene,
@@ -618,10 +621,11 @@ export function enemyTouched(
   dir: number,
   t: Tuning,
   events: SimEvent[],
+  glide = 0,
 ): void {
   const e = state.enemies[i];
   if (!e) return;
-  KINDS[e.kind].touched?.(e, info(state, scene, t, events), dir);
+  KINDS[e.kind].touched?.(e, info(state, scene, t, events), dir, glide);
 }
 
 // How many enemies the last `slashEnemies` call glanced off (their shells were forward).

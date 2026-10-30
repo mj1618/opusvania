@@ -2556,9 +2556,17 @@ function sky(): Json {
 const TX = 3520;
 /** The tunnel's west hall's bramble run (x0, x1, room-local; review r6 #1: the area's longest composed run). */
 const TUNNEL_RUN: [number, number] = [1056, 3072];
-/** The pit's east end (r9: 1,024 -> 768 long, the den's warning floor wider) and the glide line's lamp. */
-const PIT_E = 3456 + 3520;
-const PIT_WICK: [number, number] = [3380 + 3520, 1560];
+/**
+ * The pit's west and east ends (r9: 1,024 -> 768 long, the den's warning floor wider; r9b: 960, its west end the
+ * hump's plumb east face, the take-off 384 over the far floor) and the glide line's lamp.
+ */
+const PIT_W = 2560 + 3520;
+const PIT_E = 3520 + 3520;
+const PIT_WICK: [number, number] = [3480 + 3520, 1560];
+/** The pit's hawker's home (r9b: under the roof, over the pit's east half). */
+const PIT_HAWK: [number, number] = [6800, 1170];
+/** The hump's west foot and its top (r9b: the take-off, 384 over the warning's floor). */
+const HUMP: [number, number] = [2272 + 3520, 1472];
 /** The den's warning's floor. */
 const WARN_FLOOR = 1856;
 /** The knuckles over it (x, top). */
@@ -2587,7 +2595,7 @@ function tunnel(): Json {
     skip: [[1472 + TX, 2368 + TX]],
   });
   r.cave(2304 + TX, 1088, 3712 + TX, 1856, { ceil: 96, w: 0, e: 0, corner: 0 });
-  r.hole(2688 + TX, 1856, PIT_E, 2048);
+  r.hole(PIT_W, 1856, PIT_E, 2048);
   // (r9: the pit 768, not 1,024. A glide from the jump's apex (let go, press again) meets the pit's east face ~60 px
   // under the lip and a kick puts her on the floor; a running jump, or a jump held through (the carried glide opens 16
   // px under the hump's top, already falling fast), drops into the pit ~200 short. A lower floor (1,984) let the apex
@@ -2600,8 +2608,8 @@ function tunnel(): Json {
   // A covered tube in the roof over the pit (review r5 #10: a hidden route, Nine Sols' vents): the way back west for
   // a clawed player, in from a shaft over the east block, out by a drop onto the hump (its faces refuse the claws:
   // the glide still owns the way east).
-  r.hole(2560 + TX, 768, 4288 + TX, 896);
-  r.hole(2560 + TX, 896, 2688 + TX, 1088);
+  r.hole(PIT_W - 128, 768, 4288 + TX, 896);
+  r.hole(PIT_W - 128, 896, PIT_W, 1088);
   r.hole(4160 + TX, 896, 4288 + TX, 1088);
   // The west hall (r7, review r6 #1 / #10: the room grown west under the hub's west half, the notch closed): past the
   // burrbacks the floor runs on west into a long low hall, the bramble run (1,664) in a shallow pit across it under
@@ -2614,13 +2622,20 @@ function tunnel(): Json {
   r.hang(1536 + TX, 1280, 256, 352, 3, 'r');
   r.hang(2048 + TX, 1280, 192, 352, 3, 'l');
   // The hump, the pit (thorns all along its floor), the block under the shortcut.
-  r.burl(2304 + TX, 1856, 384, 256, 2);
+  // (r9b: the hump steps up from the west to a take-off 384 over the far floor, its east face plumb at the pit's lip:
+  // the highest ground is where she jumps. Over the old 256 drop a jump held through landed 25 px past the lip. Now a
+  // glide from the lip, held through, from the apex or a walk-off, lands well clear, and a jump still falls short of
+  // the far face.)
+  r.mass(HUMP[0], 1856 - 192, PIT_W - HUMP[0], 192);
+  r.mass(HUMP[0] + 96, HUMP[1], PIT_W - HUMP[0] - 96, 1856 - 192 - HUMP[1]);
   r.mass(4288 + TX, 1408, 192, 384);
-  r.noClaws(2560 + TX, 768, 1088);
-  r.noClaws(2688 + TX, 896, 1088);
+  r.noClaws(PIT_W - 128, 768, 1088);
+  r.noClaws(PIT_W, 896, 1088);
+  // (r9b: the pit's far face is slick: a jump that falls short slides into the thorns, no kick up it.)
+  r.noClaws(PIT_E, 1856, 2048);
   r.noClaws(2304 + TX, 1088, 1280);
   r.shortcut('sc-cellar', 4416 + TX, 1152, 64, 256, 'w');
-  r.thorns('thorn-pit', 2688 + TX, 2048, PIT_E - 2688 - TX);
+  r.thorns('thorn-pit', PIT_W, 2048, PIT_E - PIT_W);
   r.thorns('thorn-run', TUNNEL_RUN[0], 1920, TUNNEL_RUN[1] - TUNNEL_RUN[0]);
   r.burrback('burr-tu-1', 1100 + TX, 1856, 1, 220, { fenced: true });
   r.burrback('burr-tu-2', 1450 + TX, 1856, -1, 160, { fenced: true });
@@ -2628,7 +2643,7 @@ function tunnel(): Json {
   r.ants('ant-tu', 1700 + TX, 900 + TX, 1856, 2);
   r.hoard('burrow-', 860 + TX, 2020, 100, 60, 2);
   r.cover('burrow-cover', 704 + TX, 1920, 320, 256, 'burrow-panel');
-  r.cover('tube-cover', 2496 + TX, 704, 1856, 448);
+  r.cover('tube-cover', PIT_W - 192, 704, 4288 + TX + 64 - (PIT_W - 192), 448);
   r.hoard('tube-', 3200 + TX, 840, 400, 40, 2);
   r.landmark('tracks', 'tracks', 3000 + TX, 1856);
   // Over the run: three knuckles (low and slow), each with a pod, and two more pods hung from the roof's roots (the
@@ -2654,11 +2669,16 @@ function tunnel(): Json {
   // (a jump off it falls past 280 px under the flame), lights her as she glides by, and the hawker orbits it: its
   // strike comes mid-glide, told, with room to cut it or drop under it. Flung off it she only lands on the floor
   // sooner. Three glints on the line (v8: eight), the glide the prize.
+  // r9b: it hunts her, not the flame (on its orbit's clock the strike came whenever the clock said, and what she saw
+  // of it was a 6-frame pull-back). It hangs under the roof over the pit's east half, out of every glide's line,
+  // sees her from a third of the way across (never on the hump: the lip is 640 off), tells for 30 frames and strikes
+  // where her glide will be. A check back, a drop and a fresh glide, a cut or a fling off its lamp answers it (the
+  // lamp out, it leaves); a blow throws her on along her glide (`glideKnockVx`): a light, not the crossing.
   r.lamp('wick-pit', PIT_WICK[0], PIT_WICK[1]);
-  r.flyer('hawker', 'hawk-pit', PIT_WICK[0] - 140, PIT_WICK[1] - 120, -1, {
-    orbit: 'wick-pit',
-    period: 180,
-    radius: 200,
+  r.flyer('hawker', 'hawk-pit', PIT_HAWK[0], PIT_HAWK[1], -1, {
+    guards: 'wick-pit',
+    radius: 80,
+    sight: 520,
   });
   r.arc('pit-arc-', 2816 + TX, 3328 + TX, 1560, 100, 3);
   // The den's warning (r8, review r7 #7): a gated wave on the east floor where the glide lands. A root lid lies over
@@ -2724,7 +2744,7 @@ function tunnel(): Json {
   r.place('nest-mouth', 672, 1856);
   r.place('land', 1920 + TX, 1856);
   r.place('floor', 1000 + TX, 1856);
-  r.place('hump', 2496 + TX, 1600);
+  r.place('hump', PIT_W - 96, HUMP[1]);
   r.place('east', 3900 + TX, WARN_FLOOR);
   r.place('low', 4300 + TX, 2048);
   r.place('ledge', 4350 + TX, 1408);

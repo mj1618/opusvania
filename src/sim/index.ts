@@ -546,6 +546,8 @@ export function step(
       ? undefined
       : e0;
   if (e && p.invuln === 0 && p.hp > 0 && !state.goal.gathered) {
+    // (The way she was gliding as it met her: a hawker's blow keeps her on it, canopy r9b.)
+    const glide = p.gliding ? (p.vx > 0 ? 1 : p.vx < 0 ? -1 : p.facing) : 0;
     const pc = p.x + p.w / 2;
     const ec = e.x + e.w / 2;
     const dir = pc < ec ? -1 : pc > ec ? 1 : -p.facing;
@@ -567,7 +569,7 @@ export function step(
       // The creature that hit her holds as long as she does (the blow lands: `health.hurtHitstop`).
       e.hitstop = Math.max(e.hitstop, state.player.hitstop);
     }
-    enemyTouched(state, S, touch, dir, t, events);
+    enemyTouched(state, S, touch, dir, t, events, glide);
   }
   // A boss's blade (the Mantis: its strike, its cuts, a ripple): its own box, not its body.
   bossBlade(state, S, P, t, slowed || aiming, events);

@@ -343,6 +343,13 @@ function toRim(info: StepInfo, t: L, rim: number): void {
   p.vy = Math.min(p.vy, -t.rimLift);
 }
 
+/** A blow on a gliding moth (`glideKnockVx` > 0): on along her glide (`dir`), lifted `glideKnockLift`. */
+function glideKnock(p: PlayerState, t: L, dir: number): void {
+  p.vx = dir * t.glideKnockVx;
+  p.kickX = 0;
+  p.vy = -t.glideKnockLift;
+}
+
 /** A pass begins: `n` frames of swoop after the pull-back (`enemyDive` at the flame). */
 function swoop(e: EnemyState, info: StepInfo, t: L, f: { x: number; y: number }, n: number): void {
   const span = frames(t.diveWindupFrames) + n;
@@ -1116,13 +1123,17 @@ export const lampwing: KindRules = {
   },
 
   /** Its touch hurt her: it bounces off, away from her centre, and has had enough for now. */
-  touched(e, info, dir) {
+  touched(e, info, dir, glide) {
     if (e.mode === 'dead') return;
     const t = rowOf(info.t, e);
     const p = info.state.player;
     // (`rim`: every blow of it sends her toward the rim, up and over, never off it: the crown, round 4.)
     const rim = info.scene.enemies?.find((s) => s.id === e.id)?.rim;
     if (rim !== undefined) toRim(info, t, rim);
+    // A gliding moth struck goes on her way (canopy r9b: the tunnel's hawker knocked her straight down, or back,
+    // into the pit almost every crossing): thrown along her glide and lifted, so the blow costs a light, not the
+    // crossing. Held, the wings open again as the stagger ends.
+    const keep = glide !== 0 && rim === undefined && t.glideKnockVx > 0;
     // On a rhythm: a moth caught in the orbit as it passes is struck straight down (into the tunnel under
     // a throw gap: a pip and the slow way), and the pass goes on to the other perch.
     if (e.orbit >= 0 && e.mode === 'dive') {
@@ -1131,9 +1142,12 @@ export const lampwing: KindRules = {
       p.lureGrace = e.orbit;
       p.lureGraceFrames = Math.max(p.lureGraceFrames, frames(t.passGraceFrames));
       if (rim !== undefined) return;
-      p.vx = 0;
       p.pullX = 0;
-      p.vy = t.passKnockDown;
+      if (keep) glideKnock(p, t, glide);
+      else {
+        p.vx = 0;
+        p.vy = t.passKnockDown;
+      }
       return;
     }
     const dx = e.x + e.w / 2 - (p.x + p.w / 2);
@@ -1151,6 +1165,11 @@ export const lampwing: KindRules = {
     // in R8 the blow dropped her into the thorn bed under the throw gap).
     if (rim !== undefined) return;
     if (t.huntCaught && strikeOut(info)) return;
+    if (keep) {
+      p.pullX = 0;
+      glideKnock(p, t, glide);
+      return;
+    }
     // A hawker blow on one standing knocks her straight up, never sideways (area1-plan-r3: the crown hawker
     // must never carry her over the rim). (`hurtPlayer` has already cleared `grounded`: read her feet.)
     if (t.straightKnock && onGround(info)) {

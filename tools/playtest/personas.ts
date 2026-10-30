@@ -1696,6 +1696,9 @@ class Planner implements Persona {
     const f = o.frame;
     if (f - this.targetSince > 60 * 45) {
       this.giveUp(t, 'not reached in 45 s', f);
+      // (Canopy r9b: the rest of that ground with it. The r9 run spent 45 s on each cell of the well's shard shelf,
+      // which only a fling reaches, one after another, before the door it had in frame.)
+      if (t.key.startsWith('cell:')) this.giveUpGround(mind, t, f);
       return 0;
     }
     if (!p.grounded && mind.climber && (p.vy < -2 || p.mode === 'wallSlide') && f - this.airClimbAt > 30) {
@@ -1828,6 +1831,20 @@ class Planner implements Persona {
       return this.startLine(o, ctx, scene, mind, cur, { kind: 'surface', surface: fin }, cands, m, null);
     }
     return this.startLine(o, ctx, scene, mind, cur, { kind: 'surface', surface: to }, cands, m, null);
+  }
+
+  /** Unwalked ground it could not reach: every other unwalked cell on the same surface goes too. */
+  private giveUpGround(mind: Mind, t: Target, f: number): void {
+    const s = mind.surfaces.find((q) => !q.cap && t.stand(q));
+    if (!s) return;
+    let n = 0;
+    for (let x = s.x0 + 64; x < s.x1 - 32; x += CELL) {
+      const key = `cell:${cellKey(x, yAt(s, x))}`;
+      if (this.visited.has(key.slice(5)) || this.given.has(key)) continue;
+      this.given.add(key);
+      n++;
+    }
+    if (n) this.notes.push(`f${f}: and the ${n} other unwalked cell(s) on that ground (${s.x0}-${s.x1})`);
   }
 
   private failed(m: Move, f: number, why: string, mind: Mind): void {
