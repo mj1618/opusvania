@@ -38,6 +38,13 @@ const C = 'wallJump';
 const G = 'glide';
 
 const CLAIMS: Claim[] = [
+  // The hatching branch (r6): the first dark edge, a pocket under the branch's end, before the drop.
+  {
+    room: 'cn-hatch',
+    from: [4950, 1320],
+    kit: [],
+    reach: ['drop', 'cn-hatch:pocket-1', 'cn-hatch:pocket-2', 'cn-hatch:pocket-3'],
+  },
   // The Crossing (r6: 8,000 wide, the old hub east of x 3520): from the landing the low west and the fork are open;
   // the high limb, the clump's and the block's secrets (claws), the glide shelf and the door (three seeds) are shut.
   {
@@ -52,6 +59,7 @@ const CLAIMS: Claim[] = [
       'cn-hub:bank-great',
       'cn-hub:high-great',
       'cn-hub:shelf-great',
+      'vent',
     ],
     max: 9000,
   },
@@ -59,7 +67,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-hub',
     from: [6160, 1152],
     kit: [C],
-    reach: ['limbs', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:bank-great', 'cn-hub:high-great'],
+    reach: ['limbs', 'vent', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:bank-great', 'cn-hub:high-great'],
     not: ['door', 'cn-hub:shelf-great'],
     max: 12000,
   },
@@ -138,7 +146,9 @@ const CLAIMS: Claim[] = [
     max: 9000,
   },
   // The upper limbs: both ways with the claws, the niche.
-  { room: 'cn-limbs', from: [200, 768], kit: [C], reach: ['hub', 'well', 'cn-limbs:niche-great'] },
+  { room: 'cn-limbs', from: [200, 768], kit: [C], reach: ['hub', 'well', 'vent', 'cn-limbs:niche-great'] },
+  // (r6: the covered vent from the floor into the hub's chamber, and back up to the high exit.)
+  { room: 'cn-limbs', from: [2448, 1280], kit: [C], reach: ['vent', 'hub'] },
   { room: 'cn-limbs', from: [3000, 576], kit: [C], reach: ['well'] },
   // The rot branch: down from the giant, through the rotten walls; the crawl there and back without the claws; the
   // web; the Elder's room (its climb and the plug into the well need the claws).
@@ -162,7 +172,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-fork',
     from: [400, 1344],
     kit: [],
-    reach: ['hub', 'cellar', 'cn-fork:stone-east'],
+    reach: ['hub', 'cellar', 'cn-fork:stone-east', 'cn-fork:stone-great'],
     not: ['grove', 'cn-fork:shelf-great'],
   },
   { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'], not: ['cn-fork:shelf-great'] },
@@ -229,7 +239,12 @@ const CLAIMS: Claim[] = [
     reach: ['crown', 'gap', 'attic', 'spire', 'cn-bower:p-bower'],
     max: 9000,
   },
-  { room: 'cn-bower', from: [400, 704], kit: [C, G], reach: ['gap', 'crown', 'spire', 'cn-bower:kin-great'] },
+  {
+    room: 'cn-bower',
+    from: [400, 704],
+    kit: [C, G],
+    reach: ['gap', 'crown', 'spire', 'cn-bower:kin-great', 'cn-bower:kin-great-2', 'place:chamber'],
+  },
   { room: 'cn-crown', from: [1400, 1792], kit: [C], reach: ['bower', 'glide'] },
   { room: 'cn-attic', from: [200, 1184], kit: [], reach: ['bower', 'cn-attic:breath-hollow'] },
   // The gap: without the glide the far limb is out of reach (a fall drops to the fork or climbs back); with it, the
@@ -254,6 +269,8 @@ const CLAIMS: Claim[] = [
     max: 9000,
   },
   { room: 'cn-tunnel', from: [1920, 1856], kit: [C], reach: ['hub', 'burrow'], not: ['den', 'cellar'] },
+  // (r6: the covered tube over the pit is the clawed way back west, never the way east.)
+  { room: 'cn-tunnel', from: [3900, 1856], kit: [C], reach: ['place:tube', 'hub'], max: 9000 },
   { room: 'cn-burrow', from: [860, 1216], kit: [C], reach: ['tunnel', 'cn-burrow:stone-deep'] },
   // (The balcony's lip reaches the arena floor: v3's bitten corner sealed it, a softlock only the video found.)
   {
