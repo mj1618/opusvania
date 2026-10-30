@@ -126,13 +126,13 @@ and its foot wall (the hollow root), the bower's kin wall, the gap's roost (the 
 out's ledge wall. Majors: two moonDrops (the two branch ends), five moth-stones, the keen blade, long breath, night
 eyes, quick wings, three seeds, the two abilities.
 
-## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~25 min since r4)
-57 claims hold: every exit and find of every room is reachable with the kit stated, and the locks hold without
+## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~10 min since r4)
+55 claims hold: every exit and find of every room is reachable with the kit stated, and the locks hold without
 their key (as v3, plus r4's: the chimneys only by kicks across (the explorer's `zig` macros: no single face is a
 ladder), the Elder's and the way out's plugs cut from under them, the hub's clump only with the claws, the giant's
 seed only through its wall (`cuts: false`), the Grove's gate only once the pit is clear, the den's balcony reaching
 the arena floor and not climbable back (`place:` claims), the giant's tier 3 back up with the claws). r4 counts bark
-cuts in the search's keys (`barkHp`), which made it ~10x slower. The world check passes (claws, then glide).
+cuts in the search's keys (`barkHp`), which made it ~5x slower. The world check passes (claws, then glide).
 
 ## Played by the human-like bots (r4: playtest-reports/canopy-r4, canopy-r4-fork)
 `npm run humanplay -- run --world canopy --skills casual,average,skilled --seeds 1 --no-render --minutes 25`
