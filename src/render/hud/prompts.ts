@@ -16,6 +16,10 @@
  *    creature that is aware of her (the sim's `player.offerTarget`: round 3, so a press never meets
  *    "nothing in reach"). Gone for good once a gift has landed (`enemyGift`); after `offerShows`
  *    showings with no press she is not nagged again until her next fade.
+ *  - the fling (the Canopy r8: the hatch's first fling, a minute in): the Lamp key's cap, HELD, beside the
+ *    flame (not her: the flame is what the key is for) while a press would catch one (the sim's `flingTarget`)
+ *    and she has never flung. Gone for good on her first `fling`. No bar of text, no arrow: the cap sinks and
+ *    stays down, and a thin ring breathes round the flame in the cap's time, so the two read as one thing.
  *
  * "For good" is kept in localStorage (try / catch: private windows have none). In `?manual` (the
  * capture tools, the tests) nothing shows and the storage is not touched, so shots stay clean;
@@ -25,6 +29,9 @@
  * The HUD has no camera; where she is on screen comes from `hudLink` (the goal renderer).
  */
 import { CanvasSource, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { flameAt, flingTarget } from '../../sim/lures';
+import type { GameState } from '../../sim/state';
+import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { hudLink } from './link';
 
@@ -68,6 +75,16 @@ export const PROMPTS = {
   /** Where it stands from her body centre, world px (x to the side away from the wall for the kick). */
   dx: 62,
   dy: -66,
+  /**
+   * The fling's cap: world px from the flame's centre (to the side away from her, a little up), the ring round
+   * the flame (radius px, how far it breathes), and how long she must be in reach before it shows (s: a fling
+   * already on its way is not interrupted by a key popping up).
+   */
+  flingDx: 64,
+  flingDy: 0,
+  flingRing: 30,
+  flingBreath: 6,
+  flingAfter: 0.08,
   /** Cap half-size, logical px. */
   cap: 13.5,
   /** The hold: seconds per loop, pressed from..to (of the loop), how far the cap sinks px. */
@@ -87,9 +104,23 @@ const CELL = 72;
 const PALE = 'rgba(226, 236, 240, 0.94)';
 const PALE_N = 0xe2ecf0;
 
-type Lesson = 'glide' | 'kick' | 'offer';
+type Lesson = 'glide' | 'kick' | 'offer' | 'fling';
 /** The keys of the offer (src/input/bindings.ts) and the letter on their cap. */
-const OFFER_KEYS: Record<string, string> = { KeyV: 'V', KeyF: 'F', KeyI: 'I' };
+const OFFER_KEYS: Record<string, string> = { KeyF: 'F' };
+/** The Lamp's keys (the fling, src/input/bindings.ts) and their letters. */
+const LAMP_KEYS: Record<string, string> = { KeyV: 'V', KeyI: 'I' };
+/** The flame's place this frame (scratch). */
+const FLAME = { x: 0, y: 0 };
+
+/**
+ * The flame a press of Lamp would catch now (-1 none): the sim's own `flingTarget` over the render view (its
+ * player is interpolated; lures and frame are the sim's). Never while she is already holding a fling.
+ */
+function flingReady(sim: SimView): number {
+  if (sim.player.fling >= 0 || !sim.scene.lures?.length) return -1;
+  const view = { player: sim.player, lures: sim.lures, frame: sim.frame } as unknown as GameState;
+  return flingTarget(view, sim.scene, tuning);
+}
 
 /** A key cap with its letter (or the space bar's mark), pale on a soft dark seat. `wide` = half-width px. */
 function paintCap(label: string, wide: number): Texture {
@@ -206,10 +237,13 @@ function creatureNear(sim: SimView, px: number): boolean {
 }
 
 export class Prompts {
+  /** The HUD's handle (it fades this out for a held beat): the cap's box and the fling's ring. */
   readonly root = new Container({ label: 'hud-prompts' });
+  /** The cap and what goes with it, standing beside her (or the flame). */
+  private readonly box = new Container({ label: 'hud-prompt-cap' });
   /** Off in `?manual` (captures, tests). */
   enabled = true;
-  readonly taught: Record<Lesson, boolean> = { glide: false, kick: false, offer: false };
+  readonly taught: Record<Lesson, boolean> = { glide: false, kick: false, offer: false, fling: false };
   private readonly store: boolean;
   private readonly caps = new Map<string, Texture>();
   private readonly cap = new Sprite();
@@ -218,6 +252,15 @@ export class Prompts {
   private readonly bar = new Graphics();
   private readonly wings: [Graphics, Graphics] = [new Graphics(), new Graphics()];
   private readonly away = new Graphics();
+  /** The fling's ring round the flame (screen space, like the cap). */
+  private readonly ring = new Graphics();
+  /** The Lamp key she last pressed; V until she has pressed one. */
+  private lampKey = 'KeyV';
+  /** Seconds a flame has been in her reach (the fling's lesson waits `flingAfter`). */
+  private inReach = 0;
+  /** The flame's offset from her on screen, logical px (the fling's cap stands by it). */
+  private fx = 0;
+  private fy = 0;
   /** The jump key she last pressed (a `KeyboardEvent.code`); Z until she has pressed one. */
   private key = 'KeyZ';
   /** The offer key she last pressed; V until she has pressed one. */
@@ -258,6 +301,7 @@ export class Prompts {
         this.taught.glide = got.glide === true;
         this.taught.kick = got.kick === true;
         this.taught.offer = got.offer === true;
+        this.taught.fling = got.fling === true;
       } catch {
         // No storage: she is taught once per visit.
       }
@@ -266,6 +310,7 @@ export class Prompts {
       window.addEventListener('keydown', (e) => {
         if (e.code === 'Space' || e.code === 'KeyZ' || e.code === 'KeyK') this.key = e.code;
         else if (OFFER_KEYS[e.code]) this.offerKey = e.code;
+        else if (LAMP_KEYS[e.code]) this.lampKey = e.code;
       });
       (window as unknown as { __prompts?: Prompts }).__prompts = this;
     }
@@ -288,8 +333,10 @@ export class Prompts {
       .lineTo(9, -11)
       .lineTo(8.8, -5.4)
       .stroke({ width: 1.2, color: PALE_N, alpha: 0.92, cap: 'round', join: 'round' });
-    this.root.addChild(this.lip, this.bar, this.wings[0], this.wings[1], this.away, this.cap);
-    this.root.visible = false;
+    this.box.addChild(this.lip, this.bar, this.wings[0], this.wings[1], this.away, this.cap);
+    this.root.addChild(this.ring, this.box);
+    this.ring.visible = false;
+    this.box.visible = false;
   }
 
   /** Forgets what she has learned (dev). */
@@ -297,6 +344,7 @@ export class Prompts {
     this.taught.glide = false;
     this.taught.kick = false;
     this.taught.offer = false;
+    this.taught.fling = false;
     this.offerShown = 0;
     this.offerRest = false;
     this.save();
@@ -330,6 +378,7 @@ export class Prompts {
       } else if (e.type === 'fall') this.ranOff = dropUnder(sim, P.aheadFrames, true) > P.dropPx;
       else if (e.type === 'jump') this.ranOff = false;
       else if (e.type === 'enemyGift') this.learn('offer');
+      else if (e.type === 'fling') this.learn('fling');
       else if (e.type === 'offer' || e.type === 'offerMiss') this.offerShown = 0;
       else if (e.type === 'fade') {
         this.offerShown = 0;
@@ -346,9 +395,22 @@ export class Prompts {
     this.sinceWall = p.mode === 'wallSlide' ? 0 : Math.min(1e6, this.sinceWall + df);
     if (sim.frame < 2) this.sinceWall = 1e6;
 
+    // A flame in her reach (the fling's lesson): where it is from her, on screen.
+    const flame = !this.taught.fling && free ? flingReady(sim) : -1;
+    this.inReach = flame >= 0 ? this.inReach + dt : 0;
+    if (flame >= 0) {
+      const l = sim.scene.lures?.[flame];
+      if (l) {
+        flameAt(sim.lures, flame, l, sim.frame - 1 + sim.alpha, tuning, FLAME);
+        this.fx = (FLAME.x - p.cx) * hudLink.zoom;
+        this.fy = (FLAME.y - p.cy) * hudLink.zoom;
+      }
+    }
+
     let want: Lesson | null = null;
     if (this.enabled && hudLink.on) {
       if (!this.taught.kick && this.slide >= P.slideFrames) want = 'kick';
+      else if (flame >= 0 && this.inReach >= P.flingAfter) want = 'fling';
       else if (!this.taught.offer && !this.offerRest && free && giftReady(sim)) want = 'offer';
       else if (
         !this.taught.glide &&
@@ -385,12 +447,14 @@ export class Prompts {
         // New: it stands where she is at once.
         if (this.lesson !== want) this.t = 0;
         // A hold is seen held from its first frame: it starts pressed, the bar a third full.
-        if (want === 'glide') this.t = P.holdLoop * 0.3;
+        if (want === 'glide' || want === 'fling') this.t = P.holdLoop * 0.3;
         this.lesson = want;
-        this.side = want === 'kick' ? (p.wallDir > 0 ? -1 : 1) : 1;
+        // (The fling's cap stands on the flame's far side from her.)
+        this.side =
+          want === 'kick' ? (p.wallDir > 0 ? -1 : 1) : want === 'fling' ? (this.fx >= 0 ? 1 : -1) : 1;
         if (this.alpha <= 0.003) this.place(1);
       }
-      this.linger = want === 'glide' ? P.linger : P.lingerKick;
+      this.linger = want === 'glide' || want === 'fling' ? P.linger : P.lingerKick;
     } else this.linger -= dt;
     const done = this.lesson !== null && this.taught[this.lesson];
     const on = this.lesson !== null && !done && this.linger > 0 && this.enabled;
@@ -399,27 +463,31 @@ export class Prompts {
       Math.max(0, this.alpha + (on ? dt / P.fadeIn : -dt / (done ? P.learned : P.fadeOut))),
     );
     if (this.alpha <= 0.003) {
-      this.root.visible = false;
+      this.box.visible = false;
+      this.ring.visible = false;
       if (!on) this.lesson = null;
       return;
     }
     this.t += dt;
     this.place(Math.min(1, dt * 12));
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha) * P.alpha;
-    this.root.visible = true;
-    this.root.alpha = a;
-    this.root.position.set(Math.round(this.x * 2) / 2, Math.round(this.y * 2) / 2);
-    this.root.scale.set(this.lesson === 'kick' ? P.kickScale : 1);
+    this.box.visible = true;
+    this.box.alpha = a;
+    this.box.position.set(Math.round(this.x * 2) / 2, Math.round(this.y * 2) / 2);
+    this.box.scale.set(this.lesson === 'kick' ? P.kickScale : 1);
 
     // The cap for the key she uses (the jump's; the offer's on its lesson).
-    const keyNow = this.lesson === 'offer' ? this.offerKey : this.key;
+    const keyNow =
+      this.lesson === 'offer' ? this.offerKey : this.lesson === 'fling' ? this.lampKey : this.key;
     if (this.shownKey !== keyNow) {
       this.shownKey = keyNow;
       const wide = keyNow === 'Space' ? P.cap * 2.3 : P.cap;
       let tex = this.caps.get(keyNow);
       if (!tex) {
         tex = paintCap(
-          keyNow === 'Space' ? ' ' : (OFFER_KEYS[keyNow] ?? (keyNow === 'KeyK' ? 'K' : 'Z')),
+          keyNow === 'Space'
+            ? ' '
+            : (OFFER_KEYS[keyNow] ?? LAMP_KEYS[keyNow] ?? (keyNow === 'KeyK' ? 'K' : 'Z')),
           wide,
         );
         this.caps.set(keyNow, tex);
@@ -432,7 +500,8 @@ export class Prompts {
         .stroke({ width: 1.1, color: PALE_N, alpha: 0.42, cap: 'round' });
     }
     const wide = keyNow === 'Space' ? P.cap * 2.3 : P.cap;
-    const hold = this.lesson === 'glide';
+    const fling = this.lesson === 'fling';
+    const hold = this.lesson === 'glide' || fling;
     let down = 0;
     let held = 0;
     if (hold) {
@@ -464,7 +533,22 @@ export class Prompts {
           .roundRect(-bw + 1.2, by + 1.2, fillW, 3, 1.5)
           .fill({ color: 0xffd9a0, alpha: 0.92 * down + 0.1 });
     }
-    const open = hold ? (0.55 + 0.45 * smooth(0, 0.3, held)) * down : 0;
+    // (The fling's lesson has no wings: the ring round the flame is its picture.)
+    const open = hold && !fling ? (0.55 + 0.45 * smooth(0, 0.3, held)) * down : 0;
+    this.ring.visible = fling;
+    if (fling) {
+      // A thin pale ring round the flame, tightening while the key is held (the world slows: a breath held).
+      const z = hudLink.zoom;
+      const r = (P.flingRing + P.flingBreath * (1 - down)) * z;
+      this.ring
+        .clear()
+        .circle(0, 0, r)
+        .stroke({ width: 1.2, color: PALE_N, alpha: 0.35 + 0.35 * down })
+        .circle(0, 0, r + 3.5 * z)
+        .stroke({ width: 3, color: 0xffd9a0, alpha: 0.1 * down });
+      this.ring.alpha = a;
+      this.ring.position.set(hudLink.x + this.fx, hudLink.y + this.fy);
+    }
     for (const side of [-1, 1]) {
       const w = this.wings[side < 0 ? 0 : 1];
       w.visible = open > 0.01;
@@ -485,10 +569,13 @@ export class Prompts {
   private place(k: number): void {
     const P = PROMPTS;
     const z = hudLink.zoom;
-    // Inside the visible view (any window shape), clear of its edges.
+    // Inside the visible view (any window shape), clear of its edges. The fling's stands by the flame.
     const v = hudLink.view;
-    const tx = Math.min(v.left + v.w - 60, Math.max(v.left + 60, hudLink.x + this.side * P.dx * z));
-    const ty = Math.min(v.top + v.h - 80, Math.max(v.top + 50, hudLink.y + P.dy * z));
+    const fl = this.lesson === 'fling';
+    const ax = fl ? hudLink.x + this.fx + this.side * P.flingDx * z : hudLink.x + this.side * P.dx * z;
+    const ay = fl ? hudLink.y + this.fy + P.flingDy * z : hudLink.y + P.dy * z;
+    const tx = Math.min(v.left + v.w - 60, Math.max(v.left + 60, ax));
+    const ty = Math.min(v.top + v.h - 80, Math.max(v.top + 50, ay));
     this.x += (tx - this.x) * k;
     this.y += (ty - this.y) * k;
   }

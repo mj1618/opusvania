@@ -682,6 +682,12 @@ export class GoalRenderer {
   }
 
   update(dt: number, clock: number, cam: CameraView, sim: SimView): void {
+    // The HUD has no camera: tell it where she is on screen (in every room: the Canopy has no lanterns or heart, and
+    // its prompts, the fling's and the glide's, stood nowhere until round 9).
+    hudLink.on = true;
+    hudLink.x = SAFE_W / 2 + (sim.player.cx - cam.x) * cam.zoom;
+    hudLink.y = SAFE_H / 2 + (sim.player.cy - cam.y) * cam.zoom;
+    hudLink.zoom = cam.zoom;
     if (this.lamps.length === 0 && !this.heart) return;
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
     const L = GOAL.lantern;
