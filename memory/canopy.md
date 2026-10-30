@@ -1,7 +1,7 @@
-# The Canopy: the first area built to the reference numbers (v8, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v9, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
-docs/design/levels/reviews/canopy-r1.md .. canopy-r7.md; the reference data: docs/design/reference-levels/ (all four
+docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
 exact since 2026-10-30).
 Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
@@ -23,6 +23,32 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v9 (review r8): shape, frames, the second peak
+- **Sealed air** (`sealDeep(d)` before `fill()`, `sealed(x0, y0, x1, y1)` by hand): mass more than `d` from any carved
+  air or the room's edge becomes air she can never reach, with a back, listed in `marks.sealed`. The sim and the
+  painter see air; `export-area.ts` (so the map, `metrics.ts`, `canopy-furniture.ts`) and the bots' map
+  (`buildSurfaces`) see rock. Keep `d` >= 192 from anything reachable, and off the room's edge. **The bots walked at
+  sealed floors for 45 s at a time until their map dropped them**: any new kind of unreachable air needs the same.
+  Render painted the hub's sealed under-floor as the open sky backdrop, not the deep back (render's call).
+- **Deep solid in frame**: `npx tsx tools/levels/canopy-frames.ts [room ...]` frames every wide stop with the real
+  follow camera and its zones (headless, a second for all rooms) at 16:9 / 16:10 / 21:9 and prints look:check's
+  deep share (> 96 px in); the bar is <= 30% a stop, a room's median <= 20%. It matched the review's numbers on v8.
+- **The well is two climbing legs** (leg 1, leg 2's chimney), then the gallery: walked and jumped (terraces, a bough,
+  a stair of one-ways under open air: a solid band over a stair step bumps the jump off it). A one-way stair needs
+  no band within 272 px over any step's launch spot.
+- **Fling lines**: `npx tsx tools/levels/fling-probe.ts <room> <lamp> <x> <y> [--set=<lamp>=x,y] [--glide] [--hold=]`
+  prints every aim's flight off a lamp (lamps it brings into reach, landing, thorns). Reach is 110 px from her centre,
+  so two aims off one lamp only share a third lamp within ~300 px of it (the paths fan out). After a fling, the next
+  lamp can be in reach inside the 8-frame `flingCooldown` (a press eaten).
+- **The glide is weak over a shallow drop**: a held ground jump opens the wings 16 px under the take-off, already
+  falling fast; over the tunnel's pit it lands where a plain jump does. The long glide is from the apex (let go, press
+  again) or a walk-off. A glide lock over a pit 256 under the take-off has ~150 px between a jump and an apex glide.
+- **Peaks along the route**: `canopy-furniture.ts --route` (`ROUTE`: room-local points from the hatch to the den;
+  sliding 2-screen windows, things within 640 x 360 of her line, glints out) and the hub-to-Grove climbing share.
+  A full-frame window counted every room's walls and flattened everything (median 4.8).
+- **A map station** (sim): `MoonPatch.map` / `hangs` (`mapStation`, `stoneHung`); the hub's `p-crossing`.
+- **Every creature-waking trigger has a camera zone keyed to its wave** (`canopy-check.ts`).
 
 ## v8 (review r7): the first ten minutes
 - **A required lesson in a room crossed once**: a fling lamp goes out for good when she lands, so a required fling on a
@@ -226,6 +252,9 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   lookahead flung and the hands never did, "did not go as foreseen"). v7's still played the old catch. Their old
   lamp-cut lines snuff lamps for good: a required lamp must `relight`. r8 run (canopy-r8): all three out of the
   hatch in the first minute, two clear the hollow's ambush, none finds the shelf to the limbs.
+- r9 (canopy-r9): claws at 1:22-2:19; the average and skilled bots in the hollow at 3:37-3:54, the average on the
+  door's floor 14 s after the ambush, then off to explore (the shard's shelf they cannot fling to, the well's bottom);
+  none to the limbs. Their explorer chases unwalked ground before exits.
 - r6: **they read strips** (lines.ts: a climb move whose face has a thorn strip in its span offers the clean far face
   first, `wall climb (the far face: ...)`, and `humanPick` takes it first).
 

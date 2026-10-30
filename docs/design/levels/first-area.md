@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v8, 2026-10-31)
+# The Canopy: a first area built to the reference numbers (v9, 2026-10-31)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -224,6 +224,92 @@ the render builder's.
     hatch now has `art.pieces`).
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
+
+## v9: the level side of review round 8 (`reviews/canopy-r8.md`, 7/10)
+Round 8's verdict: the first ten minutes are fair; what holds it at 7 is shape. The well was a vertical sink with an
+unlit door, the frames half black boxes, the second peak on a branch, 51 glints buying nothing. v9 takes the [level]
+items (#1, #2, #4, #5, #7, #8, #9); #3, #6 and #10 are the render builder's.
+- **#1, the well.**
+  - *Two climbing legs to the limbs* (v8: legs 1, 2, 3a, 3b). Leg 3 is **the gallery**, a switchback through the
+    hollowed west wall, walked and jumped: west along the landing's floor (a burrback, a bramble pit), up two root
+    terraces at the west wall, east along a bough (a lampwing over it, one dive a pass), up a stair of roots through
+    a root across the hollow's floor. The solver walks it with no claws at all (`(1700, 2432) [none]`).
+  - *Leg 2's strip is off the climb* (the bots' top hit source four rounds running): `thorn-w2` is the gallery's
+    bramble pit, 256 long in a 64 px pit, where a jump is the choice. Leg 2 is either face at delays 0-16 (36 of 36),
+    its top lip the chimney's width (the east face tops out on it).
+  - *The door*: a root step under it, so the hollow's floor, the step and the door are two plain jumps east of where
+    the stair comes up (I drove it: floor -> step -> door -> the limbs in 64 frames). A `door-notice` camera zone
+    over the stair's top holds the view at 640-2,560 x 256-1,344: the door is the frame's top right at 16:9, 16:10
+    and 21:9 (`canopy-r9.test.ts`). A `door` landmark (`door-limbs`) is for render to light.
+  - *The ambush pays*: a root shelf high on the west wall (256-832 x 800, its face slick) holds the moon shard (v8's
+    landing niche). Only the hollow lamp reaches it, an up-left fling from over the ambush floor (in the trigger:
+    the fight is on); the claim without the lamp holds (`lampKey`), lit it is taken.
+  - Path climbing between the hub and the Grove: 18% of the path's length (`canopy-furniture.ts --route`).
+- **#2, less solid in frame.** `sealDeep(d)` (generator): mass more than `d` px (256; 192 for the crawl, galleries and
+  Spire) from any carved air or the room's edge is carved out as sealed air with the back behind it, listed in
+  `marks.sealed` (Zod and `Room`: air to the sim and the painter, rock to the area export, the map and the bots).
+  Walls become shells, pillars and boughs. By hand: the well's pillars (behind leg 1's faces, under the gallery,
+  behind the stairwell), the hub's floor a 256 px bough (two posts by the seed door's shaft, the east bank too), the
+  fork's west block a 320 px trunk. `canopy-frames.ts` (headless, the real follow camera and zones, look:check's ring
+  test): **every wide stop of every room at most 30% deep solid** at 16:9, 16:10 and 21:9 (v8: 27 over); the well's
+  median 4% (v8: 44%), the hub 6%, the fork 7%. look:check on the painted frames: the well 2-10% deep, near-black 6-13%
+  (v8: 52-65%).
+- **#4, the second peak on the path.** The den's warning is a two-beat arena: the pit 768 (v8: 1,024), the floor 640 to
+  the lid; beat 1 the two lampwings down from the roof, beat 2 a juvenile pair and a burrback up out of the den's mouth
+  (or down the tube's shaft), each from 400+ px; the lid opens when the last falls; a `fit` zone over the arena until
+  `cn-tunnel-clear`; two lamps a jump over the floor, two root knuckles. The hawker orbits a lamp on the glide's line
+  (`wick-pit`): she is lit as she glides by and it strikes mid-glide (driven: a dive every crossing). The pit's arc
+  is three glints. Peaks measured along the route without glints (`alongRoute`, sliding 2-screen windows, what is
+  within 640 x 360 of her line): the Grove 11.5 a screen (3.8x the median 3.0), the tunnel's warning 9.0 (3.0x).
+- **#5, glints 51 -> 23** (no answer on the trade): kept as the prizes of lines and secrets (the limbs' niche 2, the
+  Elder's risk 2, the nest wall 2, the Grove's arc 3, the gap's roost 2 and glide 2, the tunnel's burrow 2, tube 2, pile
+  3, pit arc 3); the run's arc and leg 2's risk glints are gone. The trader's spot stays.
+- **#7, the gap's chain is three lamps.** `wick-gap-3` at 2,800 x 1,580, where the down-left and the left flings off the
+  second both pass (`fling-probe.ts`); straight down lands on a knuckle. From there a left or up-left fling carried a
+  clawed player onto the far limb, and a shorter far limb is past the glide (a walk-off glide sinks 0.45 px a px), so
+  a slick root hangs from the canopy between them (2,368-2,560, its foot at 1,560, under which the glide passes): the
+  flights west off the third lamp meet it and fall to the bramble. Driven: lamp 1 down-left, lamp 2 down-left, lamp 3
+  down-right, onto the pod garden. The lit proofs hold.
+- **#8, every set piece framed.** `fit` zones on the hollow's ambush (until `cn-well-clear`) and the den's warning;
+  `wing-am` waits by the lamp (1,450 x 820), off her column. `canopy-check.ts`: every trigger that wakes creatures has
+  a camera zone over it keyed to its wave's clear flag.
+- **#9, a reason to stop in the hub** (sim, small): a moon patch can be a **map station** (`MoonPatch.map`) that
+  **hangs moth-stones** (`hangs: [{stone, flag}]`). Resting at it pushes `mapStation` (render opens the map) and, for
+  each stone she has read and not hung, sets its flag and pushes `stoneHung` (`hung` = how many hang now). The hub's
+  save beside the kin's lamp (260 px) is one: `cn-stone-west / heart / east / high / deep`, one more each return.
+- **Bots** (a bug the run found): a persona's map took the floor of sealed air for ground and walked at it 45 s at a
+  time (the r9 run's first pass stood in the hub and the trunk for minutes); `buildSurfaces` drops tops inside
+  `marks.sealed`.
+
+**v9's numbers** (`metrics.ts`, `canopy-furniture.ts --check --route`; round 9's bar met):
+
+| measure | HK | Silksong | Ori | Nine Sols | Canopy v8 | **Canopy v9** |
+|---|---|---|---|---|---|---|
+| enemies per box screen | 0.55 | 0.26 | 0.57 | 0.59 | 0.55 | **0.59** (the gallery's two, the warning's beat 2) |
+| majors / minors | 17 / 4 | 8 / 41 | 23 / 11 | 16 / 13 | 23 / 51 | **23 / 23** |
+| hidden share | 0.35 | 0.22 | 0.18 | 0.26 | 0.27 | **0.30** |
+| things per box screen | 0.28 | 0.17 | 0.80 | 0.42 | 1.48 | **1.21** |
+| solid share of room boxes | 0.63 | 0.74 | 0.44 | 0.49 | 0.50 | **0.50** (sealed air counted as rock) |
+| deep solid in a wide stop (max) | | | | | 52% | **20%** (every stop <= 30%) |
+| peaks along the route (no glints) | | | | | (the tunnel's on a branch) | **Grove 3.8x, the warning 3.0x** |
+| hub -> Grove climbing | | | | | | **18% of the path** |
+
+What round 9's bar is (`check`): one room peak; two route peaks at >= 3x (the review asked 4x: the middle stretches,
+3-6 a screen on the trunk, the well and the bower / gap, would have to thin); thorns >= 10,000 px (two strips came off
+the climbs); the hub to the Grove climbing at most half its path.
+
+**Proven**: every claim of every room on 6ffd96e (27 rooms, a room a process), then the well and the tunnel again
+after the stair and the tunnel's last change. `canopy-r9.test.ts` (10): the door in frame at three shapes, the ambush
+fit and its lampwing's post, the shard by the fling, the warning's two beats and its lid and zone, glints <= 25, the
+gap's three aims, the map station. `climbs.ts --creatures`: leg 2 with the room's creatures 0 hits, the Spire's foot
+with its hawker <= 1.
+
+**Played by the bots** (playtest-reports/canopy-r9, on c543690; bugs only): claws at 1:22-2:19; the average bot in
+the hollow at 3:54 and on the door's floor 14 s after the ambush, then it turned back to explore (the shard's shelf,
+which it cannot fling to, and the well's bottom) and was lost there; the skilled bot spent 75 s jumping at the
+shard's shelf. None reached the limbs (4 / 27 rooms each). Hits: the gallery's bramble 2 (casual), its burrback 1-2;
+no leg-2 strip hits. A person walked the door in one go (driven); the bots' explorer goes for unwalked ground before
+exits and has no plan for a fling to a ledge.
 
 ## v8: the level side of review round 7 (`reviews/canopy-r7.md`, 6.5/10)
 Round 7's verdict: the shape is in the references' band, but the first ten minutes hold three things a new player
@@ -625,7 +711,22 @@ and the giant's tier 3 was a pocket (its shaft started 448 px over the floor). N
 two or three tries and leave (a thorn there returns them to the well's bottom when they never stood on the mouth's
 floor), none climbed the fork's claw face in 20 min, and the rot branch still swallows the no-claws bot.
 
-## What is still weak (for round 9)
+## What is still weak (for round 10)
+- **No person has played it.** Matt's run from the hatch to the Grove is still the gate.
+- **The tunnel's glide.** A jump held through (the carried glide opens 16 px under the hump's top, already falling
+  fast) is barely longer than a jump and drops into the pit; the clean crossing is a glide from the apex (let go, press
+  again) to the pit's east face and a kick up it. A lower warning floor let the apex glide land clean but opened the
+  pit to a jump and a kick (the lock leaked). The hawker's strike mid-glide nearly always knocks her into the pit
+  (a 6-frame tell).
+- **Route peaks at 3x, not 4x.** The middle (the trunk, the well's gallery and mouth, the bower and the gap) is 3-6
+  things a screen along the line; 4x needs it thinner, a density call.
+- **The bots don't leave the hollow.** The door is two jumps and in frame, but their explorer chases the shard's
+  shelf and the well's bottom; a person's read of it is unmeasured.
+- **The gap's hanging root** is a stark black column across the area's best still until render dresses it.
+- **The second lamp is in reach 5 frames after the first's release**, inside the fling's 8-frame cooldown: an early
+  press is eaten (a re-press works).
+
+## What was weak after v8 (round 9 answered most)
 - **No person has played it.** The first ten minutes now teach the fling, arrive instead of spawning and keep her save;
   Matt's run from the hatch to the Grove is still the evidence nothing else gives.
 - **The tunnel's peak is counted, not felt.** 59 things in 8.4 screens, 15 of them glints on lines (the run's arc,

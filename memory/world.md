@@ -100,6 +100,9 @@ the visited placed rooms' rects (scaled to fit, <= 1/8): room boxes with ids, so
 (amber), moon patches seen (ringed: her save patch), lures seen (warm dot burning / grey ring out), glades not taken
 (white diamond), exits seen and not crossed (green; arrival-only openings never), her (pulsing). "Seen" is sim-side
 and saved: within `map.seeX` 1000 x `seeY` 600 of her, every `map.seeEvery` 10 frames.
+Map stations (the Canopy r9, src/sim/progress.ts `restAt`): a moon patch with `map: true` pushes `mapStation` on a
+rest (render: open the map there), and its `hangs` set each read-but-unhung moth-stone's flag (`stoneHung`). Sealed
+air (`marks.sealed`) is rock on the map.
 
 ## Other worlds: prototype levels (2026-10-18)
 `content/worlds/<id>.json` (same schema as world.json) are their own worlds: `WORLD_FILES` / `WORLDS` / `getWorld`
