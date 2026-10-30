@@ -6,4 +6,6 @@ and the earlier study's downloads (`nifty-bhaskara-28e244/shots/reference/maps/`
 Hollow Knight is now read from the installed game: `hollow-knight/extract.py` (UnityPy dump of each scene) ->
 `rooms.py` (rooms in scene units) -> `build.py` (area.json), and `render_look.py` (look references, outside the repo);
 usage in `docs/design/reference-levels/hollow-knight/README.md`.
+Silksong is read from the installed game by `silksong/extract.py` (one file: `cabindex`, `dump`, `build`, `measure`,
+`render`, `enums`; usage in its docstring), method in `docs/design/reference-levels/silksong/EXTRACTED.md`.
 Run Python on downloaded data with `-I`.
