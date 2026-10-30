@@ -1020,7 +1020,7 @@ function hub(): Json {
   // route.)
   r.hole(0, 1280, 256, 1472);
   // A thorn pit in the clearing's floor, under the swing of the walk west (review r5 #3: hazard on the travel).
-  r.hole(3392, 1600, 3840, 1664);
+  r.hole(3456, 1600, 3712, 1664);
   r.hole(6720, 1600, 6976, 1664);
   // The seed door and its shaft into the root tunnel.
   r.gate('seed-door', 1792 + HX, 1600, 256, 64, 'seeds:3');
@@ -1056,7 +1056,7 @@ function hub(): Json {
   r.oneWay(3264, 1344, 128, 'branch');
   r.oneWay(4096, 1408, 160, 'branch');
   r.burl(4544, 1600, 384, 96, 1);
-  r.thorns('thorn-hub', 3392, 1664, 448);
+  r.thorns('thorn-hub', 3456, 1664, 256);
   r.thorns('thorn-hub-e', 6720, 1664, 256);
   r.patch('p-crossing', 2960, 1600);
   r.set('camera', { anchorY: 0.4 });
