@@ -1024,7 +1024,6 @@ function trunk(): Json {
   r.burl(1920, 704, 256, 192, 2);
   r.burl(1664, 704, 256, 384, 2);
   r.add('moonseeds', { id: 'seed-giant', x: 1824, y: 220 });
-  r.thorns('thorn-t1', 2304, 704, 96);
   r.thorns('thorn-t2', 768, 1024, 192);
   r.thornsUnder('thorn-roof', 960, 768, 128);
   r.thorns('thorn-t3', 256, 1664, 192);
@@ -1085,7 +1084,6 @@ function well(): Json {
   r.thornsUp('thorn-w1', 1024, 3600, 240);
   r.thornsUp('thorn-w2', 1508, 2620, 240);
   r.thornsUp('thorn-w3', 1024, 1400, 250);
-  r.thorns('thorn-floor', 2240, 4928, 128);
   r.flyer('lampwing', 'wing-shaft', 1280, 2240, -1, { radius: 200 });
   // The ambush: woken by the claws.
   r.burrback('burr-am-1', 640, 1152, 1, 300, { wakes: C, fenced: true });
