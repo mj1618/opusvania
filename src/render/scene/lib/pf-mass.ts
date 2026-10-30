@@ -2570,90 +2570,123 @@ function paintFloorMount(
     return;
   }
   if (fam === 'burl') {
-    const cx = lerp(sh.x0, sh.x1, side < 0 ? 0.3 : 0.7);
-    const bw = Math.max(w * 0.5, Math.min(hgt * 0.45, 380));
-    const top = y + th * 0.55;
-    const pts: number[] = [];
-    for (let k = 0; k <= 24; k++) {
-      const t = k / 24;
-      const a = Math.PI * (1 - t);
-      const sx = Math.cos(a);
-      const ry = (fy + 12 - top) * (0.92 + 0.08 * wobble(t * 900, seed, 120));
-      pts.push(
-        cx + sx * bw * (1 - 0.45 * Math.sin(a) ** 2) * (1 + 0.08 * wobble(t * 700, seed + 2, 90)),
-        fy + 12 - Math.sin(a) ** 0.6 * ry,
-      );
-    }
-    const body = chaikin(pts, 1);
-    p.solid(body, T.body, B.walkH - 0.06, { bark: 0.6 });
-    // (One smooth dome read as an egg: lobes swelling out of it, each with a lit upper-left arc, roots over it.)
-    for (let k = 0; k < 4; k++) {
-      const lx = cx + range(rr, -0.6, 0.6) * bw;
-      const ly = lerp(top, fy, range(rr, 0.3, 0.8));
-      const lr = bw * range(rr, 0.25, 0.42);
-      p.solid(
-        chaikin(blob(lx, ly, lr, lr * 0.8, seed + 20 + k, 0.3, 14), 2),
-        lerp3(T.body, T.lift, 0.5),
-        B.walkH - 0.05,
-        {
-          bark: 0.6,
-        },
-      );
-      const arcPts: number[] = [];
-      for (let q = 0; q <= 8; q++) {
-        const a = Math.PI * (1.05 + 0.5 * (q / 8));
-        arcPts.push(lx + Math.cos(a) * lr, ly + Math.sin(a) * lr * 0.8);
-      }
-      p.tint(strand(arcPts, range(rr, 4, 7), 0.3), T.veinLit, 0.6);
-    }
-    for (let k = 0; k < 3; k++) {
-      const x0 = cx + range(rr, -0.5, 0.5) * bw;
+    // (Canopy review r7 #8: a dome on a foot read as an egg or an urn.) Roots erupting out of the floor: 3-5 thick ones
+    // fanning up from a wide footprint and knotting together under the ledge, a dark gap between each, the ledge on
+    // their knotted crown; no closed body.
+    const cx = lerp(sh.x0, sh.x1, side < 0 ? 0.35 : 0.65);
+    const top = y + th * 0.6;
+    const spread = Math.max(w * 0.7, Math.min(hgt * 0.8, 420));
+    const n = 3 + Math.floor(rr() * 3);
+    for (let k = 0; k < n; k++) {
+      const u = n > 1 ? k / (n - 1) - 0.5 : 0;
+      const fx = cx + u * spread * 2 + range(rr, -30, 30);
+      const kx = cx + u * w * 0.3 + range(rr, -14, 14);
+      const w0 = range(rr, 34, 56) * (1 - Math.abs(u) * 0.4);
+      // (Three legs to a slab read as a stool: they bundle into one column low down, then part under the ledge.)
+      const by = lerp(fy, top, range(rr, 0.3, 0.45));
       limb(
         [
-          x0,
-          top + 10,
-          x0 + range(rr, -0.4, 0.4) * bw,
-          lerp(top, fy, 0.5),
-          x0 + range(rr, -0.8, 0.8) * bw,
-          fy + 8,
+          fx + u * range(rr, 40, 120),
+          fy + 14,
+          lerp(fx, cx, 0.5),
+          lerp(fy, by, 0.6),
+          cx + u * 26,
+          by,
+          kx,
+          top + 6,
         ],
-        (t) => Math.max(5, range(rr, 12, 22) * (1 - t * 0.4)),
-        70 + k,
-        B.walkH - 0.04,
+        (t) => Math.max(10, w0 * (1.35 - t * 0.6)),
+        40 + k,
+        B.walkH - 0.05 + k * 0.004,
       );
     }
-    feet(cx - bw * 0.8, 20, 0.8);
-    feet(cx + bw * 0.8, 30, 0.8);
+    // The knot they make under the ledge: a few short lumps, not a dome.
+    for (let k = 0; k < 3; k++) {
+      const lx = cx + range(rr, -0.3, 0.3) * w;
+      p.solid(
+        chaikin(
+          blob(lx, top + range(rr, 4, 20), range(rr, 18, 34), range(rr, 12, 20), seed + 60 + k, 0.35, 12),
+          1,
+        ),
+        T.body,
+        B.walkH - 0.03,
+        { bark: 0.6 },
+      );
+    }
     return;
   }
   if (fam === 'arch') {
-    const mid = lerp(sh.x0, sh.x1, range(rr, 0.4, 0.6));
-    const a0 = sh.x0 - range(rr, 60, 200);
-    const a1 = sh.x1 + range(rr, 60, 200);
-    const w0 = range(rr, 40, 62);
+    // (Canopy review r7 #8: a symmetric arch read as a croquet hoop or a pipe handle.) A root that surfaces from the
+    // floor far off to one side at a shallow angle, rises under the ledge and dives back in steeply past its other end,
+    // splitting into feet; a thinner root braids it; rootlets hang from its span.
+    const far = side < 0 ? sh.x0 - range(rr, 220, 380) : sh.x1 + range(rr, 220, 380);
+    const near = side < 0 ? sh.x1 + range(rr, 10, 50) : sh.x0 - range(rr, 10, 50);
+    const under = (t: number) => y + th * (0.75 + 0.25 * t);
+    const w0 = range(rr, 44, 66);
+    const pts = [
+      far,
+      fy + 16,
+      lerp(far, near, 0.25),
+      fy - Math.min(hgt * 0.25, 70),
+      lerp(far, near, 0.55),
+      under(0.4),
+      lerp(far, near, 0.85),
+      under(0),
+      near,
+      lerp(y, fy, 0.45),
+      near - side * range(rr, 10, 30),
+      fy + 10,
+    ];
+    limb(pts, (t) => w0 * (1.25 - 0.6 * Math.sin(Math.PI * t)), 1);
+    // The braid: thinner, out of the floor nearer, round the big one and into the ledge's underside.
     limb(
       [
-        a0,
+        lerp(far, near, 0.4),
         fy + 12,
-        lerp(a0, mid, 0.3),
-        lerp(fy, y, 0.75),
-        mid,
-        y + th * 0.7,
-        lerp(mid, a1, 0.7),
-        lerp(fy, y, 0.75),
-        a1,
-        fy + 12,
+        lerp(far, near, 0.5),
+        lerp(fy, y, 0.5),
+        lerp(far, near, 0.7) + side * 20,
+        under(0.2) + 10,
+        lerp(far, near, 0.95),
+        under(0) + 4,
       ],
-      (t) => w0 * (0.85 + 0.3 * Math.abs(t - 0.5)),
-      1,
-    );
-    // A thinner root crossing it.
-    limb(
-      [lerp(a0, mid, 0.5), fy + 12, mid + side * 30, lerp(fy, y + th, 0.5), lerp(mid, a1, 0.6), y + th * 0.9],
-      (t) => Math.max(6, w0 * 0.45 * (1 - t * 0.6)),
+      (t) => Math.max(8, w0 * 0.42 * (1 - t * 0.5)),
       2,
       B.walkH - 0.05,
     );
+    feet(near, 30, 0.9);
+    // A tangle under the span (an open loop read as a hoop): roots from the floor up into it, crossing.
+    for (let k = 0; k < 5; k++) {
+      const t0 = range(rr, 0.35, 0.9);
+      const t1 = clamp(t0 + range(rr, -0.25, 0.25), 0.3, 0.95);
+      const bx = lerp(far, near, t0);
+      const tx = lerp(far, near, t1);
+      limb(
+        [
+          bx,
+          fy + 12,
+          lerp(bx, tx, 0.5) + range(rr, -20, 20),
+          lerp(fy, under(1 - t1), 0.5),
+          tx,
+          under(1 - t1) + 10,
+        ],
+        (t) => Math.max(8, (18 + 4 * k) * (1 - t * 0.45)),
+        90 + k,
+        B.walkH - 0.06,
+      );
+    }
+    // Rootlets off the span.
+    for (let k = 0; k < 6; k++) {
+      const t = range(rr, 0.45, 0.95);
+      const rx = lerp(far, near, t);
+      const ry = under(1 - t) + w0 * 0.4;
+      const len = range(rr, 16, 60);
+      limb(
+        [rx, ry, rx + range(rr, -8, 8), ry + len * 0.5, rx + range(rr, -14, 14), ry + len],
+        (q) => 5 * (1 - q),
+        80 + k,
+      );
+    }
     return;
   }
   if (fam === 'stump') {
