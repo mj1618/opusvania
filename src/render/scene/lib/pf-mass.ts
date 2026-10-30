@@ -99,6 +99,12 @@ export const MASS = {
   /** Knuckles deep in a big mass (canopy r7): one per this many px² of it, their half width range, px. */
   knuckleArea: 180000,
   knuckleR: [140, 340] as readonly number[],
+  /** The core (canopy r8, review r7 #3): the steps in from a free edge (px) where the mass sinks to its near-black, the
+   *  alpha of each, how far the steps waver (px) and the core's share of the deep tone. */
+  core: [28, 40, 52, 64, 76, 88, 100, 112, 124, 136] as readonly number[],
+  coreA: [0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32, 0.36, 0.42, 0.6] as readonly number[],
+  coreWob: 22,
+  coreK: 0.45,
   /** Earth (`ground`). */
   soil: 0x161a22,
   soilLit: 0x3a4250,
@@ -203,6 +209,75 @@ export const MASS_TONES: Record<Look, MassTone> = {
 export function massTone(room: Room): MassTone {
   const look = gradeLookOf(room);
   return look ? MASS_TONES[look] : NIGHT_TONE;
+}
+
+/** The near-black a mass sinks to deep inside (step 2c): its deep tone at `MASS.coreK`. */
+export function massCore(t: MassTone): number {
+  const k = MASS.coreK;
+  const ch = (s: number) => Math.round(((t.deep >> s) & 255) * k);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+/**
+ * The core of one mass rect: strips 8 px tall whose ends follow the distance to the free edges (sampled every 16 px,
+ * wavering by `MASS.coreWob`), one polygon set per step of `MASS.core` at `MASS.coreA`. Strips of one step share
+ * their edges exactly, so the multisampled bake draws no seams.
+ */
+function paintCore(
+  p: Paint,
+  r: MassRect,
+  runs: ReadonlyArray<{ key: number; a: number; b: number; vertical: boolean }>,
+  seed: number,
+  color: number,
+): void {
+  const gx = 16;
+  const gy = 4;
+  const nx = Math.max(1, Math.ceil(r.w / gx));
+  const ny = Math.max(1, Math.ceil(r.h / gy));
+  const xs: number[] = [];
+  for (let i = 0; i <= nx; i++) xs.push(Math.min(r.x + r.w, r.x + i * gx));
+  const field = new Float32Array((nx + 1) * ny);
+  const W = MASS.coreWob;
+  for (let j = 0; j < ny; j++) {
+    const yc = r.y + Math.min(r.h, (j + 0.5) * gy);
+    for (let i = 0; i <= nx; i++) {
+      const x = xs[i] as number;
+      const wob = W * (0.6 * wobble(x + yc * 0.4, seed, 210) + 0.4 * wobble(yc - x * 0.3, seed + 5, 130));
+      field[j * (nx + 1) + i] = distToRuns(x, yc, runs) + wob;
+    }
+  }
+  const D = MASS.core as readonly number[];
+  const A = MASS.coreA as readonly number[];
+  D.forEach((d, lv) => {
+    let any = false;
+    for (let j = 0; j < ny; j++) {
+      const y0 = r.y + j * gy;
+      const y1 = Math.min(r.y + r.h, y0 + gy);
+      let start: number | null = null;
+      for (let i = 0; i <= nx; i++) {
+        const f = (field[j * (nx + 1) + i] as number) - d;
+        const x = xs[i] as number;
+        if (f > 0 && start === null) {
+          if (i === 0) start = x;
+          else {
+            const fp = (field[j * (nx + 1) + i - 1] as number) - d;
+            start = lerp(xs[i - 1] as number, x, fp / (fp - f));
+          }
+        } else if (f <= 0 && start !== null) {
+          const fp = (field[j * (nx + 1) + i - 1] as number) - d;
+          const end = lerp(xs[i - 1] as number, x, fp / (fp - f));
+          if (end - start > 1) p.albedo.rect(start, y0, end - start, y1 - y0);
+          any = true;
+          start = null;
+        }
+      }
+      if (start !== null && r.x + r.w - start > 1) {
+        p.albedo.rect(start, y0, r.x + r.w - start, y1 - y0);
+        any = true;
+      }
+    }
+    if (any) p.albedo.fill({ color, alpha: A[lv] as number });
+  });
 }
 
 /** The edge painter's colours for the paint in progress (pf-edge.ts). */
@@ -870,6 +945,16 @@ export function paintMasses(
   };
   for (const f of faces) if (near(f.key - 240, f.a, f.key + 240, f.b)) liftBand(f, 'face');
   for (const t of tops) if (near(t.a, t.key - 40, t.b, t.key + 240)) liftBand(t, 'top');
+
+  // 2c. The core (canopy review r7 #3: "the ground is no longer a silhouette", the insides read at luma 19-35 against
+  // HK's and Silksong's 0-5). Deeper than `MASS.core` from a free edge the mass goes to its near-black core, feathered
+  // over four wavering steps: the sub-masses, plates, lift and grain above live only in the outer band, where they
+  // shape the silhouette. The bake multiplies its light by this colour, so its streaks go with it.
+  const core = massCore(T);
+  masses.forEach((r, i) => {
+    if (inTaper.has(i) || !near(r.x, r.y, r.x + r.w, r.y + r.h)) return;
+    paintCore(p, r, edgeRuns, seed + i * 17, core);
+  });
 
   // 1b. Tapers: a burl is one root flare, a hanging clump one bundle of roots (drawn over the bodies around them).
   for (const t of tapers) {
