@@ -1,134 +1,125 @@
-# Ori and the Blind Forest DE: the Sunken Glades, mapped (2026-10-30)
+# Ori and the Blind Forest DE: the Sunken Glades, mapped from the game files (2026-10-30)
 
-For `../BRIEF.md`. Data: `area.json` (our px, origin at the area's top-left, y down). Pictures (gitignored):
+For `../BRIEF.md`. Data: `area.json` (our px, origin at the area's top-left, y down). How it was read, what is exact and
+the five findings that matter most for our first area: `EXTRACTED.md`. Pictures (gitignored):
 `shots/reference-levels/ori/map.png` (1 px = 8 of our px; `map-west|middle|east.png` are the same image in thirds) and
-`terrain-native.png` (the in-game map art, same scale, with the room boxes).
+`terrain-native.png` (the collider terrain, 5 px per unit). Look references (art, outside the repo):
+`~/code/opusvania-refs/ori/`.
 
-**Area.** The Sunken Glades and the Spirit Caverns: from where control begins (the waking glade, game coordinates
-184, −220), past Sein, the first Spirit Well and Fil's Wall Jump tree, up through the Spirit Caverns' three keystone
-gates to the Spirit Tree and the corridor east to the Hollow Grove. World box in game units: x −360..310,
-y −316..−70 (y up). The prologue (Swallow's Nest, with Naru) is not in this space: the wiki says Ori can never return
-there, so it is left out.
+**Area.** The Sunken Glades and the Spirit Caverns: from where control begins (game units 189, −219) through Sein, the
+first Spirit Well, Fil's Wall Jump tree and the Spirit Caverns' three keystone gates to the Spirit Tree and the way east
+to the Hollow Grove. In the game it is 17 streaming scenes (`sunkenGlades*`, `spiritTreeRefined`,
+`upperGladesBelowSpiritTree`, `westGladesOverworldForestA`) plus 5 art-only scenes that load with them. World box in
+game units: x −344..295, y −314..−64.5 (y up). The prologue (Swallow's Nest) is a separate space and is left out.
 
 ## Sources and confidence
 
-**The game files were not on the disk when I started or when I finished.** I checked
-`~/Library/Application Support/Steam/steamapps/content/app_387290/` and `/Applications/Steam.app/.../content/` at both
-times. Everything below is mined or estimated. Every entry in `area.json` has a `src`.
+Read from the Windows depot of Ori DE (Unity 5.3.2f1) with UnityPy: `tools/reference/mined/ori/extract.py`.
 
 | what | source | confidence |
 |---|---|---|
-| 30 pickups (cells, keystones, map stone, fragment, Wall Jump, spirit-light containers) with x,y | Ori DE randomizer logic `bf-areas.ori` (sparkle-preference/ori_rando_server) | exact to ±1 unit (the rando stores integers). Checked: 25 of 30 sit within 1 unit of open space on the map art; the other 5 are secret pockets that the map does not draw |
-| what each pickup needs | the same logic file, plus the fandom wiki's Sunken Glades item list | high |
-| terrain (110 solid polygons, 5 water polygons) | the in-game world map, as tiles from the rando tracker (`ori-tracker.firebaseapp.com/images/ori-map/7/x/y.png`, 8.77 map px per unit), georeferenced with the tracker's own transform (`getMapCrs`, built on the two teleporters) and checked against the pickups (best offset ≤ 1 unit) | about ±1 unit (47 px). It is the map's silhouette, not the colliders: no one-way platforms, slopes are smoothed, and secret rooms are missing. Water is the map's violet fill |
-| camera / units | decompiled `Assembly-CSharp.dll` (the rando's copy): `CameraController.FieldOfView = 60`, `CameraOffsetController.DefaultZoom = 20` | these are code defaults; a scene or prefab can override them (not checked) |
-| hero jump | `SeinJump.FirstJumpHeight = 3` (chained jumps `3.75`, `4.5`), code default | medium |
-| run speed | TASVideos: airborne max ~11.67 u/s | medium |
-| Spirit Flame | Speed Demos Archive wiki: 2 damage a hit, 0.2 s between shots, 2 shots then a 0.5 s cooldown; range 8 u (code) | high |
-| health | wiki: 1 life cell = 4 internal HP; Ori starts with 3 cells and 0 energy | high |
-| gates, levers, boulders, hazards, breakables, Sein's spot | rando anchors where they exist (gates ±3 u), otherwise placed by hand from wiki and walkthrough text | gates medium; the rest low |
-| enemies (16) | kinds and groups from the wiki's enemy table and two walkthroughs (ludo.guide, gamerwalkthroughs.com); **positions placed by hand** | low. Count, positions, HP and damage all need the game files |
-| order of play, minutes | the walkthroughs plus the logic | low (guesses) |
+| rooms = the game's streaming scenes, their bounds | each scene's `SceneRoot.MetaData` (`SceneMetaData.SceneBoundaries`) | exact |
+| terrain: 272 solid polygons, 11 one-way platforms, 8 water volumes | the collider strips (`CageStructureToolCollider` meshes, layer `solids`), filled by their winding (rock on the right of the strip); `GoThroughPlatform` and physics logs; `WaterZone` bounds | edges exact; the fill is ±0.2 u (a raster) |
+| hazards (54) and their damage | layer `killCharacter` colliders + `DamageDealer` (thorns 4 or 8, lasers 10000), `LaserBeam`, `WaterZone.Damage` (4 or 20) | exact |
+| 48 enemies: position, HP, contact damage, respawn, loot | `*EnemyPlaceholder.Settings` (Health, DamageOnTouch, ...) and `ProjectileSpawner` | exact; kind names are the class names with the wiki's common name |
+| 34 pickups, 2 Spirit Wells, lever, boulders, spring, 26 orb plants | `CollectablePlaceholder.Prefab`, `KeystonePickup`, `MapStone(Pickup)`, `GetAbilityPedestal`, `GetAbilityAction`, `SavePedestal`, `Lever`, `PushPullBlock`, `Spring`, orb-plant entities | exact |
+| gates | `DoorWithSlots.NumberOfOrbsRequired`, `EnergyDoor.AmountOfEnergyRequired`, `ChargeFlameWall`, `StompableFloor`, thorn barriers (`shootableCreepDoor`), the Rammer's scripted wall | exact; which exit each one closes is read off the map |
+| secrets | `TransparentWallB` zones (foreground art that fades when Ori enters) for 5; the randomizer's notes for 7 (torch barriers, polluted pools, a breakable wall) | exact / mined |
+| scene joins | open runs ≥ 1.5 u along shared scene edges of the collider terrain | exact positions; curated (sky above the start is not an exit) |
+| camera, hero, attack | `CameraController` / `CameraOffsetController` prefabs and the scenes' `DefaultCameraZoom`; the `seinCharacter` prefab; `SpiritFlame` assets | exact |
+| pickup ids, what a pickup needs from later areas | the randomizer's location table (as in the earlier mined data) | mined |
+| order of play, minutes | walkthroughs (unchanged) | estimate |
 
-**Not obtained:** enemy HP and contact damage (prefab data; no wiki or speedrun page has them), the exact enemy count,
-the small spirit-light orbs from plants and enemies, one-way platforms, the exact geometry of the 5 secret pockets
-(they are drawn as 2-unit pockets behind a dashed "secretWall"), and a check that the camera zoom stays 20 here.
-With the Windows depot, `UnityPy` on the Glades scenes (`sunkenGlades*`, `spiritCaverns*`, scene names are in the
-rando's `RandomizerGUIDs.txt`) would give all of these.
+**Not extracted:** the order of play and the minutes; spirit light dropped by plants (loot tables on prefabs); swinging
+spike-log damage (on prefabs). The Spirit Tree itself does not render from these scenes (its art is in a cutscene
+scene), so the look render skips it.
+
+**What changed from the mined version:** rooms are now the game's 17 scenes, not 22 hand-cut boxes (so counts per room
+moved by definition); the terrain is the colliders, not the map's silhouette (now with 11 one-way platforms, 54 hazards,
+6 secret pockets); there are 48 enemies, not 16 placed by hand, all with HP and damage; the hero is smaller than
+estimated (32 x 54 px, not 47 x 70) and the chained-jump bonus does not exist in the shipped prefab; Spirit Flame reaches
+12 u, not 8. "Secrets" now counts only pickups that cannot be seen from the route (12), not every pickup the randomizer
+annotated (27).
 
 ## Units
 
-- **1 game unit = 46.77 of our px.** View = 41.06 × 23.09 u (perspective camera, FOV 60°, 20 u away, 16:9), and
-  1920 / 41.06 = 46.77.
-- **Hero:** the box is about 1.0 × 1.5 u = **47 × 70 px** (an estimate; ours is 40 × 80). **Run 11.67 u/s =
-  546 px/s** (ours 576). **Jump 3 u = 140 px** (ours ~272). Chained jumps are 3.75 / 4.5 u = 175 / 210 px.
-- So the view scale matches the body and the run speed within 10%. **Ori's single jump is about half of ours**, in px
-  and in body heights (2 bodies against our 3.4). Ori's spaces are built for a low jump plus wall jump and double jump.
-- The whole area is 31,333 × 11,504 px (16.3 × 10.7 views).
+- **1 game unit = 46.765 of our px.** Camera: perspective, `FieldOfView` 60 (prefab), `DefaultZoom` 20 u (prefab, and
+  every Glades scene's `SceneSettingsComponent.DefaultCameraZoom`). View = 41.06 x 23.09 u; 1920 / 41.06 = 46.765. A
+  few `CameraOffsetAnimationZone`s pull to 18-21 u (±10%).
+- **Hero** (`seinCharacter`): capsule 0.68 x 1.15 u = **32 x 54 px** (ours 40 x 80). **Run 11.67 u/s = 546 px/s**
+  (ours 576; ground accel 60 u/s², decel 30). **Jump 3 u = 140 px** (first, second and third jump all 3 u in the
+  prefab), gravity 26 u/s², max fall 32 u/s. Wall jump (6, 12) u/s. Ori's jump is **2.6 body heights**, ours 3.4.
+- **Attack:** Spirit Flame, 2 damage, combos of 3 shots 0.2 s apart then 0.5 s; auto-aims within 12 u (561 px).
+- **Health:** 3 life cells. A hit costs ceil(damage / 4) cells: damage 1-4 = 1 cell, 5-8 = 2 cells.
+- The area is 29,883 x 11,668 px (15.6 x 10.8 screens).
 
-## The area as a player meets it (first 10 minutes, then the rest)
+## The area as a player meets it
 
-- **0:00** Ori wakes in a bright, empty glade about 3 screens long (`wake`). There are no enemies or pickups in it.
-  The way east is blocked by a bramble wall, which can only be passed hours later.
-- **0:30** Head west. Climb a rise, then drop onto a log and fall through it into a lower band (`drop` → `well`). The
-  drop is one-way for now.
-- **1:30** Walk west along the lower band. Hop logs over polluted water and jump purple thorn plants (`crossing`).
-  **Energy cell 1** here unlocks Soul Link (save anywhere for 1 energy).
-- **3:00** A **Rammer** bursts out of a cracked wall in the tunnel. You jump it, and it breaks the wall and dies under
-  a falling rock (`ram`).
-- **4:00** At the tunnel's west end Ori climbs a big log and finds **Sein**, which gives **Spirit Flame**.
-- **5:00** **Three Hoppers** attack: the first real fight. **Secret 2** (a small container) is under the log.
-- **7:00** Walk back east. Burn the thorn plants around a wind plant. Behind them is the **Spirit Well**, the first
-  save (`well`, 1.7 screens below the start).
-- **8:00** The wind plant lifts Ori back up (`drop`). A Crawler waits on the pole. **Secret 1** is behind roots, and
-  **keystone 1** is behind a boulder you pull aside.
-- **10:00** Swinging logs over the pond lead to **keystone 2** (`logs`). Spirit Gate 1 opens with 2 keys. Behind it
-  is the signpost hub.
-- **10–15** Optional: hop up the giant mushrooms for **life cell 1** (`attic`). Go west under a log, down a shaft,
-  and into the long hollow at the bottom-left. There, Fil's tree gives **Wall Jump** (`walljump`, ~min 15). Use it at
-  once on the wall beside the tree for **energy cell 2**.
-- **15–23** Climb back up. Push a boulder past swinging spikes for **keystone 2-2**, with secrets 3 and 4 beside it
-  (`upperleft`). Pull a lever for the **map fragment** (`leftglades`). Drop to the **map stone** and **keystone 2-1**
-  (`mapstone`).
-- **23–29** Spirit Gate 2 opens into the **Spirit Caverns**. Wall-jump up between rows of shooter flowers and collect
-  **4 keystones**. On the way you pass a 4-energy gate that you cannot open yet.
-- **29–33** Spirit Gate 3 opens. Pass the Valley fork and enter the **Spirit Tree's** dome (a set piece and the
-  second Spirit Well). Go east to the Hollow Grove.
+- **0:00** Ori wakes in a 6.4-screen glade (`wake`) with no enemies. The way east is a 4-energy door; above, an
+  invisible ceiling and a high ledge (a large spirit-light container for later).
+- **0:30** West: drop through a log into the lower band (`well`). The Spirit Well here is behind thorn plants.
+- **1:30** The pools (`crossing`): one Piranha in the polluted pond (shallow water costs 1 cell a tick, the deep pools
+  20 damage = death). **Energy cell 1** in the ram tunnel unlocks Soul Link.
+- **3:00** The **Rammer** (20 HP, 2 cells a hit) charges; jumping it makes it break the rock into Sein's hollow.
+- **4:00** **Sein: Spirit Flame.** At once 3 Hoppers (10 HP = 5 hits, 1 cell a touch, no respawn) and a hidden small
+  container under fading foreground art.
+- **5-10** Walking back east, the Glades fill up: 7 enemies switch on only once Ori has Spirit Flame (2 Hoppers of
+  20 HP and a slug in `well`, 4 slugs in `crossing`), and so do the first 2 keystones. Burn the thorns around the
+  spring, the first Spirit Well (route 30,519 px from the start), keystone, swinging logs, keystone, Spirit Gate 1.
+- **10-15** The signpost hub (`signpost`): 4 Hoppers (12 HP, 1 cell), a slug, the life cell up the mushrooms. West
+  (`leftglades`): 3 slugs, a thorn barrier, down the Spirit Caverns shaft to **Wall Jump** (`walljump`, no enemies),
+  energy cell on the wall beside the tree.
+- **15-23** Push blocks past rotating lasers for a keystone (`upperleft`); the map stone and a keystone (`mapstone`).
+- **23-29** Spirit Gate 2 into the Spirit Caverns (`caverns`, 10 screens): 7 indestructible shooter plants in rows,
+  4 slugs, a Hopper, a drop slug, 4 keystones, the map fragment behind a lever bridge.
+- **29-33** Spirit Gate 3 opens straight into the Spirit Tree (the second Spirit Well, 84,914 px of route after the
+  first), then east to the Hollow Grove.
 
 ## Measurements
 
 | measure | value |
 |---|---|
-| rooms | 22 (hand-cut from the map; the game has no rooms) |
-| screens: room boxes / open air inside them | **79.9 / 41.3** (1 screen = 1920 × 1080) |
-| critical-path rooms | 16 of 22, **70.0 screens** of box |
-| critical route walked (A* through the map's open space) | **121,271 px = 63 view-widths**, ~33 min (guess) → about 1.9 view-widths a minute |
-| horizontal vs vertical travel on that route | **106,798 vs 30,431 px (3.5 : 1)** |
-| rooms by shape | pocket 6, hall 5, corridor 5, shaft 4, hub 1, setpiece 1 |
-| exits per room | mean **2.32**; max 5 (`leftglades`, the junction); 5 rooms have 1 |
-| dead ends and what each holds | `ram`: Sein (Spirit Flame) + secret 2 · `walljump`: Wall Jump + energy cell + giant container · `upperleft`: keystone + 2 secrets · `mapstone`: map stone + keystone · `laserpond`: ability cell. **Every dead end pays a major item** |
-| loops inside the area | 3 (E − V + 1). (a) `signpost` → drop to `mapstone` → `leftglades` → `signpost`, ~3 view-widths, open from min 10. (b) `lowercav` → 4-energy gate → `laser` → drop to `signpost`, ~5 view-widths, needs 4 energy (late). (c) `drop` → `well` → `crossing` → swim tunnel → `logs`, ~7 view-widths, needs clean water (hours later). **None of the loops is open on the first pass except (a)** |
-| enemies | 16 placed (estimates): **0.20 per screen** overall, **0.17 per screen** on the critical path |
-| enemy kinds | Hopper 6, shooter flower 5 (stationary, respawning projectile rows), Consumed Crawler 2, Rammer 1 (scripted), Quilled Crawler 1, Crawler 1 |
-| enemy toughness | HP **not mined**. Spirit Flame does 2 a hit; Ori has 12 internal HP (3 cells). The walkthroughs say Hoppers die "in about one hop", i.e. a few hits, and that the Rammer ambush can kill a fresh Ori. The danger here is from terrain and timing (shooter rows, spikes, thorns, laser), not from enemy health |
-| pickups | 30: keystones 8, spirit-light containers 10 (small 4, large 3, giant 3), energy cells 4, ability cells 4, life cell 1, map stone 1, map fragment 1, Wall Jump 1 → **0.38 pickups per screen**, 0.10 keystones per screen |
-| secrets (truly hidden) | 11. Off the map art: 4 (secret 1, 2, 3, the pocket above the Wall Jump hollow). Behind a breakable wall or floor: 2. Behind a DE torch barrier (Light Burst): 2. Under polluted water: 2. Reached by bashing a projectile: 1. Distance from the route: median **~670 px (0.35 view-width)**, max 2,384 px (secret 3) |
-| saves | 2 Spirit Wells, **83,803 px of route apart** (~44 view-widths). The first is 32,572 px into the route (~min 7). Soul Link (save anywhere for 1 energy) is available from ~min 2, so the well spacing is not the save spacing |
-| gates seen before they open | the bramble wall east of the start (seen min 0, opened hours later); Spirit Gate 2 (seen ~min 12, opened ~23); the 4-energy laser gate (seen ~24, opened much later); the charge-flame wall; the pond's swim tunnel. Gates 1 and 3 open within a minute of being seen |
-| longest stretch of route with no thing or enemy within 6 u | **17,951 px (9.3 view-widths)**: signpost → Wall Jump tree (low confidence: unplaced enemies may sit there). Next longest: the empty waking glade, 8,863 px |
-| what the first abilities open | start: 5 rooms / 27 screens / 3 pickups → **+Spirit Flame (min 4): 12 / 49 / 10** → **+Wall Jump (min 15): 18 / 73 / 19, all 8 keystones** → later skills and clean water: 22 / 80 / 30. Wall Jump adds 24 screens and 9 pickups in the area itself |
-| first play (guess) | critical path ~33 min; 100% of the area ~70 min spread over later visits (11 of the 30 pickups need skills from later areas) |
+| rooms | 17 scenes; 83.8 screens of exact scene area (84.9 by bounding box); sizes 1.5-11.5, median 3.7 |
+| critical-path rooms | 12 of 17, 67.8 screens |
+| critical route (shortest open path through the colliders, waypoint to waypoint; ignores gravity) | **121,040 px = 63 view-widths**, ~33 min (guess): ~1.9 view-widths a minute |
+| horizontal vs vertical travel | **104,146 vs 29,528 px (3.5 : 1)** |
+| rooms by shape | hall 7, pocket 4, corridor 3, hub 1, shaft 1, set piece 1 |
+| exits per room | 3.0 inside the area, 3.7 with the exits to other areas; max 8 (`crossing`) |
+| dead ends and what each holds | `sein`: Spirit Flame + a secret · `walljump`: Wall Jump + energy cell + a secret · `upperleft`: keystone + 2 small containers · `laserpond`: ability cell · `porch`: ability cell (the Valley side) · `wake`: the start (a container on a high ledge). Every dead end pays |
+| loops | 5 (E − V + C). Open on the first pass: 2 short ones round the hub (`signpost`–`attic`–`laser`, `signpost`–`laser`–`leftglades`). Gated: the polluted swim tunnel, the 4-energy gate, the one-way hole into Sein's hollow |
+| enemies | **48: 41 killable + 7 shooter plants. 0.57 per screen (0.48 killable); 0.50 per screen in critical-path rooms** |
+| rooms with no enemy | 3 of 17: the start glade, the Wall Jump hollow, the Spirit Tree |
+| densest rooms (enemies per screen) | Sein's hollow 1.5 (the 3-Hopper set piece), the drop-slug pond 1.3, the Spirit Caverns 1.3 (13) |
+| enemy kinds | Spiked slug 14 (7 HP, 1 cell), Hopper 13 (10 / 12 / 20 / 40 HP; 1-2 cells), shooter plant 7, swooping bird 5 (28-32 HP), drop slug 3, Piranha 2, acid slug 2, Rammer 1, Spitter 1 |
+| toughness against Ori | Spirit Flame 2 a hit: a slug takes 4 hits, the first Hoppers 5, the hub's 6, the later ones 10-20. A touch costs 1 cell (damage 1-4) or 2 (damage 5: Rammer, the 20-HP Hoppers, drop slugs, Spitter). Ori has 3 |
+| hazards | 54: thorn surfaces (4 = 1 cell, 8 = 2 cells), 6 lasers (instant death), polluted deep water (20 = death) |
+| pickups | 34 = keystones 8, ability cells 5, energy cells 4, life cell 1, map stone + fragment 2, abilities 3 (Spirit Flame, Wall Jump, Charge Flame from the Hollow Grove side), spirit-light containers 11 → **0.41 per screen**. Also 26 orb plants and bulbs (spirit light, 3-5 HP) |
+| secrets (not visible from the route) | **12 of 34 pickups.** Under fading foreground art (`TransparentWallB`): 5. Behind torch barriers (Light Burst): 2. Under polluted water: 2. Behind a breakable / stompable: 2. A pocket above the ceiling: 1. Distance from the route: median **644 px (0.34 view-width)**, max 2,388 px |
+| saves | 2 Spirit Wells, **84,914 px of route apart (44 view-widths)**; the first at 30,519 px (~min 7). Soul Link (save anywhere for 1 energy) from ~min 2 |
+| gates seen before they open | the start glade's 4-energy door (min 0, opens much later); Spirit Gate 2 (seen ~min 12, opens ~23); the laser cave's 4-energy gate; two Charge Flame walls; the polluted swim tunnel. Gates 1 and 3 open within a minute of being seen |
+| longest stretch of route with no pickup, save or enemy within 6 u | **5,437 px (2.8 view-widths)**: the climb from the Wall Jump tree back up the caverns shaft. The mined estimate was 17,951 px; the real Glades are fuller |
+| what the first abilities open (by scene) | start: 5 scenes / 30 screens → **+Spirit Flame: 13 / 66** → +Wall Jump: 14 / 74 (all 8 keys, the Spirit Tree). Coarse: big scenes count whole |
+| first play (guess) | critical path ~33 min; 100% ~70 min over later visits (13 pickups need skills from later areas) |
 
 ## 12 facts for an AI building a first area
 
-1. **Scale:** 1 Ori unit = 46.8 px; the view is 41 × 23 units. The body (47 × 70 px) and run (546 px/s) are close to
-   ours, but **Ori's jump is 140 px, half of ours**, and the spaces are cut for that. Scale our jump gaps from body
-   heights, not from Ori's px.
-2. The first area is **80 screens** of room boxes, of which **41 screens are open air**. The critical path is a
-   **63-view-width walk** in ~33 minutes: about **2 view-widths a minute**.
-3. **Travel is 3.5 : 1 horizontal to vertical.** The Glades are a stack of long horizontal bands linked by short
-   shafts. The one big climb (the Spirit Caverns) comes last.
-4. **The first 4 minutes have no weapon and no ability:** an empty 3-screen glade, a one-way drop, a scripted Rammer
-   you jump over, then the weapon (Sein) at the far end of a dead-end tunnel, rewarded at once with a 3-Hopper fight.
-5. **Two abilities in 15 minutes:** Spirit Flame at ~min 4, Wall Jump at ~min 15. **Each one nearly doubles the
-   reachable space** (27 → 49 → 73 screens).
-6. **The new ability is used within seconds:** energy cell 2 sits on the wall beside the Wall Jump tree.
-7. **Keystones pace the path: 8 keys, 3 gates (2, 2, 4).** All 8 keys are within 16 px of the route. Keys are progress, not secrets.
-8. **Every dead end pays a major item** (5 dead ends: the weapon, the skill, the map stone, 2 keystones + 2 secrets,
-   an ability cell). The mean is 2.3 exits per room, with one 5-exit junction (`leftglades`).
-9. **About a third of the pickups (11 of 30) are visible but locked** behind skills from later areas (Light Burst,
-   Bash, Charge Jump, clean water). Gates are seen long before they open (the bramble wall at min 0, the energy gates).
-10. **Secrets sit close:** 11 truly hidden pickups, median ~0.35 view-width off the route. They hide in pockets the map
-    does not draw, behind breakables, behind torch barriers, and under polluted water.
-11. **Combat is light:** ~0.2 enemies per screen. Hoppers come in groups of 3 in one tunnel, and the Spirit Caverns use
-    5 stationary shooter rows as timing hazards. The pressure is mostly from terrain (thorns, swinging spikes, a laser).
-12. **Saves:** 2 Spirit Wells ~44 view-widths of route apart, the first ~7 minutes in. Soul Link (save anywhere for 1
-    energy, from min 2) does the real work. **The area ends at a landmark set piece** (the Spirit Tree dome, ~9 screens
-    of box, also a save), with the exit to the hub right behind it.
-
-## How to rebuild
-
-The scripts are in the session scratchpad: `ori/tools/{crs,data,data2,build,render}.py`, run with the shared venv plus
-opencv. `build.py` reads `bf-areas.ori` from `nifty-bhaskara-28e244/shots/reference/maps/ori/logic/` and the
-stitched tiles. The hand-made tables (rooms, exits, route, estimated enemies and hazards) are in `data.py` and
-`data2.py`. Replace them with scene data when the game files exist.
+1. **Scale:** 1 unit = 46.8 px; the view is 41 x 23 units. Ori is 32 x 54 px and runs 546 px/s; **the jump is 140 px,
+   2.6 body heights** (ours 3.4). Scale gaps from body heights, not from Ori's px.
+2. **84 screens, 63 view-widths of route, ~33 minutes**, 17 scenes of 1.5-11.5 screens (median 3.7).
+3. **Travel is 3.5 : 1 horizontal.** Long bands, short shafts, one 10-screen vertical set piece last (the caverns).
+4. **0.57 enemies per screen, 48 in all** (3x the walkthrough estimate). Only 3 rooms are empty: the start, the
+   ability tree and the Spirit Tree, the places to breathe.
+5. **The first stretch is empty until the weapon arrives:** before Spirit Flame Ori meets 2 enemies (a scripted Rammer,
+   a Piranha); 7 enemies and the first 2 keystones switch on the moment Sein joins.
+6. **Escalation by numbers, not by kinds:** the first Hoppers have 10 HP and hit for 1; the hub's 12 HP and 1 cell; the
+   optional rooms' 20-40 HP and 2 cells. Slugs (7 HP) are the filler everywhere.
+7. **Hazards outnumber enemies: 54 hazard shapes** (thorns, lasers, polluted water); a laser or deep water kills
+   outright, a thorn costs 1-2 of 3 cells.
+8. **Every dead end pays** (6 of 6): the weapon, the skill, a keystone, ability cells.
+9. **12 of 34 pickups are hidden, 0.34 view-width from the route**; the main trick (5) is foreground art that fades
+   when Ori walks into it.
+10. **Keys are on the route** (8 keystones, 3 gates of 2, 2, 4); the new skill is used within seconds (an energy cell
+    waits on the wall beside the Wall Jump tree, 0.7 view-width of route after it).
+11. **Saves:** 2 Spirit Wells 44 view-widths apart, the first ~7 minutes in; Soul Link from minute 2 is the real save.
+12. **Pickups 0.41 per screen plus 26 orb plants**, so the longest empty stretch is 2.8 view-widths; the area ends at a
+    landmark (the Spirit Tree, 8 screens, a save) with the exit right behind it.

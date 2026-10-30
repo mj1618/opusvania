@@ -320,16 +320,18 @@ export const WOOD_LOOK_GRADE: Record<'heartwood' | 'shaft' | 'nest' | 'canopy' |
     richTint: [0xd4fff0, 0xd4fff0, 0xd4fff0],
     vignetteTint: [0x3a7a70, 0x3a7a70, 0x3a7a70],
   },
+  // (Review r5 #7: the den's grade is cool umber-grey, its light from the fungus below; the heartwood keeps the amber.)
   den: {
     ...WOOD_GRADE,
     exposure: [1.22, 1.22, 1.22],
-    shadowTint: [0x2c1408, 0x2c1408, 0x2c1408],
+    shadowTint: [0x1a1816, 0x1a1816, 0x1a1816],
     shadowLift: [0.2, 0.2, 0.2],
-    highlightTint: [0xffe0c0, 0xffe0c0, 0xffe0c0],
-    highlightWarmth: [0.4, 0.4, 0.4],
-    richSaturation: [1.25, 1.25, 1.25],
-    richTint: [0xffdcc4, 0xffdcc4, 0xffdcc4],
-    vignetteTint: [0x6a4030, 0x6a4030, 0x6a4030],
+    highlightTint: [0xdce8e4, 0xdce8e4, 0xdce8e4],
+    highlightWarmth: [0.08, 0.08, 0.08],
+    saturation: [0.8, 0.8, 0.8],
+    richSaturation: [0.95, 0.95, 0.95],
+    richTint: [0xe4ece8, 0xe4ece8, 0xe4ece8],
+    vignetteTint: [0x3a403e, 0x3a403e, 0x3a403e],
   },
 };
 

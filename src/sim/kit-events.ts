@@ -11,6 +11,7 @@ import type { SlashDir } from './events';
  *   good (`w`, `h` its rect: the solid is gone from the next step).
  * - `kitClang`: a forward or up cut met a seed-case: nothing breaks, she is held `hitstop` frames and
  *   thrown back `recoil` px/f (`hitX`, `hitY` = where the blade met it).
+ * - `gateShut`: an arena's door (`shut`) closes behind her: its trigger's flag is set (render: it drops).
  * - `flagSet`: a trigger (`by`) set a story flag in the save. `gateOpen`: a gate's flag is set: its
  *   solid is gone (`w`, `h` its rect).
  *
@@ -63,6 +64,7 @@ export type KitEvent =
   | { type: 'storyHold'; id: string; frames: number; x: number; y: number }
   | { type: 'storyHoldEnd'; id: string; x: number; y: number }
   | { type: 'gateOpen'; id: string; flag: string; x: number; y: number; w: number; h: number }
+  | { type: 'gateShut'; id: string; flag: string; x: number; y: number; w: number; h: number }
   /**
    * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it
    * gives, `pogo` = off a down cut, `held` = jump was held (the higher throw).

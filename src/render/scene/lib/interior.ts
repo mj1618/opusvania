@@ -22,6 +22,11 @@ import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobbl
 export const INTERIOR = {
   /** The deep back's parallax (between the mid layer's 0.68 and the playfield). */
   deepParallax: 0.86,
+  /** The mid plane (review r5 #7): its parallax, its value (share of the way from the mass to the fog), and the share
+   *  of the back it covers. */
+  midParallax: 0.93,
+  midValue: 0.45,
+  midCover: 0.32,
   /** Spacing of the lights along exposed tops, faces and undersides (px), and the fallback cell. */
   mossEvery: 640,
   fungusEvery: 560,
@@ -40,6 +45,9 @@ export const INTERIOR = {
   /** How far the near back's torn edge reaches into it where it meets open air (px). */
   tear: 420,
 } as const;
+
+/** The den's fungus light from below (review r5 #7). */
+const DEN_FUNGUS = 0x5a8a84;
 
 export type BackMat = 'root' | 'earth' | 'grain' | 'leaf' | 'frost';
 
@@ -135,15 +143,17 @@ const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
     root: 0x142420,
     rootLit: 0x688878,
   },
+  // (Review r5 #7: the den and the heartwood were two browns, the same picture desaturated. The den is cool umber-grey
+  // earth lit from below by fungus, dark roots hanging; the heartwood amber lit from above.)
   den: {
-    deep: 0x34241a,
-    deepLit: 0x5c3e2a,
-    fog: 0x4c3c34,
-    near: 0x3c2a1e,
-    nearLit: 0x9e7250,
-    grain: 0x1a0f0a,
-    root: 0x4c3424,
-    rootLit: 0xb08a60,
+    deep: 0x2a2725,
+    deepLit: 0x4a5250,
+    fog: 0x444a4a,
+    near: 0x2a2624,
+    nearLit: 0x76807a,
+    grain: 0x121010,
+    root: 0x1a1716,
+    rootLit: 0x5a605c,
   },
 };
 
@@ -629,6 +639,8 @@ function heartwoodNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed
   const B = BRANCH;
   const T = plan.tone;
   const r = rngFor(seed, 401);
+  // (Review r5 #7: along the giant, diagonal, as the deep back's panels: horizontal lenses read as bands.)
+  const ang = heartAngle(plan);
   const n = Math.round((b.w * b.h) / 160000);
   for (let k = 0; k < n; k++) {
     const cx = b.x + range(r, -0.05, 1.05) * b.w;
@@ -638,7 +650,7 @@ function heartwoodNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed
     const rx = range(r, 300, 800) * (0.6 + 0.4 * kx);
     const ry = range(r, 30, 80);
     p.solid(
-      chaikin(blob(cx, cy, rx, ry, seed + k * 3, 0.25, 22), 2),
+      turn(chaikin(blob(cx, cy, rx, ry, seed + k * 3, 0.25, 22), 2), cx, cy, ang),
       T.near,
       B.backH + 0.02,
       { bark: 0.6, alpha: 0.4 },
@@ -650,7 +662,7 @@ function heartwoodNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed
       const line: number[] = [];
       for (let t = 0; t <= 10; t++)
         line.push(cx - rx * 0.8 + (rx * 1.6 * t) / 10, y + 6 * wobble(cx + t * 90, seed + q, 200));
-      p.tint(strand(line, range(r, 2, 5), 0.2), T.grain, 0.5);
+      p.tint(turn(strand(line, range(r, 2, 5), 0.2), cx, cy, ang), T.grain, 0.5);
     }
   }
   // Splits: long dark cracks along the grain, a lit lip under each.
@@ -662,12 +674,17 @@ function heartwoodNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed
     const line: number[] = [];
     for (let t = 0; t <= 14; t++)
       line.push(x0 + (len * t) / 14, y0 + 14 * wobble(x0 + t * 80, seed + k, 260));
-    p.solid(strand(line, range(r, 8, 16), 0.08), T.grain, B.backH, { bark: 0.2 }, 0.85);
+    p.solid(turn(strand(line, range(r, 8, 16), 0.08), x0, y0, ang), T.grain, B.backH, { bark: 0.2 }, 0.85);
     p.tint(
-      strand(
-        line.map((v, j) => (j % 2 ? v + 7 : v)),
-        2.5,
-        0.08,
+      turn(
+        strand(
+          line.map((v, j) => (j % 2 ? v + 7 : v)),
+          2.5,
+          0.08,
+        ),
+        x0,
+        y0,
+        ang,
       ),
       T.nearLit,
       0.25,
@@ -707,15 +724,48 @@ function canopyNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: n
   const B = BRANCH;
   const T = plan.tone;
   const r = rngFor(seed, 409);
-  for (let x = b.x + range(r, 0, 200); x < b.x + b.w; x += range(r, 220, 460)) {
-    const w = range(r, 40, 110);
+  // (Review r5 #7: five or six even posts of one width and lean to a frame read as a fibre forest. Few (at most four a
+  // view), widths 3:1 and more, leaning +-8 degrees, a third of them forked, leaf clumps breaking them.)
+  for (let x = b.x + range(r, 0, 300); x < b.x + b.w; x += range(r, 480, 900)) {
+    const w = range(r, 30, 150);
     const kx = tornK(b, e, x, b.y + b.h / 2);
     if (kx < 0.15) continue;
     const yTop = b.y - 30 + (e.n ? range(r, 0.2, 1) * INTERIOR.tear : 0);
     const yBot = b.y + b.h + 30 - (e.s ? range(r, 0.3, 1) * INTERIOR.tear : 0);
+    const lean = Math.tan(range(r, -0.14, 0.14)) * (yBot - yTop);
     const line: number[] = [];
-    for (let t = 0; t <= 12; t++) line.push(x + range(r, -8, 8), lerp(yTop, yBot, t / 12));
+    for (let t = 0; t <= 12; t++)
+      line.push(x + lean * (t / 12 - 0.5) + range(r, -8, 8), lerp(yTop, yBot, t / 12));
     const wl = wander(line, 30, seed + Math.round(x), 300);
+    if (r() < 0.34) {
+      // A fork: a second limb leaving it partway up, leaning away.
+      const at = Math.floor(range(r, 3, 8)) * 2;
+      const fx = wl[at] as number;
+      const fy = wl[at + 1] as number;
+      const side = r() < 0.5 ? -1 : 1;
+      const fl = range(r, 300, 700);
+      const fork = [fx, fy, fx + side * fl * 0.3, fy - fl * 0.45, fx + side * fl * 0.55, fy - fl * 0.9];
+      p.solid(
+        ribbon(chaikin2(fork), (t) => w * 0.6 * (1 - t * 0.5)),
+        T.near,
+        B.backH + 0.025,
+        { bark: 0.9 },
+        0.85,
+      );
+    }
+    for (let q = 0; q < 1 + Math.floor(r() * 2); q++) {
+      const at = Math.floor(range(r, 1, 11)) * 2;
+      const lx = wl[at] as number;
+      const ly = wl[at + 1] as number;
+      for (let k = 0; k < 14; k++)
+        p.solid(
+          leaf(lx + range(r, -70, 70), ly + range(r, -40, 40), range(r, 16, 32), range(r, 0, 6.28)),
+          k % 3 ? T.near : T.nearLit,
+          B.backH + 0.08,
+          { bark: 0, moss: 0.4 },
+          k % 3 ? 0.9 : 0.5,
+        );
+    }
     p.solid(
       ribbon(wl, (t) => w * (0.8 + 0.3 * wobble(t * 900, seed, 160))),
       T.near,
@@ -974,6 +1024,19 @@ function denNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: numb
   }
 }
 
+/** Points turned by `a` about (cx, cy). */
+function turn(pts: number[], cx: number, cy: number, a: number): number[] {
+  const c = Math.cos(a);
+  const sn = Math.sin(a);
+  const out: number[] = [];
+  for (let k = 0; k < pts.length; k += 2) {
+    const dx = (pts[k] as number) - cx;
+    const dy = (pts[k + 1] as number) - cy;
+    out.push(cx + dx * c - dy * sn, cy + dx * sn + dy * c);
+  }
+  return out;
+}
+
 /** A leaf: a pointed lens at (x, y), `l` long, turned by `a`. */
 function leaf(x: number, y: number, l: number, a: number): number[] {
   const pts: number[] = [];
@@ -1129,6 +1192,12 @@ function softGrad(
   }
 }
 
+/** The heartwood's grain angle for a room (radians off the horizontal: the giant lies diagonal across the frame). */
+export function heartAngle(plan: InteriorPlan): number {
+  const r = rngFor(plan.backs.length, Math.round((plan.backs[0]?.x ?? 0) + (plan.backs[0]?.w ?? 0) * 3), 83);
+  return (r() < 0.5 ? -1 : 1) * range(r, 0.22, 0.5);
+}
+
 /** The deep back: lighter and softer than the near back, grain and dim roots, a fog band across it (layer coords). */
 export function drawDeepBack(
   g: {
@@ -1200,55 +1269,67 @@ export function drawDeepBack(
         }
       }
     } else if (plan.look === 'heartwood') {
-      // Inside the fallen giant: the grain runs along it (across the screen), in broken runs of uneven period and
-      // swell (review r4: even waves read as cartoon plank stripes), split by long dark cracks.
-      for (let y = b.y; y < b.y + b.h; y += range(r, 20, 110)) {
-        let x = b.x - range(r, 0, 400);
-        const amp = range(r, 6, 46);
-        const per = range(r, 380, 1500);
-        while (x < b.x + b.w) {
-          const len = range(r, 500, 2400);
-          const line: number[] = [];
-          for (let xx = x; xx <= x + len; xx += 60)
-            line.push(xx, y + amp * wobble(xx, seed + Math.round(y), per) + 10 * wobble(xx, seed + 7, 140));
-          if (line.length >= 6)
-            g.poly(strand(line, range(r, 4, 26), 0.25)).fill({
-              color: r() < 0.45 ? T.deepLit : T.grain,
-              alpha: range(r, 0.12, 0.3),
-            });
-          x += len + range(r, 40, 500);
+      // Inside the fallen giant (review r5 #7: full-width horizontal bands and concentric rings read as sepia striped
+      // wallpaper and a target): the grain runs along the giant, diagonal to the frame (one lean per room), in broken
+      // panels 300-900 px long with dark splits between; light from above through cracks. No rings (a cut end shows
+      // them: the fallen burls).
+      const ang = heartAngle(plan);
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      // Panels, laid in lanes across the grain, staggered along it.
+      const diag = Math.hypot(b.w, b.h);
+      const cx0 = b.x + b.w / 2;
+      const cy0 = b.y + b.h / 2;
+      for (let v = -diag / 2; v < diag / 2; v += range(r, 70, 190)) {
+        let u = -diag / 2 - range(r, 0, 500);
+        const wd = range(r, 50, 170);
+        while (u < diag / 2) {
+          const len = range(r, 300, 900);
+          const pts: number[] = [];
+          const lo: number[] = [];
+          for (let q = 0; q <= 12; q++) {
+            const t = q / 12;
+            const uu = u + len * t;
+            const half =
+              (wd / 2) * Math.sin(Math.PI * t) ** 0.35 * (0.8 + 0.3 * wobble(uu, seed + Math.round(v), 160));
+            const px = cx0 + uu * ca - v * sa;
+            const py = cy0 + uu * sa + v * ca;
+            pts.push(px + half * sa, py - half * ca);
+            lo.push(px - half * sa, py + half * ca);
+          }
+          for (let q = lo.length / 2 - 1; q >= 0; q--) pts.push(lo[q * 2] as number, lo[q * 2 + 1] as number);
+          const lit = r() < 0.4;
+          g.poly(pts).fill({
+            color: lit ? T.deepLit : T.grain,
+            alpha: lit ? range(r, 0.14, 0.3) : range(r, 0.18, 0.36),
+          });
+          // Grain inside the panel, along it.
+          for (let q = 0; q < 2; q++) {
+            const vv = v + range(r, -0.3, 0.3) * wd;
+            const line: number[] = [];
+            for (let t = 0; t <= 8; t++) {
+              const uu = u + len * (0.1 + 0.8 * (t / 8));
+              line.push(cx0 + uu * ca - vv * sa, cy0 + uu * sa + vv * ca + 4 * wobble(uu, seed + q, 90));
+            }
+            g.poly(strand(line, range(r, 2, 5), 0.3)).fill({ color: T.grain, alpha: 0.3 });
+          }
+          u += len + range(r, 30, 160);
         }
       }
-      for (let k = 0; k < Math.max(2, Math.round((b.w * b.h) / 900000)); k++) {
-        const x0 = b.x + range(r, -0.1, 0.8) * b.w;
-        const y0 = b.y + range(r, 0.1, 0.9) * b.h;
-        const len = range(r, 500, 1600);
+      // Light from above: a soft glow at the top and a few cracks letting it in, slanting down.
+      softGrad(g, b.x, b.x + b.w, b0.y + b0.h * 0.5, b0.y - pad * 0.5, T.deepLit, 0.3, seed + i * 41);
+      for (let k = 0; k < Math.max(1, Math.round(b.w / 1400)); k++) {
+        const x = b.x + range(r, 0.1, 0.9) * b.w;
+        const len = range(r, 300, 900);
         const line: number[] = [];
-        for (let t = 0; t <= 16; t++)
-          line.push(x0 + (len * t) / 16, y0 + 18 * wobble(x0 + t * 100, seed + k, 300));
-        g.poly(strand(line, range(r, 6, 14), 0.05)).fill({ color: T.grain, alpha: 0.75 });
-        g.poly(
-          strand(
-            line.map((v, j) => (j % 2 ? v - 8 : v)),
-            2.5,
-            0.05,
-          ),
-        ).fill({ color: T.deepLit, alpha: 0.5 });
-      }
-      // Growth rings where the giant split: great soft ellipses.
-      for (let k = 0; k < Math.max(1, Math.round((b.w * b.h) / 2400000)); k++) {
-        const cx = b.x + range(r, 0.15, 0.85) * b.w;
-        const cy = b.y + range(r, 0.2, 0.8) * b.h;
-        for (let q = 0; q < 5; q++) {
-          const rx = 180 + q * 70;
-          const ring = blob(cx, cy, rx, rx * 1.5, seed + k * 7 + q, 0.12, 30);
-          ring.push(ring[0] as number, ring[1] as number, ring[2] as number, ring[3] as number);
-          g.poly(strand(ring, 10 + q * 3, 0.05)).fill({ color: q % 2 ? T.deepLit : T.grain, alpha: 0.28 });
-        }
+        for (let t = 0; t <= 10; t++)
+          line.push(x + (t / 10) * len * 0.35 + range(r, -6, 6), b0.y - 40 + (t / 10) * len);
+        g.poly(strand(line, range(r, 5, 12), 0.6)).fill({ color: T.nearLit, alpha: 0.22 });
       }
     } else {
-      // Strata: long soft lenses across the earth, broken, of uneven thickness.
-      for (let y = b.y; y < b.y + b.h; y += range(r, 40, 160)) {
+      // Strata: long soft lenses across the earth, broken, of uneven thickness (few and faint in the den).
+      const denK = plan.look === 'den' ? 2.6 : 1;
+      for (let y = b.y; y < b.y + b.h; y += range(r, 40, 160) * denK) {
         let x = b.x - range(r, 0, 300);
         while (x < b.x + b.w) {
           const len = range(r, 400, 1800);
@@ -1347,6 +1428,33 @@ export function drawDeepBack(
         });
       }
     } else if (plan.look === 'den') {
+      // Lit from below: the fungus on the floor throws a cold glow up the earth; dark roots hang into it from the roof.
+      softGrad(
+        g,
+        b.x,
+        b.x + b.w,
+        b0.y + b0.h * 0.35,
+        b0.y + b0.h + pad * 0.5,
+        DEN_FUNGUS,
+        0.34,
+        seed + i * 43,
+      );
+      for (let x = b.x + range(r, 0, 120); x < b.x + b.w; x += range(r, 90, 260)) {
+        const len = range(r, 0.15, 0.55) * b0.h;
+        const raw: number[] = [];
+        for (let t = 0; t <= 10; t++)
+          raw.push(
+            x + range(r, -8, 8) + Math.sin(t * 0.7 + x) * 20 * (t / 10),
+            b.y + pad * 0.3 + (len * t) / 10 - 40,
+          );
+        const w0 = range(r, 10, 36);
+        g.poly(
+          ribbon(wander(raw, 20, seed + Math.round(x), 200), (t) => Math.max(2, w0 * (1 - t) ** 0.8)),
+        ).fill({
+          color: T.grain,
+          alpha: range(r, 0.5, 0.8),
+        });
+      }
       // Scrapes: the old burrback's claws, raked across the earth in threes.
       for (let k = 0; k < Math.max(3, Math.round(b0.w / 500)); k++) {
         const x = b0.x + range(r, 0, 1) * b0.w;
@@ -1469,4 +1577,271 @@ export function backEdgeShade(plan: InteriorPlan, seed: number): Array<{ pts: nu
     }
   });
   return out;
+}
+
+/** A colour `t` of the way from c0 to c1. */
+function mixC(c0: number, c1: number, t: number): number {
+  const ch = (c: number, sh: number) => (c >> sh) & 255;
+  const m = (sh: number) => Math.round(lerp(ch(c0, sh), ch(c1, sh), t));
+  return (m(16) << 16) | (m(8) << 8) | m(0);
+}
+
+/**
+ * The mid plane (review r5 #7: one flat back behind the play where Silksong has busy mid-value moss lobes behind fog
+ * and HK three depths of lit arches): between the playfield and the deep back (parallax `INTERIOR.midParallax`), its
+ * value `midValue` of the way from the mass to the fog, covering about `midCover` of the back, in the look's own
+ * shapes. Nothing in it has a lit flat top (a background shape must never read as a platform).
+ * - shaft: frost-root arches and hanging lichen;
+ * - heartwood: split grain panels along the giant and sap-lit knots;
+ * - nest: chambers and galleries in silhouette;
+ * - canopy: forked branches with leaf clumps;
+ * - den: roots hanging from the roof and old shells.
+ */
+export function drawMidBack(
+  g: { poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown } },
+  plan: InteriorPlan,
+  seed: number,
+  pad: number,
+  massBody: number,
+): void {
+  const T = plan.tone;
+  // (In the pale shaft a mid-grey reads as a cut-out against the fog: its mid plane sits nearer the fog.)
+  const v = plan.look === 'shaft' ? INTERIOR.midValue + 0.18 : INTERIOR.midValue;
+  const col = mixC(massBody, T.fog, v);
+  const dark = mixC(massBody, T.fog, v * 0.55);
+  const lit = mixC(massBody, T.fog, Math.min(0.85, v + 0.25));
+  plan.backs.forEach((b0) => {
+    const b = { x: b0.x - pad, y: b0.y - pad, w: b0.w + pad * 2, h: b0.h + pad * 2 };
+    const r = rngFor(seed, b0.x, b0.y, 97);
+    const area = b.w * b.h;
+    let covered = 0;
+    const want = area * INTERIOR.midCover;
+    const fill = (pts: number[], c: number, a = 0.92, est = 0): void => {
+      g.poly(pts).fill({ color: c, alpha: a });
+      covered += est;
+    };
+    let guard = 0;
+    if (plan.look === 'heartwood') {
+      const ang = heartAngle(plan);
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      while (covered < want && guard++ < 400) {
+        const cx = b.x + r() * b.w;
+        const cy = b.y + r() * b.h;
+        const len = range(r, 380, 980);
+        const wd = range(r, 90, 240);
+        const up: number[] = [];
+        const lo: number[] = [];
+        for (let q = 0; q <= 14; q++) {
+          const t = q / 14;
+          const u = (t - 0.5) * len;
+          const half = (wd / 2) * Math.sin(Math.PI * t) ** 0.4 * (0.75 + 0.35 * wobble(u, seed + q, 140));
+          const px = cx + u * ca;
+          const py = cy + u * sa;
+          up.push(px + half * sa, py - half * ca);
+          lo.push(px - half * sa, py + half * ca);
+        }
+        const pts = [...up];
+        for (let q = lo.length / 2 - 1; q >= 0; q--) pts.push(lo[q * 2] as number, lo[q * 2 + 1] as number);
+        fill(pts, r() < 0.3 ? lit : col, 0.9, len * wd * 0.7);
+        // A split down its length, dark.
+        const sp: number[] = [];
+        const off = range(r, -0.25, 0.25) * wd;
+        for (let q = 1; q < 10; q++) {
+          const u = (q / 10 - 0.5) * len * 0.85;
+          sp.push(cx + u * ca - off * sa, cy + u * sa + off * ca + 5 * wobble(u, seed + 5, 80));
+        }
+        g.poly(strand(sp, range(r, 5, 12), 0.2)).fill({ color: dark, alpha: 0.9 });
+        // A sap-lit knot now and then.
+        if (r() < 0.35) {
+          const kx = cx + range(r, -0.3, 0.3) * len * ca;
+          const ky = cy + range(r, -0.3, 0.3) * len * sa;
+          g.poly(chaikin(blob(kx, ky, 18, 12, seed + guard, 0.3, 12), 1)).fill({ color: dark, alpha: 0.95 });
+          g.poly(chaikin(blob(kx, ky + 2, 7, 5, seed + guard + 1, 0.3, 10), 1)).fill({
+            color: INTERIOR.sap,
+            alpha: 0.5,
+          });
+        }
+      }
+    } else if (plan.look === 'shaft') {
+      while (covered < want && guard++ < 400) {
+        if (r() < 0.55) {
+          // A frost-root arch: a root bowing across, broken off partway, its width swelling and pinching (an even
+          // full arc with a lit edge read as a rail).
+          const x0 = b.x + r() * b.w;
+          const y0 = b.y + r() * b.h;
+          const span = range(r, 300, 820);
+          const rise = span * range(r, 0.25, 0.6);
+          const dir = r() < 0.5 ? -1 : 1;
+          const tEnd = range(r, 0.55, 1);
+          const line: number[] = [];
+          for (let q = 0; q <= 14; q++) {
+            const t = (q / 14) * tEnd;
+            line.push(
+              x0 + dir * span * t,
+              y0 - rise * Math.sin(Math.PI * t) + 30 * wobble(t * 900, seed + guard, 300),
+            );
+          }
+          const wl = wander(line, 18, seed + guard * 3, 160);
+          const w0 = range(r, 22, 58);
+          fill(
+            ribbon(
+              wl,
+              (t) =>
+                w0 *
+                (0.55 + 0.45 * wobble(t * 1300, seed + guard, 260) ** 2 + 0.3 * t) *
+                (t > 0.9 ? (1 - t) * 8 + 0.2 : 1),
+            ),
+            col,
+            0.8,
+            span * w0 * tEnd,
+          );
+        } else {
+          // Hanging lichen: a cluster of fine strands from a root above.
+          const x = b.x + r() * b.w;
+          const y = b.y + r() * b.h * 0.7;
+          const n = 6 + Math.floor(r() * 10);
+          for (let q = 0; q < n; q++) {
+            const len = range(r, 80, 340);
+            const xx = x + range(r, -50, 50);
+            const line = [xx, y, xx + range(r, -10, 10), y + len * 0.5, xx + range(r, -20, 20), y + len];
+            fill(strand(chaikin2(line), range(r, 4, 10), 0.6), q % 3 ? col : lit, 0.85, len * 7);
+          }
+        }
+      }
+    } else if (plan.look === 'nest') {
+      while (covered < want && guard++ < 400) {
+        // A chamber: a rounded mound of packed earth with its mouth dark in it, a gallery running off from it.
+        const cx = b.x + r() * b.w;
+        const cy = b.y + r() * b.h;
+        const rx = range(r, 140, 340);
+        const ry = rx * range(r, 0.55, 0.85);
+        fill(chaikin(blob(cx, cy, rx, ry, seed + guard, 0.3, 18), 2), col, 0.9, Math.PI * rx * ry * 0.9);
+        g.poly(
+          chaikin(
+            blob(
+              cx + range(r, -0.2, 0.2) * rx,
+              cy + ry * 0.15,
+              rx * 0.42,
+              ry * 0.36,
+              seed + guard + 3,
+              0.3,
+              14,
+            ),
+            2,
+          ),
+        ).fill({
+          color: dark,
+          alpha: 0.95,
+        });
+        const pts: number[] = [];
+        let x = cx;
+        let y = cy;
+        let a = range(r, 0, 6.28);
+        for (let t = 0; t < 12; t++) {
+          pts.push(x, y);
+          a += range(r, -0.6, 0.6);
+          x += Math.cos(a) * 70;
+          y += Math.sin(a) * 40;
+        }
+        fill(strand(pts, range(r, 40, 70), 0.15), col, 0.9, 12 * 70 * 55);
+        g.poly(strand(pts, range(r, 14, 22), 0.15)).fill({ color: dark, alpha: 0.9 });
+      }
+    } else if (plan.look === 'canopy') {
+      while (covered < want && guard++ < 400) {
+        // A branch fork: a limb rising at a slant and splitting, leaf clumps at its tips.
+        const x0 = b.x + r() * b.w;
+        const y0 = b.y + r() * b.h;
+        const a0 = -Math.PI / 2 + range(r, -0.9, 0.9);
+        const len = range(r, 300, 700);
+        const xm = x0 + Math.cos(a0) * len;
+        const ym = y0 + Math.sin(a0) * len;
+        const w0 = range(r, 24, 60);
+        fill(
+          ribbon(
+            wander([x0, y0, (x0 + xm) / 2, (y0 + ym) / 2, xm, ym], 20, seed + guard, 200),
+            (t) => w0 * (1 - t * 0.35),
+          ),
+          col,
+          0.9,
+          len * w0,
+        );
+        for (const da of [-1, 1]) {
+          const a1 = a0 + da * range(r, 0.3, 0.8);
+          const l1 = len * range(r, 0.4, 0.8);
+          const xe = xm + Math.cos(a1) * l1;
+          const ye = ym + Math.sin(a1) * l1;
+          fill(
+            ribbon([xm, ym, (xm + xe) / 2, (ym + ye) / 2 + 10, xe, ye], (t) => w0 * 0.62 * (1 - t * 0.7)),
+            col,
+            0.9,
+            l1 * w0 * 0.4,
+          );
+          const rx = range(r, 80, 170);
+          for (let q = 0; q < Math.round(rx / 4); q++) {
+            const ang = range(r, 0, 6.28);
+            const d = Math.sqrt(r());
+            g.poly(
+              leaf(
+                xe + Math.cos(ang) * rx * d,
+                ye + Math.sin(ang) * rx * 0.6 * d,
+                range(r, 18, 34),
+                range(r, 0, 6.28),
+              ),
+            ).fill({
+              color: q % 4 ? col : lit,
+              alpha: 0.9,
+            });
+          }
+          covered += rx * rx * 0.9;
+        }
+      }
+    } else {
+      // The den: roots hanging from the roof, thick, twisting, tapering, and a few rising from the floor and arching
+      // back into it (ribbed shell domes here read as wheels).
+      while (covered < want && guard++ < 400) {
+        if (r() < 0.75) {
+          const x = b.x + r() * b.w;
+          const len = range(r, 0.25, 0.7) * b0.h;
+          const raw: number[] = [];
+          for (let t = 0; t <= 12; t++)
+            raw.push(x + Math.sin(t * 0.6 + x) * 30 * (t / 12), b.y + pad - 60 + (len * t) / 12);
+          const w0 = range(r, 30, 90);
+          fill(
+            ribbon(wander(raw, 24, seed + guard, 220), (t) => Math.max(3, w0 * (1 - t) ** 0.7)),
+            col,
+            0.92,
+            len * w0 * 0.55,
+          );
+          g.poly(
+            strand(
+              raw.map((v, j) => (j % 2 ? v : v + w0 * 0.22)),
+              w0 * 0.16,
+              0.4,
+            ),
+          ).fill({ color: lit, alpha: 0.4 });
+        } else {
+          const x0 = b.x + r() * b.w;
+          const span = range(r, 260, 640);
+          const rise = span * range(r, 0.3, 0.7);
+          const y0 = b0.y + b0.h + 40;
+          const line: number[] = [];
+          for (let q = 0; q <= 14; q++) {
+            const t = q / 14;
+            line.push(
+              x0 + span * t,
+              y0 - rise * Math.sin(Math.PI * t) ** 0.8 + 20 * wobble(t * 700, seed + guard, 200),
+            );
+          }
+          const w0 = range(r, 30, 70);
+          fill(
+            ribbon(line, (t) => w0 * (0.75 + 0.5 * Math.abs(t - 0.5))),
+            col,
+            0.92,
+            span * w0,
+          );
+        }
+      }
+    }
+  });
 }

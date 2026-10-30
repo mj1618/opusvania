@@ -20,7 +20,16 @@ import type { SolidRect } from '../../../sim/scene';
 import { interiorPlan, paintGlowFlora, paintNearBacks } from './interior';
 import { mix } from './look';
 import type { BakeLook, MistFill } from './pf-bake';
-import { MASS, type MassRect, massOutline, massTone, paintMasses, paintRoost, paintShelves } from './pf-mass';
+import {
+  MASS,
+  type MassRect,
+  massOutline,
+  massTone,
+  paintMasses,
+  paintRoost,
+  paintShelves,
+  paintTaproot,
+} from './pf-mass';
 import { Paint } from './pf-paint';
 import {
   blob,
@@ -2068,7 +2077,10 @@ export function paintBranchTerrain(
     undefined,
     walls,
     massTone(room),
+    room.id,
   );
+  // The den's taproot over its column (review r5 #6).
+  paintTaproot(p, room, seed + 67);
   // The one-way ledges: root shelves (review r3 #2).
   paintShelves(p, massPlan, room, seed + 61);
   // The glowing growth on them (its light is live: layers/interior.ts).
@@ -2294,6 +2306,7 @@ export function paintBranchTerrain(
           r,
           [],
           massTone(room),
+          room.id,
         );
       // (A cover hanging from the top into open air is a root clump: shown past its rect, its strands' ragged tips.)
       const hangs = front && r.y <= 0 && (r.w <= MASS.pillarW || roost);

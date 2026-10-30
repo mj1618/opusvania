@@ -12,7 +12,7 @@ import { markOfferTarget, updateOffer } from './giving';
 import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import { createHatch, updateHatch } from './hatch';
 import { ActionBit, type InputFrame, wasPressed } from './input';
-import { afterCatch, catchHold, updateKit } from './kit';
+import { afterCatch, catchHold, rearmArenas, updateKit } from './kit';
 import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
 import { dropGlints, updateDrops, updatePickups } from './pickups';
@@ -445,6 +445,8 @@ export function step(
   // The end of a fade: she re-forms at her last moon patch (any room: everything earned is kept),
   // else at the last light / safe ground, and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
+    // (An arena's door shut behind her opens again: the lock-in re-arms, as HK's does on a death.)
+    rearmArenas(scene, state.save);
     // (In a glow room all her glow lies where she fell instead: src/sim/light.ts.)
     if (S.glow) dropGlow(state, S, events);
     else dropGlints(state, S, t.health.fadeDrop, events);

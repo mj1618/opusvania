@@ -31,7 +31,7 @@ export const KIT_FIELDS = {
         .strict(),
     )
     .optional(),
-  gates: z.array(z.object({ ...rect, flag: id, kick }).strict()).optional(),
+  gates: z.array(z.object({ ...rect, flag: id, shut: id.optional(), kick }).strict()).optional(),
   triggers: z
     .array(
       z

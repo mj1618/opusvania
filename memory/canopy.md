@@ -1,7 +1,8 @@
-# The Canopy: the first area built to the reference numbers (v5, 2026-10-30)
+# The Canopy: the first area built to the reference numbers (v6, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
-docs/design/levels/reviews/canopy-r1.md .. canopy-r4.md; the reference data: docs/design/reference-levels/.
+docs/design/levels/reviews/canopy-r1.md .. canopy-r5.md; the reference data: docs/design/reference-levels/ (all four
+exact since 2026-10-30).
 Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
 ## How it is made (tools/levels/canopy.ts)
@@ -22,6 +23,37 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v6 (review r5): what changed in how it is built
+- **The hub is 8,000 wide** (`HX` = 3520: the old hub's content sits that far east in it) and the west rooms (limbs,
+  trunk, well, rot, crawl, webs, elder) moved 3,520 west with it; their top / bottom links' `at` (world x) moved too.
+  It leaves a notch in the map under the hub's west half (open to the bottom), the one hole the bands now have.
+- **An arena's door** (`gates[].shut`, src/sim/kit.ts `gateShut` / `rearmArenas`): open until the `shut` flag (a
+  trigger's), then a solid until `flag`; a fade while it stands takes `shut` back out of the save (the door opens
+  behind her as she re-forms, the trigger shuts it again: HK's lock-in, never a locked-out softlock). `gateShut`
+  event for render / audio. The Grove: `pit-door` at the entry corridor's lip, east of `p-grove`.
+  `tests/unit/canopy-arena.test.ts`.
+- **A door shut from one side sits in the room it is shut from**: `rot-wall` is a shortcut in the well's corridor
+  (opens `e`, from the rot hall), not in the rot room (the explorer, and a person, walked into the rot room first).
+- **Rests and strips** (the way out, v6): each strip over a rest guards the face she must not take on the next leg;
+  it must sit above the apex of the leg below's last kick into that rest (~200 px over its floor: a 384 px rest
+  opening takes it) and below the next leg's touches on that face + their slide (a plug bump drops her 100-150 px:
+  cut a plug on the leg whose face is clean below it). Leg 3's slick corner (`noClaws` on the west block over rest W)
+  stops "one face" without a strip there.
+- **climbs.ts plans**: `back` (walk out of a rest onto its lip, then jump the other way), `hops` (jumps in place with
+  up cuts), `takes` (pickups it must have), `delays` / `margin` (a risk plan for a reward over a strip is held at
+  0 / 6 with half the margin, 32).
+- **Pods** sit through `pad()` (a limb's rolling rects levelled under the box; else "inside a solid"); none within a
+  flyer's territory (the scene check throws).
+- **Covers** run 64 px into the mass round the hollow (render's interior plan makes a cover a back, inset 48: an edge
+  probing air reads as torn, `wood-looks.test.ts`).
+- **Hidden routes** keep their locks with slick faces: the tunnel's tube drops onto the hump down a shaft whose faces
+  refuse the claws, and the nearest climbable face is 256 px away (a kick off it reaches 2,368 but not 2,560).
+- `npx tsx tools/levels/canopy-furniture.ts` (after `export-area.ts canopy`): thorns, things to hit, one-ways per
+  air screen in hero heights for the four references and the Canopy.
+- **Two-tier burls are props with a family** (render's `propFamilies`, `wood-props.test.ts`: five burl families, none
+  in more than three rooms): the Canopy holds about 15 burl tapers in all. A hump that only needs to be ground is
+  `burl(..., 1)` (one rect, not a taper); knuckles to stand on are one-ways.
 
 ## Climbs as set pieces (r4, review r3 #1)
 - **Bots find bugs; they are not the bar.** v3 flattened every climb to one clean face for the bots; r4 put the
@@ -116,6 +148,11 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   face from the map and climb leg 2's thorned east face); from the fork two of three climb the claw face and fight
   the Grove's wave. They see no pickup under a cover until inside it or its bark is broken (observe.ts, r5: the
   hub's covered hoard drew six jumps in r4). They walk into flat floor thorns: put beds in shallow pits.
+- r6 (canopy-r6, canopy-r6-fork): all three start bots on the well's landing in 1:36-3:53 (the bottom as a start
+  works), none past leg 3 (2,070-2,170), well <-> trunk loops after. A pit a bot meets before the claws must be a
+  plain jump (the hub's 448 px pit turned all three back); no thorns where a limb's drop lands (the hub's east pit).
+- r6: **they read strips** (lines.ts: a climb move whose face has a thorn strip in its span offers the clean far face
+  first, `wall climb (the far face: ...)`, and `humanPick` takes it first).
 
 ## Measuring
 `npx tsx tools/reference/export-area.ts canopy` (`CRITICAL`, `HIDDEN_ROOMS` there; `onCriticalPath` now from

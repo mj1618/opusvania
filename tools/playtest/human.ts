@@ -243,7 +243,8 @@ export function humanPick(
     else if (m.gap > ctx.plainReach && ctx.glide)
       prefs = [/^jump-glide \(/, /^jump \+ double/, /^walk-off glide/];
     else prefs = [full, /^standing hop/, /^jump-glide \(/, /^walk off/];
-  } else if (m.kind === 'walk' || m.kind === 'drop')
+  } else if (m.kind === 'climb') prefs = [/^wall climb \(the far face/];
+  else if (m.kind === 'walk' || m.kind === 'drop')
     prefs = ctx.glide && m.rise > 300 ? [/^walk-off glide/, /^walk off/] : [/^walk off/, /^hop off/];
   const order: Candidate[] = [];
   for (const re of prefs) {

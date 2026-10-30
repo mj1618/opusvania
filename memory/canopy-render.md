@@ -146,3 +146,48 @@ Shots: round 5 before / after in `shots/canopy-r5-render/before|after/<room>/`.
   a ragged snowline (never floating), dark valley walls converging on its foot over a valley floor, a soft river of
   mist, lamps at three depths (the near ones with moths) and a lamp tree on the drop. `half` 1900 for 21:9.
 - Gotchas: a pale flat quad at low alpha reads as a slab of glass; a thin straight lit line reads as a wire.
+
+## Round 6 (review r5 #4, #6, #7, #8: the render items)
+Shots: `shots/canopy-r6-render/before|after/<room>/` (after also `cn-out-21x9`, `cn-hub-16x10`); against the references at
+matched hero scale (Wing 80 px = Knight 85 = Hornet 139, all drawn at 40 px a hero): `compare/r6-vs-refs.png` (rows: our
+well chimney | Silksong Tut_01; our hub door | HK King's Pass 75-42; our Grove pit | Silksong Tut_02; ours left) and
+`compare/before-after.png`. ImageMagick here has no font (no labels: `-annotate` fails) and `montage` is broken: build
+sheets with `-resize` + `+append` / `-append`.
+- **Edges, not insides** (`lib/pf-edge.ts`, used by pf-mass.ts). `edgeModel(masses, sides, seed, skip)` merges the free
+  runs and gives every face / underside a chain of lobes (`EDGE.claw` +-12 px, `EDGE.loose` for `kick: false`,
+  `EDGE.under` hangs below the collision only); the body's `outline` and the painters read the same lobes. A face is
+  lobed knobs (seam on part of the inner side, a lit crescent, moss on the upper arc, overhanging moss cushions / root
+  stubs off some crests); an underside lobes + `paintFringe` (moss drips, roots, 60-200 px every 40-120); a walk top
+  `paintTopBand` (30-60 px of moss, its depth wandering, tongues; `EDGE.bandLow/High` are albedo: the bake multiplies,
+  so mossDark came out as a dark band) over a half-thickness great root (the full one read as a plank). Inside a mass
+  further than `EDGE.inner` from an edge, veins / plates / fissures keep `innerK` of their alpha.
+  `tests/unit/wood-edges.test.ts`: no face or underside edge straight (within 3 px) over 300 px, claw faces within 12,
+  undersides never above the collision. `massEdgeLines(room)` is what it walks.
+- Gotchas: lobes on both faces of a narrow post read as a string of beads: rects under `MASS.lobeMinW` (220) keep the
+  bark column (3a) and lobe at half. Full seam rings read as coins. Even scallops under a top read as a valance.
+- **Prop families** (pf-mass.ts): `propFamilies()` gives each taper a family (burls `stump`, `split`, `knee`, `fungus`,
+  `fallen`; hangs `talon`, `beard`, `curtain`, `pod`), rooms in id order, the least-used family not yet in the room.
+  `tests/unit/wood-props.test.ts`: none twice in a room, none in more than 3 Canopy rooms (13 burl rooms needed a fifth
+  family). `findTapers` skips a hang wider than `hangMaxW` (360: the roof's own mass) or shorter than `hangMinH`, and any
+  stack whose claw face runs over `clawTaper` (400: the fork's face was a pleated fan). `paintMasses` takes `roomId`.
+- **Shelves** (`shelfFor` now gives `near` (a mass face within 256 px) and `floor`): a root from that wall rising under
+  the ledge below the walk (so the walk visibly ends), else a braided root rising from the floor, leaning in from one
+  side (straight under the middle read as a table on a stem); hung only with nothing else. No ropes.
+- The seed door (kit.ts `seal`, wood): a mat of wavy roots running into the wood at both ends (crossed diagonals were a
+  truss). The den's taproot: `paintTaproot` (pf-branch calls it) over the column, 160-220 thick, twisting, 3-4 roots
+  at the foot, a sap-lit scar at the wick.
+- **Backs** (lib/interior.ts): a mid plane `drawMidBack` in its own layer `interiorMid` (0.93, masked like the deep),
+  value `midValue` from the mass body to the fog (+0.18 in the shaft: mid-grey on the pale fog read as cut-outs),
+  `midCover` of the back, shapes per look. Heartwood: grain in diagonal panels at `heartAngle(plan)` (deep, near and mid
+  agree), light from above, no rings. Den: cool umber-grey (TONES, MASS_TONES, `WOOD_LOOK_GRADE.den`), fungus light from
+  below, dark roots hanging (ribbed shell domes read as wheels). Canopy posts: 480-900 apart, width 30-150, lean +-8
+  degrees, a third forked, leaf clumps on them.
+- **The vista** (`WoodVista`): `ridge` is one body (a shared base falling off at the ends, a soft max that fills the
+  saddles); faces opaque, lowest peak first, each clipped to where it is the top, closing on a slant (square bottoms read
+  as blocks); a mid range; four hill bands (`hillY`, `hills`) with mist in the folds and fir clumps (none on the
+  farthest: tiny even firs read as a fence); lamps set on the crests; a lamp tree (trunk, three limbs, lobed crown).
+- Standing silhouettes on mass walks (pf-branch-flora.ts `standing`: fiddleheads, seed stalks, grass blades, live in
+  the wind), `BRANCH_FLORA.standGap / standH`.
+- Weak still: claw faces at +-12 px still read near-straight at play distance; our moss band and fiddleheads are a
+  fraction of Silksong's (thinner, dimmer); the big masses' insides are still the largest dark planes on screen (HK's
+  insides are drawn shapes).
