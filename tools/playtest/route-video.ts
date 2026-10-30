@@ -13,6 +13,11 @@
  * next move still lands on the same node. `render` replays the tape in the page (follow camera, zoom 1, pickups and
  * HUD on), one picture per 2 sim frames (30 fps, real time), skips long still stretches, and burns the room name in
  * a corner (ffmpeg + an .srt), then writes chapters.md.
+ *
+ * v3 (2026-10-30): the route is the v3 layout's (27 rooms). A `warp` leg is a harness teleport for where play
+ * cannot go on (a level bug); it is saved in legs.json (`warps`), replayed by `render` at the same sim frame and
+ * captioned. An `optional` fight leaves the creature be when time runs out. `--title`, `--layout` and the commit
+ * (git) head chapters.md.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -42,6 +47,8 @@ const { values: args, positionals } = parseArgs({
     frames: { type: 'string' },
     name: { type: 'string', default: 'canopy-playthrough' },
     crf: { type: 'string', default: '25' },
+    title: { type: 'string', default: 'The Canopy: a complete playthrough (review video)' },
+    layout: { type: 'string' },
   },
 });
 
@@ -55,8 +62,10 @@ const world = getWorld(WORLD);
 type Leg =
   | { name: string; kind: 'exit'; exit: string; max?: number }
   | { name: string; kind: 'goal'; test: (s: GameState) => boolean; max?: number }
-  | { name: string; kind: 'fight'; ids: string[]; seconds?: number }
+  | { name: string; kind: 'fight'; ids: string[]; seconds?: number; optional?: boolean }
   | { name: string; kind: 'script'; script: string }
+  /** A harness teleport (feet at x, y), only where play cannot go on (a level bug): captioned in the video. */
+  | { name: string; kind: 'warp'; x: number; y: number; why: string }
   | { name: string; kind: 'settle' };
 
 const taken = (id: string) => (s: GameState) => s.save.taken.includes(id);
@@ -73,69 +82,90 @@ const near =
     const f = feet(s);
     return Math.abs(f.x - x) < r && Math.abs(f.y - y) < 60;
   };
-const broken = (id: string, sc: () => GameState) => {
-  void sc;
-  return (s: GameState) => s.save.opened.includes(id) || s.save.opened.some((o) => o.endsWith(`:${id}`));
-};
+/** A rotten wall or panel of the room she is in is broken (its key in save.opened). */
+const opened = (id: string) => (s: GameState) => s.save.opened.some((o) => o === id || o.endsWith(`:${id}`));
 
 export const ROUTE: Leg[] = [
+  // v3 (build a46886f): the critical path from a fresh save, both fights, and detours to the new things (the
+  // Elder's plug and chimney, the webs, the crawl, the rot walls; the cellar's ants and the nest wall; the Grove's
+  // keen hollow; the way out's ledge wall).
   // The hatch: the cocoon listens after the fade up; three presses break it.
   { name: 'cn-hatch: the hatching', kind: 'script', script: '.170 J2 .10 J2 .10 J2 .10 J2 .90' },
   { name: 'cn-hatch: down to the drop', kind: 'exit', exit: 'drop', max: 12000 },
-  // The Crossing, first time: the rotten bank wall and its hidden hollow (a secret), then west and low.
-  { name: 'cn-hub: break the bank wall', kind: 'goal', test: picked('cn-hub', 'bank-great'), max: 8000 },
-  { name: 'cn-hub: to the fallen giant', kind: 'exit', exit: 'trunk', max: 8000 },
+  // The Crossing reads west: down the root floor into the giant's mouth.
+  { name: 'cn-hub: the lit way west', kind: 'exit', exit: 'trunk', max: 9000 },
+  // The fallen giant: the rotten wall is the only way on from its first hall.
+  { name: 'cn-trunk: the rotten wall', kind: 'goal', test: opened('giant-wall'), max: 9000 },
   { name: 'cn-trunk: the seed in the roof', kind: 'goal', test: flag('seeds:1'), max: 9000 },
   { name: 'cn-trunk: down to the well', kind: 'exit', exit: 'well', max: 9000 },
   { name: 'cn-well: the claws at the bottom', kind: 'goal', test: owns('wallJump'), max: 9000 },
+  // Detour west: the plug into the Elder's room, its chimney to the moonDrop, down through the webs and the crawl,
+  // the rot hall's walls, back into the well's foot.
+  { name: 'cn-well: the plug (a rotten wall)', kind: 'exit', exit: 'elder', max: 9000 },
+  {
+    name: 'cn-elder: the chimney to the moonDrop',
+    kind: 'goal',
+    test: taken('cn-elder:drop-elder'),
+    max: 12000,
+  },
+  { name: 'cn-elder: down to the webs', kind: 'exit', exit: 'webs', max: 12000 },
+  // (The explorer counts the web's hold as a failure: she walks in cutting, is held, breaks free, the weaver misses.)
+  { name: "cn-webs: through the weaver's web", kind: 'script', script: `${'R+A1 R12 '.repeat(23)}R10` },
+  // (Not the niche's great glint: every way up to it crosses strands, and the explorer will not be held.)
+  { name: 'cn-crawl: the crawlspace', kind: 'exit', exit: 'rot', max: 12000 },
+  { name: 'cn-rot: the cache wall', kind: 'goal', test: picked('cn-rot', 'cache-great'), max: 12000 },
+  { name: 'cn-rot: back to the well', kind: 'exit', exit: 'well', max: 12000 },
   {
     name: 'cn-well: up the shaft',
     kind: 'goal',
     test: (s) => s.room === 'cn-well' && feet(s).y <= 1160 && feet(s).y > 900,
-    max: 9000,
+    max: 12000,
   },
-  {
-    name: 'cn-well: the ambush',
-    kind: 'fight',
-    ids: ['burr-am-1', 'burr-am-2', 'wing-am', 'juv-am'],
-    seconds: 120,
-  },
-  { name: 'cn-well: out by the claw face', kind: 'exit', exit: 'limbs', max: 9000 },
-  { name: 'cn-limbs: back to the Crossing', kind: 'exit', exit: 'hub', max: 9000 },
-  {
-    name: 'cn-hub: the rotten floor and the moth-stone',
-    kind: 'goal',
-    test: taken('cn-hub:stone-heart'),
-    max: 9000,
-  },
+  { name: 'cn-well: the ambush', kind: 'fight', ids: ['burr-am-1', 'burr-am-2'], seconds: 120 },
+  // (The ambush's lampwing hovers ~450 px over the hollow's floor and never comes down to her: left be if so.)
+  { name: 'cn-well: the lampwing', kind: 'fight', ids: ['wing-am'], seconds: 20, optional: true },
+  { name: 'cn-well: out to the upper limbs', kind: 'exit', exit: 'limbs', max: 9000 },
+  { name: 'cn-limbs: the jump over the thorns', kind: 'exit', exit: 'hub', max: 9000 },
   { name: 'cn-hub: east to the fork', kind: 'exit', exit: 'fork', max: 9000 },
+  // Detour: the fork's rotten floor, the cellar's ants, the galleries' nest wall.
+  { name: 'cn-fork: the rotten floor to the cellar', kind: 'exit', exit: 'cellar', max: 9000 },
+  { name: 'cn-cellar: past the ants', kind: 'exit', exit: 'galleries', max: 12000 },
+  {
+    name: 'cn-galleries: the nest wall',
+    kind: 'goal',
+    test: picked('cn-galleries', 'nest-great'),
+    max: 12000,
+  },
+  { name: 'cn-galleries: back', kind: 'exit', exit: 'cellar', max: 12000 },
+  { name: 'cn-cellar: back up', kind: 'exit', exit: 'fork', max: 12000 },
   { name: 'cn-fork: the claw climb to the Grove', kind: 'exit', exit: 'grove', max: 9000 },
   { name: 'cn-grove: the keen hollow', kind: 'goal', test: flag('upgrade:keenBlade'), max: 9000 },
   { name: 'cn-grove: the seed', kind: 'goal', test: flag('seeds:2'), max: 9000 },
-  { name: 'cn-grove: down the rotten pit floor', kind: 'exit', exit: 'hollowroot', max: 9000 },
-  {
-    name: 'cn-hollowroot: the quick-wings hollow',
-    kind: 'goal',
-    test: flag('upgrade:quickWings'),
-    max: 9000,
-  },
-  { name: 'cn-hollowroot: back up', kind: 'exit', exit: 'grove', max: 9000 },
   { name: 'cn-grove: on to the Spire', kind: 'exit', exit: 'spire', max: 9000 },
-  { name: 'cn-spire: the climb', kind: 'exit', exit: 'bower', max: 9000 },
-  { name: 'cn-bower: up the east wall to the attic', kind: 'exit', exit: 'attic', max: 9000 },
-  { name: 'cn-attic: the long-breath hollow', kind: 'goal', test: flag('upgrade:longBreath'), max: 9000 },
-  { name: 'cn-attic: back down', kind: 'exit', exit: 'bower', max: 9000 },
-  { name: 'cn-bower: up to the crown', kind: 'exit', exit: 'crown', max: 9000 },
+  { name: 'cn-spire: the climb', kind: 'exit', exit: 'bower', max: 12000 },
+  { name: 'cn-bower: the kin climb to the crown', kind: 'exit', exit: 'crown', max: 12000 },
   { name: 'cn-crown: the glide', kind: 'goal', test: owns('glide'), max: 9000 },
   { name: 'cn-crown: back down', kind: 'exit', exit: 'bower', max: 9000 },
-  { name: 'cn-bower: west to the gap', kind: 'exit', exit: 'gap', max: 9000 },
-  { name: 'cn-gap: the far seed', kind: 'goal', test: flag('seeds:3'), max: 9000 },
-  { name: 'cn-gap: up to the sky room', kind: 'exit', exit: 'sky', max: 9000 },
-  { name: 'cn-sky: the night-eyes hollow', kind: 'goal', test: flag('upgrade:nightEyes'), max: 9000 },
-  { name: 'cn-sky: back down', kind: 'exit', exit: 'gap', max: 9000 },
+  { name: 'cn-bower: west to the gap', kind: 'exit', exit: 'gap', max: 12000 },
+  { name: 'cn-gap: the glide to the far seed', kind: 'goal', test: flag('seeds:3'), max: 12000 },
   { name: 'cn-gap: the drop into the Crossing', kind: 'exit', exit: 'hub', max: 9000 },
   { name: 'cn-hub: the seed door', kind: 'exit', exit: 'door', max: 9000 },
-  { name: 'cn-tunnel: the root tunnel', kind: 'exit', exit: 'den', max: 9000 },
+  { name: 'cn-tunnel: the glide over the thorn pit', kind: 'exit', exit: 'den', max: 12000 },
+  // Build a46886f: the balcony is sealed from the arena (the arena cave's bitten west corner leaves solid at
+  // x 640-736, y 416-512 across the balcony's mouth), so she walks to its end and is set 180 px east, in the air.
+  {
+    name: "cn-den: the balcony's end",
+    kind: 'goal',
+    test: (s) => s.room === 'cn-den' && feet(s).x >= 560,
+    max: 3000,
+  },
+  {
+    name: 'cn-den: (teleport past the sealed lip)',
+    kind: 'warp',
+    x: 800,
+    y: 576,
+    why: 'Teleport: the balcony is sealed (level bug)',
+  },
   {
     name: 'cn-den: down into the arena',
     kind: 'goal',
@@ -143,15 +173,14 @@ export const ROUTE: Leg[] = [
     max: 9000,
   },
   { name: 'cn-den: the old burrback', kind: 'fight', ids: ['old-burr'], seconds: 300 },
-  { name: 'cn-den: out', kind: 'exit', exit: 'out', max: 9000 },
-  { name: 'cn-out: the rotten wall to the ledge', kind: 'exit', exit: 'ledge', max: 9000 },
+  { name: 'cn-den: out through the root gate', kind: 'exit', exit: 'out', max: 9000 },
+  { name: 'cn-out: the rotten wall to the ledge', kind: 'exit', exit: 'ledge', max: 12000 },
   { name: 'cn-ledge: the hoard', kind: 'goal', test: picked('cn-ledge', 'ledge-great'), max: 9000 },
   { name: 'cn-ledge: back out', kind: 'exit', exit: 'out', max: 9000 },
-  { name: 'cn-out: the way on', kind: 'goal', test: flag('cn-area-end'), max: 9000 },
+  { name: 'cn-out: the glide over the valley', kind: 'goal', test: flag('cn-area-end'), max: 12000 },
   { name: 'end: hold', kind: 'script', script: '.240' },
 ];
 void near;
-void broken;
 
 // ---- the driver
 
@@ -171,6 +200,8 @@ class Driver {
   rooms: string[] = [];
   events: Array<{ f: number; e: SimEvent }> = [];
   log: LegLog[] = [];
+  /** Harness teleports: before sim frame `f` (the tape's length then), feet at (x, y). */
+  warps: Array<{ f: number; x: number; y: number; why: string }> = [];
   private last: readonly SimEvent[] = [];
 
   constructor() {
@@ -196,6 +227,19 @@ class Driver {
 
   play(tape: readonly number[]): void {
     for (const m of tape) this.push(m);
+  }
+
+  /** Replays a saved tape with its teleports (a resumed plan). */
+  replay(tape: readonly number[], warps: Driver['warps']): void {
+    for (const m of tape) {
+      for (const w of warps) if (w.f === this.tape.length) this.warp(w.x, w.y, w.why);
+      this.push(m);
+    }
+  }
+
+  warp(x: number, y: number, why: string): void {
+    this.game.teleport(x, y);
+    this.warps.push({ f: this.tape.length, x, y, why });
   }
 
   settle(max = 180): void {
@@ -380,12 +424,17 @@ class Driver {
     if (L.kind === 'script') {
       this.play(parseInputScript(L.script));
       ok = true;
+    } else if (L.kind === 'warp') {
+      this.warp(L.x, L.y, L.why);
+      note = L.why;
+      ok = true;
     } else if (L.kind === 'settle') {
       this.settle();
       ok = true;
     } else if (L.kind === 'fight') {
       note = this.fight(L.ids, (L.seconds ?? 120) * 60);
-      ok = note.startsWith('down');
+      // (An optional fight that runs out of time leaves the creature be: the route goes on.)
+      ok = note.startsWith('down') || L.optional === true;
     } else {
       const test = L.kind === 'goal' ? L.test : undefined;
       const exit = L.kind === 'exit' ? L.exit : undefined;
@@ -464,6 +513,8 @@ const KEEP = new Set([
   'enemyAware',
   'reform',
   'fallCatch',
+  'shortcutOpen',
+  'enemyPhase',
 ]);
 
 // ---- render
@@ -483,10 +534,16 @@ async function main(): Promise<void> {
     const from = args.from ? Number(args.from) : 0;
     if (from > 0) {
       // Resume: replay the saved tape's first legs.
-      const prev = JSON.parse(readFileSync(join(out, 'legs.json'), 'utf8')) as { legs: LegLog[] };
+      const prev = JSON.parse(readFileSync(join(out, 'legs.json'), 'utf8')) as {
+        legs: LegLog[];
+        warps?: Driver['warps'];
+      };
       const tape = JSON.parse(readFileSync(join(out, 'tape.json'), 'utf8')) as number[];
       const upto = prev.legs[from - 1]?.end ?? 0;
-      d.play(tape.slice(0, upto));
+      d.replay(
+        tape.slice(0, upto),
+        (prev.warps ?? []).filter((w) => w.f < upto),
+      );
       d.log.push(...prev.legs.slice(0, from));
       console.log(`resumed at leg ${from} (frame ${upto}, ${d.s.room})`);
     }
@@ -498,7 +555,7 @@ async function main(): Promise<void> {
       writeFileSync(join(out, 'tape.json'), JSON.stringify(d.tape));
       writeFileSync(
         join(out, 'legs.json'),
-        JSON.stringify({ legs: d.log, hash: d.game.hash(), frames: d.tape.length }, null, 1),
+        JSON.stringify({ legs: d.log, hash: d.game.hash(), frames: d.tape.length, warps: d.warps }, null, 1),
       );
       if (!log.ok || L.name === args.upto) break;
     }
@@ -553,8 +610,25 @@ async function render(out: string): Promise<void> {
     let lastPos = '';
     const t0 = Date.now();
     const total = args.frames ? Math.min(Number(args.frames), masks.length) : masks.length;
+    const warps =
+      (
+        JSON.parse(readFileSync(join(out, 'legs.json'), 'utf8')) as {
+          warps?: Array<{ f: number; x: number; y: number }>;
+        }
+      ).warps ?? [];
     while (done < total) {
-      const n = Math.min(2, total - done);
+      for (const w of warps)
+        if (w.f === done)
+          await page.evaluate(
+            ([x, y]) =>
+              (window as unknown as { __game: { teleport(x: number, y: number): unknown } }).__game.teleport(
+                x as number,
+                y as number,
+              ),
+            [w.x, w.y],
+          );
+      const nextWarp = warps.find((w) => w.f > done)?.f ?? Number.POSITIVE_INFINITY;
+      const n = Math.min(2, total - done, nextWarp - done);
       const st = (await page.evaluate((k) => {
         const g = (window as unknown as { __game: { step(n: number): unknown; state(): GameState } }).__game;
         g.step(k);
@@ -607,12 +681,27 @@ const UPGRADE: Record<string, string> = {
   quickWings: 'quick wings',
   longBreath: 'long breath',
   nightEyes: 'night eyes',
+  moonDrop: 'a moonDrop (one more light)',
 };
 const BARK: Record<string, string> = {
+  // v2
   'bank-wall': 'Secret: a rotten wall breaks',
   'cache-floor': 'Secret: a rotten floor breaks',
   'pit-panel': 'A rotten floor breaks',
   'ledge-wall': 'Secret: a rotten wall breaks',
+  // v3
+  'giant-wall': 'A rotten wall breaks: the way on',
+  'rot-panel': 'Secret: a rotten floor breaks',
+  'elder-plug': "Secret: the Elder's plug breaks",
+  'rot-wall': 'A rotten wall breaks',
+  'rot-cache': 'Secret: a rotten wall breaks',
+  'crawl-panel': 'Secret: a rotten floor breaks',
+  'cellar-panel': 'Secret: a rotten floor breaks',
+  'nest-wall': "Secret: the nest's wall breaks",
+  'pit-wall': 'Secret: a rotten wall breaks',
+  'hollow-wall': 'Secret: a rotten wall breaks',
+  'kin-wall': 'Secret: a rotten wall breaks',
+  'burrow-panel': 'Secret: a rotten floor breaks',
 };
 
 function eventText(e: SimEvent): string | null {
@@ -634,8 +723,20 @@ function eventText(e: SimEvent): string | null {
         : x.id === 'wing-am' || /^burr-am|juv-am/.test(x.id as string)
           ? null
           : null;
+    case 'enemyPhase':
+      return x.phase === 2
+        ? 'Phase 2: the slam, then it rolls'
+        : x.phase === 3
+          ? 'Phase 3: the desperate rams'
+          : null;
     case 'gateOpen':
-      return 'The root gate opens';
+      return x.id === 'seed-door'
+        ? 'The seed door opens'
+        : x.id === 'root-gate'
+          ? 'The root gate opens'
+          : null;
+    case 'shortcutOpen':
+      return 'A shortcut opens';
     case 'flagSet':
       return x.flag === 'cn-area-end' ? 'The way on: end of the Canopy' : null;
     case 'fade':
@@ -643,6 +744,12 @@ function eventText(e: SimEvent): string | null {
     default:
       return null;
   }
+}
+
+/** The commit the video was made from (chapters.md). */
+function build(): string {
+  const r = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.trim() : '?';
 }
 
 function finish(out: string): void {
@@ -693,6 +800,14 @@ function finish(out: string): void {
     const a = vt(f);
     lines.push({ a, b: Math.min(end, a + 3.5), style: 'Event', text });
   }
+  const warps =
+    (
+      JSON.parse(readFileSync(join(out, 'legs.json'), 'utf8')) as {
+        warps?: Array<{ f: number; why: string }>;
+      }
+    ).warps ?? [];
+  for (const w of warps)
+    lines.push({ a: vt(w.f), b: Math.min(end, vt(w.f) + 4), style: 'Event', text: w.why });
   for (const L of legs)
     if (/ambush|old burrback/.test(L.name)) {
       const a = vt(L.start);
@@ -763,9 +878,15 @@ function finish(out: string): void {
   writeFileSync(
     join(out, 'chapters.md'),
     [
-      '# The Canopy: a complete playthrough (review video)',
+      `# ${args.title}`,
       '',
-      `\`${name}.mp4\`: ${mmss(end)}, 1280x720, 30 fps, real-time speed. Build 93710c7 (the v2 layout, round-3 rendering), world \`canopy\` from a fresh save in \`cn-hatch\`; the follow camera at zoom 1, glints and HUD on. Played by a bot (tools/playtest/route-video.ts): one input tape, every ability, seed and flag earned in play, fights fought for real. Still stretches over 1.5 s are cut short.`,
+      `\`${name}.mp4\`: ${mmss(end)}, 1280x720, 30 fps, real-time speed. Build ${build()}${args.layout ? ` (${args.layout})` : ''}, world \`canopy\` from a fresh save in \`cn-hatch\`; the follow camera at zoom 1, glints and HUD on. Played by a bot (tools/playtest/route-video.ts): one input tape, every ability, seed and flag earned in play, fights fought for real${warps.length ? ', except where marked' : ''}. Still stretches over 1.5 s are cut short.`,
+      ...(warps.length
+        ? [
+            '',
+            `Harness edits (captioned in the video): ${warps.map((w) => `${mmss(vt(w.f))} ${w.why}`).join('; ')}. A teleport re-creates her with the base maximum, so she loses a light there (5 to 4).`,
+          ]
+        : []),
       '',
       '| time | room | what happens |',
       '|---|---|---|',
