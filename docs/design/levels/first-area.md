@@ -231,7 +231,8 @@ would not forgive or not find: a point-blank spawn, a runback through a save she
 about. v8 takes the [level] items (#1, #2, #4, #5's level side, #7, #9) and two bugs from the coordinator's v7 video;
 the render items (#3, #6, #8, #10, the moon's draw) are the render builder's. The trade is Matt's call (not built).
 - **#1, the fling taught.**
-  - *A required, safe first fling a minute in* (the hatch, the one room crossed once): the crown's east limb (S5) is
+  - *A required, safe first fling a minute in* (the hatch, the one room crossed once; the lamp relights 90 frames
+    after it goes out, `relight`, so a cut never leaves her without it): the crown's east limb (S5) is
     cut back to 3,520 and the droop's limb (S8) starts at 4,272 (still inside its painted trunk): 752 px across and
     290 down, past any jump (a coyote jump with the hold reached 4,221 before: 51 px short of the new lip). One lamp
     (`wick-first`, 3,700 x 660) hangs on a running jump's rise off the lip; under the gap the fall catch sets her
@@ -253,8 +254,9 @@ the render items (#3, #6, #8, #10, the moon's draw) are the render builder's. Th
     down off the second, the third. A down-left fling off the first brings the second into reach
     (`canopy-r8.test.ts`), and every gap claim holds lit.
   - *The bots fling*: `FlingAim` in tools/playtest/lines.ts (Lamp pressed when a flame is in reach on a lamp
-    line, the stick swept over the ways toward the goal reading `lureArc`, let go on the best). v7's bots still played
-    the old lamp catch (`player.lure`, always -1 since 2026-10-18): that is why they lit 0 lamps.
+    line, the stick swept over the ways toward the goal reading `lureArc`, let go on the best), and the Lamp key in
+    the motor's keys (human.ts). v7's bots still played the old lamp catch (`player.lure`, always -1 since
+    2026-10-18), and their hands had no Lamp key: that is why they lit 0 lamps.
 - **#2, ambushes arrive** (sim: `EnemySpawn.arrive`, a list of points; `EnemyState.arrive / arriveX / arriveY`;
   `enemyArrive`; `tuning.enemies.arriveDelayFrames` 36, `arriveFrames` 48, `arriveClearPx` 400; trigger `rearm`).
   The flag's step shuts the gates; 36 frames later each creature shows at the first of its arrive points 400+ px from
@@ -534,7 +536,23 @@ seed only through its wall (`cuts: false`), the Grove's gate only once the pit i
 the arena floor and not climbable back (`place:` claims), the giant's tier 3 back up with the claws). r4 counts bark
 cuts in the search's keys (`barkHp`), which made it ~5x slower. The world check passes (claws, then glide).
 
-## Played by the human-like bots (v7: playtest-reports/canopy-r7)
+## Played by the human-like bots (v8: playtest-reports/canopy-r8)
+On 9643301 (25 min, give up after 180 s; for bugs and softlocks only):
+
+| bot | out of the hatch | claws at | furthest | where it went |
+|---|---|---|---|---|
+| casual | 0:57 (3 catches, then the fling) | 2:23 | leg 2 | well <-> trunk loops for 22 min; leg 2's strip 13 hits |
+| average | 0:30 | 1:26 | **the hollow at 4:17**, the ambush cleared (all three), leg 3 | lost in the well at 14:40 (the hollow and the chimney: never found the shelf to the limbs) |
+| skilled | 0:32 | 1:24 | **the hollow at 8:04**, the ambush cleared | lost in the well at 13:27, the same |
+
+What the runs found, fixed on the way: the hands never pressed the Lamp key (`ActionBit.lamp` was missing from the
+motor's keys in human.ts: the lamp lines planned flings the keyboard never sent), and **the first lamp could be cut
+down for good** (the bots' old lamp-cut lines snuffed it: no lamp, no way across, a softlock): it relights 90 frames
+after it goes out. With both, all three fling across in the first minute. The well's ambush arrived and was fought
+and cleared by two bots (4 and 3 hits in it). Not reached: the limbs (v7's skilled bot left by them at 16:39); the
+bots wander the hollow after the ambush. A plain jump from the block to the east shelf is the way (the proofs).
+
+### v7 (playtest-reports/canopy-r7)
 The start command on 9f0d77a (25 min, give up after 180 s; for bugs and softlocks only, never a difficulty bar):
 
 | bot | claws at | furthest | where it went |

@@ -26,7 +26,8 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
 ## v8 (review r7): the first ten minutes
 - **A required lesson in a room crossed once**: a fling lamp goes out for good when she lands, so a required fling on a
-  way walked again (the hub) needs a second way (claws, or a `relight` lamp) or it softlocks. The hatch is crossed
+  way walked again (the hub) needs a second way (claws, or a `relight` lamp) or it softlocks. And a lamp can be cut
+  down for good with the blade: a required one gets `relight` (the first lamp: 90 frames; never saved). The hatch is crossed
   once, its fall catch is the soft floor (a catch relights the embers). The gap is past a jump by a margin: the
   explorer's `offdj` (a walk-off, then jump held in coyote time) reached 51 px further than a running jump.
 - **A fall catch's return gave a free double jump** (`placePlayer` -> `createPlayer` takes the tuning's): a player who
@@ -221,7 +222,10 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   the limbs; still well <-> trunk loops, leg 2's strip 6-15 hits a run. The bots rest at a patch only when they
   happen to stand still in it: the casual one never rested at `p-hollow`, so its ambush fades cost legs 2-3 again.
 - r8: **they fling** (`FlingAim` in lines.ts: a lamp line presses Lamp when `flingTarget` finds a flame, sweeps the
-  aims reading `lureArc`, lets go on the best). v7's still played the old catch (`player.lure`, -1 since the fling).
+  aims reading `lureArc`, lets go on the best; the Lamp key is in the motor's `BITS` in human.ts: without it the
+  lookahead flung and the hands never did, "did not go as foreseen"). v7's still played the old catch. Their old
+  lamp-cut lines snuff lamps for good: a required lamp must `relight`. r8 run (canopy-r8): all three out of the
+  hatch in the first minute, two clear the hollow's ambush, none finds the shelf to the limbs.
 - r6: **they read strips** (lines.ts: a climb move whose face has a thorn strip in its span offers the clean far face
   first, `wall climb (the far face: ...)`, and `humanPick` takes it first).
 
