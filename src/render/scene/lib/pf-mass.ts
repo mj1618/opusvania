@@ -81,6 +81,8 @@ export const MASS = {
   taperMaxW: 900,
   /** ...a hanging one only this narrow (wider is the roof's own mass), and none with a claw face this tall. */
   hangMaxW: 360,
+  /** A block free on every side and no bigger than this (w, h px) is a lump: no lift, knobs or wrap on its faces. */
+  floatMax: [560, 360] as readonly number[],
   /** Faces of masses narrower than this keep a bark column (a root post), not lobes. */
   lobeMinW: 220,
   hangMinH: 160,
@@ -690,6 +692,23 @@ export function paintMasses(
   const faces = em.faces;
   const unders = em.unders;
   const tops = em.tops;
+  // A small block floating free (every side in the air, review r9 #5: the hub's clearing block, lit lobes and lichen
+  // on all four sides round its dark middle, read as a picture frame in the sky): its faces get no lift band, knob
+  // chain or wrap; it reads as one dark lump under its lit top.
+  const floats = new Set<number>();
+  masses.forEach((r, i) => {
+    const s = sides[i] as Sides;
+    const full = (segs: Seg[], len: number) => segs.reduce((a, g) => a + (g[1] - g[0]), 0) >= len - 2;
+    if (
+      r.w <= (MASS.floatMax[0] as number) &&
+      r.h <= (MASS.floatMax[1] as number) &&
+      full(s.left, r.h) &&
+      full(s.right, r.h) &&
+      full(s.top, r.w) &&
+      full(s.bottom, r.w)
+    )
+      floats.add(i);
+  });
 
   // 1. The body (a taper's is its own silhouette, step 1b).
   masses.forEach((r, i) => {
@@ -954,7 +973,8 @@ export function paintMasses(
       u += l + range(rr, 14, 40);
     }
   };
-  for (const f of faces) if (near(f.key - 240, f.a, f.key + 240, f.b)) liftBand(f, 'face');
+  for (const f of faces)
+    if (!floats.has(f.i) && near(f.key - 240, f.a, f.key + 240, f.b)) liftBand(f, 'face');
   for (const t of tops) if (near(t.a, t.key - 40, t.b, t.key + 240)) liftBand(t, 'top');
 
   // 2c. The core (canopy review r7 #3: "the ground is no longer a silhouette", the insides read at luma 19-35 against
@@ -1076,7 +1096,7 @@ export function paintMasses(
   const et0 = edgeTone();
   for (const f of faces) {
     const r = masses[f.i] as MassRect;
-    if (r.w < MASS.lobeMinW || !near(f.key - 200, f.a, f.key + 200, f.b)) continue;
+    if (r.w < MASS.lobeMinW || floats.has(f.i) || !near(f.key - 200, f.a, f.key + 200, f.b)) continue;
     const et = earth(r)
       ? { ...et0, body: MASS.soil, deep: T.deep, lift: MASS.soilLit, rim: MASS.soilLit, moss: 0 }
       : et0;
@@ -1302,7 +1322,7 @@ export function paintMasses(
   const fam = topFamily();
   if (fam) {
     for (const f of faces) {
-      if (!near(f.key - 200, f.a, f.key + 200, f.b)) continue;
+      if (floats.has(f.i) || !near(f.key - 200, f.a, f.key + 200, f.b)) continue;
       const off = (u: number) => f.key + f.dir * em.faceAt(f.dir, f.key, u);
       paintFaceWrap(p, f.a, f.b, f.dir, off, B.walkH, em.seedOf(f) + 17, fam);
     }
