@@ -53,7 +53,17 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   skilled bot spent 45 s on each cell of the well's shard shelf in turn (100+ s). Their explorer still ranks every
   unwalked cell (rank 1) over exits (rank 3), so a door in frame waits until the room is walked.
 - **route-video.ts v6**: the v9 route (gallery legs, the hollow's shard, the gap's chain and out by the fork, the
-  warning's fight `until` `cn-tunnel-clear`).
+  warning's fight `until` `cn-tunnel-clear`); `plan` runs the whole area (57 legs, 5.6 min of play), only the
+  optional shard fling unfound (it needs the ambush on). A fight leg that fails now says who is up and where she is.
+- **A gate can shut on her**: `shut` gates have no body check. The Grove's `pit-wave` trigger reached up to 32 px
+  under the arena gates' foot, so a slow drop through the opening set it with her head in the gate's rect: stuck
+  inside a solid (the route plan stood there 240 s). Keep an arena trigger's top >= her height + 32 under any gate it
+  shuts (`canopy-r9b.test.ts`).
+- **Framing a room's edge with a zone**: a zone's `bounds` must lie inside the room, and a zoomed view meets the room's
+  edges softly (`zones.edgeKnee` 220 px), so a fit frame ending at the room's foot leaves the view ~80 px short of it.
+  To put the view near an edge, give a set `zoom` and a small frame in that corner: the view centres on it, asks past
+  the edge and the knee stops it ~20 px short. The den's warning: `zoom` 0.85 over 640 x 640 at the mouth's corner
+  (v9: the fit frame stopped at the mouth's floor, beat 2's tell on the frame's edge).
 
 ## v9 (review r8): shape, frames, the second peak
 - **Sealed air** (`sealDeep(d)` before `fill()`, `sealed(x0, y0, x1, y1)` by hand): mass more than `d` from any carved

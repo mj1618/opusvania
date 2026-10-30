@@ -2141,7 +2141,9 @@ function grove(): Json {
     ],
   });
   // (Landing in the pit still marks the way down: proofs and the review video read it.)
-  r.add('triggers', { id: 'pit-wave', x: 1472, y: 1120, w: 2016 - 1472, h: 480, sets: 'cn-grove-wave' });
+  // (r9b: its top 128 under the arena gates' foot: one gliding down through the opening set it with her head still in
+  // the gate's rect, and the gate shut on her (the route video stood stuck in it 240 s).)
+  r.add('triggers', { id: 'pit-wave', x: 1472, y: 1216, w: 2016 - 1472, h: 384, sets: 'cn-grove-wave' });
   r.flyer('lampwing', 'wing-a', 1700, 900, 1, { radius: 220 });
   r.flyer('hawker', 'hawk-e', 3600, 700, -1, { radius: 260 });
   r.thorns('thorn-p1', 2560, 1664, 140);
@@ -2733,8 +2735,13 @@ function tunnel(): Json {
         y: 1088,
         w: 8000 - PIT_E,
         h: WARN_FLOOR - 1088,
-        fit: true,
-        bounds: { x: 8000 - 2048, y: 896, w: 2048, h: 1152 },
+        // (r9b, render's note: the bounds stopped at the mouth's floor (2,048), so beat 2's tell and its arrivals up
+        // out of the den's mouth played on the frame's bottom edge. Now a set zoom (0.85: the view 2,260 x 1,270 at
+        // 16:9) centred on a small frame over the mouth's corner: the view asks for more than the room's foot and its
+        // east edge, and the room's soft edges (the zones' 220 px knee) stop it ~20 px short of both. The mouth and
+        // its step sit well inside the frame at 16:9, 16:10 and 21:9; the pit's east half and the roof still show.)
+        zoom: 0.85,
+        bounds: { x: 8000 - 640, y: 2176 - 640, w: 640, h: 640 },
         until: 'cn-tunnel-clear',
       },
     ],

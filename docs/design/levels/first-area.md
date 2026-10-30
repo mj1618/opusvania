@@ -245,7 +245,14 @@ the render builder's.
 - **Bots** (`giveUpGround`): an unwalked cell given up after 45 s takes the rest of that ground with it (r9's skilled
   bot spent 45 s on each cell of the shard's shelf in turn). Their explorer still walks every reachable cell of a room
   before an exit; that is the bots, not a reading of the door.
-- `canopy-r9b.test.ts` (4): the jumps short and the glides clear, the hawker's blow and its answers, the chain's press.
+- **The den's warning frames the mouth** (render's note): the zone is a set zoom (0.85) over a small frame at the
+  mouth's corner, so the view runs to ~2,155 (v9: 2,048, the mouth's floor on the frame's edge) and to ~7,998 at
+  16:9, 16:10 and 21:9; the pit's far lip and the roof still in frame.
+- **The Grove's wave trigger** starts 128 under the arena gates (it reached up to their foot, and a slow drop set it
+  with her head in the gate, which shut on her: found by the route plan).
+- `tools/playtest/route-video.ts plan` runs the v9 route end to end (57 legs; the shard's fling, optional, unfound).
+- `canopy-r9b.test.ts` (8): the jumps short and the glides clear, the hawker's blow and its answers, the chain's press,
+  the warning's frame at three shapes, the Grove trigger under its gates.
 
 ## v9: the level side of review round 8 (`reviews/canopy-r8.md`, 7/10)
 Round 8's verdict: the first ten minutes are fair; what holds it at 7 is shape. The well was a vertical sink with an
