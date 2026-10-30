@@ -112,6 +112,10 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   three east to the fork; v3 sends all three west to the claws.
 - Runs: playtest-reports/canopy-r3, canopy-r4 and canopy-r4-fork (first-area.md has the numbers). r4: they take
   the claws and loop the west; two or three tries at the well's chimney, then away.
+- r5 (canopy-r5, canopy-r5-fork): claws at ~1:05, then loops of well / rot / trunk (their chimney lines choose the
+  face from the map and climb leg 2's thorned east face); from the fork two of three climb the claw face and fight
+  the Grove's wave. They see no pickup under a cover until inside it or its bark is broken (observe.ts, r5: the
+  hub's covered hoard drew six jumps in r4). They walk into flat floor thorns: put beds in shallow pits.
 
 ## Measuring
 `npx tsx tools/reference/export-area.ts canopy` (`CRITICAL`, `HIDDEN_ROOMS` there; `onCriticalPath` now from

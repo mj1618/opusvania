@@ -118,7 +118,7 @@ test and points the clawed player east. Item by item:
     floor. Leg 2: one strip on the east face (2592-2740); the west face is clean to the landing, and a jump at the
     east face changes wall at once. The landing dropped to 2432 (leg 2 768 px, leg 3 1280), is a save
     (`p-landing`), keeps no creature (a lampwing kept it from being safe ground), and has a root lip into the
-    chimney so the far face is a jump away. Leg 3: west strip over the landing's lip (1856-2048), east strip under
+    chimney (256 long) so the far face is a jump away. Leg 3: west strip over the landing's lip (1856-2048), east strip under
     the hollow (1152-1352): up the east face, across above the west strip, up the west face. The ambush's step moved
     off the chimney's top.
   - *The Elder* (the optional hardest): three legs, a rest at each end (the floor, the rest in the east wall, the
@@ -135,8 +135,8 @@ test and points the clawed player east. Item by item:
   - *Sim fix* (src/sim/return.ts): a thorn return walked back along the top's rect into a wall; the well landing's
     floor rect runs under a rotten wall, and she was squeezed up 1,500 px. The walk stops where her box does not fit.
 - **#2, the way on after the claws.**
-  - The fork's face: `thorn-pit` moved west (2240-2432), the last 384 px before the face clean, `juv-e` onto the
-    knoll, a lamp (`wick-fork`, 3000 x 440) over the face's top.
+  - The fork's face: `thorn-pit` moved west (2240-2432) into a shallow pit, the last 384 px before the face clean,
+    `juv-e` onto the knoll, a lamp (`wick-fork`, 3000 x 440) over the face's top.
   - The Elder's notch: its rotten plug is now a shortcut that opens only from the Elder's side (`elder-door`, opens
     `w`): at the claws the notch is a shut root door, and the way on is up.
   - The hub's hoard was already under a cover; the bots saw through covers. `tools/playtest/observe.ts` now hides a
@@ -145,6 +145,10 @@ test and points the clawed player east. Item by item:
   the rot branch's way in is a rotten wall high in tier 3's east face (`rot-door`, its sill 320 over the floor: out of
   a jump), the shaft behind it down to the rot hall. The rot hall's roof strip and tier 2's roof strip are cut (the
   floor strips stay).
+- **Floor thorns on the way sit in shallow pits** (tier 2, tier 3, the fork, the Grove's pit and east floor: 64 deep).
+  Found by the bots: tier 2's flat bed under its 256 px roof was unjumpable (every jump bumped the roof and came down
+  in it; the first r5 run faded 6-8 times there and never reached the well). Its roof lifts over the bed now, the bed
+  is 128 wide, and a pit reads as a gap to jump, not floor to walk.
 - **#8, the peak and the boss as beats.**
   - The Grove's wave in two beats: beat 1 the two burrbacks (their death sets `cn-grove-beat2`); beat 2 two juveniles
     out from under the Grovemother's arch (2120, 2400), the dangler, and a lampwing from `wick-b`'s light (2800 x
@@ -183,6 +187,11 @@ out's ledge wall. Majors: two moonDrops (the two branch ends), five moth-stones,
 eyes, quick wings, three seeds, the two abilities.
 
 ## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~10 min since r4)
+r5: the same claims with the rot branch shut without the claws (and reached from tier 3 with them), the Elder's
+door shut from the well, the well landing's save reached; all hold (~12 min). Plus the fairness test
+(`tests/unit/canopy-climbs.test.ts`, in `npm run test`): 12 climbs (the well's three legs, the way out's two, the
+fork's face, the Spire's foot and neck, the Elder's three legs, the kin) pass at kick delays 0 / 6 / 10 from 3-5
+start x with every strip grown 64 px; the ones with a strip fail on one face; a thorn returns her to her rest.
 55 claims hold: every exit and find of every room is reachable with the kit stated, and the locks hold without
 their key (as v3, plus r4's: the chimneys only by kicks across (the explorer's `zig` macros: no single face is a
 ladder), the Elder's and the way out's plugs cut from under them, the hub's clump only with the claws, the giant's
@@ -190,7 +199,25 @@ seed only through its wall (`cuts: false`), the Grove's gate only once the pit i
 the arena floor and not climbable back (`place:` claims), the giant's tier 3 back up with the claws). r4 counts bark
 cuts in the search's keys (`barkHp`), which made it ~5x slower. The world check passes (claws, then glide).
 
-## Played by the human-like bots (r4: playtest-reports/canopy-r4, canopy-r4-fork)
+## Played by the human-like bots (r5: playtest-reports/canopy-r5, canopy-r5-fork)
+Same commands as r4 on 871a37b (from the start; then from the fork with the claws):
+
+| bot | rooms | claws at | where it stopped |
+|---|---|---|---|
+| casual | 5 / 27 | 1:02 | well, rot and trunk loops (lost 16 min); leg 2's east strip 0-7 hits |
+| average | 5 / 27 | 1:02 | the same; leg 2's east strip 6 hits |
+| skilled | 5 / 27 | 1:13 | the same; reached the landing in an earlier run, never leg 3 |
+| fork: casual | 6 | (given) | **up the claw face**, cleared both beats of the Grove wave (12 kills), then back to the fork and the cellar branch |
+| fork: average | 5 | (given) | fork -> hub -> trunk -> well loops (never tried the face) |
+| fork: skilled | 6 | (given) | **up the claw face**, beat 1 (one burrback left), then the cellar branch |
+
+Against r4: the claws come ~1:50 sooner (no rot panel to fall down, no tier-2 trap), no bot is swallowed by the rot
+branch before the claws, and two of three fork bots climb the fork's face (r4: none in 25 min). Still not reached:
+the well's leg 3 and the hollow (the bots' chimney lines climb the east face of leg 2 into its strip: they choose
+the face from the map, not from the thorns), the Spire, anything past it. The bots' climb lines are
+`zigLine` / `climbLine` with kick-glides across at fixed heights; a person reads the strips.
+
+### r4 (playtest-reports/canopy-r4, canopy-r4-fork)
 `npm run humanplay -- run --world canopy --skills casual,average,skilled --seeds 1 --no-render --minutes 25`
 (give up after 180 s without progress), on 07d894b; then the same from the fork with the claws (`--from cn-fork
 --abilities wallJump`, review r3's "start the bots at the fork"):
@@ -212,7 +239,20 @@ and the giant's tier 3 was a pocket (its shaft started 448 px over the floor). N
 two or three tries and leave (a thorn there returns them to the well's bottom when they never stood on the mouth's
 floor), none climbed the fork's claw face in 20 min, and the rot branch still swallows the no-claws bot.
 
-## What is still weak (for round 5)
+## What is still weak (for round 6)
+- **The bots still stop in the west**: they take the claws in a minute and climb leg 1, but loop well, rot and trunk;
+  their chimney lines pick a face by the map, not by the thorns, so leg 2's east strip turns them back. Teaching
+  `lines.ts` to read strips (climb the clean face, cross above the strip) is the next bot step; a human run (Matt)
+  to the Grove is the better evidence.
+- **The way out is fair but plain**: a hop to a rest and one face cut through a plug. It is no longer the final
+  exam the review asked for; the Elder (optional) is the hardest climb now, and it is moderate.
+- **The Grove's gate**: a bot that leaves one burrback of beat 1 alive never sees beat 2 or an open gate; nothing on
+  screen says "clear the pit". The east floor's way to the gate is long and the bots turned back from it.
+- **The den**: the shelves are higher and wider, but there is still no claw face under them (a face to the floor would
+  wall the arena), and the reveal is a root shoulder, not a corridor.
+- **Render items from r4 untouched by this pass** (the props, the slabs, looks by region, the snuff, the vista).
+
+### Weak after v4 (round 5 answered most)
 - **The bots still stop at a third**: they take the claws and loop the west (well, rot, Elder); the human bot's
   chimney line works in probes but the planner gives it few tries, and a thorn in the chimney can return a climber
   who never stood on the mouth's floor to the well's bottom (1,700 px down): a person would hate that too.
