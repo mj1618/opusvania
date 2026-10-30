@@ -1986,15 +1986,6 @@
     "pods": [],
     "enemies": [
       {
-        "id": "wing-shaft",
-        "kind": "lampwing",
-        "x": 1280,
-        "y": 2240,
-        "facing": -1,
-        "senses": "always",
-        "radius": 200
-      },
-      {
         "id": "burr-am-1",
         "kind": "burrback",
         "x": 640,

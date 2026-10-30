@@ -1080,10 +1080,9 @@ function well(): Json {
   r.add('glades', { id: 'glade-claws', x: 1360, y: 4704, w: 216, h: 224, ability: C });
   r.patch('p-well', 1900, 4928);
   r.great('claw-prize', 1090, 3900);
-  // Thorns on the east face between its rests: the long west face is the climb, the lampwing works it.
+  // Thorns on the east face between its rests: the long west face is the climb.
   r.thornsUp('thorn-w2', 1508, 2600, 240);
   r.thornsUp('thorn-w3', 1508, 1400, 250);
-  r.flyer('lampwing', 'wing-shaft', 1280, 2240, -1, { radius: 200 });
   // The ambush: woken by the claws.
   r.burrback('burr-am-1', 640, 1152, 1, 300, { wakes: C, fenced: true });
   r.burrback('burr-am-2', 1960, 960, -1, 250, { wakes: C, fenced: true });
