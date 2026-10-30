@@ -1955,13 +1955,6 @@
       },
       {
         "tag": "root",
-        "x": 2240,
-        "y": 4544,
-        "w": 320,
-        "h": 32
-      },
-      {
-        "tag": "root",
         "x": 0,
         "y": 2944,
         "w": 1024,
@@ -1977,10 +1970,10 @@
       },
       {
         "tag": "root",
-        "x": 2528,
-        "y": 4576,
-        "w": 32,
-        "h": 32
+        "x": 2240,
+        "y": 4544,
+        "w": 320,
+        "h": 64
       },
       {
         "tag": "root",
@@ -2003,6 +1996,13 @@
         "w": 32,
         "h": 64,
         "kick": false
+      },
+      {
+        "tag": "root",
+        "x": 2304,
+        "y": 4608,
+        "w": 256,
+        "h": 64
       },
       {
         "tag": "root",
@@ -2069,6 +2069,24 @@
         "y": 3900
       },
       {
+        "id": "risk-w-1",
+        "kind": "glint",
+        "x": 2276,
+        "y": 2460
+      },
+      {
+        "id": "risk-w-2",
+        "kind": "glint",
+        "x": 2276,
+        "y": 2510
+      },
+      {
+        "id": "risk-w-3",
+        "kind": "glint",
+        "x": 2276,
+        "y": 2560
+      },
+      {
         "id": "niche-w-1",
         "kind": "glint",
         "x": 1500,
@@ -2083,6 +2101,16 @@
     ],
     "pods": [],
     "enemies": [
+      {
+        "id": "wing-chimney",
+        "kind": "lampwing",
+        "x": 2112,
+        "y": 1680,
+        "facing": -1,
+        "senses": "always",
+        "radius": 140,
+        "wakes": "wallJump"
+      },
       {
         "id": "burr-am-1",
         "kind": "burrback",
@@ -2116,7 +2144,14 @@
         "wakes": "wallJump"
       }
     ],
-    "lures": [],
+    "lures": [
+      {
+        "id": "wick-shaft",
+        "kind": "wick",
+        "x": 1290,
+        "y": 4180
+      }
+    ],
     "marks": {
       "trees": [],
       "stretches": [],
@@ -2219,6 +2254,14 @@
         "w": 64,
         "h": 256,
         "opens": "w"
+      },
+      {
+        "id": "rot-wall",
+        "x": 2368,
+        "y": 4672,
+        "w": 64,
+        "h": 256,
+        "opens": "e"
       }
     ],
     "glades": [
@@ -2234,8 +2277,8 @@
     "patches": [
       {
         "id": "p-well",
-        "x": 1900,
-        "y": 4928
+        "x": 1720,
+        "y": 3200
       },
       {
         "id": "p-landing",
@@ -2246,8 +2289,8 @@
     "mothStones": [
       {
         "id": "stone-west",
-        "x": 2250,
-        "y": 4928,
+        "x": 2440,
+        "y": 3200,
         "area": "cn-west"
       }
     ],
@@ -2255,9 +2298,9 @@
       {
         "id": "thorn-w2",
         "x": 2276,
-        "y": 2592,
+        "y": 2656,
         "w": 28,
-        "h": 148
+        "h": 84
       },
       {
         "id": "thorn-w3a",
@@ -2338,18 +2381,19 @@
       },
       {
         "from": "rot",
-        "to": "bottom"
+        "to": "bottom",
+        "door": "rot-wall"
       },
       {
         "from": "bottom",
         "to": "glade-claws"
       },
       {
-        "from": "bottom",
+        "from": "mouth",
         "to": "p-well"
       },
       {
-        "from": "bottom",
+        "from": "mouth",
         "to": "stone-west"
       },
       {
@@ -3115,13 +3159,6 @@
       }
     ],
     "bark": [
-      {
-        "id": "rot-wall",
-        "x": 448,
-        "y": 1216,
-        "w": 64,
-        "h": 256
-      },
       {
         "id": "rot-cache",
         "x": 2304,
@@ -3961,6 +3998,18 @@
     ],
     "pickups": [
       {
+        "id": "risk-e-1",
+        "kind": "glint",
+        "x": 1124,
+        "y": 420
+      },
+      {
+        "id": "risk-e-2",
+        "kind": "glint",
+        "x": 1124,
+        "y": 480
+      },
+      {
         "id": "elder-1",
         "kind": "glint",
         "x": 327,
@@ -4045,9 +4094,9 @@
       {
         "id": "thorn-e3",
         "x": 1124,
-        "y": 600,
+        "y": 648,
         "w": 28,
-        "h": 200
+        "h": 152
       }
     ],
     "hollows": [
@@ -5773,7 +5822,7 @@
         "tag": "root",
         "x": 0,
         "y": 96,
-        "w": 544,
+        "w": 832,
         "h": 32
       },
       {
@@ -5795,6 +5844,13 @@
         "x": 0,
         "y": 128,
         "w": 32,
+        "h": 64
+      },
+      {
+        "tag": "root",
+        "x": 544,
+        "y": 128,
+        "w": 288,
         "h": 64
       },
       {
@@ -5977,9 +6033,9 @@
     "oneWays": [
       {
         "tag": "branch",
-        "x": 2560,
+        "x": 1792,
         "y": 1376,
-        "w": 256
+        "w": 192
       }
     ],
     "pickups": [
@@ -6024,8 +6080,9 @@
         "x": 1800,
         "y": 1600,
         "facing": 1,
-        "radius": 260,
+        "radius": 220,
         "senses": "always",
+        "wakes": "cn-grove-wave",
         "sets": "cn-grove-beat2"
       },
       {
@@ -6037,35 +6094,38 @@
         "radius": 200,
         "senses": "always",
         "fenced": true,
+        "wakes": "cn-grove-wave",
         "sets": "cn-grove-beat2"
       },
       {
         "id": "juv-wave-w",
         "kind": "juvenileBurrback",
-        "x": 2120,
+        "x": 1760,
         "y": 1600,
-        "facing": -1,
+        "facing": 1,
         "radius": 200,
         "senses": "always",
+        "fenced": true,
         "wakes": "cn-grove-beat2",
         "sets": "cn-grove-clear"
       },
       {
         "id": "juv-wave-e",
         "kind": "juvenileBurrback",
-        "x": 2400,
+        "x": 2920,
         "y": 1600,
-        "facing": 1,
-        "radius": 200,
+        "facing": -1,
+        "radius": 160,
         "senses": "always",
+        "fenced": true,
         "wakes": "cn-grove-beat2",
         "sets": "cn-grove-clear"
       },
       {
         "id": "dang-wave",
         "kind": "dangler",
-        "x": 2256,
-        "y": 1352,
+        "x": 1824,
+        "y": 793,
         "facing": 1,
         "senses": "always",
         "wakes": "cn-grove-beat2",
@@ -6279,6 +6339,16 @@
         "h": 256,
         "flag": "cn-grove-clear",
         "kick": false
+      },
+      {
+        "id": "pit-door",
+        "x": 640,
+        "y": 192,
+        "w": 64,
+        "h": 384,
+        "flag": "cn-grove-clear",
+        "shut": "cn-grove-wave",
+        "kick": false
       }
     ],
     "moonseeds": [
@@ -6329,6 +6399,13 @@
         "y": 192,
         "w": 256,
         "h": 28
+      }
+    ],
+    "patches": [
+      {
+        "id": "p-grove",
+        "x": 420,
+        "y": 576
       }
     ],
     "shots": {
@@ -10289,26 +10366,33 @@
     "solids": [
       {
         "tag": "root",
+        "x": 0,
+        "y": 384,
+        "w": 896,
+        "h": 192,
+        "kick": false
+      },
+      {
+        "tag": "root",
+        "x": 0,
+        "y": 576,
+        "w": 640,
+        "h": 256
+      },
+      {
+        "tag": "root",
         "x": 1280,
         "y": 384,
         "w": 512,
-        "h": 384,
+        "h": 576,
         "kick": "west"
       },
       {
         "tag": "root",
         "x": 0,
-        "y": 384,
+        "y": 832,
         "w": 896,
-        "h": 640
-      },
-      {
-        "tag": "root",
-        "x": 1536,
-        "y": 768,
-        "w": 256,
-        "h": 256,
-        "kick": false
+        "h": 192
       },
       {
         "tag": "root",
@@ -10319,25 +10403,61 @@
       },
       {
         "tag": "root",
-        "x": 1280,
+        "x": 608,
         "y": 1024,
+        "w": 288,
+        "h": 64
+      },
+      {
+        "tag": "root",
+        "x": 640,
+        "y": 1088,
+        "w": 256,
+        "h": 128
+      },
+      {
+        "tag": "root",
+        "x": 1536,
+        "y": 960,
+        "w": 256,
+        "h": 384,
+        "kick": false
+      },
+      {
+        "tag": "root",
+        "x": 704,
+        "y": 1216,
+        "w": 192,
+        "h": 384
+      },
+      {
+        "tag": "root",
+        "x": 1280,
+        "y": 1344,
         "w": 512,
-        "h": 64,
+        "h": 320,
         "kick": "west"
       },
       {
         "tag": "root",
         "x": 0,
         "y": 1344,
+        "w": 512,
+        "h": 512
+      },
+      {
+        "tag": "root",
+        "x": 0,
+        "y": 1856,
         "w": 1472,
-        "h": 704
+        "h": 192
       },
       {
         "tag": "root",
         "x": 1728,
-        "y": 1088,
+        "y": 1664,
         "w": 64,
-        "h": 1152,
+        "h": 576,
         "kick": false
       },
       {
@@ -10511,7 +10631,13 @@
       {
         "tag": "branch",
         "x": 1152,
-        "y": 1024,
+        "y": 1344,
+        "w": 128
+      },
+      {
+        "tag": "branch",
+        "x": 896,
+        "y": 832,
         "w": 128
       }
     ],
@@ -10573,17 +10699,17 @@
         {
           "id": "ledge-cover",
           "x": 1280,
-          "y": 1024,
+          "y": 1600,
           "w": 512,
-          "h": 384,
+          "h": 448,
           "opens": "ledge-wall"
         },
         {
           "id": "ledge-cover-2",
           "x": 0,
-          "y": 1344,
+          "y": 1984,
           "w": 1792,
-          "h": 1024,
+          "h": 384,
           "opens": "ledge-wall"
         }
       ],
@@ -10623,8 +10749,18 @@
         },
         {
           "id": "foot",
-          "x": 900,
+          "x": 1088,
+          "y": 1856
+        },
+        {
+          "id": "restE",
+          "x": 1400,
           "y": 1344
+        },
+        {
+          "id": "restW",
+          "x": 760,
+          "y": 832
         },
         {
           "id": "top",
@@ -10669,16 +10805,16 @@
       {
         "id": "out-plug",
         "x": 896,
-        "y": 448,
+        "y": 832,
         "w": 384,
         "h": 64
       },
       {
         "id": "ledge-wall",
         "x": 1280,
-        "y": 1088,
+        "y": 1664,
         "w": 64,
-        "h": 256
+        "h": 192
       }
     ],
     "gates": [
@@ -10699,6 +10835,20 @@
         "y": 2212,
         "w": 1344,
         "h": 28
+      },
+      {
+        "id": "thorn-o2",
+        "x": 1252,
+        "y": 832,
+        "w": 28,
+        "h": 128
+      },
+      {
+        "id": "thorn-o3",
+        "x": 896,
+        "y": 384,
+        "w": 28,
+        "h": 64
       }
     ],
     "patches": [
@@ -10738,14 +10888,24 @@
           "y": 1344
         },
         {
-          "name": "chimney",
+          "name": "foot",
           "x": 1088,
-          "y": 1100
+          "y": 1856
         },
         {
           "name": "rest",
           "x": 1300,
-          "y": 1024
+          "y": 1344
+        },
+        {
+          "name": "chimney",
+          "x": 1088,
+          "y": 1000
+        },
+        {
+          "name": "restW",
+          "x": 900,
+          "y": 832
         },
         {
           "name": "top",

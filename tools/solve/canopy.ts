@@ -79,30 +79,46 @@ const CLAIMS: Claim[] = [
   { room: 'cn-trunk', from: [600, 1664], kit: [], reach: ['well'], not: ['hub', 'rot'] },
   // (Back in from the well with the claws: up the tiers to the hall and out to the Crossing.)
   { room: 'cn-trunk', from: [600, 1664], kit: [C], reach: ['well', 'rot', 'place:t2', 'place:t1', 'hub'] },
-  // The well: without the claws the bottom is a pit (out only east to the rot hall); with them, everything.
+  // The well: the bottom is a start (r6): without the claws a pit with the claws in it (the rot hall's door and the
+  // Elder's open only from their own side); with them, the one way out is up leg 1 to the mouth's save and stone.
+  { room: 'cn-well', from: [1700, 4928], kit: [], reach: ['wallJump'] },
   {
     room: 'cn-well',
     from: [1700, 4928],
     kit: [],
-    reach: ['rot', 'cn-well:p-well', 'cn-well:stone-west'],
-    not: ['limbs', 'trunk', 'elder'],
+    reach: ['place:notch'],
+    not: ['limbs', 'trunk', 'elder', 'rot', 'cn-well:p-well', 'cn-well:stone-west'],
   },
   {
     room: 'cn-well',
     from: [1700, 4928],
     kit: [C],
-    reach: ['limbs', 'trunk', 'rot', 'cn-well:claw-prize', 'cn-well:p-landing'],
-    // (The Elder's door opens only from the Elder's side: r5, the claws point up.)
-    not: ['elder'],
+    reach: [
+      'limbs',
+      'trunk',
+      'cn-well:claw-prize',
+      'cn-well:p-well',
+      'cn-well:stone-west',
+      'cn-well:p-landing',
+    ],
+    // (The Elder's door and the rot hall's open only from their own side: r5 / r6, the claws point up.)
+    not: ['elder', 'rot'],
     max: 9000,
   },
-  { room: 'cn-well', from: [2200, 3200], kit: [], reach: ['trunk', 'rot', 'wallJump'] },
+  {
+    room: 'cn-well',
+    from: [2200, 3200],
+    kit: [],
+    reach: ['trunk', 'wallJump', 'cn-well:p-well', 'cn-well:stone-west'],
+    not: ['rot'],
+  },
   // (In from the giant's mouth with the claws: the chimney's kicks across, the landing's niche, the hollow.)
   {
     room: 'cn-well',
     from: [2400, 3200],
     kit: [C],
     reach: ['limbs', 'place:mid', 'cn-well:shard-well', 'cn-well:stone-west'],
+    not: ['rot'],
     max: 9000,
   },
   // The upper limbs: both ways with the claws, the niche.
@@ -173,6 +189,16 @@ const CLAIMS: Claim[] = [
   },
   // (Fallen into the pit, the caps throw her back up to the tiers.)
   { room: 'cn-grove', from: [1800, 1600], kit: [C], flags: ['cn-grove-clear'], reach: ['fork', 'spire'] },
+  // The arena (r6): in the pit with the wave on, both doors hold until it is down; the room stays open inside.
+  {
+    room: 'cn-grove',
+    from: [1800, 1600],
+    kit: [C],
+    flags: ['cn-grove-wave'],
+    reach: ['cn-grove:seed-grove', 'cn-grove:keen-hollow'],
+    // (The save is outside the west door: a fade re-arms the arena and she re-forms there.)
+    not: ['fork', 'spire', 'cn-grove:p-grove'],
+  },
   { room: 'cn-spire', from: [300, 1472], kit: [C], reach: ['grove'] },
   // The Spire: the climb to the bower and the nook; the hollow root behind the foot's wall.
   { room: 'cn-spire', from: [300, 1472], kit: [C], reach: ['bower', 'nook', 'grove', 'hollowroot'] },
@@ -234,9 +260,25 @@ const CLAIMS: Claim[] = [
     room: 'cn-out',
     from: [300, 1344],
     kit: [C, G],
-    reach: ['den', 'ledge', 'cn-out:p-out', 'cn-area-end'],
+    reach: ['den', 'ledge', 'cn-out:p-out', 'cn-area-end', 'place:restE', 'place:restW'],
     not: ['cn-next'],
     max: 9000,
+  },
+  // (r6, the exam: no glide from the way in skips leg 1; the plug holds without a cut.)
+  {
+    room: 'cn-out',
+    from: [300, 1344],
+    kit: [G],
+    reach: ['place:foot'],
+    not: ['place:restE', 'cn-out:p-out'],
+  },
+  {
+    room: 'cn-out',
+    from: [1400, 1344],
+    kit: [C, G],
+    cuts: false,
+    reach: ['place:foot'],
+    not: ['place:restW'],
   },
   {
     room: 'cn-out',

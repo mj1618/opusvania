@@ -15,8 +15,9 @@
  *  - **Rotten bark** (`scene.bark`): a solid until `hp` cuts (1 a cut, whatever its power) break it for
  *    good (`save.opened` gets `room:id`, like a shortcut). A floor panel takes only down cuts; the cut
  *    that breaks it does not bounce her, so she drops through.
- *  - **Gates** (`scene.gates`): a solid while the save's `flags` lack its `flag`. **Triggers**
- *    (`scene.triggers`) set a flag when her box centre enters them.
+ *  - **Gates** (`scene.gates`): a solid while the save's `flags` lack its `flag`; with `shut`, an arena's
+ *    door, open until `shut` is set (she is in), and a fade while it stands re-arms it (`rearmArenas`).
+ *    **Triggers** (`scene.triggers`) set a flag when her box centre enters them.
  *
  * Bark and gates are added to the solids by `withShortcuts` (src/sim/world.ts) while they stand,
  * tagged `kit` so they are never safe ground. The slash meets the kit inside `resolveSlash`
@@ -61,6 +62,24 @@ export interface KitState {
   catchCount: number[];
 }
 
+/** A gate stands (a solid) with these flags: until its `flag`, and an arena's door only once `shut` is set. */
+export function gateShut(g: { flag: string; shut?: string | undefined }, flags: readonly string[]): boolean {
+  if (flags.includes(g.flag)) return false;
+  return g.shut === undefined || flags.includes(g.shut);
+}
+
+/**
+ * A fade while an arena's door is shut re-arms it: its `shut` flag leaves the save (the door stands open behind her
+ * as she re-forms, and its trigger shuts it again). Called at the end of a fade, before the creatures go home.
+ */
+export function rearmArenas(scene: Scene, save: SaveState): void {
+  for (const g of scene.gates ?? []) {
+    if (g.shut === undefined || !gateShut(g, save.flags)) continue;
+    const k = save.flags.indexOf(g.shut);
+    if (k >= 0) save.flags.splice(k, 1);
+  }
+}
+
 /** The save key of a piece of this room. */
 function key(scene: Scene, id: string): string {
   return `${scene.id}:${id}`;
@@ -79,7 +98,7 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     seedHitBy: (scene.seedCases ?? []).map(() => 0),
     thornHitBy: (scene.thorns ?? []).map(() => 0),
     capHitBy: (scene.caps ?? []).map(() => 0),
-    gates: (scene.gates ?? []).map((g) => (save.flags.includes(g.flag) ? 1 : 0)),
+    gates: (scene.gates ?? []).map((g) => (gateShut(g, save.flags) ? 0 : 1)),
     hold: 0,
     pogoFrame: 0,
     capPogo: -1,
@@ -131,7 +150,7 @@ export function kitSolids(scene: Scene, save: SaveState): { key: string; solids:
     solids.push(s);
   }
   for (const g of scene.gates ?? []) {
-    if (save.flags.includes(g.flag)) continue;
+    if (!gateShut(g, save.flags)) continue;
     k += `g${g.id}|`;
     const s: SolidRect = { x: g.x, y: g.y, w: g.w, h: g.h, tag: 'ledge', kit: 'gate' };
     if (g.kick !== undefined) s.kick = g.kick;
@@ -544,19 +563,18 @@ export function updateKit(
   for (let i = 0; i < gates.length; i++) {
     const g = gates[i];
     if (!g) continue;
-    const open = save.flags.includes(g.flag) ? 1 : 0;
+    const open = gateShut(g, save.flags) ? 0 : 1;
     if (open === kit.gates[i]) continue;
     kit.gates[i] = open;
-    if (open)
-      events.push({
-        type: 'gateOpen',
-        id: g.id,
-        flag: g.flag,
-        x: g.x + g.w / 2,
-        y: g.y + g.h / 2,
-        w: g.w,
-        h: g.h,
-      });
+    events.push({
+      type: open ? 'gateOpen' : 'gateShut',
+      id: g.id,
+      flag: g.flag,
+      x: g.x + g.w / 2,
+      y: g.y + g.h / 2,
+      w: g.w,
+      h: g.h,
+    });
   }
   // Thorns.
   if (p.faded > 0 || p.hp <= 0 || state.exit || state.caught || state.goal.gathered) return false;

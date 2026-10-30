@@ -2,6 +2,8 @@
  * The Canopy's set-piece climbs are fair (review r4 #1: they passed only frame-perfect): each passes with a reaction
  * delay of 0, 6 and 10 frames before every kick, from three start x on its rest, with every thorn strip grown 64 px
  * at both ends; one face alone runs into thorns; a thorn hit puts her back on the rest the climb started from.
+ * A plan that takes a reward off the line (review r5 #2: glints over a strip) is a risk: it must pass at 0 and 6
+ * with half the margin.
  * The climbs and the player model: tools/levels/climbs.ts.
  */
 import { describe, expect, it } from 'vitest';
@@ -13,8 +15,8 @@ describe('the Canopy climbs are fair', () => {
       const bad: string[] = [];
       for (const plan of c.plans)
         for (const [i, x] of c.xs.entries())
-          for (const d of DELAYS) {
-            const r = runClimb(c, plan, x, d, MARGIN, plan.jumpAt?.[i]);
+          for (const d of plan.delays ?? DELAYS) {
+            const r = runClimb(c, plan, x, d, plan.margin ?? MARGIN, plan.jumpAt?.[i]);
             if (!r.pass) bad.push(`${plan.name} x${x} delay ${d}: ${r.end} [${r.touches.join(' ')}]`);
           }
       for (const plan of c.fails ?? [])

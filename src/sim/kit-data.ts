@@ -41,7 +41,12 @@ export interface Bark {
   heartwood?: boolean;
 }
 
-/** A gate: a solid while the save has not got `flag` in `flags` (the silk curtain that falls with the boss). */
+/**
+ * A gate: a solid while the save has not got `flag` in `flags` (the silk curtain that falls with the boss). With
+ * `shut`, an arena's door: open until the save has `shut` (a trigger's flag: she is in), then a solid until `flag`
+ * (the wave is down). A fade while it is shut takes `shut` back out of the save (the arena re-arms, HK's lock-in:
+ * the door is open behind her when she re-forms, and the trigger shuts it again).
+ */
 export interface FlagGate {
   id: string;
   x: number;
@@ -49,6 +54,7 @@ export interface FlagGate {
   w: number;
   h: number;
   flag: string;
+  shut?: string;
   kick?: boolean | 'east' | 'west';
 }
 

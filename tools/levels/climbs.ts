@@ -43,6 +43,16 @@ export interface Plan {
   cut?: boolean;
   /** She walks toward the first face and jumps when her feet pass this x (the lip of a rest); one per start x. */
   jumpAt?: number[];
+  /** She walks the other way to `jumpAt` (out of a rest onto its lip), then jumps holding toward the first face. */
+  back?: boolean;
+  /** Pickups (ids) she must have taken when she gets there: a reward off the line (review r5 #2). */
+  takes?: string[];
+  /** Jumps straight up from where she stands first, cutting up (a plug over a rest's lip), before the climb. */
+  hops?: number;
+  /** Kick delays it must pass at (default `DELAYS`): a reward off the line is a risk, held at 0 and 6 only. */
+  delays?: number[];
+  /** The strips' margin it must pass with (default `MARGIN`): a risk keeps half of it. */
+  margin?: number;
 }
 
 export interface Climb {
@@ -73,6 +83,12 @@ export interface Result {
 }
 
 const DIR = (d: number) => (d > 0 ? R : L);
+
+/** A pickup of the scene she has taken (its timer runs once it wakes toward her). */
+function taken(s: ReturnType<typeof createState>, scene: Room, id: string): boolean {
+  const i = (scene.pickups ?? []).findIndex((p) => p.id === id);
+  return i >= 0 && (s.pickups.timers[i] ?? 0) !== 0;
+}
 
 /** The room with every thorn strip grown `margin` px at both ends, creatures and glades out. */
 export function climbScene(room: string, margin = 0): Room {
@@ -108,24 +124,52 @@ export function runClimb(
   let end = 'timeout';
   let pass = false;
   /** The frame she jumps from the rest (at once, or at the lip). */
-  let jumpF = jumpAt === undefined ? 0 : -1;
+  let jumpF = jumpAt === undefined && !plan.hops ? 0 : -1;
   let back: Result['back'];
+  let hops = plan.hops ?? 0;
+  let hopUp = false;
+  let hopF = 0;
   for (let k = 0; k < STAND + 1800; k++) {
     const p = s.player;
     const f = k - STAND;
     let m = 0;
-    if (f >= 0) {
+    if (f >= 0 && hops > 0) {
+      // Hops in place: jump (held to the top), cut up on the way, land, again.
+      if (p.grounded && !hopUp) {
+        if (f - hopF > 6) {
+          m = J;
+          hopUp = true;
+          hopF = f;
+        }
+      } else if (!p.grounded) {
+        m = J | U | ((f - hopF) % 12 < 2 ? A : 0);
+      } else if (hopUp && f - hopF > 8) {
+        hopUp = false;
+        hops--;
+        hopF = f;
+      }
+      if (hops === 0) touchK = -1;
+    } else if (f >= 0) {
       const fx0 = p.x + p.w / 2;
-      if (jumpF < 0 && jumpAt !== undefined && (plan.first > 0 ? fx0 >= jumpAt : fx0 <= jumpAt)) jumpF = f;
+      if (jumpF < 0 && plan.hops && jumpAt === undefined) jumpF = f;
+      const walk = plan.back ? -plan.first : plan.first;
+      if (jumpF < 0 && jumpAt !== undefined && (walk > 0 ? fx0 >= jumpAt : fx0 <= jumpAt)) jumpF = f;
       const air = jumpF < 0 ? -1 : f - jumpF;
       if (air > 20 && p.grounded) {
         const fx = p.x + p.w / 2;
         const fy = Math.round(p.y + p.h);
         pass = fy <= c.goal.y && fx >= c.goal.x0 && fx <= c.goal.x1;
         end = pass ? 'goal' : `landed (${Math.round(fx)}, ${fy})`;
+        if (pass && plan.takes) {
+          const missed = plan.takes.filter((id) => !taken(s, scene, id));
+          if (missed.length) {
+            pass = false;
+            end = `goal without ${missed.join(', ')}`;
+          }
+        }
         break;
       }
-      m = DIR(air >= 0 && air < (plan.away ?? 0) ? -h : h);
+      m = DIR((air >= 0 && air < (plan.away ?? 0)) || (air < 0 && plan.back) ? -h : h);
       if (p.grounded) m |= air >= 0 && air < 20 ? J : 0;
       else if (air >= (plan.away ?? 0) && (p.mode === 'wallSlide' || p.wallDir === h)) {
         if (touchK < 0) touchK = f;
@@ -199,6 +243,15 @@ export const CLIMBS: Climb[] = [
     plans: [
       { name: 'W face', first: -1, legs: [{ mode: 'face' }] },
       { name: 'E then W', first: 1, legs: [{ mode: 'face', until: 3200 }, { mode: 'face' }] },
+      // The reward off the line (review r5 #2): glints on the thorned east face over its strip, a kick in and out.
+      {
+        name: 'W, in to the glints, W',
+        first: -1,
+        delays: [0, 6],
+        margin: 32,
+        takes: ['risk-w-1', 'risk-w-2', 'risk-w-3'],
+        legs: [{ mode: 'face', until: 2840 }, { mode: 'face', until: 1e9 }, { mode: 'face' }],
+      },
     ],
     fails: [{ name: 'E face only', first: 1, legs: [{ mode: 'face' }] }],
   },
@@ -222,21 +275,36 @@ export const CLIMBS: Climb[] = [
   {
     id: 'out-1',
     room: 'cn-out',
-    note: 'the way out, leg 1: the chimney floor to the rest under the plug',
+    note: 'the way out, leg 1: the chimney floor to rest E, up the east face',
     xs: [1024, 1088, 1152],
-    y: 1344,
-    goal: { x0: 1152, x1: 1536, y: 1024 },
+    y: 1856,
+    goal: { x0: 1152, x1: 1536, y: 1344 },
     plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
   },
   {
     id: 'out-2',
     room: 'cn-out',
-    note: 'the way out, leg 2: the rest, the plug, the clifftop',
+    note: 'the way out, leg 2: rest E, the plug, rest W; the east face over rest E has a strip',
     xs: [1344, 1408, 1472],
-    y: 1024,
-    goal: { x0: 0, x1: 1792, y: 384 },
+    y: 1344,
+    goal: { x0: 576, x1: 1024, y: 832 },
     plans: [
       { name: 'W face, cutting', first: -1, cut: true, jumpAt: [1200, 1232, 1264], legs: [{ mode: 'face' }] },
+    ],
+    fails: [
+      { name: 'E face only', first: 1, back: true, jumpAt: [1216, 1216, 1216], legs: [{ mode: 'face' }] },
+    ],
+  },
+  {
+    id: 'out-3',
+    room: 'cn-out',
+    note: 'the way out, leg 3: rest W to the clifftop; the west face over rest W has a strip',
+    xs: [704, 768, 832],
+    y: 832,
+    goal: { x0: 0, x1: 1792, y: 384 },
+    plans: [{ name: 'E face', first: 1, jumpAt: [960, 992, 1008], legs: [{ mode: 'face' }] }],
+    fails: [
+      { name: 'W face only', first: -1, back: true, jumpAt: [992, 992, 992], legs: [{ mode: 'face' }] },
     ],
   },
   {
@@ -307,6 +375,17 @@ export const CLIMBS: Climb[] = [
     goal: { x0: 0, x1: 832, y: 512 },
     plans: [
       { name: 'W face, cutting', first: -1, cut: true, jumpAt: [1072, 1048, 1024], legs: [{ mode: 'face' }] },
+      // The reward off the line (review r5 #2): glints on the east face over its strip, across and back.
+      {
+        name: 'W, cutting, in to the glints, W',
+        first: -1,
+        cut: true,
+        jumpAt: [1072, 1048, 1024],
+        delays: [0, 6],
+        margin: 32,
+        takes: ['risk-e-1', 'risk-e-2'],
+        legs: [{ mode: 'face', until: 820 }, { mode: 'face', until: 1e9 }, { mode: 'face' }],
+      },
     ],
   },
   {
@@ -337,8 +416,8 @@ if (process.argv[1]?.endsWith('climbs.ts')) {
     ] as const)
       for (const plan of plans)
         for (const [i, x] of c.xs.entries())
-          for (const d of delays) {
-            const r = runClimb(c, plan, x, d, margin, plan.jumpAt?.[i]);
+          for (const d of plan.delays ?? delays) {
+            const r = runClimb(c, plan, x, d, Math.min(margin, plan.margin ?? margin), plan.jumpAt?.[i]);
             const ok = kind === 'must pass' ? r.pass : !r.pass;
             console.log(
               `  ${ok ? 'ok  ' : 'FAIL'} ${kind} ${plan.name} x${x} d${d}: top ${r.top} ${r.end}` +
