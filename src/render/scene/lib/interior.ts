@@ -1605,9 +1605,11 @@ export function drawMidBack(
   massBody: number,
 ): void {
   const T = plan.tone;
-  const col = mixC(massBody, T.fog, INTERIOR.midValue);
-  const dark = mixC(massBody, T.fog, INTERIOR.midValue * 0.55);
-  const lit = mixC(massBody, T.fog, Math.min(0.85, INTERIOR.midValue + 0.25));
+  // (In the pale shaft a mid-grey reads as a cut-out against the fog: its mid plane sits nearer the fog.)
+  const v = plan.look === 'shaft' ? INTERIOR.midValue + 0.18 : INTERIOR.midValue;
+  const col = mixC(massBody, T.fog, v);
+  const dark = mixC(massBody, T.fog, v * 0.55);
+  const lit = mixC(massBody, T.fog, Math.min(0.85, v + 0.25));
   plan.backs.forEach((b0) => {
     const b = { x: b0.x - pad, y: b0.y - pad, w: b0.w + pad * 2, h: b0.h + pad * 2 };
     const r = rngFor(seed, b0.x, b0.y, 97);
@@ -1664,34 +1666,36 @@ export function drawMidBack(
     } else if (plan.look === 'shaft') {
       while (covered < want && guard++ < 400) {
         if (r() < 0.55) {
-          // A frost-root arch: a thick root bowing across, its ends running off into the back.
+          // A frost-root arch: a root bowing across, broken off partway, its width swelling and pinching (an even
+          // full arc with a lit edge read as a rail).
           const x0 = b.x + r() * b.w;
           const y0 = b.y + r() * b.h;
           const span = range(r, 300, 820);
           const rise = span * range(r, 0.25, 0.6);
           const dir = r() < 0.5 ? -1 : 1;
+          const tEnd = range(r, 0.55, 1);
           const line: number[] = [];
           for (let q = 0; q <= 14; q++) {
-            const t = q / 14;
+            const t = (q / 14) * tEnd;
             line.push(
               x0 + dir * span * t,
               y0 - rise * Math.sin(Math.PI * t) + 30 * wobble(t * 900, seed + guard, 300),
             );
           }
-          const w0 = range(r, 26, 66);
+          const wl = wander(line, 18, seed + guard * 3, 160);
+          const w0 = range(r, 22, 58);
           fill(
-            ribbon(line, (t) => w0 * (0.7 + 0.5 * Math.abs(t - 0.5))),
-            col,
-            0.9,
-            span * w0,
-          );
-          g.poly(
-            strand(
-              line.map((v, j) => (j % 2 ? v - w0 * 0.32 : v)),
-              w0 * 0.2,
-              0.3,
+            ribbon(
+              wl,
+              (t) =>
+                w0 *
+                (0.55 + 0.45 * wobble(t * 1300, seed + guard, 260) ** 2 + 0.3 * t) *
+                (t > 0.9 ? (1 - t) * 8 + 0.2 : 1),
             ),
-          ).fill({ color: lit, alpha: 0.6 });
+            col,
+            0.8,
+            span * w0 * tEnd,
+          );
         } else {
           // Hanging lichen: a cluster of fine strands from a root above.
           const x = b.x + r() * b.w;

@@ -210,6 +210,47 @@ export function paintFaceLobes(
       p.solid(m, tone.moss, h + 0.1, { moss: 0.9 }, 0.9);
     }
   }
+  // (Review r5 #4: within +-12 px a claw face still read as a ruler at play distance.) Overhanging paint off some
+  // crests: a moss cushion bulging out past the lobe, or a root stub curling down off it, 10-30 px into the air.
+  for (const L of lobes) {
+    if (L.c < a + 60 || L.c > b - 60 || r() < 0.45) continue;
+    const u = L.c - L.w * range(r, 0.05, 0.3);
+    const x0 = at(u);
+    if (tone.moss && r() < 0.65) {
+      const out = range(r, 10, 26);
+      const len = range(r, 30, 70);
+      const pts: number[] = [];
+      for (let q = 0; q <= 12; q++) {
+        const t = q / 12;
+        const bulge = out * Math.sin(Math.PI * t) ** 0.7 * (1 + 0.25 * Math.sin(t * 13 + L.c));
+        pts.push(x0 + dir * bulge, u - len / 2 + len * t);
+      }
+      pts.push(x0 - dir * 10, u + len / 2, x0 - dir * 10, u - len / 2);
+      p.solid(pts, tone.moss, h + 0.12, { moss: 1 });
+    } else {
+      const len = range(r, 22, 56);
+      const out = range(r, 12, 30);
+      p.solid(
+        strand(
+          [
+            x0 - dir * 6,
+            u,
+            x0 + dir * out * 0.6,
+            u + len * 0.25,
+            x0 + dir * out,
+            u + len * 0.7,
+            x0 + dir * out * 0.8,
+            u + len,
+          ],
+          range(r, 6, 11),
+          0.5,
+        ),
+        tone.deep,
+        h + 0.02,
+        { bark: 0.6 },
+      );
+    }
+  }
   // A crack into the mass at each notch between lobes.
   for (const L of lobes) {
     const u = L.c + L.w / 2;

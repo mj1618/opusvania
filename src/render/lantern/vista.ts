@@ -271,7 +271,9 @@ export class WoodVista {
       const sd = x < this.peakX + o * W.half ? -1 : 1;
       if (d < 1) {
         const v =
-          W.peak * ph * ((1 - d) ** 1.9 + 0.08 * (1 - d) * Math.sin((1 - d) * (sd > 0 ? 11 : 8) + o * 5) ** 2);
+          W.peak *
+          ph *
+          ((1 - d) ** 1.9 + 0.08 * (1 - d) * Math.sin((1 - d) * (sd > 0 ? 11 : 8) + o * 5) ** 2);
         if (v > h) {
           second = h;
           h = v;
@@ -316,7 +318,8 @@ export class WoodVista {
       // (The faces close on a slant from the saddle to the spur's foot: closed square, they read as blocks.)
       const shadow: number[] = [];
       for (let x = xa; x <= cx; x += 8) shadow.push(x, this.ridge(x));
-      for (let k = spur.length / 2 - 1; k >= 0; k--) shadow.push(spur[k * 2] as number, spur[k * 2 + 1] as number);
+      for (let k = spur.length / 2 - 1; k >= 0; k--)
+        shadow.push(spur[k * 2] as number, spur[k * 2 + 1] as number);
       g.poly(shadow).fill({ color: W.farDark });
       const lit: number[] = [...spur];
       for (let x = xb; x >= cx; x -= 8) lit.push(x, this.ridge(x));
@@ -327,7 +330,16 @@ export class WoodVista {
         const gy = this.ridge(gx) + 8;
         const len = (W.footY - gy) * (0.25 + r() * 0.3);
         const bend = len * (0.12 + r() * 0.12);
-        g.poly([gx, gy, gx + 5, gy + len * 0.1, gx + 3 + bend, gy + len, gx + 1 + bend * 0.8, gy + len * 0.6]).fill({
+        g.poly([
+          gx,
+          gy,
+          gx + 5,
+          gy + len * 0.1,
+          gx + 3 + bend,
+          gy + len,
+          gx + 1 + bend * 0.8,
+          gy + len * 0.6,
+        ]).fill({
           color: W.farDark,
           alpha: 0.6,
         });
@@ -345,7 +357,8 @@ export class WoodVista {
         under.push(x, Math.min(line + tongue, y + (line - y) * 0.9 + tongue));
       }
       if (cap.length < 6) continue;
-      for (let k = under.length / 2 - 1; k >= 0; k--) cap.push(under[k * 2] as number, under[k * 2 + 1] as number);
+      for (let k = under.length / 2 - 1; k >= 0; k--)
+        cap.push(under[k * 2] as number, under[k * 2 + 1] as number);
       g.poly(cap).fill({ color: mix(W.far, W.snow, 0.72) });
       const sh: number[] = [];
       for (let x = xa; x <= cx; x += 8) {
@@ -405,7 +418,20 @@ export class WoodVista {
     const tx = px - 640;
     const ty = this.hillTop(3, tx) + 6;
     const wall = W.hills[3] as number;
-    g.poly([tx - 11, ty, tx - 6, ty - 70, tx - 9, ty - 120, tx + 3, ty - 122, tx + 7, ty - 70, tx + 12, ty]).fill({
+    g.poly([
+      tx - 11,
+      ty,
+      tx - 6,
+      ty - 70,
+      tx - 9,
+      ty - 120,
+      tx + 3,
+      ty - 122,
+      tx + 7,
+      ty - 70,
+      tx + 12,
+      ty,
+    ]).fill({
       color: wall,
     });
     const limbs: Array<[number, number]> = [];
@@ -414,7 +440,9 @@ export class WoodVista {
       [0, -116, 10, -206, 7],
       [2, -104, 76, -160, 6],
     ] as const) {
-      g.poly(ribbonTaper([tx + ax, ty + ay, tx + (ax + ex) / 2 + 6, ty + (ay + ey) / 2 - 8, tx + ex, ty + ey], w0)).fill({
+      g.poly(
+        ribbonTaper([tx + ax, ty + ay, tx + (ax + ex) / 2 + 6, ty + (ay + ey) / 2 - 8, tx + ex, ty + ey], w0),
+      ).fill({
         color: wall,
       });
       limbs.push([tx + ex, ty + ey]);
@@ -438,7 +466,8 @@ export class WoodVista {
     const d = Math.abs(x - (this.peakX + o * W.half)) / (hw * W.half * 1.7);
     if (d >= 1) return 0;
     const sd = x < this.peakX + o * W.half ? -1 : 1;
-    const v = W.peak * ph * ((1 - d) ** 1.9 + 0.08 * (1 - d) * Math.sin((1 - d) * (sd > 0 ? 11 : 8) + o * 5) ** 2);
+    const v =
+      W.peak * ph * ((1 - d) ** 1.9 + 0.08 * (1 - d) * Math.sin((1 - d) * (sd > 0 ? 11 : 8) + o * 5) ** 2);
     const rag =
       9 * Math.sin(x * 0.045) + 6 * Math.sin(x * 0.13 + 1) + 3 * Math.sin(x * 0.31) + 2 * Math.sin(x * 0.7);
     return v + rag * Math.min(1, v / (W.peak * 0.25));
@@ -584,8 +613,4 @@ function ribbon(line: number[], w: number): number[] {
   }
   for (let k = b.length / 2 - 1; k >= 0; k--) a.push(b[k * 2] as number, b[k * 2 + 1] as number);
   return a;
-}
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
 }

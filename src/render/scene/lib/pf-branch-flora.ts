@@ -31,6 +31,10 @@ export const BRANCH_FLORA = {
   fernGap: [380, 900] as readonly number[],
   /** Sway px per px of length. */
   windPerPx: 0.12,
+  /** Standing silhouettes on a mass's walk (review r5 #4: nothing stood on the floors): one every this many px, and
+   *  their height range px. */
+  standGap: [150, 400] as readonly number[],
+  standH: [30, 120] as readonly number[],
 } as const;
 
 /** Night tones. */
@@ -48,6 +52,9 @@ const T = {
   fern: 0x0e2420,
   fernLit: 0x2d4c43,
   tuft: 0x07120f,
+  /** The standing silhouettes: near-black, a cool moon edge. */
+  stand: 0x050c0c,
+  standLit: 0x2e4846,
 } as const;
 
 /** A leaf sprig at a twig's end: a few small leaves fanning from it. */
@@ -235,6 +242,107 @@ function tuft(b: FloraBuilder, r: Rng, x: number, y: number): void {
   }
 }
 
+/**
+ * A silhouette standing on a walk (review r5 #4, Silksong's fiddleheads and HK's curls): a curled fern head on a bent
+ * stem, a seed stalk with a nodding head, or a few long grass blades leaning. Dark against the moss band, a moon edge.
+ */
+function standing(b: FloraBuilder, r: Rng, x: number, y: number, h: number): void {
+  const k = r();
+  const lean = range(r, -0.35, 0.35);
+  if (k < 0.4) {
+    // A fiddlehead: a stem bending over into a spiral.
+    const n = 1 + (r() < 0.5 ? 1 : 0);
+    for (let q = 0; q < n; q++) {
+      const hh = h * (q ? 0.65 : 1);
+      const xx = x + q * range(r, -14, 14);
+      const side = r() < 0.5 ? -1 : 1;
+      b.plant(xx, y, hh, r(), hh * 0.12, hh * 0.5, 0.25);
+      const line: number[] = [];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        line.push(xx + lean * hh * t * t + side * hh * 0.08 * Math.sin(t * Math.PI), y - hh * 0.85 * t);
+      }
+      const R0 = hh * range(r, 0.1, 0.16);
+      const ex = line[line.length - 2] as number;
+      const ey = line[line.length - 1] as number;
+      for (let i = 1; i <= 16; i++) {
+        const a = -Math.PI / 2 + side * (i / 16) * Math.PI * 2.4;
+        const rad = R0 * (1 - (i / 16) * 0.8);
+        line.push(ex + side * R0 + Math.cos(a + Math.PI) * rad * side, ey + Math.sin(a) * rad + R0 * 0.2);
+      }
+      b.strip(
+        line,
+        (t) => 4.2 * (1 - t * 0.6) + 0.6,
+        () => T.stand,
+        () => mix(T.stand, T.standLit, 0.6),
+      );
+    }
+  } else if (k < 0.7) {
+    // A seed stalk: a thin stem, a leaf or two, a nodding seed head.
+    b.plant(x, y, h, r(), h * 0.15, h * 0.6, 0.3);
+    const tipX = x + lean * h + range(r, -6, 6);
+    const line = quad(x, y + 1, x + lean * h * 0.3, y - h * 0.55, tipX, y - h, 8);
+    b.strip(
+      line,
+      (t) => 3 * (1 - t * 0.5),
+      () => T.stand,
+      () => T.stand,
+    );
+    for (let q = 0; q < 2; q++) {
+      const t = range(r, 0.2, 0.5);
+      const side = q ? -1 : 1;
+      b.leaf(
+        x + lean * h * 0.3 * t,
+        y - h * t,
+        -Math.PI / 2 + side * 1.1,
+        h * 0.24,
+        h * 0.06,
+        T.stand,
+        T.stand,
+        T.standLit,
+        0.2 * side,
+      );
+    }
+    b.leaf(
+      tipX,
+      y - h,
+      Math.PI / 2 + lean * 0.8 + 0.5,
+      h * 0.16,
+      h * 0.1,
+      T.stand,
+      T.standLit,
+      T.stand,
+      0,
+      1,
+      4,
+    );
+  } else {
+    // Grass blades: three to five, long, leaning, tapering to points.
+    const n = 3 + Math.floor(r() * 3);
+    for (let q = 0; q < n; q++) {
+      const hh = h * range(r, 0.45, 1);
+      const xx = x + range(r, -10, 10);
+      const ln = lean + range(r, -0.35, 0.35);
+      b.plant(xx, y, hh, r(), hh * 0.18, hh * 0.6, 0.4);
+      const line = quad(
+        xx,
+        y + 1,
+        xx + ln * hh * 0.25,
+        y - hh * 0.6,
+        xx + ln * hh * 0.85,
+        y - hh * (1 - Math.abs(ln) * 0.3),
+        7,
+      );
+      b.strip(
+        line,
+        (t) => 6 * (1 - t) + 0.2,
+        () => T.stand,
+        () => mix(T.stand, T.standLit, 0.5),
+      );
+    }
+  }
+}
+
 /** Grows the branch's plants into the garden's meshes. */
 export function growBranch(g: Garden, plan: BranchPlan): void {
   const F = BRANCH_FLORA;
@@ -255,6 +363,18 @@ export function growBranch(g: Garden, plan: BranchPlan): void {
     }
     for (let x = st.x0 + range(r, 40, 200); x < st.x1 - 20; x += range(r, 120, 320)) {
       tuft(g.front, r, x, st.top(x));
+    }
+    // On a mass's walk: standing silhouettes (never on a face, never so close to an end that one reads as a ledge).
+    if (st.parent === 'mass' && st.x1 - st.x0 >= 160) {
+      const rs = rngFor(st.x0, st.y, 61);
+      for (
+        let x = st.x0 + range(rs, 40, 200);
+        x < st.x1 - 40;
+        x += range(rs, F.standGap[0] as number, F.standGap[1] as number)
+      ) {
+        if (clearAt(x, st.y, 40)) continue;
+        standing(g.back, rs, x, st.top(x) + 2, range(rs, F.standH[0] as number, F.standH[1] as number));
+      }
     }
     const spots: number[] = [];
     if (st.west !== 'under') spots.push(st.x0 + range(r, 24, 70));
