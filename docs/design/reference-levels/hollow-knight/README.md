@@ -1,130 +1,126 @@
 # Hollow Knight: King's Pass, Dirtmouth, Forgotten Crossroads (to False Knight + Vengeful Spirit)
 
-2026-10-30. Brief: `../BRIEF.md`. Data: `area.json` (shared schema). Map: `shots/reference-levels/hollow-knight/map.png`
-(1 px = 8 of our px) plus crops `map-crop-*.png`; `terrain-native.png` is the hallownest.net screenshot collage of the
-same region for the real art (its rooms are spaced like the in-game map, so it does not line up with `area.json`).
+2026-10-30. Brief: `../BRIEF.md`. Data: `area.json` (shared schema), **now read from the game files** (method and the
+designer's findings: `EXTRACTED.md`). Map: `shots/reference-levels/hollow-knight/map.png` (1 px = 8 of our px, drawn
+from `area.json` only) plus `map-small.png` and crops `map-crop-*.png`. Look references (Team Cherry's art, outside the
+repo): `~/code/opusvania-refs/hollow-knight/`.
 
 ## Sources and confidence
 
-**The game files were not available.** Hollow Knight was not installed at the start or at the end of this session
-(`~/Library/Application Support/Steam/steamapps/common/` holds only CS:GO and Nine Sols; Steam's content log shows no
-download). Everything below is mined community data, the wiki, and marked estimates. The extraction pipeline for the
-game files is written and waiting (see "Re-running from the game files").
-
 | what | source | confidence |
 |---|---|---|
-| room size (tile-map W x H) | hallownest-calculator `js/scene-objects.js` SIZES, generated from the game files | exact |
-| exits, one-ways, what each door needs | RandomizerMod door table + logic (gates hand-read from the logic) | exact |
-| door, item, bench positions | TangledMapView `mapData.js` (scene units) | exact |
-| enemies per room | hallownest-calculator ENEMIES: per Hunter's-Journal type, a **count and the group's centre** | exact count, position = group centre |
-| breakable walls/floors, one-way walls, hidden-room masks | hallownest-calculator SECRETS: centre point | centre exact, size guessed |
-| geo rocks, totems, chests, tablets | TangledMapView + hallownest-calculator | exact |
-| enemy HP, behaviour | hollowknight.wiki (datamined) | good |
-| **terrain** | the game's **own map drawing** of each room (hallownest-calculator `map-walk.js` + GameMap boxes), 1-unit cells, nudged per room so benches/rocks/walkers stand on it | **rough envelope**: outer cave walls, floors and ceilings only. **No interior platforms, slopes, spikes or acid.** Up to a few units off. |
-| hidden-thing "how / needs" | randomizer logic for needs, nearest secret object (<= 15 u) for how | inferred |
-| hero box, jump height, difficulty ratings, play minutes | estimates | low |
+| room size | the scene's tk2dTileMap (width x height in units; also the camera's bounds) | exact |
+| terrain | every enabled, non-trigger collider on layer 8 (Terrain) active at load: the tile map's edge loops filled per 1-unit cell, plus polygon / box colliders (slopes, roofs, trims) | exact (colliders that only repeat the tile map are dropped) |
+| hazards | DamageHero hazardType 2 (spikes, 89 strips) and 3 (acid, 4 boxes): their trigger colliders | exact |
+| breakables | walls, floors, the dive floor, collapsing floors by their FSM (breakable_wall_v2 etc.): their colliders; walls take 4 hits | exact |
+| hidden areas (secretWall) | the dark masks over pockets (unmasker FSM): the reveal trigger you step into, else the mask sprite's bounds | exact geometry; whether each is a "secret" is a judgement |
+| exits | TransitionPoints (gate name, centre, target scene + entry) | exact |
+| enemies | every HealthManager present on a first visit, incl. battle waves (waves that wait off-screen sit at the arena centre); hp and contact / weapon damage from the files; behaviour text from the wiki | exact; difficulty 1-5 is ours |
+| pickups, saves, levers, NPCs | by component / FSM (Geo Rock: hits x geo per hit + payout; chests; shinies by charm id / PlayerData key; grubs; mask shards; vessel fragment; benches; stag) | exact positions and values |
+| what an item or door needs | randomizer logic (homothetyhk/RandomizerMod), matched to the file items within 4 u | mined, exact |
+| room graph (which door leads where), room placement | randomizer door table, rooms chained by matching door positions | mined, exact graph; placement is ours |
+| camera, knight | resources.assets: tk2dCamera (perspective, FOV 24, z -38.1), Knight BoxCollider2D, HeroController constants, Physics2D gravity, fixed step | exact; jump height computed from them |
+| first-play minutes, difficulty ratings | estimates | low |
 
-URLs: https://github.com/betorzdev/hallownest-calculator (`js/scene-objects.js`, `js/map.js`, `js/map-walk.js`),
-https://github.com/homothetyhk/RandomizerMod (Resources/Data, Resources/Logic),
-https://github.com/sirbrialliance/TangledMapView (`Web/mapData.js`), https://hollowknight.wiki (MediaWiki API, enemy pages),
-https://www.hallownest.net (screenshot map tiles, `terrain-native.png`). Cross-check: hk-psx's scene catalog
-(https://github.com/EBonura/hk-psx, `docs/CATALOG.md`) counts 7 HealthManagers in King's Pass = our 3 vengeflies + 4 crawlids.
-
-**Not got:** collider-accurate terrain (platforms, slopes), hazards (spikes in King's Pass and Crossroads_31, acid in
-Crossroads_35), individual enemy positions and patrol ranges, Goams (not Journal kills, so absent), the exact size of
-each breakable wall, the hero's collider and jump from `HeroController`, the camera's FOV (the 64 px/unit is the
-community figure: 1080 px / 16.875 u).
+Not in the data: enemy patrol ranges (behaviour is in PlayMaker FSMs, not fields), Goam HP (invulnerable), the Grubfather
+rewards past 5 grubs (only 5 grubs exist in this area), anything conditional on later progress (kept in `enemiesLater`:
+65 infected-Crossroads variants, Gruz Mother's brood, inactive-at-load and 2%-chance enemies).
 
 ## Units
 
-1 HK unit = **64 of our px** (HK's 1080p view is 30 x 16.875 u, so its view = our 1920 x 1080 view exactly).
-Hero in our px: box **~32 x 82** (est.; ours 40 x 80), run **531 px/s** (8.3 u/s; ours 576), full jump **~330 px**
-(est. 5.2 u; ours 272). So HK's knight is slightly narrower, a touch slower and jumps ~20% higher, relative to the view,
-than Wing.
+The game camera is a perspective tk2dCamera, vertical FOV 24 deg, at z -38.1; the knight and the terrain are at z 0.
+So the view is **28.80 x 16.20 units** (not the 30 x 16.875 the community figure gives) and **1 HK unit = 66.68 of our
+px**. The art is authored at 64 px per unit, so HK draws it at 1.04x on a 1080p screen. The camera keeps its centre at
+least 14.6 / 8.3 u from the scene's edges (the lock areas' minimums match).
+
+Hero in our px (files): box **33 x 85** (0.5 x 1.28 u; ours 40 x 80), run **553 px/s** (8.3 u/s; ours 576), full jump
+**352 px** (5.27 u: 16.65 u/s held for 9 steps of 0.02 s, then 47.4 u/s2 gravity; ours 272), dash 20 u/s for 0.25 s,
+fall cap 20 u/s, nail cooldown 0.41 s, 1.3 s invulnerable after a hit, pogo 12 u/s.
 
 ## The area as a player meets it (first 10 minutes; times are estimates)
 
-- **0:00 King's Pass** (201 x 80 u = 31.8 screens, one room). You fall in at the top left. Within the first screen and
-  a half: three slash prompts (left, right, up) on the floor, then 4 crawlids (harmless walkers) and 3 vengeflies
-  (homing fliers). The room is three long tiers worked left to right; the Focus tablet sits mid-way (x 111 u). Two
-  breakable floors on the top tier, a hidden-room mask at the far left, a spike pit at the bottom right with the Fury
-  of the Fallen charm and a tablet. The exit is a stone door you break; past it a ledge drop you can't climb back
-  (the claw gate shown in minute 4). The Howling Cliffs exit is visible and needs claw: the first lock, minute 1-2.
-- **~0:04 Dirtmouth** (263 x 70 u, 36 screens, no enemies). A flat walk with Elderbug, a bench at x 132, six
-  locked doors (rescues, keys, the stag station, DLC tents), and the well at x 185. The Crystal Peak exit on the right needs wings + crystal
-  heart: the second lock.
-- **~0:06 the well** (Crossroads_01, 8 screens). 2 tiktiks, a crawlid, 2 wandering husks. Left goes to the Platforms
-  shaft, right to the Black Egg Temple (bench + the game's final door, sealed).
-- **~0:08-10** east: Crossroads_39 (2 wandering husks, a hornhead) to the East junction (Crossroads_14, 4 exits: a
-  grub guarded by a Husk Guard, Myla, the lever corridor down to the stag shaft). Or west: the Platforms shaft
-  (9 gruzzers, 7 tiktiks) to Cornifer and his map 2 rooms in, and the Greenpath gate guarded by an Elder Baldur
-  (needs Vengeful Spirit: a lock you see by minute ~10).
-- After that (est. minutes 10-45): the stag shaft (bench 1 room off), the Husk Guard corridor (Crossroads_21), the
-  False Knight arena (Crossroads_10, its west door opens after the fight), the Ancestral Mound (11 baldurs, an Elder
-  Baldur, a bench) and Vengeful Spirit.
+- **0:00 King's Pass** (201 x 80 u = 34.5 screens, one room). You drop in at the top left (the claw-locked exit to
+  Howling Cliffs is beside you: the first lock). Three tiers worked left to right: 3 crawlids and 3 vengeflies (8 HP,
+  1 mask), 5 geo rocks, 3 tablets, a lifeblood cocoon, 7 spike strips (50 u) with 8 respawn points, 4 dark pockets
+  that open as you enter, a breakable floor and two collapsing floors. The Fury of the Fallen chest sits in a spike pit
+  at the bottom right. The exit (a breakable stone) is at the top right.
+- **~0:04 Dirtmouth** (263 x 70 u, 39.5 screens, no enemies): Elderbug, a bench at x 132, locked doors, the well at x 185.
+- **~0:06 the well** (Crossroads_01, 100 x 42 u): 2 tiktiks, a crawlid, 2 wandering husks; a relic in a dark pocket
+  above the floor. Left to the Platforms shaft, right to the Black Egg Temple (the final door, sealed; its bench is
+  behind that door, so not usable now).
+- **~0:08-10** east: the corridor (3 enemies) to the East junction and the lever corridor down to the stag shaft; or
+  west: the Platforms shaft (9 gruzzers, 7 tiktiks, 1 crawlid), Cornifer two rooms in, the Elder Baldur gate (needs
+  Vengeful Spirit, seen by minute ~10).
+- After (est. 10-45 min): the stag, the Husk Guard corridor (Crossroads_21: 5 enemies, 41 u of spikes, 3 dark
+  pockets), the False Knight arena (with its 3 husks), the Ancestral Mound (11 baldurs, an Elder Baldur, a bench) and
+  Vengeful Spirit.
 
 ## Measurements
 
-Counted over the area's 45 rooms (King's Pass, Dirtmouth, 40 Crossroads rooms incl. Ancestral Mound, the Black Egg
-Temple, Salubra's shop, Sly's hut); the two Greenpath rooms and the Crystal Peak toll room are drawn but not counted.
-A "screen" is 1920 x 1080 of ours (30 x 16.875 u).
+Over the area's 45 rooms (boundary rooms: Greenpath x2 and the Crystal Peak toll room, drawn but not counted). A screen
+is 1920 x 1080 of ours = 28.8 x 16.2 u.
 
 | measure | value |
 |---|---|
-| rooms / screens (room rects) | **45 / 310** screens; **~192** screens of air by the map drawings (62%) |
-| room size | min 1.5, median **4.4**, max 36 screens (Dirtmouth 36, King's Pass 32, Ancestral Mound 21) |
-| critical path (King's Pass to Vengeful Spirit) | **12 rooms (27%)**, 142 screens (46%, because the two 30+ screen intro rooms are on it); 56,971 px long through doors |
-| critical path without King's Pass + Dirtmouth | 10 rooms, 74 screens, 7 rooms to the first boss from the well |
-| rooms by shape | hall 24, hub 7 (4+ exits), set piece 6, shaft 6, corridor 2 |
-| exits per room | mean **2.4**; 1 exit: 13, 2: 16, 3: 7, 4: 5, 5: 2, 6: 2 |
-| dead ends | **17** (13 + 4 interiors). Each holds something: grub x3 (31, 35, 48), charm (Glowing Womb), vessel fragment (37), bench (Hot Springs; Stag + stag station), grub rewards (Grubfather), soul totem (Myla), geo rock (tram, Goam journal room), Ancestral Mound (ability + bench + charm), Black Egg Temple (bench + final door), Salubra (shop), Sly's hut (rescue), Baldur gate (tablet + the way to Greenpath), King's Pass (start) |
-| loops (independent cycles) | **5**, lengths 4, 4, 7, 10, 11 rooms; the two 4-room loops close through one-way/boss walls (Mawlek wall, Gruz Mother) |
-| enemies (first visit, no spawns) | **144 individuals = 0.46 per screen**; on the critical path 50 = **0.35 per screen**; 19 of 45 rooms have none; 125 more are Infected-Crossroads variants or spawns (excluded) |
-| enemy kinds (n) | Aspid Hunter 21, Vengefly 17, Tiktik 14, Gruzzer 13, Wandering Husk 12, Aspid Mother 11, Baldur 11, Crawlid 10, Husk Bully 10, Husk Hornhead 8, Leaping Husk 6, Husk Warrior 3, Elder Baldur 2, Husk Guard 2, Menderbug 1, Gruz Mother 1, Brooding Mawlek 1, False Knight 1 (+ Goams, not counted) |
-| HP vs the hero | nail 5 dmg. Commons 8 HP (**2 hits**: crawlid, vengefly, tiktik, gruzzer) or 15 (**3 hits**: husks, aspid hunter, baldur); Aspid Mother 20 (4). Heavies: Elder Baldur 60 (12, immune when curled), Husk Guard 70 (14). Bosses: Gruz Mother 90 (18), Brooding Mawlek 300 (60), False Knight 355 (71). Hero 5 masks; contact = 1 mask; Husk Guard club and FK mace = 2. 11 SOUL per hit, 33 to heal one mask = 3 hits per heal. |
-| difficulty mix (1-5, est.) | 1: 26%, 2: 44%, 3: 26%, 4: 2% (2 Husk Guards, Gruz Mother), 5: 1% (Mawlek, False Knight) |
-| pickups per screen | major **0.07** (22 incl. 7 Grubfather rewards: 5 grubs, 2 mask shards, 1 vessel fragment, 3 charms, map, key item, ability, relic, chest); geo rocks **0.12** (36); everything incl. totems, tablets, doors **0.35** |
-| secrets | **26**: 18 breakable walls/floors (incl. a one-way wall and a dive floor) + 8 hidden-room masks. Hops from the critical path: 0: 11, 1: 1, 2: 7, 3: 5, 4: 2 |
-| secrets on the critical path | 11 of 26: King's Pass has 3 (2 breakable floors, a hidden room); Crossroads_21 (the FK approach) has 4 |
-| saves | **6 benches** (Dirtmouth, Black Egg Temple, Stag, Hot Springs, Salubra, Ancestral Mound); hops from the critical path 0, 1, 1, 3, 2, 0; straight-line Dirtmouth to Stag 8.2 screen-widths, Stag to Hot Springs 3.3, Stag to Salubra 7.4. No bench in King's Pass; the first is ~4 minutes in. |
-| gated exits (all visible before they open) | **16**: boss 6, claw 3, breakable one-way 2, spell 1 (Elder Baldur), Isma's tear 1, claw+wings 1, wings+crystal heart 1, key 1; plus 6 shuttered houses in Dirtmouth |
-| travel on the critical path | horizontal 44,832 px (23.4 screen-widths), vertical 11,904 px (11 screen-heights): V:H = 0.27 by px, 0.47 by screens |
-| longest stretch with nothing within half a screen | 7,756 px (~4 screen-widths): the walk across Dirtmouth |
-| what the first ability opens | Vengeful Spirit kills the Elder Baldur at Crossroads_11_alt: **the whole next area** (Greenpath, ~33 rooms). Inside this area it opens nothing new by door (43 of 45 rooms are reachable with the start kit + bosses); still locked: Glowing Womb (claw) and the vessel-fragment room (lift). |
+| rooms / screens | **45 / 336** screens of room box; the tile map is solid in 47% of it (~178 screens of air) |
+| room size | min 1.6, median **4.8**, max 39.5 screens (Dirtmouth 39.5, King's Pass 34.5); median room 70 x 35 u |
+| critical path (King's Pass to Vengeful Spirit) | **12 rooms (27%)**, 155 screens (46%); 58,978 px through doors |
+| rooms by shape | hall 22, hub 9 (4+ exits), set piece 6, shaft 6, corridor 2 |
+| exits per room | mean **2.4**; 1 exit: 13, 2: 16, 3: 5, 4: 7, 5: 2, 6: 2 |
+| dead ends | **17**, each holds something (grubs, a charm, the vessel fragment, benches, the stag, shops, the ability) |
+| loops | **5** independent cycles |
+| enemies (first visit) | **162 = 0.48 per screen** (137 without the 25 Goams); critical path **51 = 0.33 per screen**; 19 of 45 rooms have none |
+| densest rooms | Goam room (Crossroads_13) 19 = 2.4/screen; Glowing Womb arena 17 (12 in waves) = 2.2; vessel-fragment hall 13 husks = 1.8; Platforms shaft 17 = 1.6; Ancestral Mound 17 |
+| enemy kinds (n) | Goam 25, Aspid Hunter 18, Vengefly 17, Tiktik 14, Wandering Husk 12, Gruzzer 12, Baldur 11, Husk Bully 10, Aspid Mother 10, Crawlid 9, Husk Hornhead 9, Leaping Husk 6, Elder Baldur 2, Husk Warrior 2, Husk Guard 2, Gruz Mother 1, Brooding Mawlek 1, False Knight 1 |
+| HP vs the hero (files) | nail 5. **8 HP** (2 hits): crawlid, vengefly, tiktik, gruzzer. **15** (3): every husk, aspid hunter, baldur. 20 (4): aspid mother. Elder Baldur 60, Husk Guard 70, Gruz Mother 90, Brooding Mawlek 300, False Knight 65 per armour phase x 3. Every contact = 1 mask of 5; only the Husk Guard's club and the False Knight's mace deal 2 |
+| battle waves | 3 rooms lock you in: Glowing Womb (12 in waves), False Knight (the boss + 3 husks), aspid arena (3); the two Elder Baldurs are battle groups of one |
+| pickups per screen | major **0.05** (17: 5 grubs, 2 mask shards, a vessel fragment, 4 charms incl. Grubsong, map, City Crest, relic, geo chest, Vengeful Spirit); geo rocks **0.11** (36, mostly 15 geo in 5 hits); soul totems 7 |
+| hazards | spikes in **15 of 45 rooms**, 492 u of strip (~17 view-widths); acid 4 boxes (the acid grub room); 13 of the 15 spike rooms have hazard-respawn triggers (43) |
+| secrets | **33 hidden things**; 19 breakables (8 walls, 5 floors, 5 collapsing floors, 1 dive floor) and 18 dark pockets; 11 pockets are in critical-path rooms |
+| saves | **5 benches + 1 stag** (Dirtmouth, Salubra, Hot Springs, Stag, Ancestral Mound); none in King's Pass |
+| gated exits (all visible first) | **16**: boss 6, claw 3, breakable 2, spell 1, Isma's tear 1, claw+wings 1, wings+crystal heart 1, key 1 |
+| travel on the critical path | horizontal 46,706 px, vertical 12,169 px: V:H = 0.26 |
+| screens with nothing in them | 59%; the longest straight run of empty screens is 16 |
+| what the first ability opens | Vengeful Spirit kills the Elder Baldur at Crossroads_11_alt: the whole next area (Greenpath). Inside this area it opens no door |
+
+### What changed from the mined version (same tools, a screen = 1920 x 1080)
+metrics.ts on the whole file (with the boundary rooms): screens 329 -> **357** (+8.5%: the camera shows 28.8 u, not 30,
+so every unit is 66.7 px, not 64); enemies 102 group entries -> **198** individuals (0.31 -> 0.55 per screen; area only
+0.48); mean difficulty 2.27 -> 1.89; kinds 30 -> 24 (infected variants moved to `enemiesLater`); majors 23 -> 17 (only
+1 of the 7 Grubfather rewards is reachable with this area's 5 grubs); saves 8 -> 7 (no bench in the temple's first
+room); secrets 36 -> 35; empty screens 65% -> 59%; solid share 0.35 -> 0.63 (real colliders instead of the map's
+outline); hazards 0 -> 93. Densest room 5.5 -> 2.4 per screen (the old figure was per mined screen).
 
 ## 12 facts for an AI building a first area
 
-1. **The view is 30 x 16.875 units; 1 u = 64 of our px**, so HK numbers carry over 1:1 in screens. The hero is ~0.5 x
-   1.3 u, runs 8.3 u/s (3.6 s per screen width).
-2. **The tutorial room is huge and single**: King's Pass is 201 x 80 u = 32 screens in one room, three tiers, 7
-   enemies, 3 secrets, 5 geo rocks, a charm; it ends in a one-way drop.
-3. **A quiet hub of 36 screens with 0 enemies** follows it (Dirtmouth): one bench, one well, 6 locked doors, 1 locked exit.
+1. **The view is 28.8 x 16.2 units; 1 u = 66.7 of our px.** The knight is 0.5 x 1.28 u (33 x 85 px), runs 8.3 u/s
+   (3.5 s a screen), jumps 5.3 u (352 px) and its walls break in 4 hits.
+2. **The tutorial room is huge and single**: King's Pass is 201 x 80 u = 34.5 screens: 6 enemies (all 8 HP), 50 u of
+   spikes with 8 respawn points, 4 dark pockets, 5 geo rocks, 3 tablets, a charm in a spike pit.
+3. **A quiet hub of 39.5 screens with 0 enemies** follows it (Dirtmouth).
 4. **Only 27% of rooms are on the critical path** (12 of 45); the first boss is 7 rooms from the well.
-5. **Median room = 4.4 screens**, but sizes swing 1.5 to 36; 24 of 45 are long halls, 6 are tall shafts, 7 are hubs
-   with 4-6 exits.
-6. **Mean 2.4 exits per room; 17 dead ends (38%), and every dead end holds something**: a grub, a charm, a bench, a
-   shop, a mask or vessel piece, an ability.
-7. **5 loops in 45 rooms** (one per 9), lengths 4-11 rooms; two of them close through walls that open from the far
-   side (one-way shortcuts back to Cornifer's hub).
-8. **Enemy density is low: 0.46 per screen overall, 0.35 on the critical path**; 19 of 45 rooms have none. The 26 rooms
-   that have enemies hold ~5.5 each.
-9. **Commons die in 2-3 nail hits (8 or 15 HP vs 5 damage)**; heavies take 12-14 hits; the first required boss takes
-   71 (355 HP). Everything hits for 1 of 5 masks; only clubs and the boss's mace hit for 2.
-10. **26 secrets** (0.08 per screen): 18 breakable walls/floors and 8 hidden-room masks; 11 sit on the critical path,
-    the rest 1-4 rooms off it.
-11. **6 benches, never more than 3 rooms from the critical path**; 3 of them are dead-end rewards (Stag, Hot Springs,
-    Ancestral Mound).
-12. **16 gated exits are shown before they open** (boss 6, claw 3, one-way walls 2, spell 1, ...), and the game's
-    final door is 2 rooms from the well; the first ability (Vengeful Spirit) opens the next area rather than this one.
+5. **Median room 4.8 screens (70 x 35 u)**, sizes 1.6 to 39.5; 22 halls, 9 hubs, 6 shafts, 6 set pieces.
+6. **Mean 2.4 exits; 17 dead ends, every one holds something.**
+7. **Enemies 0.48 per screen, 0.33 on the critical path, 19 of 45 rooms empty**, and 5 dense rooms at 1.6-2.4 per
+   screen, two of them lock-in fights.
+8. **Commons take 2-3 hits (8 / 15 HP vs 5)**; every enemy hits for 1 of 5 masks; only two weapons hit for 2.
+9. **Spikes are quiet and common**: 15 of 45 rooms, 492 u of 1-u-tall strips, 1 mask a touch, and a respawn point
+   beside them (43 triggers in 13 rooms).
+10. **33 hidden things**: 19 breakables and 18 dark pockets you only see once you step in; 11 pockets on the critical
+    path's rooms (King's Pass alone has 4).
+11. **5 benches and a stag, none in King's Pass**; the first is ~4 minutes in.
+12. **16 gated exits are shown before they open**; the first ability opens the next area, not this one.
 
 ## Re-running from the game files
 
-When Hollow Knight is installed, these scripts replace the mined estimates. Copies are in
-`shots/reference-levels/hollow-knight/tools/` (gitignored; the mined inputs in `tools/data/`; the scripts' `SP`/`DATA`
-paths point at the session scratchpad and the earlier study's `nifty-bhaskara-28e244` worktree, so repoint them):
-`dump.py <...>/hollow_knight.app/Contents/Resources/Data <out> <scenes>` reads BuildSettings, builds type trees from
-`Managed/*.dll` and writes every GameObject with world transform, layer, 2D colliders in world space, and each
-MonoBehaviour's fields (HealthManager hp, DamageHero, PlayMakerFSM states and float params). `build.py area.json <dumps>`
-then needs a converter from the dumps to its per-room dict (terrain = non-trigger colliders on layer 8 Terrain;
-hazards = DamageHero hazardType; enemies = HealthManager; breakables by component/FSM name), `render.py` and
-`metrics.py` are unchanged.
+```
+python3 -m venv <venv> && <venv>/bin/pip install UnityPy TypeTreeGeneratorAPI Pillow numpy
+D=~/Library/Application\ Support/Steam/steamapps/common/Hollow\ Knight/hollow_knight.app/Contents/Resources/Data
+<venv>/bin/python -I tools/reference/mined/hollow-knight/extract.py "$D" <dumps> <scenes|ALL>   # ~15 s for the area
+<venv>/bin/python -I tools/reference/mined/hollow-knight/rooms.py <dumps> <rooms.json>
+<venv>/bin/python -I tools/reference/mined/hollow-knight/build.py <area.json> <rooms.json>
+```
+`build.py` still reads the mined tables (randomizer door table + logic, TangledMapView, the wiki's behaviour text) from
+the paths at its top; repoint them. Scene list for the area: Tutorial_01, Town, Crossroads_* (with Crossroads_10_boss),
+Room_temple, Room_ruinhouse, Room_Charm_Shop, Mines_33, Fungus1_01, Fungus1_01b. `render_look.py` makes the look
+references (outside the repo).

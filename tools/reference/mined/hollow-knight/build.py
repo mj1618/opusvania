@@ -1,5 +1,8 @@
 """Build area.json for Hollow Knight's first area.
-usage: build.py <out area.json> [dumps dir]   (no dumps dir = mined-only mode)"""
+usage: python -I build.py <out area.json> [rooms.json from rooms.py]   (without rooms.json = the old mined-only mode)
+With rooms.json, sizes, doors, terrain, hazards, breakables, hidden areas, things and every enemy come from the game
+files (extract.py -> rooms.py); the mined tables still give the door graph (randomizer), what each door / item needs
+(randomizer logic), item ids, and enemy behaviour text (wiki)."""
 import collections, heapq, json, math, os, re, sys
 sys.path.insert(0, os.path.dirname(__file__))
 from lj import lj
@@ -7,12 +10,17 @@ from lj import lj
 DATA = "/Users/matt/code/worktrees/opusvania/nifty-bhaskara-28e244/shots/reference/maps/hollow-knight/data/"
 SP = "/private/tmp/claude-501/-Users-matt-code-worktrees-opusvania-game-design-rain-world-metroidvania-a8d617/d53ed2b7-ba9c-4e7b-b710-4c887df84277/scratchpad/"
 OUT = sys.argv[1]
-DUMPS = sys.argv[2] if len(sys.argv) > 2 else None
+DUMPS = sys.argv[2] if len(sys.argv) > 2 else None   # rooms.json (rooms.py)
+FR = json.load(open(DUMPS)) if DUMPS else {}
 TM = json.load(open(DATA + "rooms-tmv.json"))
 TR = json.load(open(DATA + "hk-rando-transitions.json"))
 LT = {t["Name"]: t for t in lj(DATA + "hk-rando-logic-transitions.json")}
 WIKI = json.load(open(SP + "dl/enemy-wiki.json"))
-PX = 64.0  # our px per HK unit (HK view 30 x 16.875 u = 1920 x 1080 of ours)
+# The game camera (resources.assets, _GameCameras/CameraParent/tk2dCamera): perspective, vertical FOV 24 deg, at z -38.1;
+# the hero plays on z = 0. So the view there is 2 * 38.1 * tan(12 deg) = 16.197 u tall, 28.795 u wide at 16:9.
+VIEW_H = 2 * 38.1 * math.tan(math.radians(12))
+VIEW_W = VIEW_H * 16 / 9
+PX = 1920 / VIEW_W if FR else 64.0  # our px per HK unit: their view width = our 1920 px
 
 ROOMS = ["Tutorial_01", "Town"] + sorted(r for r in TM if r.startswith("Crossroads") and r not in (
     "Crossroads_10_preload", "Crossroads_46b", "Crossroads_49b", "Crossroads_50")) + [
@@ -273,11 +281,101 @@ def mined_enemies(r):
     return out
 
 
-def dumped_room(r):
-    p = os.path.join(DUMPS, r + ".json")
-    if not os.path.exists(p):
+EN["Goam"] = ("Goam", "Goam", 2, "invulnerable worm that lunges out of the wall or floor: a moving hazard", True)
+EN["BurstingZombie"] = ("Violent Husk", None, 3, "infected-Crossroads variant", False)
+
+
+def files_room(r):
+    """the room from the game files (rooms.py), local units y up; enemies one per individual"""
+    f = FR.get(r)
+    if not f:
         return None
-    return json.load(open(p))
+    m = {"W": f["W"], "H": f["H"], "src": "files", "doors": {k: tuple(v) for k, v in f["doors"].items()},
+         "terrain": [{"kind": t["kind"], "pts": [tuple(p) for p in t["pts"]], "closed": t.get("closed", True), "name": t["name"]}
+                     for t in f["terrain"]],
+         "camLocks": f.get("camLocks"), "hazardRespawns": f.get("hazardRespawns")}
+    # enemies: first visit (incl. battle waves), one entry each; the rest go to enemiesLater
+    en, later = [], []
+    for i, e in enumerate(f["enemies"]):
+        name, page, diff, why, _ = EN.get(e["jid"], (e["jid"], None, 2, "unknown", True))
+        w = WIKI.get(page or "", {})
+        x, y = e["x"], e["y"]
+        o = {"id": f"{r}-{e['name']}-{i}", "kind": name, "journalId": e["jid"], "obj": e["name"], "x": x, "y": y,
+             "hp": e["hp"] if e["hp"] is not None else 0, "contactDamage": e["contactDamage"],
+             "behaviour": (w.get("beh") or why).split("\n")[0][:300], "difficulty": diff, "difficultyWhy": why,
+             "src": "files (position, hp, damage; HealthManager / DamageHero); behaviour: wiki"}
+        if e["jid"] == "Goam":
+            o["hp"] = 0; o["invulnerable"] = True
+        if e.get("attackDamage") and e["attackDamage"] > o["contactDamage"]:
+            o["attack"] = f"weapon hit deals {e['attackDamage']} masks"
+        elif e["jid"] in ("Spitter", "Mawlek"):
+            o["attack"] = "ranged acid blobs, 1 mask each"
+        if e["jid"] == "FalseKnight":
+            o["attack"] = "mace slam 2 masks, shockwave, falling barrels"
+            o["hp"] = e["hp"]; o["hpNote"] = "65 per armour phase in the files (3 phases), plus the head between phases"
+        if e["battle"]:
+            o["battleWave"] = True
+            if not (0 <= x <= f["W"] and 0 <= y <= f["H"]):
+                o["x"], o["y"] = f["W"] / 2, f["H"] / 2; o["atIsArenaCentre"] = True
+        if e["jid"] in ("Crawler", "Buzzer", "Climber", "Bouncer", "ZombieRunner"):
+            o["respawns"] = True
+        if e["jid"] in ("Mawlek", "FalseKnight", "BigFly", "ZombieGuard", "Blocker"):
+            o["respawns"] = False
+        (en if (e["firstVisit"] and not (e["spawned"] and not e["battle"]) and e["jid"] != "MenderBug") else later).append(
+            {**o, "why": None if e["firstVisit"] else ("infected Crossroads only" if e["infected"] else "inactive at load / spawned"),
+             **({"note": "2% chance to appear"} if e["jid"] == "MenderBug" else {})})
+    m["enemies"], m["enemiesLater"] = en, later
+    # things: from the files, matched to the mined item list for ids and what they need
+    things = []
+    mined = [(k, d) for k, d in TM.get(r, {}).get("items", {}).items() if d.get("x") is not None]
+    used = set()
+    secrets = [t for t in f["terrain"] if t["kind"] == "secretWall"]
+    breaks = [t for t in f["terrain"] if t["kind"] == "breakable"]
+    for t in f["things"]:
+        th = {k: v for k, v in t.items() if k not in ("obj",)}
+        best = None
+        for k, d in mined:
+            dd = math.hypot(d["x"] - t["x"], d["y"] - t["y"])
+            if k not in used and dd <= 4 and (best is None or dd < best[0]):
+                best = (dd, k)
+        th["id"] = best[1] if best else f"{r}-{t.get('obj', t['label'])}"
+        if best:
+            used.add(best[1])
+        how = []
+        for s_ in secrets:
+            x0, y0, x1, y1 = bbox_(s_["pts"])
+            if x0 <= t["x"] <= x1 and y0 <= t["y"] <= y1:
+                how.append("inside a hidden area (a dark mask over the room until you step in)")
+                break
+        nb = min(((dist_to_rect(t["x"], t["y"], bbox_(b["pts"])), b["name"].split(":")[0]) for b in breaks), default=None)
+        if nb and nb[0] <= 12 and t["kind"] in ("pickup-major", "pickup-minor", "breakable"):
+            how.append(f"{nb[1]} {nb[0]:.0f} u away")
+        if t.get("bossDrop"):
+            how.append(f"dropped by {t['bossDrop']}")
+        if t.get("inChest"):
+            how.append("in a chest")
+        h = hidden_of(r, best[1], t["x"], t["y"]) if best else None
+        needs = h["needs"] if h else None
+        if how or (needs and needs != "nail"):
+            th["hidden"] = {"how": "; ".join(how) or "in the open, out of reach without the ability", "needs": needs or "nail",
+                            "src": "files (geometry: hidden-area masks, breakables) + mined (randomizer logic for needs)"}
+        th.pop("bossDrop", None); th.pop("inChest", None)
+        things.append(th)
+        if "Cornifer" in t["label"]:
+            things.append({"id": "Crossroads_Map", "kind": "pickup-major", "label": "map (bought from Cornifer)", "x": t["x"], "y": t["y"] - 1,
+                           "src": "files (Cornifer's position)", "hidden": {"how": "follow Cornifer's paper trail", "needs": "nail"}})
+    m["things"] = things
+    return m
+
+
+def bbox_(pts):
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def dist_to_rect(x, y, b):
+    dx = max(b[0] - x, 0, x - b[2]); dy = max(b[1] - y, 0, y - b[3])
+    return math.hypot(dx, dy)
 
 
 # ---------------------------------------------------------------- things from TMV (exact positions, mined)
@@ -366,12 +464,15 @@ def mined_things(r):
 R = {}
 for r in ROOMS:
     m = mined_room(r)
-    if DUMPS:
-        d = dumped_room(r)
+    if FR:
+        d = files_room(r)
         if d:
+            for k, v in m["doors"].items():
+                d["doors"].setdefault(k, v)
+            d["things"] += [t for t in mined_things(r) if t["kind"] in ("npc", "shop", "landmark") and "-door" in t["id"]
+                            and not any(math.hypot(t["x"] - u["x"], t["y"] - u["y"]) < 2 for u in d["things"])]
             m = d
-            m["doors"] = mined_room(r)["doors"]
-    if not DUMPS or "things" not in m or not m.get("things"):
+    if not FR or "things" not in m:
         m["things"] = mined_things(r)
     R[r] = m
 
@@ -421,7 +522,7 @@ def W2P(r, x, y):
 
 # ---------------------------------------------------------------- shapes
 def shape(r, W, H):
-    sw, sh = W / 30.0, H / 16.875
+    sw, sh = W / VIEW_W, H / VIEW_H
     nd = len([d for d in R[r]["doors"] if not d.startswith(("door", "room", "tram", "elev"))])
     if r in ("Crossroads_10", "Crossroads_09", "Crossroads_04", "Crossroads_08", "Crossroads_22", "Crossroads_38"):
         return "setpiece"
@@ -474,7 +575,7 @@ cp, cpd = shortest(START, GOAL, {"boss", "story"})
 CP = set(cp or [])
 
 # ---------------------------------------------------------------- emit
-rooms, terrain, things, enemies = [], [], [], []
+rooms, terrain, things, enemies, enemies_later = [], [], [], [], []
 for r in R:
     if r not in off:
         continue
@@ -501,7 +602,7 @@ for r in R:
                 e["gate"] = g
             ex.append(e)
     rooms.append({"id": r, "name": NAMES.get(r, TM.get(r, {}).get("name") or r), "rect": [x0, y0, round(W * PX), round(H * PX)],
-                  "screens": round(W * H / (30 * 16.875), 2), "shape": shape(r, W, H), "onCriticalPath": r in CP,
+                  "screens": round(W * H / (VIEW_W * VIEW_H), 2), "shape": shape(r, W, H), "onCriticalPath": r in CP,
                   "inset": r in INSET, "boundary": r in EXIT_ONLY, "sizeSrc": R[r].get("src", "files"), "exits": ex})
     for t in R[r].get("terrain", []):
         terrain.append({"roomId": r, "kind": t["kind"], "poly": [W2P(r, *p) for p in t["pts"]], "closed": t.get("closed", True),
@@ -511,6 +612,11 @@ for r in R:
         o["roomId"] = r
         o["at"] = W2P(r, t["x"], t["y"])
         things.append(o)
+    for e in R[r].get("enemiesLater", []):
+        o = {k: v for k, v in e.items() if k not in ("x", "y")}
+        o["roomId"] = r
+        o["at"] = W2P(r, e["x"], e["y"])
+        enemies_later.append(o)
     for e in R[r].get("enemies", []):
         o = {k: v for k, v in e.items() if k not in ("x", "y", "px0", "px1")}
         o["roomId"] = r
@@ -535,6 +641,35 @@ area["notes"] = ["enemies: one entry per Hunter's-Journal type per room with cou
                  "breakable/secretWall boxes: centre mined, size estimated",
                  "insets: Ancestral Mound, Black Egg Temple, Salubra's shop and Sly's hut are entered by background doors; they are drawn in a row below the map, not in place",
                  "boundary rooms (Greenpath x2, Crystal Peak toll) are drawn but excluded from the metrics"]
+if FR:
+    area["enemiesLater"] = enemies_later
+    area["units"] = {"native": "unity units", "pxPerUnit": round(PX, 3), "viewNative": [round(VIEW_W, 3), round(VIEW_H, 3)],
+                     "how": "files: the game camera (resources.assets _GameCameras/CameraParent/tk2dCamera) is a perspective tk2dCamera, "
+                            "vertical FOV 24 deg, at z -38.1, native 1920x1080; the knight and the terrain are at z 0, so the view there is "
+                            "2*38.1*tan(12 deg) = 16.197 u tall and 28.795 u wide (16:9). Our 1920 px view = 28.795 u: 1 HK unit = 66.68 of our px. "
+                            "(The sprites are authored at 64 px per unit, so HK draws them at 1.04x on a 1080p screen.)"}
+    G_STEP = 47.4 * 0.02  # velocity lost per 0.02 s physics step
+    J = 9 * 0.02 * (16.65 - G_STEP) + sum(0.02 * v for v in (16.65 - G_STEP * (k + 2) for k in range(40)) if v > 0)
+    area["hero"].update({
+        "box": [round(0.5 * PX), round(1.28125 * PX)],
+        "boxSrc": "files: Knight BoxCollider2D 0.5 x 1.28125 u (resources.assets)",
+        "run": round(8.3 * PX), "runSrc": "files: HeroController.RUN_SPEED 8.3 u/s (WALK 6, dash 20 u/s for 0.25 s)",
+        "jump": round(J * PX),
+        "jumpSrc": f"files + computed: JUMP_SPEED 16.65 u/s held for JUMP_STEPS 9 physics steps (0.02 s, min 4), then gravity 60 x DEFAULT_GRAVITY 0.79 = 47.4 u/s2; full hold rises {J:.2f} u. MAX_FALL_VELOCITY 20 u/s",
+        "nail": "files: ATTACK_DURATION 0.35 s, ATTACK_COOLDOWN_TIME 0.41 s, pogo BOUNCE_VELOCITY 12 u/s, INVUL_TIME 1.3 s after a hit"})
+    area["sources"] = ["files: Hollow Knight (Steam, Mac build, Unity 6000.0.61f1) read with UnityPy + type trees generated from Managed/*.dll "
+                       "(tools/reference/mined/hollow-knight/extract.py -> rooms.py -> build.py): scene sizes (tk2dTileMap), every collider, "
+                       "TransitionPoints, HealthManager / DamageHero, PlayMakerFSM names and variables, the camera and the knight"] + [
+                       x for x in area["sources"] if not x.startswith("mined: hallownest-calculator")] + [
+                       "mined: hallownest-calculator (betorzdev) only as a cross-check of room sizes and enemy counts"]
+    area["notes"] = ["enemies: one entry per individual present on a first visit (positions, hp and damage from the files); battle waves that wait off-screen are put at the arena centre (atIsArenaCentre)",
+                     "enemiesLater: infected-Crossroads variants (after the first Dreamer / Monarch Wings), Gruz Mother's brood, inactive-at-load and 2%-chance enemies; not in the metrics",
+                     "terrain solid = the real colliders (layer 8 Terrain, non-trigger, enabled, active at load): edge loops from the tile map, polygons and boxes",
+                     "terrain secretWall = the dark masks that hide a room until you step in (unmasker FSM; the mask sprite's bounds, else its reveal trigger)",
+                     "terrain breakable = breakable walls / floors, the dive floor, collapsing floors (their colliders); hazard = DamageHero hazardType 2 (spikes) / 3 (acid)",
+                     "the room graph (which door leads where) and what each door / item needs are the randomizer's tables (mined); everything with a position is from the files",
+                     "insets: Ancestral Mound, Black Egg Temple, Salubra's shop and Sly's hut are entered by background doors; they are drawn in a row below the map, not in place",
+                     "boundary rooms (Greenpath x2, Crystal Peak toll) are drawn but excluded from the metrics"]
 area.update({"rooms": rooms, "terrain": terrain, "things": things, "enemies": enemies, "criticalPath": cp,
              "criticalPathPoints": cpp, "criticalPathPx": round(cpd or 0)})
 json.dump(area, open(OUT, "w"), indent=1)

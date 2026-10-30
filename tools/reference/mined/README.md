@@ -3,5 +3,9 @@
 How each `docs/design/reference-levels/<game>/area.json` was built from mined community data (see each game's
 README there for sources). Kept for reproducing or extending the data; their paths point at the session scratchpad
 and the earlier study's downloads (`nifty-bhaskara-28e244/shots/reference/maps/`), so repoint them before running.
-`hollow-knight/dump.py` is the UnityPy extractor for the real game files (never run: the game was not installed).
+Hollow Knight is now read from the installed game: `hollow-knight/extract.py` (UnityPy dump of each scene) ->
+`rooms.py` (rooms in scene units) -> `build.py` (area.json), and `render_look.py` (look references, outside the repo);
+usage in `docs/design/reference-levels/hollow-knight/README.md`.
+Silksong is read from the installed game by `silksong/extract.py` (one file: `cabindex`, `dump`, `build`, `measure`,
+`render`, `enums`; usage in its docstring), method in `docs/design/reference-levels/silksong/EXTRACTED.md`.
 Run Python on downloaded data with `-I`.

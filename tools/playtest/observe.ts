@@ -122,6 +122,14 @@ export interface Obs {
   lights: SeenLight[];
 }
 
+interface Cover {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  opens?: string;
+}
+
 /** Everything inside the view (with `pad` px of peripheral vision). */
 export function observe(state: GameState, scene: Scene, view: ViewRect, pad = 32): Obs {
   const p = state.player;
@@ -142,7 +150,15 @@ export function observe(state: GameState, scene: Scene, view: ViewRect, pad = 32
     if (overlaps(view, rect)) exits.push({ id: e.id, edge: e.edge, rect, point: exitPoint(scene, e) });
   }
   const pickups: SeenThing[] = [];
+  // (A pickup behind a cover is hidden, as on screen, until she is inside the cover or the bark it hides behind is
+  // broken: review r4 #2, the skilled bot jumped six times at the Crossing's covered hoard.)
+  const covers = ((scene as { marks?: { covers?: Cover[] } }).marks?.covers ?? []).filter(
+    (c) =>
+      !(c.opens && state.save.opened.includes(`${scene.id}:${c.opens}`)) &&
+      !contains(c, p.x + p.w / 2, p.y + p.h / 2, 0),
+  );
   (scene.pickups ?? []).forEach((q, i) => {
+    if (covers.some((c) => contains(c, q.x, q.y, 0))) return;
     if ((state.pickups.timers[i] ?? -1) === 0 && contains(view, q.x, q.y, pad))
       pickups.push({ id: q.id, kind: q.kind, x: q.x, y: q.y });
   });

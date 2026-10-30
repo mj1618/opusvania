@@ -141,29 +141,53 @@ export const WOOD_VISTA = {
   footY: 760,
   floorY: 860,
   /** Half the range's span (px): wider than the widest view (2592) so 21:9 never sees its ends. */
-  half: 1500,
-  /** The peak's height over the foot, and the shoulders'. */
+  half: 1900,
+  /** The main peak's height over the foot. */
   peak: 360,
+  /**
+   * The range (review r4 #7: one symmetric cone, floating snow): peaks as [offset from the main peak in `half`s, height
+   * as a share of `peak`, half-width in `half`s]. The main one stands under the moon, off the range's centre.
+   */
+  peaks: [
+    [0, 1, 0.15],
+    [-0.3, 0.7, 0.13],
+    [0.24, 0.56, 0.12],
+    [-0.58, 0.44, 0.16],
+    [0.5, 0.36, 0.14],
+  ] as ReadonlyArray<readonly [number, number, number]>,
   /** Camera distance (world px) west of the vista point where it starts to show, and where it is full. */
   showFrom: 1100,
   showFull: 300,
   far: 0x22364e,
+  farLit: 0x34507a,
+  farDark: 0x141f30,
   near: 0x16222f,
+  wall: 0x0e1822,
   ridgeLit: 0x3a5474,
   snow: 0xc6d6ec,
   haze: 0x4a6a8c,
+  river: 0x8aa6c8,
   lamp: 0xffb060,
   lampCore: 0xffe0b0,
-  lamps: 220,
+  moth: 0xffe6c0,
 } as const;
+
+/** A valley lamp: screen place, size (core px), twinkle phase, and whether moths circle it (the nearer tiers). */
+interface VistaLamp {
+  x: number;
+  y: number;
+  s: number;
+  ph: number;
+  swarm: number;
+}
 
 export class WoodVista {
   private readonly root = new Container({ label: 'wood-vista' });
   private readonly range = new Graphics();
   private readonly field = new Graphics();
-  /** The peak's screen x seen from the vista point (logical px), and the field's spread. */
+  /** The peak's screen x seen from the vista point (logical px), and the lamps at three depths. */
   private readonly peakX: number;
-  private readonly lamps: Array<[number, number, number, number]> = [];
+  private readonly lamps: VistaLamp[] = [];
 
   constructor(
     private readonly layers: LayerTree,
@@ -183,19 +207,60 @@ export class WoodVista {
         : SAFE_W / 2 + ((mountain?.x ?? at.x + 1000) - at.x) * 0.6;
     const W = WOOD_VISTA;
     const r = prng(LOOK.seed * 31 + 7);
-    // The lamps: clusters on the valley floor (villages of false light), thinning to strays.
-    const span = (valley?.w ?? 2400) * 0.9;
     const cx = SAFE_W / 2 + ((valley?.x ?? at.x) + (valley?.w ?? 0) / 2 - at.x) * 0.6;
-    const clusters = Array.from({ length: 7 }, () => [cx + (r() - 0.5) * span, r()] as const);
-    for (let i = 0; i < W.lamps; i++) {
-      const c = clusters[Math.floor(r() * clusters.length)] as readonly [number, number];
-      const stray = r() < 0.25;
-      const x = stray ? cx + (r() - 0.5) * span * 1.3 : c[0] + (r() - 0.5) * (60 + 120 * c[1]);
-      const d = r();
-      const y = W.floorY + 10 + d * d * 110 + (stray ? 0 : (r() - 0.5) * 20);
-      this.lamps.push([x, y, 0.8 + (1 - d) * 1.6, r() * 6.28]);
-    }
+    const span = (valley?.w ?? 2400) * 0.9;
+    // Three depths (review r4 #7: one flat field read as a town at night): far specks under the range, clusters on the
+    // valley's hills, and a few near lamps, larger, with their moths.
+    const tier = (
+      n: number,
+      clusters: number,
+      y0: number,
+      y1: number,
+      s0: number,
+      s1: number,
+      spread: number,
+      sw: number,
+    ) => {
+      const cs = Array.from(
+        { length: clusters },
+        () => [cx + (r() - 0.5) * spread, y0 + r() * (y1 - y0)] as const,
+      );
+      for (let i = 0; i < n; i++) {
+        const c = cs[Math.floor(r() * cs.length)] as readonly [number, number];
+        const rad = 30 + s1 * 20 * r();
+        this.lamps.push({
+          x: c[0] + (r() - 0.5) * rad * 2,
+          y: c[1] + (r() - 0.5) * rad * 0.5,
+          s: s0 + (s1 - s0) * r(),
+          ph: r() * 6.28,
+          swarm: sw && r() < 0.5 ? sw : 0,
+        });
+      }
+    };
+    // (The far tier converges on the mountain's foot, as the valley does.)
+    tier(70, 6, W.footY + 8, W.footY + 34, 0.5, 1, Math.min(span, 900), 0);
+    tier(110, 8, W.floorY - 6, W.floorY + 40, 0.9, 1.8, span, 0);
+    tier(14, 3, W.floorY + 100, W.floorY + 170, 2, 3.2, span * 1.2, 14);
     this.paint();
+  }
+
+  /** The range's top at screen x (layer px): the sharper of its peaks, ragged. */
+  private ridge(x: number): number {
+    const W = WOOD_VISTA;
+    let h = W.peak * 0.1 * (1 + 0.6 * Math.sin(x * 0.004));
+    for (const [o, ph, hw] of W.peaks) {
+      const d = Math.abs(x - (this.peakX + o * W.half)) / (hw * W.half);
+      // (Concave flanks with shoulders and notches down them: straight sides read as paper triangles.)
+      const sd = x < this.peakX + o * W.half ? -1 : 1;
+      if (d < 1)
+        h = Math.max(
+          h,
+          W.peak * ph * ((1 - d) ** 1.5 + 0.1 * (1 - d) * Math.sin((1 - d) * (sd > 0 ? 11 : 8) + o * 5) ** 2),
+        );
+    }
+    const rag =
+      9 * Math.sin(x * 0.045) + 6 * Math.sin(x * 0.13 + 1) + 3 * Math.sin(x * 0.31) + 2 * Math.sin(x * 0.7);
+    return W.footY - h - rag * Math.min(1, h / (W.peak * 0.25));
   }
 
   private paint(): void {
@@ -203,79 +268,147 @@ export class WoodVista {
     const g = this.range;
     const r = prng(LOOK.seed * 17 + 11);
     const px = this.peakX;
-    const ridge = (x: number, k: number): number => {
-      // A main peak at px with a shoulder east, lesser peaks either side, ragged.
-      const d = (x - px) / W.half;
-      const main = Math.exp(-((d / 0.16) ** 2)) * W.peak;
-      const shoulder = Math.exp(-(((d - 0.2) / 0.12) ** 2)) * W.peak * 0.55;
-      const west = Math.exp(-(((d + 0.42) / 0.18) ** 2)) * W.peak * 0.42;
-      const east = Math.exp(-(((d - 0.55) / 0.2) ** 2)) * W.peak * 0.35;
-      const base = W.peak * 0.12 * (1 + Math.sin(x * 0.004 + k));
-      const rag = 10 * Math.sin(x * 0.05 + k) + 6 * Math.sin(x * 0.13 + k * 3);
-      return W.footY - Math.max(main, shoulder, west, east, base) - rag * (0.3 + 0.7 * (main / W.peak));
-    };
+    const x0 = px - W.half;
+    const x1 = px + W.half;
     // The far range.
     const top: number[] = [];
-    for (let x = px - W.half; x <= px + W.half; x += 12) top.push(x, ridge(x, 0));
-    g.poly([...top, px + W.half, W.footY + 80, px - W.half, W.footY + 80]).fill({ color: W.far });
-    // Its west flanks in shadow, the moon side lit: snow on the upper right of the peaks as one cap per peak (narrow
-    // per-step slivers read as stripes).
-    const slope = (x: number): number => ridge(x + 6, 0) - ridge(x - 6, 0);
-    const shade: number[] = [];
-    const lit: number[] = [];
-    for (let x = px - W.half; x <= px + W.half; x += 12) {
-      const y = ridge(x, 0);
-      const h = (W.footY - y) / W.peak;
-      shade.push(x, y + (slope(x) < 0 ? 0 : 4 + 60 * h));
-      lit.push(x, y + (h > 0.55 ? (slope(x) > 0 ? 18 + 80 * (h - 0.55) : 4 + 14 * (h - 0.55)) : 0));
+    for (let x = x0; x <= x1; x += 8) top.push(x, this.ridge(x));
+    g.poly([...top, x1, W.footY + 80, x0, W.footY + 80]).fill({ color: W.far });
+    // Each peak: its moon side lit, its far side in shadow, split down a ragged spur from its apex; snow from the
+    // crest down to a ragged snowline, attached to the ridge (no slivers floating in the air).
+    for (const [o, ph, hw] of W.peaks) {
+      const cx = px + o * W.half;
+      const apexY = W.footY - W.peak * ph;
+      const w = hw * W.half;
+      // The spur: from the apex down and a little toward the shadow.
+      const spur: number[] = [];
+      for (let k = 0; k <= 12; k++) {
+        const t = k / 12;
+        spur.push(cx - w * 0.12 * t + 10 * Math.sin(t * 9 + o * 7) * t, apexY + (W.footY - apexY) * t);
+      }
+      // Shadow: the west face, between the ridge and the spur.
+      const shadow: number[] = [];
+      for (let x = cx - w; x <= cx; x += 8) shadow.push(x, this.ridge(x));
+      for (let k = spur.length / 2 - 1; k >= 0; k--)
+        shadow.push(spur[k * 2] as number, spur[k * 2 + 1] as number);
+      g.poly(shadow).fill({ color: W.farDark, alpha: 0.55 });
+      // Lit: the east face takes the moon, faintly.
+      // (Only down to where a nearer shoulder of another peak takes over, and faint: overlapping pale faces read as
+      // glass.)
+      const lit: number[] = [...spur];
+      let xe = cx;
+      while (xe < cx + w * 0.8 && this.ridge(xe + 8) >= this.ridge(xe) - 0.5) xe += 8;
+      for (let x = xe; x >= cx; x -= 8) lit.push(x, this.ridge(x));
+      g.poly(lit).fill({ color: W.farLit, alpha: 0.2 });
+      // Snow above the snowline, hugging the ridge.
+      if (ph < 0.4) continue;
+      const line = apexY + W.peak * ph * (0.32 + 0.08 * Math.sin(o * 11));
+      const cap: number[] = [];
+      const under: number[] = [];
+      for (let x = cx - w; x <= cx + w; x += 8) {
+        const y = this.ridge(x);
+        if (y > line - 4) continue;
+        cap.push(x, y);
+        // Ragged: tongues of snow down the gullies, deeper on the lit side.
+        const tongue = Math.max(0, Math.sin((x - cx) * 0.07 + o * 5)) * 26 * (x > cx ? 1.4 : 0.6);
+        under.push(x, Math.min(line + tongue, y + (line - y) * 0.9 + tongue));
+      }
+      if (cap.length < 6) continue;
+      for (let k = under.length / 2 - 1; k >= 0; k--)
+        cap.push(under[k * 2] as number, under[k * 2 + 1] as number);
+      g.poly(cap).fill({ color: W.snow, alpha: 0.42 });
+      // The shaded half of the snow, bluer.
+      const sh: number[] = [];
+      for (let x = cx - w; x <= cx; x += 8) {
+        const y = this.ridge(x);
+        if (y > line - 4) continue;
+        sh.push(x, y);
+      }
+      if (sh.length >= 4) {
+        sh.push(cx, apexY + 6, cx - w * 0.06, line);
+        g.poly(sh).fill({ color: W.farDark, alpha: 0.45 });
+      }
+      // Rock ribs down through it.
+      for (let k = 0; k < 4; k++) {
+        const x = cx + (r() - 0.3) * w * 0.7;
+        const y = this.ridge(x) + 4;
+        if (y > line) continue;
+        const len = (line - y) * (0.5 + r() * 0.6);
+        g.poly([x, y, x + 3, y, x + 8 + len * 0.3, y + len, x + 4 + len * 0.3, y + len]).fill({
+          color: W.far,
+          alpha: 0.75,
+        });
+      }
     }
-    // (Shadow: below the ridge on the slopes that face away from the moon.)
-    const shadePoly: number[] = [...top];
-    for (let i = shade.length / 2 - 1; i >= 0; i--)
-      shadePoly.push(shade[i * 2] as number, shade[i * 2 + 1] as number);
-    g.poly(shadePoly).fill({ color: 0x101a28, alpha: 0.5 });
-    const capPoly: number[] = [...top];
-    for (let i = lit.length / 2 - 1; i >= 0; i--)
-      capPoly.push(lit[i * 2] as number, lit[i * 2 + 1] as number);
-    g.poly(capPoly).fill({ color: W.snow, alpha: 0.26 });
-    // (The crest itself catches the most.)
-    const crest: number[] = [...top];
-    for (let i = lit.length / 2 - 1; i >= 0; i--)
-      crest.push(
-        lit[i * 2] as number,
-        (top[i * 2 + 1] as number) + ((lit[i * 2 + 1] as number) - (top[i * 2 + 1] as number)) * 0.35,
-      );
-    g.poly(crest).fill({ color: W.snow, alpha: 0.22 });
-    // A few dark rock ribs down through the snow.
-    for (let k = 0; k < 7; k++) {
-      const x = px + (r() - 0.35) * 220;
-      const y0 = ridge(x, 0) + 6;
-      const len = 30 + r() * 90;
-      g.poly([x, y0, x + 4, y0, x + 10 + len * 0.35, y0 + len, x + 6 + len * 0.35, y0 + len]).fill({
-        color: W.far,
-        alpha: 0.7,
-      });
-    }
-    // Haze over its foot.
+    // Haze over its foot (wavering bands, no ruled edges).
     for (let k = 0; k < 6; k++)
-      g.rect(px - W.half, W.footY - 120 + k * 30, W.half * 2, 200).fill({ color: W.haze, alpha: 0.07 });
-    // The near ridge: dark, firs along its crest.
-    const near: number[] = [];
-    for (let x = px - W.half; x <= px + W.half; x += 16) {
-      const y = W.footY + 30 - 70 * (0.5 + 0.5 * Math.sin(x * 0.0026 + 2)) - 20 * Math.sin(x * 0.011);
-      near.push(x, y);
+      g.poly(band(x0, x1, W.footY - 90 + k * 26, 110, 31 + k)).fill({ color: W.haze, alpha: 0.07 });
+    // The valley floor under the lamps (dark, a step lighter than the walls), so the walls have something to meet.
+    g.poly(band(x0, x1, W.floorY - 24, 600, 91)).fill({ color: W.near });
+    // The valley's walls: dark slopes from either side of the view converging on the mountain's foot.
+    for (const side of [-1, 1] as const) {
+      const pts: number[] = [];
+      const xEdge = side < 0 ? x0 : x1;
+      const xIn = px + side * 260;
+      for (let k = 0; k <= 24; k++) {
+        const t = k / 24;
+        const x = lerp(xEdge, xIn, t);
+        const y =
+          lerp(W.footY - 40, W.floorY + 6, t ** 0.7) +
+          (14 * Math.sin(t * 17 + side) + 7 * Math.sin(t * 41)) * (1 - t);
+        pts.push(x, y);
+      }
+      // Firs along its crest, shrinking toward the mountain.
+      for (let k = 0; k < pts.length - 2; k += 2) {
+        if (r() < 0.35) continue;
+        const t = k / pts.length;
+        const fx = (pts[k] as number) + (r() - 0.5) * 8;
+        const fy = (pts[k + 1] as number) + 3;
+        const h = (12 + r() * 22) * (1 - 0.7 * t);
+        g.poly([fx - h * 0.22, fy, fx, fy - h, fx + h * 0.22, fy]).fill({ color: W.wall });
+      }
+      pts.push(xIn + side * 120, W.floorY + 60, xIn, W.floorY + 400, xEdge, W.floorY + 400);
+      g.poly(pts).fill({ color: W.wall });
+      // Its rim catches the moon on the lit side.
+      if (side > 0) g.poly(ribbon(pts.slice(0, 50), 2)).fill({ color: W.ridgeLit, alpha: 0.35 });
     }
-    g.poly([...near, px + W.half, W.floorY + 260, px - W.half, W.floorY + 260]).fill({ color: W.near });
-    for (let i = 0; i < near.length; i += 2) {
-      if (r() < 0.45) continue;
-      const x = (near[i] as number) + (r() - 0.5) * 10;
-      const y = (near[i + 1] as number) + 4;
-      const h = 14 + r() * 26;
-      g.poly([x - h * 0.22, y, x, y - h, x + h * 0.22, y]).fill({ color: W.near });
+    // The river of mist down the valley, narrowing toward the mountain: soft, thicker along its middle (a flat pale
+    // quad read as a slab).
+    for (let q = 0; q < 4; q++) {
+      const river: number[] = [];
+      const riverB: number[] = [];
+      const wk = 1 - q * 0.22;
+      for (let k = 0; k <= 20; k++) {
+        const t = k / 20;
+        const y = lerp(W.floorY + 260, W.footY + 18, t ** 0.8);
+        const x = lerp(px - 420, px - 20, t) + 90 * Math.sin(t * 6.5) * (1 - t);
+        const w = lerp(150, 10, t) * wk * (1 + 0.15 * Math.sin(t * 23 + q));
+        river.push(x - w, y);
+        riverB.push(x + w, y);
+      }
+      for (let k = riverB.length / 2 - 1; k >= 0; k--)
+        river.push(riverB[k * 2] as number, riverB[k * 2 + 1] as number);
+      g.poly(river).fill({ color: W.river, alpha: 0.03 });
     }
     // The valley's mist, over the floor where the lamps are.
     for (let k = 0; k < 5; k++)
-      g.rect(px - W.half, W.floorY - 30 + k * 26, W.half * 2, 90).fill({ color: W.haze, alpha: 0.06 });
+      g.poly(band(x0, x1, W.floorY - 10 + k * 26, 80, 71 + k)).fill({ color: W.haze, alpha: 0.05 });
+    // One nearer lamp tree, halfway down the drop (60% of the size of the wood's), so the drop reads as depth.
+    const tx = px - 640;
+    const ty = W.floorY + 150;
+    const trunk: number[] = [tx - 8, ty, tx - 4, ty - 120, tx - 30, ty - 170, tx + 6, ty - 130, tx + 8, ty];
+    g.poly(trunk).fill({ color: W.wall });
+    for (let k = 0; k < 9; k++) {
+      const a = -Math.PI / 2 + (r() - 0.5) * 2.2;
+      const d = 30 + r() * 50;
+      g.circle(tx + Math.cos(a) * d * 1.3, ty - 160 + Math.sin(a) * d * 0.6, 26 + r() * 22).fill({
+        color: W.wall,
+      });
+    }
+    g.poly([tx + 30, ty - 150, tx + 32, ty - 95, tx + 34, ty - 95, tx + 32, ty - 150]).fill({
+      color: W.wall,
+    });
+    this.lamps.push({ x: tx + 33, y: ty - 88, s: 3.4, ph: 1.3, swarm: 22 });
   }
 
   update(cam: CameraView, clock: number): void {
@@ -294,16 +427,55 @@ export class WoodVista {
     const scale = L.scale.x || 1;
     this.root.position.set((ox - L.position.x) / scale, (oy - L.position.y) / scale);
     this.root.scale.set(cam.zoom / scale);
-    // The valley's false lights: warm points twinkling (redrawn each frame: cheap), a halo round the near ones.
+    // The valley's false lights: warm points twinkling (redrawn each frame: cheap), a halo round the near ones, and
+    // the moths circling the nearer tiers.
     const f = this.field.clear();
-    for (const [x, y, s, ph] of this.lamps) {
-      const tw = 0.6 + 0.4 * Math.sin(clock * (0.9 + (ph % 1.3)) + ph);
-      f.circle(x, y, s * 4).fill({ color: W.lamp, alpha: 0.06 * tw * s });
-      f.circle(x, y, s).fill({ color: W.lampCore, alpha: 0.5 + 0.4 * tw });
+    for (const l of this.lamps) {
+      const tw = 0.6 + 0.4 * Math.sin(clock * (0.9 + (l.ph % 1.3)) + l.ph);
+      f.circle(l.x, l.y, l.s * 4).fill({ color: W.lamp, alpha: 0.06 * tw * l.s });
+      f.circle(l.x, l.y, l.s).fill({ color: W.lampCore, alpha: 0.5 + 0.4 * tw });
+      for (let k = 0; k < l.swarm; k++) {
+        const a = clock * (0.8 + (k % 5) * 0.17) + k * 2.4 + l.ph;
+        const rr = l.s * (4 + (k % 4) * 1.6);
+        f.circle(l.x + Math.cos(a) * rr, l.y + Math.sin(a * 1.3) * rr * 0.6, 0.7 + (k % 3) * 0.25).fill({
+          color: W.moth,
+          alpha: 0.75,
+        });
+      }
     }
   }
 
   destroy(): void {
     this.root.destroy({ children: true });
   }
+}
+
+/** A band across [x0, x1] at y, h tall, its edges wavering. */
+function band(x0: number, x1: number, y: number, h: number, seed: number): number[] {
+  const a: number[] = [];
+  const b: number[] = [];
+  for (let x = x0; x <= x1 + 0.01; x += 60) {
+    a.push(x, y + 10 * Math.sin(x * 0.004 + seed) + 5 * Math.sin(x * 0.013 + seed * 3));
+    b.push(x, y + h + 12 * Math.sin(x * 0.0035 + seed * 2) + 5 * Math.sin(x * 0.011 + seed));
+  }
+  for (let k = b.length / 2 - 1; k >= 0; k--) a.push(b[k * 2] as number, b[k * 2 + 1] as number);
+  return a;
+}
+
+/** A line of even width `w` (px). */
+function ribbon(line: number[], w: number): number[] {
+  const a: number[] = [];
+  const b: number[] = [];
+  for (let i = 0; i < line.length; i += 2) {
+    const x = line[i] as number;
+    const y = line[i + 1] as number;
+    a.push(x, y - w / 2);
+    b.push(x, y + w / 2);
+  }
+  for (let k = b.length / 2 - 1; k >= 0; k--) a.push(b[k * 2] as number, b[k * 2 + 1] as number);
+  return a;
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
 }

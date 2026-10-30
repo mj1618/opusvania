@@ -15,7 +15,7 @@
  *
  * Structure, knobs and gotchas: memory/playfield.md.
  */
-import { Container, Graphics } from 'pixi.js';
+import { BlurFilter, Container, Graphics, RenderTexture, Sprite } from 'pixi.js';
 import type { SimEvent } from '../../../sim/events';
 import { slashBox } from '../../../sim/index';
 import { tuning } from '../../../sim/tuning';
@@ -111,12 +111,12 @@ export class PlayfieldLayer implements EnvModule {
       pt.paint.relief.destroy();
       const m = pt.show ?? pt.rect;
       const mask =
-        // (A cover shows its painted silhouette; a wall sits flush in the mass round it: its rect.)
-        (
-          pt.front && !pt.show && pt.poly
-            ? new Graphics().poly(pt.poly)
-            : new Graphics().rect(m.x, m.y, m.w, m.h)
-        ).fill(0xffffff);
+        // (A cover shows its painted silhouette, its edge feathered: baked alone, its lift and the light round it
+        // differ from the mass it sits in, and a hard edge drew its rect (review r4: the well's niche). A wall sits
+        // flush in the mass round it: its rect.)
+        pt.front && !pt.show && pt.poly
+          ? featherMask(ctx, pt.poly)
+          : new Graphics().rect(m.x, m.y, m.w, m.h).fill(0xffffff);
       const holder = new Container({ label: pt.key });
       holder.addChild(b.layer, mask);
       holder.mask = mask;
@@ -287,4 +287,34 @@ export class PlayfieldLayer implements EnvModule {
     }
     this.cpuMs += (performance.now() - t0 - this.cpuMs) * 0.05;
   }
+}
+
+/** A soft-edged mask of `poly` (world px): blurred at a quarter scale into a texture, shown as a sprite. */
+function featherMask(ctx: SceneContext, poly: number[]): Sprite {
+  const FEATHER = 56;
+  const k = 0.25;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (let i = 0; i < poly.length; i += 2) {
+    x0 = Math.min(x0, poly[i] as number);
+    x1 = Math.max(x1, poly[i] as number);
+    y0 = Math.min(y0, poly[i + 1] as number);
+    y1 = Math.max(y1, poly[i + 1] as number);
+  }
+  const pad = FEATHER * 2;
+  const w = Math.ceil((x1 - x0 + pad * 2) * k);
+  const h = Math.ceil((y1 - y0 + pad * 2) * k);
+  const g = new Graphics().poly(poly.map((v, i) => (v - (i % 2 ? y0 : x0) + pad) * k)).fill(0xffffff);
+  g.filters = [new BlurFilter({ strength: FEATHER * k, quality: 3 })];
+  const holder = new Container();
+  holder.addChild(g);
+  const t = RenderTexture.create({ width: w, height: h, resolution: 1 });
+  ctx.renderer.render({ container: holder, target: t, clear: true });
+  holder.destroy({ children: true });
+  const s = new Sprite(t);
+  s.position.set(x0 - pad, y0 - pad);
+  s.scale.set(1 / k);
+  return s;
 }

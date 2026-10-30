@@ -32,6 +32,7 @@ import {
   MAX_LIGHTS,
   POST,
   WOOD_GRADE,
+  WOOD_LOOK_GRADE,
   WOOD_POST,
   ZONE_GRADE,
   type ZoneGrade,
@@ -46,7 +47,8 @@ function kitPost(): typeof WOOD_POST {
 function kitGrade(): ZoneGrade {
   if (isGroveKit()) return ZONE_GRADE;
   const band = LOOK.band;
-  return band === 'hall' || band === 'roots' || band === 'cache' ? LANTERN_GRADE[band] : WOOD_GRADE;
+  if (band === 'hall' || band === 'roots' || band === 'cache') return LANTERN_GRADE[band];
+  return LOOK.inside ? WOOD_LOOK_GRADE[LOOK.inside] : WOOD_GRADE;
 }
 
 import { PostFilter } from './pipeline';

@@ -13,6 +13,7 @@
 import type { SimEvent } from './events';
 import { ActionBit } from './input';
 import { thornAt } from './kit';
+import { solidAt } from './physics/aabb';
 import type { MoveParams } from './player/params';
 import { createPlayer, updatePlayer } from './player/player';
 import type { Scene, SolidRect } from './scene';
@@ -123,6 +124,10 @@ export function clearOfThorns(
   const stride = Math.max(8, Math.round(t.room.returnProbeStep));
   for (let cx = x; dir > 0 ? cx >= run.x0 + inset : cx <= run.x1 - inset; cx -= dir * stride) {
     const cy = groundY(cx, y, scene, stepUp);
+    // (A top runs on under a wall: the Canopy's well landing, whose floor rect runs west under the mass and a
+    // rotten wall. She is never put back inside a solid: the first spot her box does not fit ends the walk.)
+    const w = t.body.width;
+    if (solidAt(scene, Math.round(cx - w / 2), cy - t.body.height, w, t.body.height)) break;
     if (!jumpMeetsThorns(state, cx, cy, dir, scene, t, P)) return { x: cx, y: cy };
   }
   return { x, y };
