@@ -1,8 +1,9 @@
 /**
  * The figure-ground check (canopy review r6 #2 and #5, r7 #3): every wide stop of the rooms at 16:9, 16:10 and 21:9,
- * each frame scaled to 480 px wide and measured in Rec.709 luma (0-255). The frame bars are measured over everything
- * but the solid interior (below): the ground is meant to be a black cut-out (HK's King's Pass is 50-56% near-black over
- * the whole frame, its flat black 28-50%; Silksong's Tut_03 75%), so it is judged by its own bars, the rest by these:
+ * each frame scaled to 480 px wide and measured in Rec.709 luma (0-255). The frame bars are measured over the air
+ * (outside the solids, the room's box and her box): the ground is meant to be a black cut-out (HK's King's Pass is
+ * 50-56% near-black over the whole frame, its flat black 28-50%; Silksong's Tut_03 75%), so it is judged by its own
+ * bars below, the air by these:
  *   - near-black (< 16) at most 50% (HK's King's Pass 50%, Crossroads 34%, Ori 24%);
  *   - mid-tones (50-150) at least 20% (HK 23-41%, Ori 22%);
  *   - the largest flat region (4-connected, within one 12-luma bin, bins offset by 0 and 6) at most 35%;
@@ -30,7 +31,7 @@ const { values: args } = parseArgs({
     rooms: { type: 'string' },
     sizes: { type: 'string', default: '1920x1080,1920x1200,2560x1080' },
     out: { type: 'string', default: 'shots/look-check' },
-    /** Also write each frame's split as a grey PGM beside it (white solid interior, grey air, black neither). */
+    /** Also write each frame's split as a grey PGM beside it (black her box, 80 air, 160 solid interior, 240 the rest). */
     masks: { type: 'boolean', default: false },
   },
 });
@@ -57,6 +58,7 @@ interface Box {
   h: number;
 }
 interface Frame {
+  room: { w: number; h: number };
   cam: { x: number; y: number; zoom: number };
   view: { w: number; h: number };
   solids: Box[];
@@ -64,7 +66,8 @@ interface Frame {
 }
 
 /**
- * Per pixel of the 480 px frame: 2 = solid interior, 1 = air, 0 = neither (her box, the solids' outer band).
+ * Per pixel of the 480 px frame: 1 = air, 2 = solid interior, 3 = the rest of the ground (a solid's outer band, the
+ * wood beyond the room's box), 0 = her box.
  * Screen to world: the view's centre is the camera, `view.w` logical px across the frame, divided by the zoom.
  */
 export function splitByCollision(f: Frame, w: number, h: number, deep: number): Uint8Array {
@@ -84,13 +87,20 @@ export function splitByCollision(f: Frame, w: number, h: number, deep: number): 
     for (let i = 0; i < w; i++) {
       const x = f.cam.x + (i + 0.5 - w / 2) * k;
       const y = f.cam.y + (j + 0.5 - h / 2) * k;
-      if (!inside(x, y)) {
-        const pad = 24;
-        const onHero = x > hb.x - pad && x < hb.x + hb.w + pad && y > hb.y - pad && y < hb.y + hb.h + pad;
-        out[j * w + i] = onHero ? 0 : 1;
+      const pad = 24;
+      if (x > hb.x - pad && x < hb.x + hb.w + pad && y > hb.y - pad && y < hb.y + hb.h + pad) {
+        out[j * w + i] = 0;
         continue;
       }
-      out[j * w + i] = ring.every(([dx, dy]) => inside(x + dx, y + dy)) ? 2 : 0;
+      if (x < 0 || y < 0 || x > f.room.w || y > f.room.h) {
+        out[j * w + i] = 3;
+        continue;
+      }
+      if (!inside(x, y)) {
+        out[j * w + i] = 1;
+        continue;
+      }
+      out[j * w + i] = ring.every(([dx, dy]) => inside(x + dx, y + dy)) ? 2 : 3;
     }
   }
   return out;
@@ -220,10 +230,12 @@ async function main(): Promise<void> {
               const c = g.cam();
               const v = g.info().view;
               const p = g.state().player;
+              const sc = g.scene();
               return {
+                room: { w: sc.width, h: sc.height },
                 cam: { x: c.x, y: c.y, zoom: c.zoom },
                 view: { w: v.w, h: v.h },
-                solids: g.scene().solids.map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h })),
+                solids: sc.solids.map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h })),
                 hero: { x: p.x, y: p.y, w: p.w, h: p.h },
               };
             },
@@ -237,10 +249,10 @@ async function main(): Promise<void> {
           if (args.masks)
             writeFileSync(
               file.replace(/\.png$/, '-split.pgm'),
-              Buffer.concat([Buffer.from(`P5 ${w} ${h} 255\n`), Buffer.from(split.map((v) => v * 120))]),
+              Buffer.concat([Buffer.from(`P5 ${w} ${h} 255\n`), Buffer.from(split.map((v) => v * 80))]),
             );
-          // The frame bars over all but the solid interior (the header).
-          const ground = split.map((v) => (v === 2 ? 1 : 0));
+          // The frame bars over the air (the header).
+          const ground = split.map((v) => (v === 1 ? 0 : 1));
           let sum = 0;
           let all = 0;
           let n = 0;
@@ -273,7 +285,7 @@ async function main(): Promise<void> {
             if (fg.air < LOOK_CHECK.airK * Math.max(1, fg.solid))
               bad.push(`air ${fg.air.toFixed(0)} < ${LOOK_CHECK.airK}x solid`);
           }
-          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, off the ground: mean ${(sum / n).toFixed(1)}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}`;
+          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, air: mean ${(sum / n).toFixed(1)}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}`;
           console.log(bad.length ? `FAIL ${line} (${bad.join(', ')})` : `ok   ${line}`);
           if (bad.length) fails.push(line);
           frames++;
