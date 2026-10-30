@@ -30,3 +30,16 @@ traps apply to Nine Sols, Silksong, Ori.
   the air tiles' bounds (Tut_01: 120 x 120 u map, 106 x 118 of room).
 - Act switches: `Black Thread States*/Normal World` = Acts 1-2 (count it), `Black Thread World` = Act 3 (drop it).
 - Same camera as HK: 66.7 of our px per unit. Hornet 0.5 x 2.08 u = 33 x 139 px: scale traversal by hero height.
+
+## Ori DE (2026-10-30, `tools/reference/mined/ori/extract.py`, Unity 5.3.2f1, Windows depot)
+- UnityPy misreads the MonoBehaviour head (`m_Script`) of 5.3 files: read the script pointer from the raw bytes
+  (`struct.unpack_from("<iq", raw, 16)`), then generate the class's nodes; the fields after the head read fine.
+- Each scene's root GameObject is saved inactive (switched on when it streams in): ignore it for "active".
+- Rooms are the streaming scenes: `SceneRoot.MetaData` -> `SceneMetaData.SceneBoundaries` tile the world. Dependent
+  art scenes (`*Background*`) also hold gameplay objects (one secret container lives in one).
+- Terrain colliders are open strips along walkable edges (`CageStructureToolCollider`, z -0.5..0.5, cut at scene
+  bounds, no back faces): fill by winding (rock right of the vertex order), per scene, not by loops.
+- Water is `WaterZone` (position +- scale / 2), not its trigger collider; drop `trialWall` and `blockOffAct*Wall`.
+- Art atlases are chroma-keyed ("UberScreen": sprites on pure red / green / blue, DXT1) and mesh UVs map into the
+  material's `_MainTex_US_ATLAS` rect; vertex colours are bytes.
+- Camera FOV 60 at zoom 20 u -> 41.06 x 23.09 u -> 46.765 px/u. Ori 0.68 x 1.15 u (32 x 54 px), run 11.67 u/s, jump 3 u.
