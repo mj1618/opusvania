@@ -101,6 +101,10 @@ export function updatePatches(
     if (q && (cur?.room !== scene.id || cur.id !== q.id)) {
       state.save.patch = { room: scene.id, id: q.id };
       events.push({ type: 'patchMark', id: q.id, room: scene.id, x: q.x, y: q.y });
+      // A map station opens the map on her first pass too (the Canopy r10, review r9 #9: it fired only on a rest, and
+      // a runner never stopped); then on each rest. The save remembers the pass (`map:room:id` in flags).
+      if (q.map && remember(state.save.flags, `map:${scene.id}:${q.id}`))
+        events.push({ type: 'mapStation', id: q.id, room: scene.id, x: q.x, y: q.y });
     }
   }
   const r = state.rest;

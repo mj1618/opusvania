@@ -191,6 +191,19 @@ describe('the premise: trap lamps (r10, review r9 #2)', () => {
   });
 });
 
+describe("the hub's map station opens on her first pass (r10, review r9 #9)", () => {
+  it('running through p-crossing shows the map once; later passes do not, a rest does', () => {
+    const s = at('cn-hub', 3300, 1600, []);
+    s.enemies.length = 0;
+    const ev = run(s, ActionBit.left, 60);
+    expect(ev.filter((e) => e.type === 'mapStation').length).toBe(1);
+    expect(ev.some((e) => e.type === 'patchRest')).toBe(false);
+    const back = run(s, R, 60);
+    const again = run(s, ActionBit.left, 60);
+    expect([...back, ...again].some((e) => e.type === 'mapStation')).toBe(false);
+  });
+});
+
 describe("the firefly's pass at the gap (r10, review r9 #2)", () => {
   it('landing below the chain starts it once; it relights the lamps she flung and is gone in 4 s', () => {
     const scene = getRoom('cn-gap');
