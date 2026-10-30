@@ -41,6 +41,14 @@ export const MASS = {
   underTh: [56, 84] as readonly number[],
   /** How far the flanks bulge out of the collision on an exposed side, px. */
   bulge: [3, 12] as readonly number[],
+  /** A free top's lip past the face (px) and how far its end rounds down over the corner (no flared capitals). */
+  lip: 4,
+  roundOver: 24,
+  /** The root filling a square inner corner: its reach along the floor / up the wall, px. */
+  corner: [38, 64] as readonly number[],
+  /** A pillar (both faces free, narrower than this) flares at its foot by up to `flare` px a side. */
+  pillarW: 420,
+  flare: 22,
   /** Earth (`ground`). */
   soil: 0x161a22,
   soilLit: 0x3a4250,
@@ -263,9 +271,18 @@ export function paintMasses(
         const yTop = topped ? y0 + 46 : y0 - 10;
         const ya = dir > 0 ? yTop : y1 + 10;
         const yb = dir > 0 ? y1 + 10 : yTop;
+        // A free-standing pillar flares into its foot (and a face leans a little either way), never a plumb post.
+        const pillar = r.w <= MASS.pillarW && s.left.length > 0 && s.right.length > 0;
+        const yLo = Math.max(ya, yb);
+        const flare = (yy: number) => (pillar ? MASS.flare * clamp((yy - (yLo - 200)) / 200, 0, 1) ** 2 : 0);
         const line: number[] = [];
-        for (let t = 0; t <= 16; t++)
-          line.push(cx + dir * 4 * wobble(lerp(ya, yb, t / 16), seed + i, 90), lerp(ya, yb, t / 16));
+        for (let t = 0; t <= 16; t++) {
+          const yy = lerp(ya, yb, t / 16);
+          line.push(
+            cx + dir * (4 * wobble(yy, seed + i, 90) + 8 * wobble(yy, seed + i + 5, 600) + flare(yy)),
+            yy,
+          );
+        }
         if (earth(r)) {
           p.solid(
             ribbon(line, () => th),
@@ -364,15 +381,15 @@ export function paintMasses(
       const freeE = !wallE && x1 >= r.x + r.w - 1 && inSegs(y + 8, s.right);
       const depth = r.h + (inSegs(x0 + 1, s.bottom) ? 0 : 200);
       const th = Math.min(range(rr, MASS.topTh[0] as number, MASS.topTh[1] as number), depth);
-      const xa = x0 - (wallW ? 40 : freeW ? 14 : 0);
-      const xb = x1 + (wallE ? 40 : freeE ? 14 : 0);
+      const xa = x0 - (wallW ? 40 : freeW ? MASS.lip : 0);
+      const xb = x1 + (wallE ? 40 : freeE ? MASS.lip : 0);
       // The root's thickness swells and pinches; its top stays flush with the collision, rounding over a free end.
       const thAt = (x: number) =>
         th * (0.86 + 0.2 * wobble(x, seed + i + 41, 260) + 0.06 * wobble(x, seed + i, 70));
       const dropAt = (x: number) => {
-        const dw = freeW ? clamp((x0 + 18 - x) / 32, 0, 1) : 0;
-        const de = freeE ? clamp((x - (x1 - 18)) / 32, 0, 1) : 0;
-        return 14 * Math.max(dw, de) ** 2;
+        const dw = freeW ? clamp((x0 + 30 - x) / 44, 0, 1) : 0;
+        const de = freeE ? clamp((x - (x1 - 30)) / 44, 0, 1) : 0;
+        return MASS.roundOver * Math.max(dw, de) ** 2;
       };
       const line: number[] = [];
       const ws: number[] = [];
@@ -418,8 +435,107 @@ export function paintMasses(
         freeE ? 22 : 0,
       );
       plan?.stretches.push(topStretch(`mass-${i}-${x0}`, x0, x1, y, th, wallW, wallE));
+      // Where the floor meets a wall rising from it: a root buttress out of the wall onto the floor, so the corner is
+      // never a square box (review r2 #2). Not on earth (the earth's own corner is soft already).
+      if (!earth(r)) {
+        if (wallW) cornerRoot(p, x0, y, 1, -1, seed + i * 19 + x0);
+        if (wallE) cornerRoot(p, x1, y, -1, -1, seed + i * 23 + x1);
+      }
     }
   });
+
+  // 5b. A narrow mass hanging from the room's top into open air (the gap's roost, review r2 #9) is a clump of roots,
+  // not a slab: strands fanning in from above, twisting down its length, running out past its foot in ragged tips.
+  masses.forEach((r, i) => {
+    const s = sides[i] as Sides;
+    if (earth(r) || r.y > 0 || r.w > MASS.pillarW || !s.bottom.length || !s.left.length || !s.right.length)
+      return;
+    if (!near(r.x - 300, r.y, r.x + r.w + 300, r.y + r.h + 400)) return;
+    const rr = rngFor(seed, r.x, r.h, 83);
+    const n = Math.round(r.w / 12) + 5;
+    const foot = r.y + r.h;
+    for (let k = 0; k < n; k++) {
+      const u = n > 1 ? k / (n - 1) : 0.5;
+      const xTop = r.x + r.w / 2 + (u - 0.5) * r.w * 2.4;
+      const xMid = r.x + r.w / 2 + (u - 0.5) * r.w * 0.9;
+      const tipLen = range(rr, 40, 320) * (1 - Math.abs(u - 0.5));
+      const xTip = r.x + r.w / 2 + (u - 0.5) * r.w * 1.3 + range(rr, -30, 30);
+      const line = chaikinLine([
+        xTop,
+        -60,
+        xMid,
+        foot * 0.35,
+        xMid + range(rr, -10, 10),
+        foot * 0.8,
+        xTip,
+        foot + tipLen,
+      ]);
+      const w0 = range(rr, 14, 30);
+      paintLimb(
+        p,
+        lineLimb(
+          line,
+          (t) => Math.max(2, w0 * (1 - t * 0.85)),
+          B.walkH - 0.01,
+          seed + k * 13 + r.x,
+          0.05,
+          0.1,
+        ),
+      );
+    }
+  });
+
+  // 6. Ceiling corners (an underside meeting a wall going down from it) get the same root, hanging; a pillar's foot
+  // flares into the floor it stands on.
+  masses.forEach((r, i) => {
+    const s = sides[i] as Sides;
+    if (earth(r)) return;
+    for (const [x0, x1] of s.bottom) {
+      const y = r.y + r.h;
+      if (!near(x0, y - 200, x1, y + 200)) continue;
+      const wallW = masses.some(
+        (q) => q !== r && q.x + q.w >= x0 - 1 && q.x < x0 && q.y < y + 4 && q.y + q.h > y + 4,
+      );
+      const wallE = masses.some(
+        (q) => q !== r && q.x <= x1 + 1 && q.x + q.w > x1 && q.y < y + 4 && q.y + q.h > y + 4,
+      );
+      if (wallW) cornerRoot(p, x0, y, 1, 1, seed + i * 29 + x0);
+      if (wallE) cornerRoot(p, x1, y, -1, 1, seed + i * 31 + x1);
+    }
+  });
+}
+
+/**
+ * A root growing out of a wall into the floor (`vy` -1: the corner is under it) or along a ceiling (`vy` +1), at the
+ * corner (x, y), reaching away from the wall (`dir`). Fills the square corner with a curved buttress.
+ */
+function cornerRoot(p: Paint, x: number, y: number, dir: number, vy: number, seed: number): void {
+  const r = rngFor(seed, 77);
+  const R = range(r, MASS.corner[0] as number, MASS.corner[1] as number);
+  // The fillet itself: the body's dark filling the corner on a curve.
+  const fill: number[] = [x, y];
+  for (let k = 0; k <= 8; k++) {
+    const a = (k / 8) * (Math.PI / 2);
+    fill.push(x + dir * R * (1 - Math.cos(a)) * 0.9, y + vy * R * (1 - Math.sin(a)));
+  }
+  p.solid(fill, MASS.body, BRANCH.walkH - 0.05, { bark: 0.4 });
+  // The root over it: from up the wall, curving out along the floor (or the ceiling) and tapering.
+  const line = [
+    x - dir * 6,
+    y + vy * R * 1.25,
+    x + dir * R * 0.12,
+    y + vy * R * 0.45,
+    x + dir * R * 0.55,
+    y + vy * 8,
+    x + dir * R * 1.35,
+    y + vy * 2,
+  ];
+  const c = chaikinLine(line);
+  const w0 = range(r, 26, 40);
+  paintLimb(
+    p,
+    lineLimb(c, (t) => Math.max(5, w0 * (1 - t) ** 0.9), BRANCH.walkH - 0.01, seed, vy < 0 ? 0.3 : 0, 0.7),
+  );
 }
 
 /**
@@ -534,108 +650,4 @@ function stones(p: Paint, x: number, y: number, w: number, h: number, seed: numb
       bark: 0,
     });
   }
-}
-
-export const BACK = {
-  /** The wood's inside: a step lighter than the mass in front (air reads lighter than solid, as in HK's caves). */
-  wood: 0x203348,
-  woodGrain: 0x132233,
-  woodLit: 0x344d66,
-  /** The earth behind the den's air. */
-  earth: 0x26283a,
-  earthGrain: 0x161824,
-  earthLit: 0x3a3c50,
-  root: 0x0f1a26,
-} as const;
-
-/**
- * The back walls (`marks.backs`): the inside of the wood (long grain along it, ring arcs, dim roots crossing) or the
- * earth behind the air (strata, stones, root ends). Barely lit (the back plane's relief): it is behind her, and a
- * shade lighter than the masses in front, so the carved space reads as space and the solid as solid.
- */
-export function paintBacks(
-  p: Paint,
-  backs: ReadonlyArray<{ x: number; y: number; w: number; h: number }>,
-  earth: boolean,
-  seed: number,
-): void {
-  const B = BRANCH;
-  const base = earth ? BACK.earth : BACK.wood;
-  const grain = earth ? BACK.earthGrain : BACK.woodGrain;
-  const lit = earth ? BACK.earthLit : BACK.woodLit;
-  backs.forEach((b, i) => {
-    const r = rngFor(seed, b.x, b.y, 17);
-    p.solid([b.x, b.y, b.x + b.w, b.y, b.x + b.w, b.y + b.h, b.x, b.y + b.h], base, B.backH, {
-      bark: earth ? 0.1 : 0.5,
-    });
-    // Grain (or strata): long wavering bands across the whole back, alternately darker and a shade lit.
-    const bands = Math.max(3, Math.round(b.h / (earth ? 46 : 34)));
-    for (let k = 0; k < bands; k++) {
-      const y0 = b.y + ((k + range(r, 0.1, 0.9)) * b.h) / bands;
-      const line: number[] = [];
-      for (let x = b.x - 10; x <= b.x + b.w + 10; x += 32)
-        line.push(
-          x,
-          y0 +
-            (earth ? 10 : 22) * wobble(x, seed + i * 7 + k, earth ? 300 : 520) +
-            5 * wobble(x, seed + k, 90),
-        );
-      const wd = range(r, earth ? 6 : 4, earth ? 22 : 14);
-      p.solid(strand(line, wd, 0.02), r() < 0.55 ? grain : lit, B.backH + range(r, -0.03, 0.04), {
-        bark: earth ? 0 : 0.7,
-        alpha: 0.7,
-      });
-    }
-    if (!earth) {
-      // Ring arcs: the growth rings of the giant seen where it split, big soft ellipses.
-      for (let k = 0; k < Math.round((b.w * b.h) / 700000); k++) {
-        const cx = b.x + range(r, 0.1, 0.9) * b.w;
-        const cy = b.y + range(r, 0.2, 0.8) * b.h;
-        for (let q = 0; q < 4; q++) {
-          const rx = range(r, 90, 160) + q * 46;
-          const ring = blob(cx, cy, rx, rx * 0.42, seed + k * 5 + q, 0.15, 28);
-          ring.push(ring[0] as number, ring[1] as number, ring[2] as number, ring[3] as number);
-          p.tint(strand(ring, 3 + q, 0.05), q % 2 ? lit : grain, 0.45);
-        }
-      }
-    } else {
-      // Stones in the earth.
-      for (let k = 0; k < Math.round((b.w * b.h) / 60000); k++) {
-        const cx = b.x + range(r, 0, b.w);
-        const cy = b.y + range(r, 0, b.h);
-        const rad = range(r, 8, 26);
-        p.solid(
-          chaikin(blob(cx, cy, rad * 1.4, rad, seed + k, 0.3, 10), 1),
-          lit,
-          B.backH + 0.05,
-          { bark: 0 },
-          0.6,
-        );
-      }
-    }
-    // Dim roots crossing the back: big soft ribbons coming down from above, a few across.
-    for (let k = 0; k < Math.max(1, Math.round(b.w / 500)); k++) {
-      const x = b.x + range(r, 0, b.w);
-      const len = range(r, 0.4, 1) * b.h;
-      const line: number[] = [];
-      for (let t = 0; t <= 10; t++) line.push(x + range(r, -30, 30) * t * 0.3, b.y + (len * t) / 10);
-      const wl = wander(line, 40, seed + k * 3 + i, 120);
-      const w0 = range(r, 26, 60);
-      p.solid(
-        ribbon(wl, (t) => w0 * (1 - t * 0.8)),
-        BACK.root,
-        B.backH + 0.02,
-        { bark: 0.6, alpha: 0.9 },
-      );
-      p.tint(
-        strand(
-          wl.map((v, j) => (j % 2 ? v : v - w0 * 0.3)),
-          w0 * 0.15,
-          0.3,
-        ),
-        lit,
-        0.35,
-      );
-    }
-  });
 }

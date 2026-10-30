@@ -698,3 +698,34 @@ export const LAMP = {
    */
   roost: { fold: 0.95, dim: 0.85, breath: 1.1, mote: 1.4, in: 1.6, out: 16 },
 } as const;
+
+/**
+ * The old burrback (the den's boss, drawn on the burrback's rig at `BEETLE_SCALE.oldBurrback`, kinds.ts): its own
+ * moves (memory/creatures.md round 5/6) and what makes it read as a boss (canopy review r2 #3).
+ */
+export const BOSS = {
+  /** Its brace and ram pitch, against the burrback's: at 4.4x a full pitch drives the snout through the floor. */
+  pitchK: 0.45,
+  /** The rear (the slam's tell): how far back it lifts (rad) and the shiver as it holds. The slam: front thrown down. */
+  rearLean: 0.62,
+  rearShake: 0.05,
+  slamLean: 0.3,
+  /** The rolling ball's radius, world px (the turn per px rolled). */
+  ballR: 66,
+  /** Rolling: the shell's width against its height (a ball). */
+  ballAspect: 0.7,
+  /** The ball as drawn, world px across (the sim's `rollTouchPx` 120, a hair over). */
+  ballPx: 140,
+  /** A dark edge round the whole body (rig px, before the scale) so it holds against any wall. */
+  edge: 1.6,
+  /** The slam's dust: puffs, and the wave's crest (px tall, world) as it runs along the floor. */
+  slamPuffs: 14,
+  waveH: 34,
+  waveColor: 0xcfd8e8,
+  /** The taproot column: its colour, the lit flank. */
+  root: 0x1a1410,
+  rootLit: 0x5a4632,
+  /** Hit flash on the big body: how white, how long (s). */
+  flash: 0.85,
+  flashLen: 0.12,
+} as const;

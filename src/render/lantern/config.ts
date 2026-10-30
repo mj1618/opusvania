@@ -60,3 +60,12 @@ export function hash01(s: string, i: number): number {
   h = Math.imul(h ^ (h >>> 13), 3266489909);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
+
+/**
+ * Rooms whose lamps are their picture (render only, by room id): the housing's size, the light's reach and the moths
+ * round it, against the kind's. The Grove is the first area's peak (canopy review r2 #7): its three wicks are big and
+ * warm, their swarms visible from the entry.
+ */
+export const ROOM_LAMPS: Record<string, { size: number; light: number; moths: number }> = {
+  'cn-grove': { size: 1.9, light: 1.9, moths: 2.2 },
+};

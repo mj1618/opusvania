@@ -36,6 +36,7 @@ import { LayerTree } from './layer-tree';
 import { AirLayer } from './layers/air';
 import { FarLayers } from './layers/far';
 import { ForegroundLayer } from './layers/foreground';
+import { InteriorLayer } from './layers/interior';
 import { LanternBackLayer } from './layers/lantern-back';
 import { MidLayer } from './layers/mid';
 import { PlayfieldLayer } from './layers/playfield';
@@ -86,9 +87,11 @@ function modulesFor(scene: Scene): ReadonlyArray<new () => EnvModule> {
   if (isGreybox(scene as Parameters<typeof isGreybox>[0])) return [GreyboxLayer];
   if (isInterior()) return LANTERN_INSIDE;
   if (isLantern()) return LANTERN_NIGHT;
-  // A wood room with the level's pieces (art.pieces): the wood's modules and Lanternroot's pieces.
-  if ((scene as Room).art?.pieces) return LANTERN_NIGHT;
-  return MODULES;
+  // A wood room with the level's pieces (art.pieces): the wood's modules and Lanternroot's pieces; an enclosed one
+  // (backs) its inside too (layers/interior.ts).
+  const enclosed = ((scene as Room).marks?.backs?.length ?? 0) > 0 && (scene as Room).art?.kit === 'wood';
+  const wood = (scene as Room).art?.pieces ? LANTERN_NIGHT : MODULES;
+  return enclosed ? [...wood, InteriorLayer] : wood;
 }
 
 export class SceneRenderer {

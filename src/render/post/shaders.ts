@@ -366,7 +366,10 @@ void main(void) {
     lc += lit.rgb * (ll * ll * uLightBack.y);
     // (Lanternroot: a thing already brighter than the cap glows by itself: its light leaves it alone.)
     float emissive = uGoalLook.w * smoothstep(cap * 0.9, cap * 1.7, ll);
-    col = mix(col, lc, (1.0 - hero) * (1.0 - emissive));
+    // A light never darkens what it falls on: over something brighter than its cap (the moon behind her, review r2
+    // #9) the knee would pull it down inside the light's reach, a grey disc with a hard rim where the reach ends.
+    float dims = smoothstep(0.0, 0.03, ll - dot(lc, LUMA));
+    col = mix(col, lc, (1.0 - hero) * (1.0 - emissive) * (1.0 - dims));
   }
   col += uHalo.rgb * (lit.a * uMix.z * (1.0 - hero));
 

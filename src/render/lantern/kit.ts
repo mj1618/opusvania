@@ -62,7 +62,21 @@ export const KIT = {
   scar: { char: 0x0a0605, burn: 0x3a2418, seam: 0xdfe8ff, light: 0xb8d0f0 },
   /** The Downwood's moonseeds and the sockets of the doors that count them. */
   seed: { body: 0xf2ecd8, wing: 0xc8d8f0, glow: 0xdfe8ff, rim: 0x8a8070 },
-  cap: { top: 0x6a4a6a, topLit: 0xb08ab0, gill: 0x2a1a2a, stalk: 0x8a7a70 },
+  /** Bounce caps: a dark teal dome with cyan glow spots, pale gills, a pale stalk (the wood's living light). */
+  cap: {
+    top: 0x14283a,
+    topMid: 0x24485a,
+    topLit: 0x5a8aa0,
+    rim: 0x9fd8e8,
+    gill: 0x0c1820,
+    gillLit: 0x8fd8e4,
+    stalk: 0x1e2a34,
+    stalkLit: 0x6a8494,
+    spot: 0xb8f6ff,
+    glow: 0x9ff3ff,
+  },
+  /** The wood's tall gate: the hole, roots woven over it, the posts and lintel, the moonlight beyond. */
+  gate: { hole: 0x02050a, root: 0x16222e, rootLit: 0x6a8aa0, post: 0x0c141c, light: 0xb8d0f0 },
   /** Seconds a gate takes to fall away, a cover to thin, a cut's shake. */
   gateFall: 0.8,
   coverEase: 3,
@@ -269,22 +283,12 @@ export class Kit {
       this.bell(back, glow, b.x, b.y, n, of, pulse, answered, clock, S);
     });
 
-    // Bounce caps: a mushroom cap over its rect, the stalk under it; a bounce squashes it.
+    // Bounce caps: a fat glowing fungus over its rect, its stalk down into the wood; a bounce squashes it.
     (S.caps ?? []).forEach((c, i) => {
-      if (!seen(c.x, c.y, c.w, c.h + 200)) return;
+      if (!seen(c.x, c.y, c.w, c.h + 260)) return;
       const t = this.capT.get(i);
       const sq = t === undefined ? 0 : Math.sin(Math.min(1, t / 0.5) * Math.PI) * Math.exp(-t * 4);
-      const cx = c.x + c.w / 2;
-      const top = c.y + sq * 6;
-      back.roundRect(cx - c.w * 0.12, c.y + c.h * 0.5, c.w * 0.24, 140, 6).fill(KIT.cap.stalk);
-      back.ellipse(cx, c.y + c.h * 0.7, c.w * 0.5 * (1 + sq * 0.15), c.h * 0.4).fill(KIT.cap.gill);
-      back
-        .ellipse(cx, top + c.h * 0.45, c.w * 0.55 * (1 + sq * 0.15), c.h * 0.55 * (1 - sq * 0.3))
-        .fill(KIT.cap.top);
-      back
-        .ellipse(cx + c.w * 0.1, top + c.h * 0.3, c.w * 0.3, c.h * 0.22)
-        .fill({ color: KIT.cap.topLit, alpha: 0.5 });
-      glow.add(cx, top + c.h * 0.4, c.w * 0.7, KIT.cap.topLit, 0.08);
+      this.cap(back, glow, c.x, c.y, c.w, c.h, sq, clock, t, `cap${i}${c.x}`);
     });
 
     // Seed-cases: a hard ridged seed.
@@ -335,7 +339,8 @@ export class Kit {
       if (open && (t === undefined || t > KIT.gateFall)) return;
       if (!seen(g.x, g.y, g.w, g.h)) return;
       const fall = open && t !== undefined ? t / KIT.gateFall : 0;
-      if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      if (g.h >= g.w && LOOK.kit === 'wood') this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else this.seal(back, g.x, g.y, g.w, g.h, clock, fall, g.id);
       // A door that counts moonseeds (the Downwood): its sockets in a row over it, one lit for each seed held.
       if (g.flag.startsWith('seeds:') && !open) {
@@ -630,6 +635,173 @@ export class Kit {
         // Now and then a small dark leaf.
         if (hash01(id, c * 23 + k) < 0.12) g.ellipse(px + dir * 5, py + 3, 5, 2.4).fill(0x14100c);
       }
+    }
+  }
+
+  /**
+   * A bounce cap in the wood (canopy review r2 #7): a fat dome of fungus, dark on top with pale gills under its lip
+   * and cyan glow spots, a curved stalk rooted down into the wood. It breathes; a bounce squashes it and flashes.
+   */
+  private cap(
+    g: Graphics,
+    glow: GlowPool,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    sq: number,
+    clock: number,
+    t: number | undefined,
+    id: string,
+  ): void {
+    const C = KIT.cap;
+    const cx = x + w / 2;
+    const breathe = 1 + 0.015 * Math.sin(clock * 1.3 + hash01(id, 1) * 6);
+    const rx = w * 0.62 * (1 + sq * 0.18) * breathe;
+    const top = y - h * 0.15 + sq * 8;
+    const lip = y + h * 0.75 + sq * 4;
+    const lean = (hash01(id, 2) - 0.5) * 30;
+    // The stalk: tapered, curved, flaring into the wood below.
+    // (Short: it roots into the top under it; the wood hides the rest.)
+    const sb = y + h + 26;
+    g.moveTo(cx - w * 0.1, lip)
+      .bezierCurveTo(
+        cx - w * 0.14 + lean * 0.3,
+        lip + 70,
+        cx - w * 0.2 + lean,
+        sb - 60,
+        cx - w * 0.3 + lean,
+        sb,
+      )
+      .lineTo(cx + w * 0.26 + lean, sb)
+      .bezierCurveTo(cx + w * 0.14 + lean, sb - 60, cx + w * 0.1 + lean * 0.3, lip + 70, cx + w * 0.09, lip)
+      .closePath()
+      .fill(C.stalk);
+    g.moveTo(cx + w * 0.02, lip + 10)
+      .bezierCurveTo(
+        cx + w * 0.04 + lean * 0.3,
+        lip + 70,
+        cx + w * 0.06 + lean,
+        sb - 60,
+        cx + w * 0.1 + lean,
+        sb,
+      )
+      .stroke({ color: C.stalkLit, width: 3, alpha: 0.45 });
+    // Under the lip: the gills, glowing faintly.
+    g.ellipse(cx, lip - 2, rx * 0.94, h * 0.32).fill(C.gill);
+    for (let k = -6; k <= 6; k++) {
+      const gx = cx + (k / 6.5) * rx * 0.86;
+      g.moveTo(cx + (k / 6.5) * rx * 0.2, lip + h * 0.18).lineTo(gx, lip - 2);
+    }
+    g.stroke({ color: C.gillLit, width: 1.6, alpha: 0.55 });
+    glow.add(cx, lip + 6, rx * 1.1, C.glow, 0.16 + 0.1 * sq, h * 0.5);
+    // The dome: a dark body, a lit crown, a pale rim along the lip.
+    const domeH = h * 0.95 * (1 - sq * 0.3);
+    g.moveTo(cx - rx, lip)
+      .bezierCurveTo(cx - rx * 1.02, lip - domeH * 0.75, cx - rx * 0.55, top, cx, top)
+      .bezierCurveTo(cx + rx * 0.55, top, cx + rx * 1.02, lip - domeH * 0.75, cx + rx, lip)
+      .quadraticCurveTo(cx, lip + h * 0.22, cx - rx, lip)
+      .fill(C.top);
+    g.ellipse(cx - rx * 0.12, top + domeH * 0.32, rx * 0.62, domeH * 0.3).fill({
+      color: C.topMid,
+      alpha: 0.75,
+    });
+    g.ellipse(cx - rx * 0.22, top + domeH * 0.2, rx * 0.34, domeH * 0.13).fill({
+      color: C.topLit,
+      alpha: 0.5,
+    });
+    g.moveTo(cx - rx * 0.96, lip - 2).quadraticCurveTo(cx, lip + h * 0.2, cx + rx * 0.96, lip - 2);
+    g.stroke({ color: C.rim, width: 3, alpha: 0.7 });
+    // Glow spots: the cyan of the wood's living light (art direction: bioluminescence), brighter as it is struck.
+    const flash = t === undefined ? 0 : Math.exp(-t * 6);
+    for (let k = 0; k < 7; k++) {
+      const u = hash01(id, 10 + k);
+      const v = hash01(id, 20 + k);
+      const px = cx + (u - 0.5) * rx * 1.5;
+      const py = top + domeH * (0.18 + 0.55 * v) * (1 - Math.abs(u - 0.5) * 0.6);
+      const r = 3 + 5 * hash01(id, 30 + k);
+      g.ellipse(px, py, r, r * 0.7).fill({ color: C.spot, alpha: 0.85 });
+      glow.add(px, py, r * 4, C.glow, 0.22 + 0.5 * flash + 0.05 * Math.sin(clock * 2 + k));
+    }
+    glow.add(cx, top + domeH * 0.5, rx * 1.6, C.glow, 0.08 + 0.3 * flash, domeH * 1.1);
+  }
+
+  /**
+   * A tall gate in the wood (the den's root gate, review r2 #3): a dark arch in the wood barred by woven roots, thick
+   * posts either side and a lintel root over it, moonlight seeping through the weave from beyond. Opening, the roots
+   * draw up into the lintel and the light pours out.
+   */
+  private rootGate(
+    g: Graphics,
+    glow: GlowPool,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    clock: number,
+    fall: number,
+    id: string,
+  ): void {
+    const G = KIT.gate;
+    const a = 1 - fall * 0.6;
+    const cx = x + w / 2;
+    // The hole and the light beyond it.
+    g.roundRect(x - 10, y - 16, w + 20, h + 16, Math.min(60, w * 0.45)).fill({ color: G.hole, alpha: 0.95 });
+    const pulse = 0.85 + 0.15 * Math.sin(clock * 0.8 + hash01(id, 1) * 6);
+    glow.add(cx, y + h * 0.55, w * 0.9, G.light, (0.26 + 0.5 * fall) * pulse, h * 0.6);
+    glow.add(cx, y + h - 8, w * 1.6, G.light, 0.12 + 0.3 * fall, 24);
+    // The weave: thick roots down the opening, drawn up as it opens, crossed by thinner diagonals.
+    const lift = fall * fall * h;
+    const n = Math.max(3, Math.round(w / 26));
+    for (let k = 0; k < n; k++) {
+      const r = hash01(id, k + 3);
+      const sx = x + (w * (k + 0.5)) / n;
+      const len = Math.max(0, h - lift * (0.7 + 0.3 * r));
+      if (len < 4) continue;
+      g.moveTo(sx, y - 6);
+      for (let s2 = 1; s2 <= 6; s2++) {
+        const u = s2 / 6;
+        g.lineTo(sx + Math.sin(u * 5 + r * 9) * 6 + wind(sx, clock, r) * 1.5 * u, y - 6 + len * u);
+      }
+      g.stroke({ color: G.root, width: 11 + r * 6, alpha: a, cap: 'round' });
+      g.moveTo(sx - 3, y);
+      for (let s2 = 1; s2 <= 6; s2++) {
+        const u = s2 / 6;
+        g.lineTo(sx - 3 + Math.sin(u * 5 + r * 9) * 6, y + len * u);
+      }
+      g.stroke({ color: G.rootLit, width: 2, alpha: 0.5 * a, cap: 'round' });
+    }
+    for (let k = 0; k < Math.round(h / 60); k++) {
+      const r = hash01(id, k + 40);
+      const yy = y + (h * (k + 0.5)) / Math.round(h / 60);
+      if (yy > y + h - lift) continue;
+      const d = k % 2 ? 1 : -1;
+      g.moveTo(x - 4, yy - d * 18).quadraticCurveTo(cx, yy + (r - 0.5) * 14, x + w + 4, yy + d * 18);
+      g.stroke({ color: G.root, width: 6 + r * 3, alpha: a, cap: 'round' });
+    }
+    // The frame: two root posts and the lintel over the arch, lit on their upper edges.
+    for (const side of [-1, 1]) {
+      const px = side < 0 ? x - 14 : x + w + 14;
+      g.moveTo(px - side * 4, y - 40)
+        .bezierCurveTo(px + side * 10, y + h * 0.3, px - side * 6, y + h * 0.7, px + side * 14, y + h + 6)
+        .stroke({ color: G.post, width: 30, cap: 'round' });
+      g.moveTo(px - side * 12, y - 30)
+        .bezierCurveTo(px + side * 2, y + h * 0.3, px - side * 14, y + h * 0.7, px + side * 4, y + h)
+        .stroke({ color: G.rootLit, width: 2.5, alpha: 0.55 });
+    }
+    g.moveTo(x - 40, y - 6)
+      .quadraticCurveTo(cx, y - 52, x + w + 40, y - 6)
+      .stroke({ color: G.post, width: 34, cap: 'round' });
+    g.moveTo(x - 30, y - 20)
+      .quadraticCurveTo(cx, y - 64, x + w + 30, y - 20)
+      .stroke({ color: G.rootLit, width: 3, alpha: 0.6 });
+    // Cyan moss beads on the lintel: the gate is a place, found in the dark.
+    for (let k = 0; k < 5; k++) {
+      const u = (k + 0.5) / 5;
+      const bx = x - 20 + (w + 40) * u;
+      const by = y - 18 - Math.sin(u * Math.PI) * 24;
+      g.circle(bx, by, 3.5).fill({ color: KIT.cap.spot, alpha: 0.9 });
+      glow.add(bx, by, 18, KIT.cap.glow, 0.3 + 0.08 * Math.sin(clock * 1.7 + k));
     }
   }
 

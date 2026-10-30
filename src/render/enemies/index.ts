@@ -11,36 +11,61 @@
  * (`__game.load()`, re-form) just shows. The glints a dead one spills are the pickup renderer's.
  */
 import type { Container } from 'pixi.js';
+import type { EnemyKind } from '../../sim/scene';
 import type { EnemyState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
 import { clamp, sat } from '../character/math';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
-import { isLantern } from '../scene/lib/room-look';
+import { LOOK } from '../scene/lib/room-look';
 import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
-import { BURR, LAMP } from './config';
+import { BOSS, BURR, LAMP } from './config';
+import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
 import { Painter, type RGB, type Shade } from './paint';
 
 const MAX_P = 160;
-/** Kinds drawn on the burrback's rig (the juvenile only in Lanternroot), and on the lampwing's (the hawker). */
-function isBeetle(kind: string): boolean {
-  return kind === 'burrback' || (isLantern() && kind in BEETLE_SCALE);
+/** The room's look, for `creatureArt` (kinds.ts): which kinds this renderer draws here. */
+function lookKey(): LookKey {
+  return { kit: LOOK.kit, pieces: LOOK.kit !== 'grove', greybox: false };
 }
-function isMoth(kind: string): boolean {
-  return kind === 'lampwing' || (kind === 'hawker' && isLantern());
-}
-/** The juvenile beetle drawn on the burrback's rig at this size (its box is 38 x 26 against 52 x 34). */
-const BURR_JUVENILE = 0.72;
-/**
- * Painted rooms (Lanternroot's kit: the Downwood too) draw these kinds on the burrback's rig, scaled about its feet:
- * the juvenile small, the old burrback (256 x 154 against 52 x 34) huge, the carriers (30 x 14) as ants.
- */
-const BEETLE_SCALE: Record<string, number> = {
-  juvenileBurrback: BURR_JUVENILE,
-  oldBurrback: 4.4,
-  carrier: 0.5,
+const isBeetle = (kind: string): boolean => creatureArt(kind as EnemyKind, lookKey()) === 'beetle';
+const isMoth = (kind: string): boolean => creatureArt(kind as EnemyKind, lookKey()) === 'moth';
+const SHADOW_C: RGB = [0.01, 0.015, 0.03];
+const WAVE_C: RGB = rgbOf(BOSS.waveColor);
+/** The rolling ball's shell (BURR's shell colours, popped toward `pop` on a hit). */
+const BALL_TOP: [number, number, number] = [0, 0, 0];
+const BALL_LOW: [number, number, number] = [0, 0, 0];
+const SH_BALL: Shade = { c0: BALL_TOP, c1: BALL_LOW, rim: 0.45, cool: 0.3, form: 0.25, band: 0.18 };
+const SH_SEAM: Shade = {
+  c0: rgbOf(BURR.color.seam),
+  c1: rgbOf(BURR.color.seam),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.2,
+  alpha: 0.85,
 };
+const SH_SHEEN: Shade = {
+  c0: rgbOf(BURR.color.sheen),
+  c1: rgbOf(BURR.color.shellTop),
+  rim: 0,
+  cool: 0,
+  form: 0,
+  band: 0.3,
+  alpha: 0.5,
+};
+const SH_BURR: Shade = {
+  c0: rgbOf(BURR.color.plateIn),
+  c1: rgbOf(BURR.color.shellLow),
+  rim: 0.5,
+  cool: 0.2,
+  form: 0.2,
+  band: 0.3,
+};
+function rgbOf(hex: number): RGB {
+  return [((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255];
+}
 const K_FRAG = 1;
 const K_MOTE = 2;
 const K_DUST = 3;
@@ -609,6 +634,91 @@ export class EnemyRenderer {
     return true;
   }
 
+  /**
+   * The old burrback's own moves (`BOSS`, memory/creatures.md): the slam lands in a burst of dust across its whole
+   * width, and its wave runs along the floor each way as a travelling crest of dust (the front she must jump).
+   */
+  private boss(rig: BurrRig, e: EnemyState, scale: number, dt: number): void {
+    const half = BURR.halfLen * scale;
+    if (rig.slamNew) {
+      rig.slamNew = false;
+      const n = BOSS.slamPuffs;
+      for (let k = 0; k < n; k++) {
+        const u = k / (n - 1) - 0.5;
+        this.dust(rig.x + u * half * 2.2, rig.y, Math.sign(u || 1) * (120 + 260 * this.rand()), 2.2, 2.6);
+      }
+      for (let k = 0; k < 10; k++)
+        this.emit(
+          K_GRIT,
+          rig.x + (this.rand() - 0.5) * half * 2,
+          rig.y - 4,
+          (this.rand() - 0.5) * 420,
+          -200 - this.rand() * 260,
+          0.6,
+          1.4 + this.rand(),
+          rig.y,
+        );
+    }
+    if (e.wave > 0) {
+      // The crest itself: a low bank of dust riding each front, fading as it runs out.
+      const fade = 1 - Math.min(1, e.wave / Math.max(1, tuning.oldBurrback.slamReachPx));
+      for (const side of [-1, 1]) {
+        const x = e.waveX + side * e.wave;
+        this.painter.soft(x - side * 14, rig.y - BOSS.waveH * 0.35, 56, BOSS.waveH * 0.6, WAVE_C, 0.6 * fade);
+        this.painter.glow(x, rig.y - BOSS.waveH * 0.25, 54, WAVE_C, 0.5 * fade, BOSS.waveH * 0.6);
+      }
+      rig.waveT += dt;
+      while (rig.waveT > 0.016) {
+        rig.waveT -= 0.016;
+        for (const side of [-1, 1]) {
+          const x = e.waveX + side * e.wave;
+          this.dust(x, rig.y, side * (60 + 80 * this.rand()), 2.4, 1.9);
+          this.emit(
+            K_GRIT,
+            x,
+            rig.y - 2,
+            side * 90 * this.rand(),
+            -140 - this.rand() * 180,
+            0.4,
+            1 + this.rand(),
+            rig.y,
+          );
+        }
+      }
+    } else rig.waveT = 0;
+  }
+
+  /**
+   * The old burrback rolling (phase 2): a round shell, `rollTouchPx` across, turning with the ground it covers; its
+   * plate seams and burrs turn with it so the roll reads, a rim of light along its top, dust off its heels.
+   */
+  private ball(rig: BurrRig, e: EnemyState, scale: number, clock: number): void {
+    const p = this.painter;
+    const r = BOSS.ballPx / 2;
+    const cx = rig.x;
+    const cy = rig.y - r + 2;
+    const a0 = rig.spin;
+    const hit = e.hitFrame >= 0 && rig.hitAge < 8 ? 1 - rig.hitAge / 8 : 0;
+    const top = BALL_TOP;
+    const low = BALL_LOW;
+    for (let k = 0; k < 3; k++) {
+      top[k] = COLORS.shellTop[k]! + (COLORS.pop[k]! - COLORS.shellTop[k]!) * hit;
+      low[k] = COLORS.shellLow[k]! + (COLORS.pop[k]! - COLORS.shellLow[k]!) * hit * 0.6;
+    }
+    p.soft(cx, rig.y - 4, r * 1.1, 14, SHADOW_C, 0.6);
+    // Burrs round the rim, turning with it.
+    for (let k = 0; k < 9; k++) {
+      const a = a0 + (k / 9) * Math.PI * 2;
+      p.ellipse(cx + Math.cos(a) * r * 1.02, cy + Math.sin(a) * r * 1.02, r * 0.3, r * 0.11, a, SH_BURR, 10);
+    }
+    p.ellipse(cx, cy, r, r, a0, SH_BALL, 28);
+    // Plate seams across it.
+    for (let k = 0; k < 3; k++) p.ellipse(cx, cy, r * 0.93, r * 0.045, a0 + (k * Math.PI) / 3, SH_SEAM, 16);
+    p.ellipse(cx - r * 0.25, cy - r * 0.35, r * 0.42, r * 0.22, -0.5, SH_SHEEN, 18);
+    p.ring(cx, cy, r * 0.97, r * 0.06, COLORS.plateIn, 0.35 + 0.15 * Math.sin(clock * 3));
+    void scale;
+  }
+
   /** A puff of dust at the ground; `k` > 1 = denser (and `size` x larger). */
   private dust(x: number, y: number, vx: number, k = 1, size = 1): void {
     const i = this.next;
@@ -642,16 +752,16 @@ export class EnemyRenderer {
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (!e) continue;
-      // (Lanternroot draws its hawkers on the lampwing's art and its juvenile beetles on the burrback's rig, small;
-      // other rooms keep what they had: memory/lanternroot-art.md.)
-      const lantern = isLantern();
-      if (e.kind === 'lampwing' || (lantern && e.kind === 'hawker')) {
+      // (Painted rooms draw hawkers on the lampwing's art and the juvenile, the old burrback and the carriers on the
+      // burrback's rig, scaled: kinds.ts. The test grove draws only its own two kinds.)
+      const art = creatureArt(e.kind, lookKey());
+      if (art === 'moth') {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
       }
-      const scale = lantern ? (BEETLE_SCALE[e.kind] ?? 1) : 1;
+      if (art !== 'beetle') continue;
+      const scale = BEETLE_SCALE[e.kind] ?? 1;
       const small = scale !== 1;
-      if (e.kind !== 'burrback' && !small) continue;
       // (A carrier in its crack is no one's: not drawn.)
       if (e.kind === 'carrier' && e.mode === 'under') continue;
       let rig = this.rigs[i];
@@ -677,6 +787,8 @@ export class EnemyRenderer {
         this.dropping(sim, e),
       );
       stepFeelers(rig, e, clock, dt);
+      rig.big = scale > 2;
+      if (rig.big) this.boss(rig, e, scale, dt);
 
       // --- Debris, from the state alone.
       const dir = e.hitDir || 1;
@@ -898,10 +1010,16 @@ export class EnemyRenderer {
         for (let k = 0; k < 4; k++)
           this.dust(rig.x + (k - 1.5) * 12, rig.y - 26 + this.rand() * 8, (k - 1.5) * 14, 1.3, 0.8);
       }
+      // (The big one sits in its own dark: a contact shadow wide as its shell, so it is heavy on the floor.)
+      if (rig.big && !e.gone) p.soft(rig.x, rig.y - 6, BURR.halfLen * scale * 1.25, 26, SHADOW_C, 0.55);
       const v0 = p.vertexCount;
       const f0 = pf.vertexCount;
-      if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
-      if (small) {
+      if (rig.big && rig.rollK > 0.5 && e.mode !== 'dead') {
+        // Rolling, the old burrback is a ball (its dome cannot turn over: half of it is belly): painted on its own.
+        this.ball(rig, e, scale, clock);
+        drawn++;
+      } else if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+      if (small && !(rig.big && rig.rollK > 0.5 && e.mode !== 'dead')) {
         p.scaleFrom(v0, rig.x, rig.y, scale);
         pf.scaleFrom(f0, rig.x, rig.y, scale);
       }

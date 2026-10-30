@@ -109,7 +109,8 @@ export class PlayfieldLayer implements EnvModule {
       const b = bakeTerrain(ctx.renderer, pt.paint, scale, [], look);
       pt.paint.albedo.destroy();
       pt.paint.relief.destroy();
-      const mask = new Graphics().rect(pt.rect.x, pt.rect.y, pt.rect.w, pt.rect.h).fill(0xffffff);
+      const m = pt.show ?? pt.rect;
+      const mask = new Graphics().rect(m.x, m.y, m.w, m.h).fill(0xffffff);
       const holder = new Container({ label: pt.key });
       holder.addChild(b.layer, mask);
       holder.mask = mask;

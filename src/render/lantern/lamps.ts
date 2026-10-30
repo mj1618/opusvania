@@ -24,7 +24,7 @@ import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import type { LightRegistry } from '../lights';
 import { mix } from '../scene/lib/look';
-import { hash01, LR } from './config';
+import { hash01, LR, ROOM_LAMPS } from './config';
 import type { GlowPool } from './glow';
 import { MothClouds, mothCount } from './moths';
 
@@ -188,6 +188,8 @@ export class Lamps {
   private readonly lit = new Map<number, number>();
   /** Point light ids this module registered last frame. */
   private readonly lightIds = new Set<string>();
+  /** This room's lamps against the kind's (ROOM_LAMPS). */
+  private readonly roomK: { size: number; light: number; moths: number };
   private readonly clouds: MothClouds;
 
   constructor(
@@ -195,6 +197,7 @@ export class Lamps {
     private readonly lights: LightRegistry,
   ) {
     const lures = scene.lures ?? [];
+    this.roomK = ROOM_LAMPS[scene.id] ?? { size: 1, light: 1, moths: 1 };
     for (const l of lures) {
       const moonwick = (l.kind as string) === 'moonwick';
       let tieY: number | null = null;
@@ -216,7 +219,7 @@ export class Lamps {
       this.info.push({
         tieY,
         standY: moonwick ? standY : null,
-        size: sizeOf(l),
+        size: sizeOf(l) * (moonwick ? 1 : this.roomK.size),
         moonwick,
         moths: moonwick
           ? 0
@@ -236,7 +239,9 @@ export class Lamps {
           x: l.x,
           y: l.y,
           size: firefly ? 70 : inf.size,
-          count: inf.moonwick ? 0 : mothCount(firefly ? 70 : inf.size, firefly ? 1.6 : 1),
+          count: inf.moonwick
+            ? 0
+            : mothCount(firefly ? 70 : inf.size, (firefly ? 1.6 : 1) * this.roomK.moths),
         };
       }),
       7,
@@ -442,12 +447,15 @@ export class Lamps {
         mid.add(x, y + s * 0.12, s * 0.5 * flick, LR.lamp.core, 0.55 * flick, s * 0.62 * flick);
         // The halo (bloom carries it further).
         glow.add(x, y, s * 2.4 * flick, LR.lamp.halo, 0.3);
+        // A room whose lamps are its picture (ROOM_LAMPS): their warmth washes the wood round them.
+        if (this.roomK.light > 1)
+          glow.add(x, y + 60, 520 * this.roomK.light * 0.5, LR.lamp.halo, 0.1 * flick, 420);
         cands.push({
           i,
           d: Math.hypot(x - cam.x, y - cam.y),
           x,
           y,
-          r: LR.lamp.light[l.kind as 'wick'] ?? 300,
+          r: (LR.lamp.light[l.kind as 'wick'] ?? 300) * this.roomK.light,
           c: LR.lamp.lightColor,
           k: flick,
         });

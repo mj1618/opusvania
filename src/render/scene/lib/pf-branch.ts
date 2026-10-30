@@ -17,9 +17,10 @@
 
 import type { Room } from '../../../scene/room';
 import type { SolidRect } from '../../../sim/scene';
+import { interiorPlan, paintGlowFlora, paintNearBacks } from './interior';
 import { mix } from './look';
 import type { BakeLook, MistFill } from './pf-bake';
-import { paintBacks, paintMasses } from './pf-mass';
+import { MASS, paintMasses } from './pf-mass';
 import { Paint } from './pf-paint';
 import { blob, chaikin, clamp, cubic, lerp, quad, range, rngFor, smoothstep, wobble } from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
@@ -1858,6 +1859,8 @@ export interface MassPatch {
   rect: { x: number; y: number; w: number; h: number };
   /** Over her (a cover) or behind her (a wall). */
   front: boolean;
+  /** Where it shows, if more than `rect` (a hanging clump's tips). */
+  show?: { x: number; y: number; w: number; h: number };
   paint: Paint;
 }
 
@@ -1883,15 +1886,9 @@ export function paintBranchTerrain(
   const sdOf = (st: Stretch): number => seed + st.s.x * 7 + st.s.y;
   const childOf = (st: Stretch): Stretch | undefined => stretches.find((o) => o.parent === st.id);
 
-  // 0. The back walls of carved space (pf-mass.ts), behind everything.
-  const backs = room.marks?.backs ?? [];
-  if (backs.length)
-    paintBacks(
-      p,
-      backs,
-      room.solids.some((q) => q.tag === 'ground'),
-      seed + 5,
-    );
+  // 0. The back walls of carved space (interior.ts: the near plane; the deep one is its own layer), behind everything.
+  const inside = interiorPlan(room, seed);
+  if (inside) paintNearBacks(p, inside, seed + 5);
 
   // 1. Forks (the parent's dip, the lower tine, the crotch, the rising tine) behind the walk.
   const kinds: ForkKind[] = ['dip', 'behind', 'hang'];
@@ -1924,6 +1921,8 @@ export function paintBranchTerrain(
   // join the stretches (rim, growth) after the limbs are painted.
   const massPlan: BranchPlan = { stretches: [], sprigs: [], hangs: [], clear: [], cocoons: [], clumps: [] };
   paintMasses(p, massPlan, room.solids.filter(isMass), room.width, room.height, seed);
+  // The glowing growth on them (its light is live: layers/interior.ts).
+  if (inside) paintGlowFlora(p, inside);
 
   // 2. The stretches. A root in a solid tree runs on into it (the trunk's collar wraps it, step 3); a
   // root in a decor tree sinks into its dark.
@@ -2117,7 +2116,10 @@ export function paintBranchTerrain(
     const one = (key: string, r: { x: number; y: number; w: number; h: number }, front: boolean) => {
       const pp = new Paint(room.width, room.height);
       paintMasses(pp, null, [...masses, { ...r, tag }], room.width, room.height, seed, r);
-      patches.push({ key, rect: { x: r.x, y: r.y, w: r.w, h: r.h }, front, paint: pp });
+      // (A cover hanging from the top into open air is a root clump: shown past its rect, its strands' ragged tips.)
+      const hangs = front && r.y <= 0 && r.w <= MASS.pillarW;
+      const show = hangs ? { x: r.x - 260, y: r.y, w: r.w + 520, h: r.h + 380 } : undefined;
+      patches.push({ key, rect: { x: r.x, y: r.y, w: r.w, h: r.h }, front, paint: pp, show });
     };
     for (const b of (room as { bark?: Array<{ id: string; x: number; y: number; w: number; h: number }> })
       .bark ?? [])

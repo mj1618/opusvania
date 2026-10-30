@@ -27,7 +27,7 @@ import {
   sat,
   smoothstep,
 } from '../character/math';
-import { BURR } from './config';
+import { BOSS, BURR } from './config';
 import { bobAt, foot, footAt, LEG_ROW, LEG_SIDE, rockAt } from './gait';
 import type { Painter, RGB, Shade } from './paint';
 
@@ -293,6 +293,18 @@ export class BurrRig {
    */
   curlK = 0;
   curlPh = 0;
+  /** Drawn many times its size (the old burrback): its pitches are gentler (`BOSS.pitchK`). */
+  big = false;
+  /** The old burrback's roll: the ball's turn (rad), and its last mode (for the slam's first frame). */
+  spin = 0;
+  private lastBossMode = '';
+  /** Set for the one update its slam lands (the renderer throws the dust and the floor wave's crack). */
+  slamNew = false;
+  waveT = 0;
+  /** 0..1: rearing (the slam's tell): its lights go to the ram's red as in a brace. */
+  rearK = 0;
+  /** 0..1: rolling (a round ball turning about its middle). */
+  rollK = 0;
   private curled = false;
   /** A down cut glanced off its top (`enemyBlock` slash `down`): the clang (1, dying), seconds since, where (-1..1 along the screen). */
   ringTop = 0;
@@ -510,7 +522,8 @@ export class BurrRig {
     {
       const Z = B.doze;
       // The sim's rule (`e.dozing`: an unseen burrback near her stops and sleeps where it stands).
-      const doze = calmT === 0 && !noticedNow && e.mode !== 'dead' && e.dozing ? 1 : 0;
+      const doze =
+        calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep') ? 1 : 0;
       this.dozeK += (doze - this.dozeK) * approach(doze ? Z.in : Z.out, dt);
     }
 
@@ -595,7 +608,9 @@ export class BurrRig {
     // --- Curled (a pogo landed): it rolls up at once and stays so through the flinch and the
     // winded time, until it uncurls (on the timer, or straight into its brace).
     const Cu = B.curl;
-    const curledNow = e.tuck > 0 && mode !== 'dead' && !wind && !ram;
+    // (The old burrback's phase change (`curl`) and its roll: the same closed ball, the roll spinning it.)
+    const balled = mode === 'curl' || mode === 'roll';
+    const curledNow = (e.tuck > 0 || balled) && mode !== 'dead' && !wind && !ram;
     const uncurled = this.curled && !curledNow;
     this.curled = curledNow;
     this.curlK +=
@@ -745,12 +760,12 @@ export class BurrRig {
       // Planted: front down, head under the plate, weight coiling back as the count runs.
       crouchT = R.crouch;
       tuckT = 0.85;
-      leanT = this.d * R.pitch;
+      leanT = this.d * R.pitch * (this.big ? BOSS.pitchK : 1);
       backT = -this.d * (R.back + R.coil * this.windU * this.windU);
     } else if (ram) {
       crouchT = R.ramCrouch;
       tuckT = 1;
-      leanT = this.d * R.ramPitch;
+      leanT = this.d * R.ramPitch * (this.big ? BOSS.pitchK : 1);
       backT = this.d * 4;
       squashT = R.stretch;
     } else if (spentM) {
@@ -766,7 +781,47 @@ export class BurrRig {
         gather;
       backT = -this.d * 2 * gather;
       bristleT = 0.3 * gather;
+    } else if (mode === 'rear') {
+      // The slam's tell: up on its hind legs, front and plate lifted high, burrs up, trembling as it holds.
+      const u = sat(this.mf / Math.max(1, e.modeFrames + e.timer));
+      crouchT = -0.4;
+      tuckT = 0.3;
+      leanT =
+        -this.d * (BOSS.rearLean * (0.55 + 0.45 * u)) + BOSS.rearShake * u * Math.sin(clock * 48 + this.seed);
+      backT = -this.d * 4 * u;
+      bristleT = 1;
+    } else if (mode === 'slam') {
+      // Brought down: the front thrown into the floor, flattened, burrs flat.
+      crouchT = R.crouch * 1.4;
+      tuckT = 1;
+      leanT = this.d * BOSS.slamLean;
+      squashT = 0.12;
+      bristleT = -0.4;
+    } else if (mode === 'wake') {
+      crouchT = 0.5;
+      tuckT = 0.5;
+      bristleT = 0.6;
     } else tuckT = 1;
+    // (The slam lands as its rear ends, whatever mode follows: the sim's slam is an instant, `enemySlam`.)
+    const slammed =
+      (mode === 'slam' && this.lastBossMode !== 'slam') || (this.lastBossMode === 'rear' && mode !== 'rear');
+    if (slammed && !fresh) {
+      this.squash.x = 0.2;
+      this.squash.v = 0;
+      this.sqDir = 0;
+      this.rock.v += this.d * 9;
+      this.bristle.v -= 30;
+      this.slamNew = true;
+    }
+    if (mode === 'rear' && this.lastBossMode !== 'rear' && !fresh) this.bristle.v += 40;
+    this.lastBossMode = mode;
+    const rearing = mode === 'rear' || mode === 'slam' ? 1 : 0;
+    this.rearK += (rearing - this.rearK) * approach(rearing ? 30 : 6, dt);
+    // Rolling: the ball turns with the ground it covers (its radius is the dome's).
+    if (mode === 'roll') this.spin += (this.vx * dt) / BOSS.ballR;
+    else this.spin *= 1 - Math.min(1, dt * 8);
+    const rolling = mode === 'roll' ? 1 : 0;
+    this.rollK += (rolling - this.rollK) * approach(rolling ? 14 : 8, dt);
     // It cannot brace yet: it keeps its head in a little.
     if (this.cdK > 0 && (mode === 'walk' || mode === 'pause'))
       tuckT = Math.max(tuckT, R.wary * sat(this.cdK * 3));
@@ -1258,7 +1313,8 @@ export function drawBurrback(
   tone(W.headLow, C.headLow);
   tone(W.eye, C.eye, 0.3);
   // Braced, the eyes take the colour of its lights: a glare under the plate.
-  for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (C.ramLight[k]! - W.eye[k]!) * 0.7 * rig.braceK;
+  for (let k = 0; k < 3; k++)
+    W.eye[k] = W.eye[k]! + (C.ramLight[k]! - W.eye[k]!) * 0.7 * Math.max(rig.braceK, rig.rearK);
   // Calmed, the eyes take the lantern's warmth; right after a blow they are not lit.
   for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (C.calmLight[k]! - W.eye[k]!) * 0.45 * rig.calmK;
   eyeLit = 1 - sat(toneDark * 1.2);
@@ -1294,7 +1350,7 @@ export function drawBurrback(
   const sq = rig.squash.x;
   // Calmed where it lies, the dome itself sags and spreads: a flatter shape, not only a lower one.
   const flat = Math.max(calm, rig.dozeK) * sat(crouch) * (1 - deadK);
-  const sx = (1 + sq - breath * 0.4 + 0.12 * swell) * (1 + B.calm.spread * flat) * (1 - Cu.short * ball);
+  const sx0 = (1 + sq - breath * 0.4 + 0.12 * swell) * (1 + B.calm.spread * flat) * (1 - Cu.short * ball);
   const sy =
     (1 - sq * 0.85 + breath + 0.1 * swell) *
     (1 - B.calm.flat * flat) *
@@ -1302,10 +1358,14 @@ export function drawBurrback(
     (1 + R.tall * braceK * (1 - ramK)) *
     (1 + Cu.tall * ball) *
     (1 - K.pound * ringTop * Math.max(0, ringW));
+  // Rolling, the closed shell is a ball: as long as it is tall, turning about its middle.
+  const rk = rig.rollK * (1 - deadK);
+  const sx = sx0 + (sy * BOSS.ballAspect - sx0) * rk;
   // Made whole again: 0..1 through coming round; the shake sits in the middle of it.
   const wakeU = rig.wakeT < R.wake ? rig.wakeT / R.wake : 1;
   const wakeShake = smoothstep(0.25, 0.4, wakeU) * (1 - smoothstep(0.55, 0.95, wakeU));
   const rot =
+    rig.spin * rk +
     rig.rock.x +
     rockAt(rig.dist, g) * g.rock * walkK * d +
     roll +
@@ -1884,7 +1944,8 @@ export function drawBurrback(
       // Calmed: one warm tone, all four breathing together with the body.
       for (let k = 0; k < 3; k++) sc[k] = sc[k]! + (C.calmLight[k]! - sc[k]!) * calm;
       // Braced: the colour of the ram.
-      for (let k = 0; k < 3; k++) sc[k] = sc[k]! + (C.ramLight[k]! - sc[k]!) * 0.85 * braceK;
+      for (let k = 0; k < 3; k++)
+        sc[k] = sc[k]! + (C.ramLight[k]! - sc[k]!) * 0.85 * Math.max(braceK, rig.rearK);
       const alert = e.mode === 'alert' ? sat(t / 3) * sat((e.timer + 4) / 6) : 0;
       // Its touch: they jump at once, then fall back through the flinch.
       const flash = rig.touching ? (B.touch.flash - 1) * (1 - smoothstep(1, 12, t)) : 0;
