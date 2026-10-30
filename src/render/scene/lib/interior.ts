@@ -1873,14 +1873,20 @@ export function drawMidBack(
       const fung = mixC(lit, DEN_FUNGUS, 0.45);
       while (covered < want && guard++ < 400) {
         const roll = r();
-        if (roll < 0.22) {
+        if (roll < 0.3) {
           // A burrow mouth: a broad bank of earth rising from the back's floor, a dark way in low in it, the fungus light
           // on its lower lip only. (A round mound with a mouth and a lit crescent read as a face.)
           const cx = b.x + r() * b.w;
           const cy = b0.y + b0.h * range(r, 0.7, 1.0);
           const rx = range(r, 220, 440);
           const ry = rx * range(r, 0.38, 0.55);
-          fill(chaikin(blob(cx, cy, rx, ry, seed + guard, 0.3, 18), 2), col, 0.92, Math.PI * rx * ry * 0.9);
+          // (A step darker than the other mid shapes: at their value the burrow's back stayed one flat grey.)
+          fill(
+            chaikin(blob(cx, cy, rx, ry, seed + guard, 0.3, 18), 2),
+            mixC(col, dark, 0.4),
+            0.94,
+            Math.PI * rx * ry * 0.9,
+          );
           const mx = cx + range(r, -0.3, 0.3) * rx;
           const my = cy + ry * range(r, 0.2, 0.4);
           const mw = rx * range(r, 0.2, 0.3);
@@ -1898,7 +1904,7 @@ export function drawMidBack(
           g.poly(strand(lip, range(r, 3, 6), 0.4)).fill({ color: fung, alpha: 0.4 });
           continue;
         }
-        if (roll < 0.38) {
+        if (roll < 0.46) {
           // A shed half-shell on its side: an open crescent with ribs along its curve (never a whole dome: a wheel), its
           // underside catching the fungus light.
           const cx = b.x + r() * b.w;
