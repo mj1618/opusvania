@@ -202,7 +202,21 @@ const SceneSchema = z
     reform: z.object({ x: int, y: int }).strict().optional(),
     reformPatch: z.boolean().optional(),
     // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
-    patches: z.array(z.object({ id: z.string().min(1), x: int, y: int }).strict()).optional(),
+    patches: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            x: int,
+            y: int,
+            map: z.boolean().optional(),
+            hangs: z
+              .array(z.object({ stone: z.string().min(1), flag: z.string().min(1) }).strict())
+              .optional(),
+          })
+          .strict(),
+      )
+      .optional(),
     glades: z
       .array(
         z
@@ -402,6 +416,9 @@ const SceneSchema = z
           .array(z.object({ id: z.string().min(1), x: int, y: int, note: z.string().optional() }).strict())
           .optional(),
         backs: z
+          .array(z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict())
+          .optional(),
+        sealed: z
           .array(z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict())
           .optional(),
         chambers: z

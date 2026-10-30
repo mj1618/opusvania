@@ -283,78 +283,19 @@ export const CLIMBS: Climb[] = [
     plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
   },
   {
+    // (r9, review r8 #1: leg 2 is the well's one chimney leg, and its strip (the bots' top hit source four rounds
+    // running, on the line a relaxed hand slides down) is a bramble pit on the gallery's floor now: either face.)
     id: 'well-2',
     room: 'cn-well',
-    note: 'leg 2 (the teach): the mouth floor to the landing; the east face has a strip',
+    note: 'leg 2: the mouth floor to the landing (the chimney top), either face',
     xs: [2048, 2112, 2176],
     y: 3200,
-    goal: { x0: 1536, x1: 2048, y: 2432 },
+    goal: { x0: 1536, x1: 2304, y: 2432 },
     plans: [
       { name: 'W face', first: -1, legs: [{ mode: 'face' }] },
+      { name: 'E face', first: 1, legs: [{ mode: 'face' }] },
       { name: 'E then W', first: 1, legs: [{ mode: 'face', until: 3200 }, { mode: 'face' }] },
     ],
-    fails: [{ name: 'E face only', first: 1, legs: [{ mode: 'face' }] }],
-  },
-  {
-    // (r8, review r7 #9: the strip grew to 160, and the glints over it are taken from the landing now: off its lip
-    // to the east face, a slide down to the glints just over the strip, a kick back. v7's kick in from the west face
-    // on the way up met the taller strip.)
-    id: 'well-2-risk',
-    room: 'cn-well',
-    note: "leg 2's reward (review r5 #2): from the landing to the glints over the east face's strip and back",
-    xs: [1664, 1728, 1792],
-    y: 2432,
-    goal: { x0: 1536, x1: 2048, y: 2432 },
-    plans: [
-      {
-        name: 'off the lip to the glints, back',
-        first: 1,
-        drop: true,
-        jumpAt: [2214, 2214, 2214],
-        delays: [0, 6],
-        // (A slide down onto glints over thorns is the risk itself: a quarter margin.)
-        margin: 16,
-        takes: ['risk-w-1', 'risk-w-2', 'risk-w-3'],
-        legs: [{ mode: 'face', until: 1e9 }, { mode: 'face' }],
-      },
-    ],
-  },
-  {
-    id: 'well-3a',
-    room: 'cn-well',
-    note: 'leg 3a (r7): the landing to the mid rest, up the east face and across into the rest',
-    xs: [1664, 1728, 1792],
-    y: 2432,
-    goal: { x0: 1536, x1: 2048, y: 1856 },
-    plans: [
-      {
-        name: 'E, across into the rest',
-        first: 1,
-        // (r8: the landing's lip runs 64 further; from its middle on, not its root: at 1,936 a 16-frame kick slid
-        // into leg 2's taller strip.)
-        jumpAt: [2016, 2016, 2048],
-        legs: [{ mode: 'face', until: 2000 }, { mode: 'face' }],
-      },
-    ],
-  },
-  {
-    id: 'well-3b',
-    room: 'cn-well',
-    note: 'leg 3b (r7): the mid rest to the hollow; the east strip under the hollow, the west face over the rest',
-    xs: [1664, 1728, 1792],
-    y: 1856,
-    goal: { x0: 256, x1: 2560, y: 1152 },
-    plans: [
-      {
-        name: 'E, across over the rest to W',
-        first: 1,
-        // (r8: from the far start the jump is 18 px nearer the lip; at 2,008 a 16-frame kick slid off the west face's
-        // foot over the rest's opening.)
-        jumpAt: [1960, 1984, 1990],
-        legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
-      },
-    ],
-    fails: [{ name: 'E face only', first: 1, jumpAt: [1960, 1984, 2008], legs: [{ mode: 'face' }] }],
   },
   {
     id: 'out-1',
@@ -496,7 +437,7 @@ export const CLIMBS: Climb[] = [
 ];
 
 /**
- * Leg 3b with its lampwing in (review r6 #3): the climb is a choice, not a toll. The rest is safe (`restSafe`: it
+ * (Until r9: leg 3b with its lampwing in, review r6 #3: the climb is a choice, not a toll. The rest is safe (`restSafe`: it
  * hovers 456 px over the rest's floor, out of its sight, so she can stand there as long as she likes); the plain plan
  * (straight up past it) takes at most one hit from two of three starts at kick delays 6 and 10; hops with up cuts on
  * the rest's lip draw it down and kill it as it stalls there, unhurt. Held by tests/unit/canopy-climbs.test.ts.
@@ -510,32 +451,20 @@ export const CREATURE_CLIMBS: Array<{
   maxHits: number;
   of: number;
 }> = [
+  // (r9: leg 3b and its lampwing are gone, the gallery's two creatures sit off the climbs: leg 2 with the room's
+  // creatures in is untouched from every start at every delay, and the Spire's foot with its hawker at most one hit.)
   {
-    climb: 'well-3b',
-    plan: {
-      name: 'E, across over the rest to W, at once',
-      first: 1,
-      jumpAt: [1960, 1984, 1990],
-      legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
-    },
-    // (r8, review r7 #9: every start, every delay, at most two hits: the lampwing dives once a pass.)
+    climb: 'well-2',
+    plan: { name: 'E then W', first: 1, legs: [{ mode: 'face', until: 3200 }, { mode: 'face' }] },
     delays: [0, 6, 10, 16],
-    maxHits: 2,
+    maxHits: 0,
     of: 3,
   },
   {
-    climb: 'well-3b',
-    plan: {
-      name: 'up cuts from the lip as it stalls, then the climb',
-      first: 1,
-      at: 2000,
-      hops: 8,
-      kills: ['wing-chimney'],
-      jumpAt: [2008, 2008, 2008],
-      legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
-    },
-    delays: [6],
-    maxHits: 0,
+    climb: 'spire-1',
+    plan: { name: 'E face, then the neck', first: 1, legs: [{ mode: 'face', until: 900 }, { mode: 'face' }] },
+    delays: [0, 6, 10, 16],
+    maxHits: 1,
     of: 3,
   },
 ];
