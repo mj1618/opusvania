@@ -989,8 +989,19 @@ function hatch(): Json {
     // (A fall off the branch is caught and set back on it, as in wood-hatch; the room is no deeper than that. Not
     // under the branch's end: the pocket.)
     catches: [{ id: 'below', x: 224, y: H - 192, w: POCKET_X - 224, h: 192 }],
-    // (The first lamp: `sets` says she has flung once; the camera zone below lets go of the frame then.)
-    lures: [{ id: 'wick-first', kind: 'wick', x: FIRST_WICK[0], y: FIRST_WICK[1], sets: 'cn-first-fling' }],
+    // (The first lamp: `sets` says she has flung once; the camera zone below lets go of the frame then. It burns again
+    // 90 frames after it goes out (`relight`, never saved): cut down with the blade it was gone for good, and the
+    // hatch with it (the bots' old lamp-cut lines found it: a softlock).)
+    lures: [
+      {
+        id: 'wick-first',
+        kind: 'wick',
+        x: FIRST_WICK[0],
+        y: FIRST_WICK[1],
+        sets: 'cn-first-fling',
+        relight: 90,
+      },
+    ],
     // The notice (review r7 #1): on S5's east half the view holds the lamp and the limb across the gap (the droop's,
     // S8) in one frame until she has flung. Wordless; render's prompt is the one word (hold the Lamp key).
     camera: {

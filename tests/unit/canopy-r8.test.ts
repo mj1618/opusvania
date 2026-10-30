@@ -163,6 +163,17 @@ describe('the first fling (review r7 #1)', () => {
     expect(s.save.flags).toContain('cn-first-fling');
   });
 
+  it('the hatch: the first lamp put out (a cut) burns again: the required lesson never softlocks', () => {
+    const { s, scene } = at('cn-hatch', 3440, 892);
+    const i = lamp(scene, 'wick-first');
+    s.lures.hp[i] = 0;
+    s.lures.out[i] = s.frame + 1;
+    const ev: SimEvent[] = [];
+    run(s, scene, 0, 120, ev);
+    expect(s.lures.hp[i]).toBeGreaterThan(0);
+    expect(s.save.snuffed).not.toContain('cn-hatch:wick-first');
+  });
+
   it('the gap: a down-left fling off the first lamp brings the second into reach', () => {
     const { s, scene } = at('cn-gap', 3560, 1344);
     const ev: SimEvent[] = [];

@@ -499,7 +499,13 @@ for (const c of runs) {
   if (only.length && !only.includes(c.room)) continue;
   const full = getRoom(c.room);
   // (Creatures out of the scene itself: a `gone` one the explorer hides can still come back and be pogoed.)
-  const room = { ...full, enemies: [], glades: c.reach.some((x) => x === C || x === G) ? full.glades : [] };
+  const room = {
+    ...full,
+    enemies: [],
+    glades: c.reach.some((x) => x === C || x === G) ? full.glades : [],
+    // (A lock whose key is the lamp: no lamp at all, it relights.)
+    ...(c.lampKey ? { lures: [] } : {}),
+  };
   const s = startState(c, room);
   const r = explore({
     scene: room,

@@ -762,7 +762,8 @@
         "kind": "wick",
         "x": 3700,
         "y": 660,
-        "sets": "cn-first-fling"
+        "sets": "cn-first-fling",
+        "relight": 90
       }
     ],
     "pickups": [],
