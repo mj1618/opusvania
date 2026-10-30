@@ -1,218 +1,166 @@
 # Nine Sols: the first zone, mapped (2026-10-30)
 
-The data is in `area.json`, with the schema from `../BRIEF.md`. The drawings are gitignored under `shots/reference-levels/nine-sols/`:
-- `map.png`: 1 px = 8 of our px, drawn from `area.json` only.
-- `map-{afm,afe,ch,fsp,cth}.png`: crops of `map.png`, one per scene.
-- `terrain-native.png`: the in-game map tiles the terrain was traced from.
-
-**The game files were not available.** I checked `~/Library/Application Support/Steam/steamapps/common/Nine Sols/` at the start and again before finishing. Both times it held only two `mono_crash` logs, with no `.acf` and nothing in `downloading/`. **Everything here is mined data**, and nothing comes from the Unity scenes. The pipeline is ready to swap in real colliders once the install exists.
+The data is in `area.json`, with the schema from `../BRIEF.md`. **Since 2026-10-30 it is read from the game files**
+(Matt's Mac install): how, what is exact and what is still mined is in `EXTRACTED.md`, which also has the five most
+useful findings for a level designer. The drawings are gitignored under `shots/reference-levels/nine-sols/`:
+- `map.png`: 1 px = 8 of our px, drawn from `area.json` only. `map-{afm,afe,ch,fsp,cth}.png`: crops, one per scene.
+- `colliders-{afm,afe,ch,fsp,cth}.png`: each scene's real colliders in Unity units (0.3 px per unit), with the room
+  rects, the designers' camera zones (green), every enemy (pale = spawned by an event), chest, door and console.
+- `terrain-native.png`: the old in-game map tiles the mined version was traced from (superseded).
+- Look references (renders and sprites, never committed): `~/code/opusvania-refs/nine-sols/README.md`.
 
 ## What the area is, and why there
-**Scope.** Five Unity scenes. Their names come from the randomizer's `PortalData.cs`.
+**Scope.** Five Unity scenes (build index in brackets):
 
 | key | Unity scene | name |
 |---|---|---|
-| AFM | `A1_S1_HumanDisposal_Final` | Apeman Facility (Monitoring) |
-| AFE | `A1_S2_ConnectionToElevator_Final` | Apeman Facility (Elevator), including Baichang |
-| CH | `AG_S1_SenateHall` | New Kunlun Central Hall |
-| FSP | `AG_S2` | Four Seasons Pavilion, the hub |
-| CTH | `A2_S6_LogisticCenter_Final` | Central Transport Hub |
+| AFM | `A1_S1_HumanDisposal_Final` (level8) | Apeman Facility (Monitoring) |
+| AFE | `A1_S2_ConnectionToElevator_Final` (level9) | Apeman Facility (Elevator), including Baichang |
+| CH | `AG_S1_SenateHall` (level54) | New Kunlun Central Hall |
+| FSP | `AG_S2_YiBase` (level55) | Four Seasons Pavilion, the hub |
+| CTH | `A2_S6_LogisticCenter_Final` (level15) | Central Transport Hub |
 
-The area runs from the elevator out of Peach Blossom Village to the Anomalous Root Node in CTH, where Lear teaches **Tai-Chi Kick**.
+The area runs from the elevator out of Peach Blossom Village to the Anomalous Root Node in CTH, where Lear teaches
+**Tai-Chi Kick** (the save there links to the scene `AG_Tutorial_Lear_S2_識破JumpKick`).
 
 **Why this boundary:**
-- **Baichang is the zone's boss.** He is the first fight with a boss bar, and he guards the elevator that leaves the zone.
-- **The first new skills fall here.** Mystic Nymph is at about minute 30 and Tai-Chi Kick at about minute 60.
-- **The Kick closes the zone's big loop.** CTH's bottom door opens back into Baichang's arena.
-- **It is the zone's last new reach in the logic.** No other ability opens more of these 5 scenes, except one chest that needs Unbounded Counter, hours later.
-- **The first Sol (General Yingzhao) is a separate zone.** He is 4 more scenes and about 1 h further on (Power Reservoir East, Central and West, then the Radiant Pagoda). Including him would double the area.
+- **Baichang is the zone's boss.** He is the first fight with a boss bar (`NameTag_Giant_Sword`, 1160 HP from his stat
+  asset) and stands at the right end of AFE.
+- **The first new skills fall here.** Mystic Nymph at about minute 30 and Tai-Chi Kick at about minute 60.
+- **The Kick closes the zone's big loop.** CTH's bottom corridor connects to Baichang's arena through the
+  `A1_S2_RightLockCorridar` connection (locked from the AFE side).
+- **It is the zone's last new reach in the logic.** No other ability opens more of these 5 scenes, except one chest
+  that needs Unbounded Counter, hours later.
+- **The first Sol (General Yingzhao) is a separate zone**, 4 more scenes and about 1 h further on.
 
 ## Sources and confidence
 | data | source | confidence |
 |---|---|---|
-| Terrain (air vs solid) | The in-game map, stitched from ninesolsmap.com zoom-15 tiles. DebugModPlus' `MapTeleportModule` shows each scene's map image is linear in world position. | Shapes are good. The map is simplified: no one-way platforms, ropes, grapple points or small ledges. Wall thickness is unknown, so I filled each scene's bounding box as solid. |
-| Scale | My own measurement against screenshots (below) | ±15% |
-| Room graph, gates, which ability opens what | Ixrec's Archipelago randomizer logic (`connections.jsonc`, `locations.jsonc`) | High: maintained and play-tested. I split each scene into rooms myself (39 rooms) along those logic regions. |
-| Chests, lore, nodes, mini-bosses | ninesolsmap `/api/markers`, cross-checked against the randomizer tracker's per-scene map positions | High (±20 map px) |
-| Enemy stats (HP, attack damage, XP) | ninesols.wiki.gg Enemy_Characteristics and the enemy pages | High (datamined on the wiki) |
-| Enemy positions and counts | A research pass placed enemies from walkthrough text (Steam guide 3457329455, intoindiegames) | **Low.** About a third are medium confidence (tied to a landmark), the rest are guesses. The counts in AFE's "bunch of enemies" and the CTH lift ambush are invented to fit the text. |
-| Yi's kit | The randomizer's `VanillaAbilities.cs` / `RemovedAbilities.cs` (vanilla always has Wall Climb, Grapple and Ledge Grab) plus wiki Combat | High |
-| Times | Timestamps from a 100% video run (Steam guide 3268452563) ×1.8 for a first play | Estimate |
+| Terrain: solid, one-way, slopes, climbable walls | files: tilemap CompositeCollider2D on the Solid / OneWay / OneWaySlope / WallRunEnable layers | exact (16-unit tiles; slopes stepped at 1 tile) |
+| Hazards, doors, breakable wall, hidden-path covers, water | files: objects with a `Trap` component, door colliders, `BreakableWall`, `HiddenPathTrigger` | exact |
+| Scale, camera, Yi's body and moves | files: SceneCamera (FOV 68 deg, z -240), PPlayer collider, CatanaStat, MaxRun | exact; jump height derived (see `EXTRACTED.md`) |
+| Enemies: positions, HP, attack, respawn | files: every `MonsterPoolObjectWrapper` with its monster stat asset | exact; names mapped to the wiki's by HP |
+| Chests, key items, saves, consoles, lifts, heal machine | files | exact positions; item names from the mined data or the scene's Chinese names |
+| Room split (39 rooms) | drawn by hand on the collider renders, keeping the mined ids | judgement |
+| Room graph, gates, which ability opens what | Ixrec's Archipelago randomizer logic; open borders between rooms checked against the tiles | high |
+| Scene placement | each scene shifted to the in-game world map (fitted on saves, chests and doors) | +-50 px between scenes; inside a scene exact |
+| Lore entries, NPC names, a few landmarks | mined (ninesolsmap markers, walkthroughs), positions moved into the new frame | +-200 px |
+| Times | a 100% video run x1.8 | estimate |
 
-**Missing (unknowable without the game files):**
-- Unity units and colliders.
-- One-way platforms.
-- Yi's collider, run speed and jump height. Nothing has been datamined, and I couldn't time a video.
-- Contact damage. As far as I know, Nine Sols enemies hurt only with attacks, so I left the field out.
-- Jin values of chests.
-- Exact hazard, door and console positions. These are marked `estimate`.
+**Still missing:** lore (database) entries and NPC identities are not tied to scene objects; contact damage (Nine
+Sols enemies hurt with attacks only, so it is 0); enemy attack values beyond the stat's base attack; the exact walked
+critical-path line (scaled from the mined one).
 
 ## Units
-- **Native unit:** px of the in-game map at ninesolsmap zoom 15 (Unity units are unknown).
-- **Conversion:** **9.6 of our px per map px**, from a view of **200 × 112.5 map px = 1920 × 1080 ours**.
-- **How I measured it:**
-  - **Normal zoom.** In two normal-zoom gameplay screenshots of AF Monitoring, a 46-map-px corridor fills 0.41 of the view height. That gives a view 112 map px tall.
-  - **Cross-check.** In the Baichang screenshot the camera is zoomed out 1.41×: Yi is 0.076 of the view height there, against 0.107 at normal zoom. There the elevator door frame (60 map px) is 0.21 of the view width, which gives 285 map px = 200 × 1.41. ✓
-- **Yi's sprite is 116 px tall in our px** (0.107 of the view height) and about 60 px wide. Our hero is a 40×80 box drawn about 83 px tall, so **Yi is about 1.4× bigger relative to the view**.
-- **Clear height.** The median clear height of the space is 586 px (5.0 Yi, 7.3 of our hero box). The quartiles are 403 and 979 px.
+- **Native unit:** the Unity unit. A tile is 16 units.
+- **Conversion: 3.336 of our px per unit.** The gameplay camera is perspective with a vertical FOV of 68 deg, 240 units
+  in front of the play plane, so it sees 2 x 240 x tan 34 = 323.8 units high, 575.6 wide at 16:9 = 1920 of our px.
+- **Cross-check:** the mined estimate (a view is 200 map px; AFM's 5888 units span 2067 map px) gives 570 units, 1% off.
+- **Yi:** a 10 x 30 unit box = **33 x 100 px** (our hero 40 x 80). Run 150 u/s = **500 px/s** (ours 576). Jump
+  speed 255 u/s held 0.133 s under gravity 830: **~244 px** (ours ~272). A tile is 53 px; a view is 36 x 20 tiles.
+- **Clear height** (floor to ceiling, critical-path rooms): median **480 px = 4.8 Yi = 9 tiles**, quartiles 320 and
+  854 px. The mined guess was 586.
 
-## The first ten minutes, as a player meets them (first-play estimate)
-- **0:00** The elevator drops Yi into the long Monitoring corridor. A parry-and-talisman tutorial prompt appears.
-- **0:30** The first Root Node, 2.2 screen widths from the start.
-- **1:00** The first Blade Trooper stands just right of the node. It is a parry dummy with one telegraphed slash.
-- **2:00** Cell blocks, then a dip with three lasers to dash through.
-  - Back up, a console hack drops a hanging corpse, which holds a key item: the Bloody Crimson Hibiscus.
-- **3:00** A Bolt Warrior, then two grunts below a ledge (drop behind them).
-- **4:00** The east stairs: a Bolt Warrior and a Blade Trooper climbing toward you.
-- **5:00** The Blade Commander: 400 HP and the first unparryable crimson attack. He guards the first Jin chest.
-- **6:00–7:30** Switchbacks down. Troopers, then two Spear Vanguards that roll past to attack from behind.
-- **8:00** A third spearman in front of a laser, with a Bolt Warrior shooting through it.
-  - A console lift makes a shortcut back to the node.
-  - A breakable wall beside it leads to the vent chest.
-- **9:00** A one-way drop into the descent rooms, and a lore console (Surveillance Footage).
-- **10:00** An alarm cutscene, then 5.6 empty screen widths of corridor to AF Elevator's first node.
+## The first ten minutes, as a player meets them (first-play estimate; positions now from the files)
+- **0:00** The elevator drops Yi into the long Monitoring corridor (room `afm-entry`, 6100 px long, 960 tall).
+- **0:30** The first Root Node, 1.4 screen widths from the elevator, between two tutorial Blade Troopers (one spawned
+  by the tutorial).
+- **1:00-3:00** A Bolt Warrior and Blade Trooper in the corridor; the laser dip (3 laser traps) under it; the Bloody
+  Crimson Hibiscus on a console-dropped corpse.
+- **3:00-5:00** The east cells and ladders: 8 enemies (Blade Troopers, Bolt Warriors, 2 hackable trap robots inside
+  hidden tubes), the Blade Commander (400 HP) on the stairs beside the first Jin chest.
+- **5:00-8:00** The lower-east switchbacks (Spear Vanguards, Troopers), then the cliff band back west: a Spear
+  Vanguard ambush on a ledge with two Bolt Warriors, a breakable wall, a shortcut lift up to the corridor, and a small
+  Jin chest in a vent pocket hidden behind a hidden-path cover.
+- **8:00-10:00** The descent rooms (Bolt Warriors on ladders, the key-item drop), then the empty exit corridor to AFE.
 
-**After minute 10:**
-- **10–25:** AF Elevator.
-  - A locked 3-enemy gauntlet in the pagoda hall.
-  - Two chests hidden on a pagoda roof.
-  - Two hacked lifts.
-  - The floating-block hall.
-  - A second node 5 screen widths before Baichang, and a heal machine at his door.
-- **~25:** Baichang (1160 HP). He drops the Stasis Jade.
-- **27:** The elevator up to Central Hall. Two hacked doors and a statue gate are visible from here, all shut.
-- **30:** The Pavilion hub. Mystic Nymph sits in a dead-end room at its far right.
-- **35–42:** Ruyi gives the jades. Lear gives the Fusang Horn (fast travel) and the skill tree.
-- **45:** The Nymph opens Central Hall's lower-right door into CTH.
-- **48:** CTH's great lift: an 8.5-screen-tall shaft and an ambush ride down.
-- **50–58:** A turret and a rope drop, moving platforms, a vent chest, the Root Node.
-- **~60:** The Anomalous Root Node teaches Tai-Chi Kick. It immediately opens a statue puzzle and the bottom corridor, whose one-way door opens into Baichang's arena.
+**After minute 10:** AFE's locked gauntlet (2 placed + 3 spawned), two small chests on the pagoda roof above the
+camera, the middle hall's floating blocks and drones, the west lift shaft with a component chest behind a cover, the
+lower hall's electrified floor, the second Root Node, the heal machine and Baichang (~25). Then Central Hall (no
+enemies on the upper route), the Pavilion (no enemies; Mystic Nymph at the far right, ~30), CTH's 10-screen lift shaft
+ridden through a 16-enemy ambush (~48), the drop, the west wing and the Anomalous Root Node (~60).
 
 ## Measurements
-All numbers come from `area.json`. "Screens" means area / (1920×1080). "Filled" counts only air pixels; "rect" counts room rectangles.
+All numbers come from `area.json` (`tools/reference/mined/nine-sols/extract.py stats`). "Screens" = area / (1920 x 1080).
+"Air" counts only non-solid cells inside the room rects; "box" counts the rects.
 
 **Size**
-- **Total.** 39 rooms in 5 scenes: **106.7 filled screens** (172 rect).
-- **By scene** (filled): AFM 12.7, AFE 25.0, CH 15.2, FSP 24.9 (about 15 of it is open sky above the pavilion), CTH 29.0.
-- **Critical path.** 28 rooms, **82.2 filled screens (77% of the area)**.
-  - Its walked length is **143,500 px = 75 view widths**, plus 6 scene transitions (doors, elevators).
-  - Pace: about **1.4 filled screens per minute**, or **1.25 view widths of path per minute** (first play, estimated 60 min).
+- **Total.** 39 rooms in 5 scenes: **170 box screens, 88 of air** (the mined version: 172 box, 107 "filled").
+- **By scene** (air): AFM 10.9, AFE 21.9, CH 13.7, FSP 15.8 (much of it open sky around the pavilion), CTH 25.6.
+- **Rooms:** median 1.65 air screens (quartiles 1.1 and 2.4); the hub is the largest (11.7). Solid fills 49% of the
+  room boxes.
+- **Critical path.** 28 rooms, 130 box / **70 air screens (80% of the air)**. Walked length about 137,000 px = 71 view
+  widths (the mined line rescaled to the files' scale; not re-traced).
 
 **Shape and connections**
-- **Rooms by shape:** hall 15, corridor 12, shaft 6, setpiece 2, arena 2, hub 1, pocket 1.
-- **Connections per room:** mean **2.54**. 2 rooms have 1, 19 have 2, 13 have 3, 5 have 4.
-- **Dead ends:** 2 rooms. `fsp-east` holds **Mystic Nymph** (the dead end is the ability room); `cth-alcove` holds a Jin chest.
-  - Two more side pockets inside rooms hold chests: the AFM vent and the AFE shaft alcove.
-- **Loops:**
-
-  | loop | walked length | how it closes |
-  |---|---|---|
-  | **Main loop:** Baichang → elevator → Central Hall → CTH → node → bottom corridor → one-way door → Baichang | 48,400 px = **25 view widths** + 1 elevator ride | Closes at about minute 62, right after the Kick |
-  | AFM, around the shortcut lift | 16.8 widths | Opens at about minute 8 |
-  | AFE middle → west → lower | 8.9 widths | Grapple back up |
-  | AFE lower → Baichang → bottom | 8.0 widths | After the Kick |
-  | Central Hall's vents | 9–12 widths | After the Kick |
+- **Rooms by shape:** hall 18, corridor 9, shaft 5, pocket 2, set piece 2, arena 2, hub 1.
+- **Connections per room:** mean **3.0** (2 rooms have 1, 13 have 2, 11 have 3, 10 have 4, 3 have 5-6). Exits inside a
+  scene are the open borders between room rects, checked on the tiles.
+- **Dead ends: 2.** `fsp-east` holds **Mystic Nymph**; `cth-alcove` holds a Jin chest guarded by a Blade Commander
+  inside a hidden-path cover.
+- **Loops:** as in the mined graph (the main loop Baichang -> Central Hall -> CTH -> bottom corridor -> Baichang is
+  about 24 view widths at the files' scale, closing at about minute 62).
 
 **Enemies**
-- **Count.** **47 placed**: 43 met on the first pass, 40 of them in critical-path rooms.
-- **Density.** **0.44 per filled screen** overall, **0.49 on the critical path**. By scene (first pass): AFE 16, AFM 14, CTH 13. CH and FSP have **0 on the main route**.
-- **Kinds:**
+- **Count.** **100**: 71 placed in the scenes, 29 spawned by events (16 in the CTH lift ambush: 12 hackable turrets and
+  4 Skycleavers; 3 + 2 in AFE's gauntlet; 2 tutorial and story spawns).
+- **Density.** **0.42 placed per box screen, 0.81 per air screen** (0.83 on the critical path); 0.59 per box screen
+  with the spawns. The mined version had 47 enemies, 0.27. By scene (placed): AFM 22, AFE 22, CTH 22, CH 5, FSP 0.
+- **18 of 39 rooms have no enemy:** all of the Pavilion, Central Hall's upper route, the exit corridors, the elevator
+  rooms. The densest: the cliff band (5.6 placed per air screen), the east cells (3.3), CTH's west wing (3.2).
+- **Spacing.** Placed enemies stand mostly alone: 46 groups (a group = enemies within 900 px of each other), 32 of
+  them single; mean group 1.5; the median distance to the nearest other enemy is 849 px (0.44 view width).
+- **Kinds (all / placed):**
 
-  | enemy | count |
-  |---|---|
-  | Blade Trooper | 14 |
-  | Bolt Warrior | 7 |
-  | Spear Vanguard | 7 |
-  | Blade Commander | 4 |
-  | Feral Beast | 4 |
-  | Skycleaver | 4 |
-  | turret | 3 |
-  | Maul Corporal | 1 |
-  | Armored Spear Vanguard | 1 |
-  | Baichang | 1 |
-  | Yanren | 1 |
-
-  The difficulty spread (1–5) is 10 / 22 / 8 / 5 / 2.
-- **HP and damage relative to Yi.** Yi has 120 HP; his sword does 20/20/40 per 3-hit combo, so a basic hit is 20.
-
-  | target | HP | sword hits to kill |
+  | enemy (prefab) | HP | count |
   |---|---|---|
-  | Bolt Warrior | 72 | 4 |
-  | Blade Trooper | 136 | 7 |
-  | Spear Vanguard | 160 | 8 |
-  | Blade Commander | 400 | 20 |
-  | Maul Corporal | 800 | 40 |
-  | Baichang | 1160 | 58 |
+  | Bolt Warrior (`GunBoy`) | 72 | 17 / 13 |
+  | Blade Trooper (`Minion`) | 136 | 14 / 11 |
+  | hackable turret (`Turrent_Danger_Bullet`) | 56 | 13 / 1 |
+  | Skycleaver Soldier (`Phoenix_AirDrone Dasher`) | 60 | 10 / 6 |
+  | crawler robot, trap monster (`TrapMonster_Robot_Crawler`) | 60 | 8 / 7 |
+  | Spear Vanguard (`Spearman`) | 160 | 7 / 7 |
+  | exploding air drone (`AirSpider_ReflectAndExplode`) | 56 | 7 / 4 |
+  | Blade Commander (`Elite`, `Sword Elite`) | 400 | 6 / 5 |
+  | broken robots, trap monsters (`TrapMonster_Mutant`, `Mini`) | 60 / 20 | 10 / 9 |
+  | Swift Crossbow Cannon (`AirTurrent`) | 25 | 3 / 3 |
+  | Maul Corporal (`FatGuy`), Spear Vanguard elite, Armored Spear Vanguard | 800, 480, 160 | 1 each |
+  | Baichang, Yanren | 1160, 1300 | 1 each |
 
-  - The median regular enemy has 136 HP (≈1.7 full combos).
-  - **Grunt hits do 20–30 = 17–25% of Yi's HP**: 4–6 hits kill him.
-  - Commander hits do 35 (29%).
-  - Baichang's triple slam is 3×35 = 88% if all three land; his crimson slam is 61 = 51%.
-  - Yi's whole heal budget is 2 pipe charges × 60 = 1 full bar.
-  - Fights are won by parry, then talisman (64–128 per blast), not by chip damage.
+  The mined version's 4 Feral Beasts do not exist in these scenes; the trap robots, drones and turrets were missing.
+  Difficulty spread (1-5): 40 / 42 / 8 / 8 / 2, mean 1.9.
+- **HP and damage relative to Yi** (unchanged; HP now confirmed from the stat assets): Yi has 120 HP and hits for 20;
+  grunts take 4-8 hits and hit for 20-30 (17-25%); the Commander 20 hits; Baichang 58.
 
-**Pickups and saves**
-- **Pickups.** 15 major, 8 minor (Jin chests), 4 lore.
-  - Per filled screen: major 0.14, minor 0.075, lore 0.037.
-  - First pass: **15 pickups in 82 critical screens, 1 per 5.5 screens**. Enemies also drop Jin.
-- **Secrets: 19 hidden things.** 11 are reachable on the first pass, 8 need later abilities or items.
-  - **How they are hidden:**
-    - above the camera on a roof (2);
-    - side alcoves off shafts or vents (4);
-    - behind a breakable wall (1);
-    - a dropped corpse after a hack (1);
-    - behind hacked doors (2);
-    - behind parry-then-hack statues (3);
-    - over a hazard floor (1);
-    - grown on the hub's tree by bringing items (2);
-    - the rest behind ability gates.
-  - **Distance from the critical path:** median 787 px (0.4 view widths) for the first-pass secrets; the maximum is 5,550 px. Over all 19, the median is 1,200 px.
-- **Saves.** 5 Root Nodes, and **none in Central Hall**.
-  - Gaps along the path: **22.7 / 13.2 / 18.4 / 18.3 view widths**, about 1 every 12 minutes.
-  - The last node before Baichang is 5.1 widths from him, and a heal machine stands at his door.
+**Pickups, saves and the rest**
+- **Pickups.** 16 major, 13 minor (Jin chests and bags), 4 lore (mined). Per air screen: major 0.18, minor 0.15.
+- **Secrets: 19 hidden things** (how: the roof above the camera 2, hidden-path covers 4, statues to parry/kick and hack
+  2, a hacked corpse 1, an electrified floor 1, under the floating blocks 1, the tree 2, vents, hacked doors and
+  ability gates the rest). Plus **19
+  hidden-path covers**, foreground masks that look like wall until Yi walks in (see `EXTRACTED.md`).
+- **Saves.** 5 Root Nodes, none in Central Hall. Gaps along the path about 22 / 13 / 18 / 17 view widths (the mined
+  walked gaps rescaled). A heal machine stands at Baichang's door.
+- **Hazards: 37 strips**, 23,100 px long in all (12 view widths), median 320 x 40 px; 19 in critical-path rooms.
+- **One-way platforms: 143** (1.6 per air screen), median 107 px (2 tiles) long. **Climbable walls: 29**, median 534
+  px tall, the tallest 1388.
+- **Breakable props** (bottles, boxes, glass, chairs): 148, 1.7 per air screen. 19 consoles, lifts and statues.
 
-**Gates**
-- **Seen before opened: 10.** Only 4 open within this zone's hour.
+**Travel and the first abilities:** as in the mined analysis (randomizer logic): the start kit reaches 13 of 36
+regions, Mystic Nymph 22, Tai-Chi Kick all 36. The one big vertical is CTH's lift shaft, 10,670 px (9.9 screens) tall.
 
-  | gate | lock | opened |
-  |---|---|---|
-  | Central Hall west door | Nymph | about 15 min after it is seen |
-  | Central Hall door to CTH | Nymph | about 15 min after it is seen |
-  | 2 CTH statues | Kick | about 5 min after they are seen |
-  | Central Hall's Lake Yaochi statue | Kick | next zone |
-  | AFE bottom level | Kick | next zone |
-  | AFE statue chest | Kick + Nymph | next zone |
-  | Yanren's platform | Nymph + Kick | next zone |
-  | Exit to AF Depths | Kick | next zone |
-  | Pavilion tree | items | hours later |
-  | Central Hall turret room | Unbounded Counter | hours later |
-
-**Travel**
-- **Vertical vs horizontal.** Walked travel is **0.26 vertical to horizontal** (31.7k vs 121k px), plus 3 vertical rides between scenes (village elevator, Baichang's elevator, the Pavilion lift).
-- **The one big in-scene vertical** is CTH's 8.5-screen lift shaft, ridden as a set-piece ambush.
-- **Longest stretch with nothing within half a view of the path:** **10,800 px = 5.6 view widths**. It is AFM's exit corridor into AFE, right after the alarm cutscene.
-
-**How the first new abilities change the reachable space** (randomizer logic, the 36 regions and 22 checks of these scenes)
-
-| kit | regions reachable | checks reachable |
-|---|---|---|
-| Start kit (Wall Climb, Grapple, Ledge Grab) | 13 (36%) | 12 |
-| + Mystic Nymph | 22 (61%) | 16 |
-| + Tai-Chi Kick | 36 (100%) | 21 |
-
-- **Tai-Chi Kick adds 14 regions (39% of the zone), 5 checks and the main loop's closing door.** It also opens the routes to 3 neighbouring zones (Lake Yaochi, AF Depths, Power Reservoir), so the zone ends by fanning out.
-- The 22nd check needs Unbounded Counter, hours later.
-
-## 12 most useful facts for an AI building a first area
-1. **Yi is about 0.107 of the view height** (116 px in ours), and the median clear height is **5 Yi tall** (586 px). Nine Sols frames tighter than us; our hero box is 0.074 of the view.
-2. **The first zone is about 107 filled screens and ~60 minutes**, so **1.4 screens and 1.25 view widths of path per minute**. The game spends its time on fights, not distance.
-3. **77% of the area is on the critical path** (28 of 39 rooms). Side content is pockets and alcoves next to the path (median 0.4 view widths away), not side branches.
-4. **0.49 enemies per filled screen on the path** (43 enemies on the first pass). They cluster in the two facility scenes, with **zero** in the hall and the hub, so the hub stays quiet.
-5. **Grunts die in 4–8 hits and hit for 17–25% of the hero's HP**; elites take 20 hits and hit for 29%; the boss has **8.5× a grunt's HP** and one unblockable move worth 51% of the hero's HP.
-6. **Saves are 13–23 view widths apart** (about 12 min). One sits **5 widths before the boss**, with a heal machine at the arena door.
-7. **The boss (Baichang) comes at minute 25 of 60, 58% of the path length** (43 of 75 widths). The rest is the hub, the new abilities and the loop home.
-8. **The first ability sits in the zone's only real dead end** (the Pavilion's far-right room). The dead end *is* the reward.
-9. **Teach the verb, then use it at once.** Tai-Chi Kick opens a statue puzzle 1 screen from where it is taught and the door that closes the **25-width main loop** back to the boss arena, within about 2 minutes.
-10. **10 gates are visible before they open, and only 4 open within the hour.** 2 open in about 15 minutes; the rest promise the next zones.
-11. **Travel is 0.26 vertical to horizontal.** The big verticals are elevators between scenes and one 8.5-screen ambush lift, each a set piece rather than a climb.
-12. **15 first-pass pickups in 82 screens (1 per 5.5)**, mostly Jin chests and crafting components. Secrets are hidden by camera framing (roofs), side alcoves, one breakable wall, and "parry then hack" statues that turn combat into the key.
+## Most useful facts for an AI building a first area
+1. **Yi is 33 x 100 px in a 1920 x 1080 view** (0.093 of the view height; our hero 0.074), runs 500 px/s, jumps ~244
+   px. The median clear height is **4.8 Yi (480 px)**: Nine Sols frames tight, industrial spaces.
+2. **The first zone is 88 air screens (170 of box) and ~60 minutes:** 1.5 air screens a minute.
+3. **80% of the air is on the critical path** (28 of 39 rooms). Side content is pockets, covers and roofs next to it.
+4. **0.81 placed enemies per air screen**, but 18 of 39 rooms have none (the hub and the halls): busy facilities,
+   quiet civic spaces.
+5. **Enemies stand alone**: 32 of 46 groups are single, median 849 px apart. Big numbers come from events: the lift
+   ambush spawns 16, the gauntlet 3.
+6. **Grunts die in 4-8 hits and hit for 17-25%**; the boss has 8.5x a grunt's HP.
+7. **Saves 13-22 view widths apart**, one 5 widths before the boss with a heal machine at the door.
+8. **The first ability sits in the zone's only real dead end** (the Pavilion's far-right room).
+9. **Teach the verb, then use it at once:** Tai-Chi Kick opens statues one screen away and the door home.
+10. **10 gates are visible before they open, only 4 within the hour.**
+11. **Terrain is busy:** 1.6 one-way ledges and 1.7 breakable props per air screen, 37 hazard strips, 29 climb walls.
+12. **19 hidden-path covers**: the zone hides space more than it hides items; 5 pickups lie under them, and 15 of the 19 are in critical-path rooms.
