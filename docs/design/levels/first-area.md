@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v3, 2026-10-30)
+# The Canopy: a first area built to the reference numbers (v4, 2026-10-30)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -61,22 +61,62 @@ wood kit paints as bulk. v3 answers review round 2 (`reviews/canopy-r2.md`):
  | webs (orb web) -- elder (moonDrop, chimney; plug into the well)
 ```
 
+## v4: the level side of review round 3 (`reviews/canopy-r3.md`, 5.5/10)
+Bots find bugs; they are not the difficulty bar. v3 had flattened every climb to one clean face so the explorer
+could prove it; v4 puts the moves back and teaches the bots (the explorer's `zig` macros, the human bots'
+`zigLine`), laying every thorn strip on the kicks' measured line (`tools/levels/canopy-probe.ts`).
+- **#1, four climbs as set pieces.**
+  - *The well*: leg 1 (the claws' first use, the wide shaft to the giant's mouth) stays clean. Legs 2 and 3 are a
+    384 px chimney up from the mouth's floor, thorns on alternate faces (five strips): she must kick across
+    (W 2937, E 2714, W 2491, E 2269 onto the landing; then E, E, W, E, W over the top). A lampwing keeps the landing
+    (a fight at a rest), and a rotten wall at the landing's back hides a moon shard (only a climber stands there).
+  - *The Elder* (the rot branch's climax): the whole 2,368 px chimney with thorns on alternate faces (six strips),
+    the rest kept, a heartwood **plug** across the chimney over the passage to the well, cut with up cuts from
+    under it while kicking; a moon shard at the top.
+  - *The Spire*: thorns on the wide chimney's west face under the lamp (one face is no longer the way), and over
+    the nook's passage the chimney narrows to 384: out from under the passage's lip and up by kicks across through
+    the hawker's orbit (E 650, W 430, E 210), thorns on alternate faces.
+  - *The way out*: the clifftop raised to 384 (a 704 px chimney, a higher glide to the door), the chimney 384 wide,
+    a rotten plug across it at 704 cut from a cling under it, thorns on the east face under it and on alternate
+    faces above. The door-oak's return limb rose to 48 (out of a jump's reach from the higher lip).
+- **#5, moons and the reveal.** Moons in view px (hub 1500,300; fork 1650,380; out 1450,360 r 200). A zoom 0.85
+  camera zone over the valley; three lamps down in the valley on the thorns' far side (the false lights, real in
+  the sim). The crown's first shot stop on its first limb.
+- **#6, the den.** The balcony's lip opens into the arena (v3's bitten corner sealed it: a softlock found on the
+  video, now a `place:floor` proof). The escape ledges are solid root shelves (drawn; their undersides clear the
+  boss's back). A lamp over the taproot that the old burrback's phase 3 puts out (`snuffs`, new sim field).
+  Not done: the 96 px centre hump (a burrback cannot step: it would wall the boss into one half; needs a sim
+  step-up first) and the corridor where it is seen asleep (the balcony already shows the whole arena).
+- **#7, the peak and the cast.** The Grove pit is a gated wave: landing in the pit wakes two juveniles and a
+  dangler (seven creatures), and the way east is a root gate that opens when the last floor creature dies (a
+  `sets` flag shared by a wave: new sim rule). Danglers replace the trunk's tier-2 lampwing; an ant trail crosses
+  the tunnel; `hawk-kin` and `hawk-far` are gone.
+- **#8, wayfinding.** `stone-west` beside the claws at the well's foot (the limbs' niche keeps a great); the fork's
+  glide shelf is thick and sheer underneath, its great under a leaf cover; the hub's secret moved into a root clump
+  hung over the east limb, its rotten wall high on a claw face (claws first: the giant's wall is the first break);
+  a save at the bower's arrival.
+- **#10, edges and leftovers.** Enclosed rooms are `roof: true` (the top edge solid but for `n` exits: the tunnel's
+  standable top and the flight out over a wall are gone). Moon shards (three a light) replace the two moonDrops:
+  the well's niche, the Elder's top, the larder. The fork's cellar panel is now a rotten wall in a root knoll's face.
+  Hoards cut to 2-3 glints (minors 82 -> 58). Orchestrator: the giant's seed now sits behind the teaching wall (in a
+  chamber over the drop), the well's ambush lampwing hangs low enough to see her.
+
 ## Measured (tools/reference/metrics.ts, against the references)
 
-| metric | HK | Ori | Nine Sols | Canopy v2 | **Canopy v3** |
-|---|---|---|---|---|---|
-| rooms | 48 | 22 | 39 | 24 | **27** |
-| screens | 329 | 88 | 172 | 60 | **83** |
-| rooms on the critical path | 25% | 77% | 72% | 58% | **52%** (14) |
-| solid share of the room boxes | 0.35 | 0.5 | (traced) | 0.43 | **0.51** |
-| enemies per screen | 0.31 | 0.18 | 0.27 | 0.58 | **0.43** (every ant counts) |
-| enemy kinds | 30 | 9 | 11 | 6 | **9** (+ web, weaver, carrier) |
-| majors | 23 | 21 | 15 | 25 | **28** |
-| minor pickups | 6 | 10 | 8 | 193 | **82** |
-| saves | 8 | 2 | 5 | 5 | **4** |
-| hazard runs | 0 | 6 | 5 | 29 | **25** |
-| screens with nothing in them | 65% | 63% | 66% | 35% | **57%** |
-| longest run of empty screens | 15 | 6 | 9 | 5 | **8** |
+| metric | HK | Ori | Nine Sols | Canopy v2 | Canopy v3 | **Canopy v4** |
+|---|---|---|---|---|---|---|
+| rooms | 48 | 22 | 39 | 24 | 27 | **27** |
+| screens | 329 | 88 | 172 | 60 | 83 | **83** |
+| rooms on the critical path | 25% | 77% | 72% | 58% | 52% | **52%** (14) |
+| solid share of the room boxes | 0.35 | 0.5 | (traced) | 0.43 | 0.51 | **0.51** |
+| enemies per screen | 0.31 | 0.18 | 0.27 | 0.58 | 0.43 | **0.49** (41: the wave, the tunnel's ants) |
+| enemy kinds | 30 | 9 | 11 | 6 | 9 | **9** (the path now meets the dangler too) |
+| majors | 23 | 21 | 15 | 25 | 28 | **31** (three moon shards) |
+| minor pickups | 6 | 10 | 8 | 193 | 82 | **58** |
+| saves | 8 | 2 | 5 | 5 | 4 | **5** (the bower) |
+| hazard runs | 0 | 6 | 5 | 29 | 25 | **37** (the chimneys' strips) |
+| screens with nothing in them | 65% | 63% | 66% | 35% | 57% | **53%** |
+| longest run of empty screens | 15 | 6 | 9 | 5 | 8 | **8** |
 
 Rooms all at least 2560 x 1440; the world's rects share edges (no holes between rooms; one notch under the burrow
 opens to the outside). Secrets: the hub's bank wall (heart moth-stone), the giant's rot panel (the rot branch), the
@@ -86,37 +126,42 @@ and its foot wall (the hollow root), the bower's kin wall, the gap's roost (the 
 out's ledge wall. Majors: two moonDrops (the two branch ends), five moth-stones, the keen blade, long breath, night
 eyes, quick wings, three seeds, the two abilities.
 
-## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~2 min)
-50 claims hold: every exit and find of every room is reachable with the kit stated, and the locks hold without
-their key (the hub's high block and door, the trunk's one-way tiers, the well without claws, the fork's claw face
-and its glide shelf, the Spire without claws, the far limb without the glide, the tunnel's pit and the way out's
-door without the glide, the den's balcony once down, the next area's door, the larder and the Elder's top without
-claws, the shortcut and the trapdoor from their shut side). The world check passes (claws, then glide; no softlock).
+## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~25 min since r4)
+57 claims hold: every exit and find of every room is reachable with the kit stated, and the locks hold without
+their key (as v3, plus r4's: the chimneys only by kicks across (the explorer's `zig` macros: no single face is a
+ladder), the Elder's and the way out's plugs cut from under them, the hub's clump only with the claws, the giant's
+seed only through its wall (`cuts: false`), the Grove's gate only once the pit is clear, the den's balcony reaching
+the arena floor and not climbable back (`place:` claims), the giant's tier 3 back up with the claws). r4 counts bark
+cuts in the search's keys (`barkHp`), which made it ~10x slower. The world check passes (claws, then glide).
 
-## Played by the human-like bots (playtest-reports/canopy-r3)
-`npm run humanplay -- run --world canopy --skills casual,average,skilled --seeds 1` (25 min, give up after 180 s
-without progress), on the final build:
+## Played by the human-like bots (r4: playtest-reports/canopy-r4, canopy-r4-fork)
+`npm run humanplay -- run --world canopy --skills casual,average,skilled --seeds 1 --no-render --minutes 25`
+(give up after 180 s without progress), on 07d894b; then the same from the fork with the claws (`--from cn-fork
+--abilities wallJump`, review r3's "start the bots at the fork"):
 
-| bot | rooms | claws at | how far on the critical path | where it stopped |
-|---|---|---|---|---|
-| casual | 8 / 27 | 3:07 | hatch, hub, trunk, well (claws) | the rot branch and the well: never climbed the well's west face |
-| average | 9 / 27 | 3:40 | ... well, limbs | back down into the rot branch (crawl, web, Elder), lost there |
-| skilled | 7 / 27 | 1:55 | hatch, hub, trunk, well, limbs, hub (high), fork | under the fork's glide-only shelf (it can see the great glint) |
+| bot | rooms | claws at | where it stopped |
+|---|---|---|---|
+| casual | 6 / 27 | 2:52 | well <-> rot <-> Elder: two looks at the chimney, thorns, back down |
+| average | 7 / 27 | - | down the rot panel into the rot branch (crawl, web, Elder) without the claws, lost there |
+| skilled | 6 / 27 | 2:54 | as the casual: up leg 1 (the east face) many times, two or three tries at the chimney |
+| fork: casual | 1 | (given) | the fork's knoll and stairs for 5 min |
+| fork: average | 3 | (given) | fork -> hub -> trunk and back (a creature-pogo out of the giant's hall) |
+| fork: skilled | 3 | (given) | fork -> hub -> trunk -> hub |
 
-v2's bots reached 4 rooms and went east from the hub (none found the west); all three v3 bots go west first and take
-the claws. What the runs fixed on the way: thorns where she lands in the giant's hall and between the rot hall and
-the claws (returns that sent her back to the ledge above, every time), the Elder's thin shelves, cross-chimney moves
-(the well and the Elder now have one clean face from floor to top), the shaft's lampwing knocking her off the only
-climb, the hollow's floor cut by the shaft's mouth, the limbs' floor between thorns with no way up (a stump that
-refused the claws, the second limb in its kick's reach, thorns at the tall trunk's foot).
+What the runs found and r4 fixed on the way (two earlier runs): the well's leg 1 had no reachable face once its
+west face refused the claws (a root curtain carries the east face down), the west face under the mouth's roof was a
+kick-loop (it refuses the claws now), two danglers over tier 2's thorns faded the casual bot 29 times (one, over
+clean floor), the rot hall's drop shaft read as a climb to a panel shut from below (its faces refuse the claws),
+and the giant's tier 3 was a pocket (its shaft started 448 px over the floor). Not fixed: the bots give the chimney
+two or three tries and leave (a thorn there returns them to the well's bottom when they never stood on the mouth's
+floor), none climbed the fork's claw face in 20 min, and the rot branch still swallows the no-claws bot.
 
-## What is still weak (for round 4)
-- **The bots stop at a third of the critical path.** They detour into the rot branch for most of their time (it is
-  the nearest unknown after the claws) and do not come back up; the fork's glide shelf holds the skilled bot. The
-  cross-chimney move (kick across 384-640 px) is beyond them, so every critical climb is now one clean face: the
-  "twist" on the well is thorns on the other face, not a change of wall.
-- **Masses still read as rectangles** at a distance: bitten outlines help (map), but tall wall faces and stacked burls
-  paint as slabs and terraces (render's side, noted to it).
-- **The east half is unplayed by bots** (Grove, Spire, bower, gap, deep): proven by the explorer only.
-- **Enemies 0.43 a screen** with every ant counted; the branches' creatures (web, ants) are untested in play.
-- **No dash gaps or later locks** yet; two moonDrops is still generous for one area.
+## What is still weak (for round 5)
+- **The bots still stop at a third**: they take the claws and loop the west (well, rot, Elder); the human bot's
+  chimney line works in probes but the planner gives it few tries, and a thorn in the chimney can return a climber
+  who never stood on the mouth's floor to the well's bottom (1,700 px down): a person would hate that too.
+- **One phase only**: a chimney's alternate thorns suit one first face (the well: jump at the west face first). Kicks
+  across and kicks up one face rise nearly the same (222 vs 235 px), so the strips must pick the phase.
+- **The east half is still unplayed by any bot** (the fork's claw face was never tried in 20 min from the fork).
+- **The den** has no centre hump (a burrback cannot step: it would wall the boss in half) and no asleep reveal.
+- **The Grove's wave** is untested by a bot; the gate needs every floor creature dead, flyers spared.
