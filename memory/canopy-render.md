@@ -8,7 +8,8 @@ docs/design/levels/reviews/canopy-r2.md. Shots: `shots/canopy-r3/` (21:9 in `sho
   `BEETLE_SCALE`), `moth` (lampwing art), `spider` (render/lantern/creatures.ts, needs `art.pieces` or Lanternroot),
   `greybox`. The enemy renderer dispatches on it. **Before r3 the wood kit drew only burrbacks and lampwings**: the
   old burrback, the juveniles and the hawkers in the Canopy were simulated and invisible.
-- `tests/unit/creature-renderers.test.ts` walks every room in `content/` and fails on a kind nothing draws. A new kind
+- `tests/unit/creature-renderers.test.ts` walks every room in `content/` and fails on a kind nothing draws (it caught
+  the orb `weaver` the day it was placed in `cn-webs`: now `orbWeaver` in render/lantern/creatures.ts). A new kind
   needs a line in `creatureArt` and a painter.
 
 ## The old burrback (the den's boss)

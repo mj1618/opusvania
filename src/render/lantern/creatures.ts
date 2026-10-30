@@ -359,10 +359,32 @@ export class Creatures {
       const ey = e.y + e.h / 2;
       if (Math.abs(ex - cam.x) > hw || Math.abs(ey - cam.y) > hh) continue;
       if (e.kind === 'dangler') this.dangler(i, e, dt, clock, sim, back, glow);
+      else if (e.kind === 'weaver') this.orbWeaver(e, clock, back, glow, i);
       else if ((e.kind as string) === 'gloamweaver') this.gloam(e, clock, sim, back, front, glow);
       else if (e.kind === 'weaverBoss') this.weaver(e, clock, sim, back, front, glow);
       else if ((e.kind as string) === 'mantis') this.mantis.draw(e, dt, clock, sim, back, front, glow);
     }
+  }
+
+  /**
+   * The orb web's weaver (memory/creatures.md): a spider on its web, head down at the hub, legs out on the strands.
+   * Running along them its legs walk; its count before the bite kindles its eyes; biting it lunges, splayed.
+   */
+  private orbWeaver(e: EnemyState, clock: number, g: Graphics, glow: GlowPool, i: number): void {
+    const ex = e.x + e.w / 2;
+    const ey = e.y + e.h / 2;
+    const s = 13;
+    const pose = P;
+    const m = e.mode;
+    pose.flip = m === 'dead' ? 1 : 0;
+    pose.walk = m === 'run' || m === 'back' ? clock * 14 : 0;
+    pose.spread = m === 'bite' ? 0.95 : m === 'windup' ? 0.75 : 0.6 + 0.04 * Math.sin(clock * 1.7 + i);
+    pose.rot = m === 'bite' ? (e.facing || 1) * 0.5 : 0;
+    pose.tell =
+      m === 'windup' ? Math.min(1, e.modeFrames / Math.max(1, e.modeFrames + e.timer)) : m === 'bite' ? 1 : 0;
+    pose.dark = 0;
+    pose.ink = 0;
+    spider(g, glow, ex, ey, s, pose, 0.1, clock, i + 11);
   }
 
   private dangler(

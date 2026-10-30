@@ -5,8 +5,8 @@
  *
  * - `beetle`: the burrback's rig (render/enemies/burrback.ts), scaled per kind about its feet.
  * - `moth`: the lampwing's art (render/enemies/lampwing.ts).
- * - `spider`: Lanternroot's pieces (render/lantern/creatures.ts: danglers, webs, the Gloamweaver, the Weaver, the
- *   mantis), built in a Lanternroot room or a wood room with `art.pieces`.
+ * - `spider`: Lanternroot's pieces (render/lantern/creatures.ts: danglers, webs and their weavers, the Gloamweaver,
+ *   the Weaver, the mantis), built in a Lanternroot room or a wood room with `art.pieces`.
  * - Greybox rooms draw every kind as its box (render/greybox/creatures.ts).
  */
 import type { EnemyKind } from '../../sim/scene';
@@ -28,7 +28,14 @@ export const BEETLE_SCALE: Partial<Record<EnemyKind, number>> = {
   carrier: 0.5,
 };
 
-const SPIDER_KINDS: ReadonlySet<string> = new Set(['dangler', 'web', 'gloamweaver', 'weaverBoss', 'mantis']);
+const SPIDER_KINDS: ReadonlySet<string> = new Set([
+  'dangler',
+  'web',
+  'weaver',
+  'gloamweaver',
+  'weaverBoss',
+  'mantis',
+]);
 
 /** The renderer that draws `kind` in a room of this look, or null if nothing would draw it. */
 export function creatureArt(kind: EnemyKind, look: LookKey): CreatureArt | null {
