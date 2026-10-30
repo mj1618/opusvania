@@ -5,6 +5,9 @@
  * `place:<id>` a place of the room's marks she stands at), and
  * each lock must hold: with the kit short of the key, the locked thing must NOT be reached. Lamps spent (traversal
  * never needs one). Glades are left out of a room unless the claim reaches for their ability.
+ * Flings (review r6 #4: five fling lines): a claim with `lit` keeps every warm lamp burning (the explorer flings off
+ * them, chains and all eight aims, `keepLamps`); and every lock claim in a room with lamps is run a second time lit,
+ * so no fling line opens a lock.
  */
 import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
@@ -32,6 +35,8 @@ interface Claim {
   cuts?: false;
   /** Search budget (nodes). */
   max?: number;
+  /** The room's warm lamps burn (flings on). */
+  lit?: boolean;
 }
 
 const C = 'wallJump';
@@ -43,7 +48,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-hatch',
     from: [4950, 1320],
     kit: [],
-    reach: ['drop', 'cn-hatch:pocket-1', 'cn-hatch:pocket-2', 'cn-hatch:pocket-3'],
+    reach: ['drop', 'place:pocket'],
   },
   // The Crossing (r6: 8,000 wide, the old hub east of x 3520): from the landing the low west and the fork are open;
   // the high limb, the clump's and the block's secrets (claws), the glide shelf and the door (three seeds) are shut.
@@ -52,22 +57,14 @@ const CLAIMS: Claim[] = [
     from: [6160, 1152],
     kit: [],
     reach: ['trunk', 'fork', 'cn-hub:p-crossing', 'place:clearing'],
-    not: [
-      'limbs',
-      'door',
-      'cn-hub:stone-heart',
-      'cn-hub:bank-great',
-      'cn-hub:high-great',
-      'cn-hub:shelf-great',
-      'vent',
-    ],
+    not: ['limbs', 'door', 'cn-hub:stone-heart', 'cn-hub:shard-high', 'cn-hub:shelf-great', 'vent'],
     max: 9000,
   },
   {
     room: 'cn-hub',
     from: [6160, 1152],
     kit: [C],
-    reach: ['limbs', 'vent', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:bank-great', 'cn-hub:high-great'],
+    reach: ['limbs', 'vent', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:shard-high', 'place:trader'],
     not: ['door', 'cn-hub:shelf-great'],
     max: 12000,
   },
@@ -103,6 +100,9 @@ const CLAIMS: Claim[] = [
   { room: 'cn-trunk', from: [600, 1664], kit: [], reach: ['well'], not: ['hub', 'rot'] },
   // (Back in from the well with the claws: up the tiers to the hall and out to the Crossing.)
   { room: 'cn-trunk', from: [600, 1664], kit: [C], reach: ['well', 'rot', 'place:t2', 'place:t1', 'hub'] },
+  // (r7, the fling line: the drop shaft's lamp throws her from tier 2 back up into the wall's chamber and on to tier 1;
+  // the hall's way out to the Crossing stays the claws'.)
+  { room: 'cn-trunk', from: [800, 1024], kit: [], lit: true, reach: ['place:t1'], not: ['hub', 'rot'] },
   // The well: the bottom is a start (r6): without the claws a pit with the claws in it (the rot hall's door and the
   // Elder's open only from their own side); with them, the one way out is up leg 1 to the mouth's save and stone.
   { room: 'cn-well', from: [1700, 4928], kit: [], reach: ['wallJump'] },
@@ -141,12 +141,38 @@ const CLAIMS: Claim[] = [
     room: 'cn-well',
     from: [2400, 3200],
     kit: [C],
-    reach: ['limbs', 'place:mid', 'cn-well:shard-well', 'cn-well:stone-west'],
+    reach: [
+      'limbs',
+      'place:mid',
+      'place:rest',
+      'cn-well:shard-well',
+      'cn-well:stone-west',
+      'cn-well:p-hollow',
+      'cn-well-ambush',
+    ],
     not: ['rot'],
     max: 9000,
   },
+  // (r7: the ambush hollow's lamp is the way up to the east shelf from its floor.)
+  {
+    room: 'cn-well',
+    from: [600, 1152],
+    kit: [C],
+    lit: true,
+    reach: ['limbs', 'cn-well:p-hollow'],
+    max: 9000,
+  },
   // The upper limbs: both ways with the claws, the niche.
-  { room: 'cn-limbs', from: [200, 768], kit: [C], reach: ['hub', 'well', 'vent', 'cn-limbs:niche-great'] },
+  { room: 'cn-limbs', from: [200, 768], kit: [C], reach: ['hub', 'well', 'vent', 'cn-limbs:niche-1'] },
+  // (r7, the high line: off the first limb's end onto the first lamp, up off the second into the niche.)
+  {
+    room: 'cn-limbs',
+    from: [200, 768],
+    kit: [],
+    lit: true,
+    reach: ['cn-limbs:niche-1', 'place:niche'],
+    max: 9000,
+  },
   // (r6: the covered vent from the floor into the hub's chamber, and back up to the high exit.)
   { room: 'cn-limbs', from: [2448, 1280], kit: [C], reach: ['vent', 'hub'] },
   { room: 'cn-limbs', from: [3000, 576], kit: [C], reach: ['well'] },
@@ -156,7 +182,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-rot',
     from: [1500, 1472],
     kit: [],
-    reach: ['well', 'crawl', 'cn-rot:cache-great'],
+    reach: ['well', 'crawl'],
     not: ['trunk'],
   },
   { room: 'cn-crawl', from: [960, 160], kit: [], reach: ['rot', 'webs'] },
@@ -172,11 +198,11 @@ const CLAIMS: Claim[] = [
     room: 'cn-fork',
     from: [400, 1344],
     kit: [],
-    reach: ['hub', 'cellar', 'cn-fork:stone-east', 'cn-fork:stone-great'],
-    not: ['grove', 'cn-fork:shelf-great'],
+    reach: ['hub', 'cellar', 'cn-fork:stone-east'],
+    not: ['grove', 'cn-fork:shelf-1'],
   },
-  { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'], not: ['cn-fork:shelf-great'] },
-  { room: 'cn-fork', from: [3000, 576], kit: [C, G], reach: ['cn-fork:shelf-great'] },
+  { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'], not: ['cn-fork:shelf-1'] },
+  { room: 'cn-fork', from: [3000, 576], kit: [C, G], reach: ['cn-fork:shelf-1'] },
   // The cellar branch: there and back without the claws; the larder needs them; the tunnel's shortcut and the
   // trapdoor open from below only.
   { room: 'cn-cellar', from: [480, 128], kit: [], reach: ['fork', 'galleries'], not: ['tunnel'] },
@@ -185,7 +211,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-galleries',
     from: [200, 704],
     kit: [],
-    reach: ['cellar', 'cn-galleries:nest-great'],
+    reach: ['cellar', 'cn-galleries:nest-1'],
     not: ['larder'],
   },
   { room: 'cn-galleries', from: [200, 704], kit: [C], reach: ['larder'] },
@@ -202,28 +228,49 @@ const CLAIMS: Claim[] = [
       'fork',
       'cn-grove:seed-grove',
       'cn-grove:keen-hollow',
-      'cn-grove:pit-great',
+      'cn-grove:shard-grove',
       'cn-grove-wave',
     ],
   },
+  // (r7: the crown's seed is on the east limb, over the arena: reached once the wave is down and the gates are open.)
   {
     room: 'cn-grove',
     from: [300, 576],
     kit: [C, G],
-    reach: ['fork', 'cn-grove:seed-grove', 'cn-grove-wave'],
-    not: ['spire'],
+    reach: ['fork', 'cn-grove:keen-hollow', 'cn-grove-wave'],
+    not: ['spire', 'cn-grove:seed-grove'],
   },
   // (Fallen into the pit, the caps throw her back up to the tiers.)
   { room: 'cn-grove', from: [1800, 1600], kit: [C], flags: ['cn-grove-clear'], reach: ['fork', 'spire'] },
-  // The arena (r6): in the pit with the wave on, both doors hold until it is down; the room stays open inside.
+  // The arena (r7, review r6 #6: the pit, not the room): in the pit with the wave on, the doors and the two root
+  // gates over the pit's openings hold until it is down: the tiers, the crown and the save are out of reach (with
+  // the claws, and with the pit's lamps burning: no fling out either).
   {
     room: 'cn-grove',
     from: [1800, 1600],
     kit: [C],
     flags: ['cn-grove-wave'],
-    reach: ['cn-grove:seed-grove', 'cn-grove:keen-hollow'],
+    reach: ['place:pit', 'place:east'],
     // (The save is outside the west door: a fade re-arms the arena and she re-forms there.)
-    not: ['fork', 'spire', 'cn-grove:p-grove'],
+    not: [
+      'fork',
+      'spire',
+      'cn-grove:p-grove',
+      'cn-grove:seed-grove',
+      'cn-grove:keen-hollow',
+      'place:crown',
+      'place:crown-w',
+      'place:mid',
+    ],
+  },
+  // (Cleared, the gates are open: the pit's lamps and the caps are a way back up to the tiers.)
+  {
+    room: 'cn-grove',
+    from: [1800, 1600],
+    kit: [],
+    lit: true,
+    flags: ['cn-grove-wave', 'cn-grove-clear'],
+    reach: ['place:mid', 'spire'],
   },
   { room: 'cn-spire', from: [300, 1472], kit: [C], reach: ['grove'] },
   // The Spire: the climb to the bower and the nook; the hollow root behind the foot's wall.
@@ -243,7 +290,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-bower',
     from: [400, 704],
     kit: [C, G],
-    reach: ['gap', 'crown', 'spire', 'cn-bower:kin-great', 'cn-bower:kin-great-2', 'place:chamber'],
+    reach: ['gap', 'crown', 'spire', 'cn-bower:shard-kin', 'place:chamber'],
   },
   { room: 'cn-crown', from: [1400, 1792], kit: [C], reach: ['bower', 'glide'] },
   { room: 'cn-attic', from: [200, 1184], kit: [], reach: ['bower', 'cn-attic:breath-hollow'] },
@@ -257,21 +304,41 @@ const CLAIMS: Claim[] = [
     not: ['hub', 'cn-gap:seed-far'],
   },
   { room: 'cn-gap', from: [4000, 1344], kit: [C, G], reach: ['hub', 'cn-gap:seed-far'] },
+  // (r7, the gap's fling line: off the shelf's lip into the roost's mouth, or down the chain to the pod garden; never
+  // the far limb, which stays the glide's.)
+  {
+    room: 'cn-gap',
+    from: [4000, 1344],
+    kit: [C],
+    lit: true,
+    reach: ['place:roost', 'cn-gap:roost-1', 'place:floor', 'fork', 'bower'],
+    not: ['hub', 'cn-gap:seed-far', 'place:far'],
+    max: 9000,
+  },
   { room: 'cn-sky', from: [1248, 960], kit: [C], reach: ['gap', 'cn-sky:eyes-hollow'] },
   // Deep: the tunnel (back up the door's shaft with the claws; the pit only with the glide; the shortcut to the
   // cellar from its block), the burrow, the den (the gate opens on the old burrback's death), the way out (the
   // door's ledge only gliding off the cliff; back by the door-oak).
   {
     room: 'cn-tunnel',
-    from: [1920, 1856],
+    from: [5440, 1856],
     kit: [C, G],
     reach: ['hub', 'den', 'burrow', 'cellar'],
     max: 9000,
   },
-  { room: 'cn-tunnel', from: [1920, 1856], kit: [C], reach: ['hub', 'burrow'], not: ['den', 'cellar'] },
+  // (r7: the west hall grown under the hub, over its bramble run to the pile at its end and back.)
+  {
+    room: 'cn-tunnel',
+    from: [5440, 1856],
+    kit: [C],
+    reach: ['hub', 'burrow', 'place:pile', 'cn-tunnel:pile-1'],
+    not: ['den', 'cellar'],
+    max: 9000,
+  },
+  { room: 'cn-tunnel', from: [800, 1856], kit: [], reach: ['place:floor'], max: 9000 },
   // (r6: the covered tube over the pit is the clawed way back west, never the way east.)
-  { room: 'cn-tunnel', from: [3900, 1856], kit: [C], reach: ['place:tube', 'hub'], max: 9000 },
-  { room: 'cn-burrow', from: [860, 1216], kit: [C], reach: ['tunnel', 'cn-burrow:stone-deep'] },
+  { room: 'cn-tunnel', from: [7420, 1856], kit: [C], reach: ['place:tube', 'hub'], max: 9000 },
+  { room: 'cn-burrow', from: [4380, 1216], kit: [C], reach: ['tunnel', 'cn-burrow:stone-deep'] },
   // (The balcony's lip reaches the arena floor: v3's bitten corner sealed it, a softlock only the video found.)
   {
     room: 'cn-den',
@@ -339,12 +406,13 @@ function startState(c: Claim, room: ReturnType<typeof getRoom>): GameState {
   // A placed player carries the tuning's double jump until she lands, whatever she owns (createPlayer): a free air
   // jump over every lock. A player who walked here has none (memory/canopy.md).
   if (!c.kit.includes('doubleJump')) s.player.dj = 0;
-  (room.lures ?? []).forEach((l, k) => {
-    if (l.kind === 'wick' || l.kind === 'lantern') {
-      s.lures.hp[k] = 0;
-      s.lures.out[k] = 1;
-    }
-  });
+  if (!c.lit)
+    (room.lures ?? []).forEach((l, k) => {
+      if (l.kind === 'wick' || l.kind === 'lantern') {
+        s.lures.hp[k] = 0;
+        s.lures.out[k] = 1;
+      }
+    });
   return s;
 }
 
@@ -382,7 +450,13 @@ function asciiMap(room: ReturnType<typeof getRoom>, states: GameState[]): string
 const only = process.argv.slice(2);
 let bad = 0;
 const t0 = Date.now();
-for (const c of CLAIMS) {
+// (Every lock in a room with warm lamps, again with them burning: no fling line opens a lock.)
+const hasWick = (id: string) =>
+  (getRoom(id).lures ?? []).some((l) => l.kind === 'wick' && !(l as { after?: string }).after);
+const runs = CLAIMS.flatMap((c) =>
+  c.not?.length && !c.lit && hasWick(c.room) ? [c, { ...c, lit: true }] : [c],
+);
+for (const c of runs) {
   if (only.length && !only.includes(c.room)) continue;
   const full = getRoom(c.room);
   // (Creatures out of the scene itself: a `gone` one the explorer hides can still come back and be pogoed.)
@@ -394,7 +468,7 @@ for (const c of CLAIMS) {
     start: [s],
     world: W,
     maxNodes: c.max ?? 6000,
-    keepLamps: false,
+    keepLamps: c.lit === true,
     pogo: c.cuts !== false,
     more: [
       ...glideClimbMacros(),
@@ -428,7 +502,7 @@ for (const c of CLAIMS) {
   const ok = !missing.length && !leaked.length;
   if (!ok) bad++;
   console.log(
-    `${ok ? 'ok  ' : 'FAIL'} ${c.room} (${c.from.join(', ')}) [${c.kit.join(',') || 'none'}]: ${r.nodes.size} nodes${r.truncated ? ' (truncated)' : ''}` +
+    `${ok ? 'ok  ' : 'FAIL'} ${c.room} (${c.from.join(', ')}) [${c.kit.join(',') || 'none'}]${c.lit ? ' lit' : ''}: ${r.nodes.size} nodes${r.truncated ? ' (truncated)' : ''}` +
       (missing.length ? `; missing ${missing.join(' ')}` : '') +
       (leaked.length ? `; LEAKS ${leaked.join(' ')}` : ''),
   );

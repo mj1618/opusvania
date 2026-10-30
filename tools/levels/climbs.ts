@@ -8,7 +8,11 @@
  *
  * `tests/unit/canopy-climbs.test.ts` holds every required climb to: passes at delays 0, 6 and 10 from three start x
  * 64 px apart, with every thorn strip grown 64 px at both ends (the margin), and fails with one face only.
- * CLI: `npx tsx tools/levels/climbs.ts [climb ...] [--margin 64] [--delays 0,6,10]` prints the table.
+ * CLI: `npx tsx tools/levels/climbs.ts [climb ...] [--margin 64] [--delays 0,6,10] [--creatures]` prints the table.
+ *
+ * With the creatures in (review r6 #3: `climbScene` stripped them, and leg 3's lampwing turned out a toll in 30 of 36
+ * runs): `runClimb(..., { creatures: true })` keeps the room's creatures, plays on through a hit (the knock may undo the
+ * climb) and counts them (`hits`) and what she killed (`kills`). `CREATURE_CLIMBS` are the plans held that way.
  */
 import { getRoom } from '../../src/scene/index';
 import type { Room } from '../../src/scene/room';
@@ -53,6 +57,12 @@ export interface Plan {
   delays?: number[];
   /** The strips' margin it must pass with (default `MARGIN`): a risk keeps half of it. */
   margin?: number;
+  /** Frames she stands still on the rest first (watching a creature's dive go by). */
+  wait?: number;
+  /** Start x for this plan (one for every start: she stands there, a rest's lip). */
+  at?: number;
+  /** Creatures (ids) she must have killed by the end (with the creatures in). */
+  kills?: string[];
 }
 
 export interface Climb {
@@ -80,6 +90,9 @@ export interface Result {
   touches: string[];
   /** Where a thorn hit put her back (feet), if one did. */
   back?: { x: number; y: number };
+  /** With the creatures in: the hits she took, and the creatures she killed. */
+  hits?: number;
+  kills?: string[];
 }
 
 const DIR = (d: number) => (d > 0 ? R : L);
@@ -90,11 +103,11 @@ function taken(s: ReturnType<typeof createState>, scene: Room, id: string): bool
   return i >= 0 && (s.pickups.timers[i] ?? 0) !== 0;
 }
 
-/** The room with every thorn strip grown `margin` px at both ends, creatures and glades out. */
-export function climbScene(room: string, margin = 0): Room {
+/** The room with every thorn strip grown `margin` px at both ends, glades out, creatures out unless `creatures`. */
+export function climbScene(room: string, margin = 0, creatures = false): Room {
   const full = getRoom(room);
   const thorns = (full.thorns ?? []).map((t) => ({ ...t, y: t.y - margin, h: t.h + 2 * margin }));
-  return { ...full, enemies: [], glades: [], thorns } as Room;
+  return { ...full, enemies: creatures ? full.enemies : [], glades: [], thorns } as Room;
 }
 
 /** Plays one plan from one start x with one reaction delay. */
@@ -105,15 +118,18 @@ export function runClimb(
   delay: number,
   margin = 0,
   jumpAt?: number,
+  o: { creatures?: boolean } = {},
 ): Result {
   const t = cloneTuning(defaultTuning);
-  const scene = climbScene(c.room, margin);
+  const scene = climbScene(c.room, margin, o.creatures);
   const W = getWorld('canopy');
   const kit = (c.kit ?? ['wallJump']) as never;
   const s = createState(1, t, scene, [], kit, newSave(kit));
-  placePlayer(s, x, c.y, t, withShortcuts(scene, s.save), []);
+  placePlayer(s, plan.at ?? x, c.y, t, withShortcuts(scene, s.save), []);
   s.player.dj = 0;
-  const STAND = 40;
+  const STAND = 40 + (plan.wait ?? 0);
+  let hits = 0;
+  const kills: string[] = [];
   let h: number = plan.first;
   let leg = 0;
   let touchK = -1;
@@ -127,6 +143,8 @@ export function runClimb(
   let jumpF = jumpAt === undefined && !plan.hops ? 0 : -1;
   let back: Result['back'];
   let hops = plan.hops ?? 0;
+  /** With the creatures in: a knock back onto the rest is a try lost, not the end (twice). */
+  let retries = 2;
   let hopUp = false;
   let hopF = 0;
   for (let k = 0; k < STAND + 1800; k++) {
@@ -167,6 +185,21 @@ export function runClimb(
             end = `goal without ${missed.join(', ')}`;
           }
         }
+        if (pass && plan.kills) {
+          const alive = plan.kills.filter((id) => !kills.includes(id));
+          if (alive.length) {
+            pass = false;
+            end = `goal with ${alive.join(', ')} alive`;
+          }
+        }
+        // (A creature's knock back onto the rest she started from is not the end: she climbs again.)
+        if (!pass && o.creatures && fy === c.y && retries-- > 0) {
+          jumpF = jumpAt === undefined ? f + 1 : -1;
+          leg = 0;
+          h = plan.first;
+          touchK = -1;
+          continue;
+        }
         break;
       }
       m = DIR((air >= 0 && air < (plan.away ?? 0)) || (air < 0 && plan.back) ? -h : h);
@@ -200,6 +233,14 @@ export function runClimb(
       wall = s.player.wallDir;
     }
     if (f >= 0) top = Math.min(top, fy);
+    for (const e of ev) {
+      if (e.type === 'hurt') hits++;
+      if (e.type === 'enemyDie') kills.push(e.id);
+    }
+    if (s.player.faded > 0) {
+      end = 'faded';
+      break;
+    }
     const hit = ev.find((e) => e.type === 'thornHit');
     if (hit) {
       end = `thorns ${(hit as { id: string }).id} (${Math.round(p.x + p.w / 2)}, ${fy})`;
@@ -214,7 +255,12 @@ export function runClimb(
       break;
     }
   }
-  return back ? { pass, end, top, touches, back } : { pass, end, top, touches };
+  const out: Result = back ? { pass, end, top, touches, back } : { pass, end, top, touches };
+  if (o.creatures) {
+    out.hits = hits;
+    out.kills = kills;
+  }
+  return out;
 }
 
 export const DELAYS = [0, 6, 10];
@@ -256,21 +302,37 @@ export const CLIMBS: Climb[] = [
     fails: [{ name: 'E face only', first: 1, legs: [{ mode: 'face' }] }],
   },
   {
-    id: 'well-3',
+    id: 'well-3a',
     room: 'cn-well',
-    note: 'leg 3: the landing to the hollow; west strip low, east strip high',
+    note: 'leg 3a (r7): the landing to the mid rest, up the east face and across into the rest',
     xs: [1664, 1728, 1792],
     y: 2432,
+    goal: { x0: 1536, x1: 2048, y: 1856 },
+    plans: [
+      {
+        name: 'E, across into the rest',
+        first: 1,
+        jumpAt: [1936, 1984, 2032],
+        legs: [{ mode: 'face', until: 2000 }, { mode: 'face' }],
+      },
+    ],
+  },
+  {
+    id: 'well-3b',
+    room: 'cn-well',
+    note: 'leg 3b (r7): the mid rest to the hollow; the east strip under the hollow, the west face over the rest',
+    xs: [1664, 1728, 1792],
+    y: 1856,
     goal: { x0: 256, x1: 2560, y: 1152 },
     plans: [
       {
-        name: 'E, over the W strip to W',
+        name: 'E, across over the rest to W',
         first: 1,
-        jumpAt: [1936, 1984, 2032],
-        legs: [{ mode: 'face', until: 1856 }, { mode: 'face' }],
+        jumpAt: [1960, 1984, 2008],
+        legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
       },
     ],
-    fails: [{ name: 'E face only', first: 1, jumpAt: [1936, 1984, 2032], legs: [{ mode: 'face' }] }],
+    fails: [{ name: 'E face only', first: 1, jumpAt: [1960, 1984, 2008], legs: [{ mode: 'face' }] }],
   },
   {
     id: 'out-1',
@@ -399,14 +461,93 @@ export const CLIMBS: Climb[] = [
   },
 ];
 
+/**
+ * Leg 3b with its lampwing in (review r6 #3): the climb is a choice, not a toll. The rest is safe (`restSafe`: it
+ * hovers 456 px over the rest's floor, out of its sight, so she can stand there as long as she likes); the plain plan
+ * (straight up past it) takes at most one hit from two of three starts at kick delays 6 and 10; hops with up cuts on
+ * the rest's lip draw it down and kill it as it stalls there, unhurt. Held by tests/unit/canopy-climbs.test.ts.
+ * (Review r6 wanted her to watch its dive from the rest: at its sight, 260 px, it never dives at her there; she has
+ * to draw it, which is the up-cut plan.)
+ */
+export const CREATURE_CLIMBS: Array<{
+  climb: string;
+  plan: Plan;
+  delays: number[];
+  maxHits: number;
+  of: number;
+}> = [
+  {
+    climb: 'well-3b',
+    plan: {
+      name: 'E, across over the rest to W, at once',
+      first: 1,
+      jumpAt: [1960, 1984, 2008],
+      legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
+    },
+    delays: [6, 10],
+    maxHits: 1,
+    of: 2,
+  },
+  {
+    climb: 'well-3b',
+    plan: {
+      name: 'up cuts from the lip as it stalls, then the climb',
+      first: 1,
+      at: 2000,
+      hops: 8,
+      kills: ['wing-chimney'],
+      jumpAt: [2008, 2008, 2008],
+      legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
+    },
+    delays: [6],
+    maxHits: 0,
+    of: 3,
+  },
+];
+
+/** Hits she takes standing on a climb's rest for `frames` with the room's creatures in (a rest is a rest). */
+export function restSafe(c: Climb, x: number, frames = 600): number {
+  const t = cloneTuning(defaultTuning);
+  const scene = climbScene(c.room, 0, true);
+  const W = getWorld('canopy');
+  const kit = (c.kit ?? ['wallJump']) as never;
+  const s = createState(1, t, scene, [], kit, newSave(kit));
+  placePlayer(s, x, c.y, t, withShortcuts(scene, s.save), []);
+  let hits = 0;
+  for (let k = 0; k < frames; k++) {
+    const ev: SimEvent[] = [];
+    step(s, 0, t, scene, ev, W);
+    hits += ev.filter((e) => e.type === 'hurt').length;
+  }
+  return hits;
+}
+
 if (process.argv[1]?.endsWith('climbs.ts')) {
   const args = process.argv.slice(2);
   const opt = (k: string) => {
     const i = args.indexOf(k);
     return i >= 0 ? args.splice(i, 2)[1] : undefined;
   };
+  const creatures = args.includes('--creatures');
+  if (creatures) args.splice(args.indexOf('--creatures'), 1);
   const margin = Number(opt('--margin') ?? 0);
   const delays = (opt('--delays') ?? DELAYS.join(',')).split(',').map(Number);
+  if (creatures) {
+    for (const cc of CREATURE_CLIMBS) {
+      const c = CLIMBS.find((q) => q.id === cc.climb) as Climb;
+      console.log(
+        `\n${c.id} with its creatures: ${cc.plan.name} (at most ${cc.maxHits} hits from ${cc.of} starts)`,
+      );
+      for (const [i, x] of c.xs.entries())
+        for (const d of cc.delays) {
+          const r = runClimb(c, cc.plan, x, d, 0, cc.plan.jumpAt?.[i], { creatures: true });
+          console.log(
+            `  ${r.pass ? 'pass' : 'FAIL'} x${x} d${d}: ${r.hits} hits, killed [${(r.kills ?? []).join(' ')}], top ${r.top} ${r.end}  [${r.touches.slice(0, 14).join(' ')}]`,
+          );
+        }
+    }
+    process.exit(0);
+  }
   const pick = args.length ? CLIMBS.filter((c) => args.includes(c.id)) : CLIMBS;
   for (const c of pick) {
     console.log(`\n${c.id} (${c.room}): ${c.note}`);
