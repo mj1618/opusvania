@@ -53,7 +53,7 @@ export const EDGE = {
   footR: [16, 40] as readonly number[],
   crestR: [12, 30] as readonly number[],
   dome: 9,
-  strand: 0.3,
+  strand: 0.16,
   /** One stipple puff in the band per this many px² of it. */
   puff: 260,
   /** The fringe under a ceiling: length and spacing, px. */

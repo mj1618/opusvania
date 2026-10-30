@@ -153,7 +153,9 @@ export class Painter {
    * colour goes `sat` of the way from its own grey to itself, times `val`, times `tint`. Null = off.
    * Tatter is Wing's painter through one of these (memory/hatch-and-tatter.md).
    */
-  grade: { sat: number; val: number; tint: RGB; lightSat: number; lightVal: number } | null = null;
+  /** A re-palette (Tatter): saturation and value scale, a tint, and `lift` of the way toward a pale of the tint (a
+   *  lighter moth, not only a greyer one: canopy review r6 #10). */
+  grade: { sat: number; val: number; tint: RGB; lightSat: number; lightVal: number; lift?: number } | null = null;
   ghost: RGB | null = null;
   ghostAlpha = 0;
   /**
@@ -341,6 +343,11 @@ export class Painter {
       r = (l + (r - l) * sk) * vk * gr.tint[0]!;
       g = (l + (g - l) * sk) * vk * gr.tint[1]!;
       b = (l + (b - l) * sk) * vk * gr.tint[2]!;
+      if (gr.lift && !light) {
+        r += (0.72 * gr.tint[0]! - r) * gr.lift;
+        g += (0.72 * gr.tint[1]! - g) * gr.lift;
+        b += (0.72 * gr.tint[2]! - b) * gr.lift;
+      }
     }
     // Global dissolve: solid and soft shapes by `alphaK`, lights by `glowK`.
     a *= mode === GLOW ? this.glowK : mode === GHOST ? 1 : this.alphaK;
