@@ -34,9 +34,14 @@ function arenaKnuckle(room: Room, o: { x: number; y: number; w: number }): boole
   const look = gradeLookOf(room);
   if (look !== 'den' && look !== 'nest') return false;
   const zones = ((
-    room.camera as { zones?: Array<{ x: number; y: number; w: number; h: number; fit?: boolean }> }
-  )?.zones ?? []) as Array<{ x: number; y: number; w: number; h: number; fit?: boolean }>;
-  return zones.some((z) => z.fit && o.x >= z.x && o.x + o.w <= z.x + z.w && o.y >= z.y && o.y <= z.y + z.h);
+    room.camera as {
+      zones?: Array<{ x: number; y: number; w: number; h: number; fit?: boolean; until?: string }>;
+    }
+  )?.zones ?? []) as Array<{ x: number; y: number; w: number; h: number; fit?: boolean; until?: string }>;
+  // An arena's zone fits the fight or holds the frame until the wave clears.
+  return zones.some(
+    (z) => (z.fit || z.until) && o.x >= z.x && o.x + o.w <= z.x + z.w && o.y >= z.y && o.y <= z.y + z.h,
+  );
 }
 
 /** The tallest drop under a ledge an old stump may carry (px). */
