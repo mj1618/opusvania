@@ -193,7 +193,8 @@ sheets with `-resize` + `+append` / `-append`.
   insides are drawn shapes).
 
 ## Round 7: figure-ground (the value rule)
-Shots: `shots/canopy-r7-render/before|after|after-16x10|after-21x9/<room>/`; `compare/r7-vs-refs.png` (same rows and
+Shots: `shots/canopy-r7-render/before|after|after-16x10|after-21x9/<room>/` (after-16x10 / 21x9 from the first pass;
+`look-check/<WxH>/` is the final at all three); `compare/r7-vs-refs.png` (same rows and
 reference crops as r6), `compare/before-after.png` (hub, Grove, den, way out, hatch, fork).
 - **The measure** (scratch scripts, not in the repo: shoot each wide stop, save `cam()`, `info().view`, `scene().solids`
   and the player box, split the frame by the collision): air = pixels outside solids and her box; solid = inside solids
@@ -219,5 +220,36 @@ reference crops as r6), `compare/before-after.png` (hub, Grove, den, way out, ha
   The shaft look has none (frost).
 - **Insides**: a few great knuckles per big mass (`MASS.knuckleArea`, `knuckleR`): only an upper arc, a dark seam, a
   lit lip at 0.4-0.6 of `veinLit`, a breath of `lift` under it. Still the darkest plane.
+- **The review's check** (r6 #2, #5): `npm run look:check -- --rooms=... --url=...` shoots every wide stop at 16:9,
+  16:10 and 21:9 (into `shots/look-check/<WxH>/<room>/`), 480 px wide luma: near-black (< 16) <= 50%, mid (50-150)
+  >= 20%, largest flat region (one 12-luma bin, 4-connected) <= 35%, `MIN_MEAN` per named stop (the hub's clearing
+  25). The seven review rooms: 133 of 135 pass (the den's balcony 50.4% near-black: the dark beyond its roof; the
+  well's shaft at 21:9 mid 18%: walls at luma 16-30 against a fog over 150; lifting them would make the solid as
+  light as the air).
+- **Sub-masses** (pf-mass.ts step 1c, `MASS.subCell / subR / subLift`, `MassTone.sub` for the night, whose lift is too
+  dark to leave the body's luma bin): overlapping lobed shapes at two values over each big mass's body, each with a
+  dark seam and a lit lip on its upper arc, largest first (HK's stacked rock). Colour only: the bake clips a tint to
+  the body. The hub's veil is `nightDeep` (`VEIL_ROOMS`).
+- **Face fungus as clumps** (interior.ts: `fungusEvery` 1100, size 30-52, 4-8 shelves on a cushion; the live light 5
+  small scattered cores): at 560 px with one core each it was a dotted line of LEDs; three stacked cores read as a
+  glowing capsule.
+- **Mid plane shapes** (r6 #9, `drawMidBack`): the shaft's far walls are columns of lobed moss mounds (`mossMound`)
+  and thick hanging roots (`hangRoot`), darker than the fog (pale arches read as brush marks; mounds floating free
+  read as clouds); the canopy's are leaf masses and fiddleheads (`fernCurl`). Gotcha: when editing a look's branch,
+  search from `drawMidBack`'s index: `drawDeepBack` has the same `plan.look === 'canopy'` branches above it.
+- **Furniture families** (r6 #8, lib/families.ts, pure; `tests/unit/wood-props.test.ts`): a one-way's family by its
+  mount (`shelfMount`): wall `bracket` / `tiers` (shelf fungi, `paintBracket`) / `stub`; a mass in reach `elbow` /
+  `knuckle` / `braid` / `fork` (`paintNearMount`); floor `snag` / `fallen` / `burl` / `arch` / `stump` (only over a
+  drop <= `STUMP_MAX_H`: higher it is a column) / `heap` (`paintFloorMount`); hung `clump` / `beard`. Never a
+  free-standing stalk (the birdbath). Thorn beds (lantern/kit.ts `bramble`): 18 families, mat (`mat` / `coil` /
+  `thicket`) x barbs (`spike` / `hook` / `pair`) x extra (`creep` canes over the lips and up a wall / dead `stems`),
+  each spilling past its strip by its own amount; barbs only on the strip (only the strip hurts). Rooms in id order,
+  least-used family not yet in the room; the test allows a room to repeat a family only once it has used all of its
+  kind (the level builder's tunnel has five hangs).
+- **The kin** (character/tatter.ts, r6 #10): scale 0.7, an ash-pale dusty grade (`Painter.grade.lift` mixes the solids
+  toward a pale of the tint): at Wing's value it read as a second Wing.
+- **The headless room-change error** (stage.ts `teardown`): `TexturePool.clear(true)` destroyed textures Pixi's filter
+  stack still held as each slot's last input, read before the slot is refilled; the stale refs are nulled with the pool.
 - Weak still: the Grove's Grovemother trunk is a flat dark rectangle; the well's lobed shaft walls stack like pillows;
-  the den's back is flat grey fog lenses; the moss is smooth next to Silksong's stippled clumps.
+  the den's back is flat grey fog lenses; the moss is smooth next to Silksong's stippled clumps; the thorn families
+  differ mostly up close (a bed is 32-64 px deep); the burl mount is still an egg at a distance.
