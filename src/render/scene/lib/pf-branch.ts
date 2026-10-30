@@ -93,8 +93,8 @@ export const BRANCH = {
   endRound: 26,
   endDrop: 12,
   /** Moss tufts that break the line: gap between them and how far they rise over it, px. */
-  tuftGap: [80, 240] as readonly number[],
-  tuftLift: [5, 11] as readonly number[],
+  tuftGap: [60, 200] as readonly number[],
+  tuftLift: [8, 18] as readonly number[],
   /** The far branch's tip past its rect, px. */
   tipExt: 40,
   /** The burl's belly swells this far below the limb, px; the knee's shoulder radius, px. */
@@ -123,6 +123,14 @@ export const BRANCH = {
   mossLit: 0x3a4a48,
   mossDark: 0x0c1617,
   lichen: [0x5f7672, 0x6f7f7a, 0x52686a] as readonly number[],
+  /**
+   * The walk's own moss (canopy r7: Silksong's and HK's rims are thick, bright and saturated against near-black ground):
+   * only on what she stands on and the claw faces, so nothing else reads as a ledge. Deep (the cushion's foot), body,
+   * lit (the crests; the moss key yellows it).
+   */
+  walkDeep: 0x1c402c,
+  walkMoss: 0x447a3e,
+  walkLit: 0x96c45a,
   silk: 0xb6c0c8,
   /** The mist the dives sink into (`#1f3550` fog of the look target) and how much of it at the bottom. */
   mist: 0x1f3550,
@@ -138,7 +146,8 @@ export const BRANCH = {
  */
 export const WOOD_BAKE: BakeLook = {
   key: 'vec3(0.66, 0.8, 0.98)',
-  mossKey: 'vec3(0.7, 0.78, 0.82)',
+  // (Canopy r7: the moon on moss yellows it a little, the rims read as moss, not grey felt.)
+  mossKey: 'vec3(0.86, 0.98, 0.62)',
   sun: 'clamp(0.4 + 0.36 * dapple + 0.1 * beam, 0.0, 1.0)',
   zone: 'vec3(0.86, 0.95, 1.06)',
   sky: 'vec3(0.32, 0.5, 0.8)',
@@ -938,8 +947,8 @@ export function mossBlanket(
     return t;
   };
   const cushion = (x: number): number => ((wobble(x, seed + 21, 70) + 1) * 0.5) ** 1.4;
-  const lift = (x: number): number => 1 + 3.2 * cushion(x) + (wobble(x, seed + 9, 8) + 1) * 0.6 + tuft(x);
-  const thick = (x: number): number => 7 + 18 * cushion(x) + 5 * wobble(x, seed + 22, 23);
+  const lift = (x: number): number => 2 + 6 * cushion(x) + (wobble(x, seed + 9, 8) + 1) * 0.9 + tuft(x);
+  const thick = (x: number): number => 14 + 26 * cushion(x) + 6 * wobble(x, seed + 22, 23);
   const endFade = (x: number): number =>
     Math.min(smoothstep(x0 - 6, x0 + 16, x), smoothstep(x1 + 6, x1 - 16, x));
   const top: number[] = [];
@@ -963,8 +972,8 @@ export function mossBlanket(
       pts.push(lower[i * 2] as number, lower[i * 2 + 1] as number);
     return pts;
   };
-  p.solid(shape(bot), B.mossDark, B.walkH + 0.2, { moss: 1 });
-  p.solid(shape(mid), B.moss, B.walkH + 0.26, { moss: 1 });
+  p.solid(shape(bot), B.walkDeep, B.walkH + 0.2, { moss: 1 });
+  p.solid(shape(mid), B.walkMoss, B.walkH + 0.26, { moss: 1 });
   // Tongues: moss creeping down the flank in uneven runs, longer under the cushions.
   for (let x = x0 + range(r, 4, 40); x < x1 - 4; x += range(r, 18, 110)) {
     const c = cushion(x);
@@ -975,7 +984,7 @@ export function mossBlanket(
       const w0 = range(r, 5, 16) * (k ? 0.6 : 1);
       const yt = Y(tx) + thick(tx) * 0.5;
       const line = quad(tx, yt - 4, tx + range(r, -4, 4), yt + l * 0.5, tx + range(r, -6, 6), yt + l, 6);
-      p.solid(strand(line, w0, 0.7), B.mossDark, B.walkH + 0.16, { moss: 1, alpha: 0.9 });
+      p.solid(strand(line, w0, 0.7), B.walkDeep, B.walkH + 0.16, { moss: 1, alpha: 0.9 });
     }
   }
   // Over a free end the moss drapes down round the corner.
@@ -997,13 +1006,13 @@ export function mossBlanket(
         y + l,
         6,
       );
-      p.solid(strand(line, range(r, 7, 15), 0.7), B.mossDark, B.walkH + 0.18, { moss: 1, alpha: 0.95 });
+      p.solid(strand(line, range(r, 7, 15), 0.7), B.walkDeep, B.walkH + 0.18, { moss: 1, alpha: 0.95 });
     }
   }
   // A crest on the cushions (the live rim lays the moonlight on it).
   let crest: number[] = [];
   const flushCrest = (): void => {
-    if (crest.length >= 8) p.solid(strand(crest, 3.6, 0.12), B.mossLit, B.walkH + 0.3, { moss: 1 }, 0.55);
+    if (crest.length >= 8) p.solid(strand(crest, 6, 0.12), B.walkLit, B.walkH + 0.3, { moss: 1 }, 0.8);
     crest = [];
   };
   for (let i = 0; i < top.length; i += 2) {

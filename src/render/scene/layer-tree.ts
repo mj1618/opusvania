@@ -43,6 +43,8 @@ export const LAYERS = [
   { name: 'interiorDeep', parallax: 0.86, screen: false },
   // Its mid plane (review r5 #7), between the deep back and the playfield, masked the same.
   { name: 'interiorMid', parallax: 0.93, screen: false },
+  // The play plane's air (layers/veil.ts): a haze screen-blended over everything behind the playfield (canopy r7).
+  { name: 'veil', parallax: 0, screen: true },
   // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).
   { name: 'airBack', parallax: 1, screen: false },
   // Warm light that passes behind the terrain: the heart waking, the ending (src/render/goal).

@@ -14,7 +14,7 @@
  */
 import { BRANCH, lineLimb, paintLimb, strand } from './pf-branch';
 import type { Paint } from './pf-paint';
-import { clamp, hash1, lerp, range, rngFor, smoothstep, wobble } from './pf-shape';
+import { blob, chaikin, clamp, hash1, lerp, range, rngFor, smoothstep, wobble } from './pf-shape';
 
 export interface LobeSpec {
   /** Offset of the notch between two lobes, px (+ = out into the air). */
@@ -28,8 +28,12 @@ export interface LobeSpec {
 }
 
 export const EDGE = {
-  /** A face she clings to: the edge keeps within +-12 px of the collision (review r5 #4). */
-  claw: { notch: -12, peak: [3, 12], w: [60, 200], gap: [-30, 20] } as LobeSpec,
+  /**
+   * A face she clings to (review r5 #4 kept it within +-12 px; canopy r7: at play distance that still read as a ruler):
+   * lobes 100-280 px long reaching up to 18 px out, notches up to 24 px in, so her hold reads on the crests and the
+   * moss cushions on them.
+   */
+  claw: { notch: -24, peak: [6, 18], w: [100, 280], gap: [-40, 10] } as LobeSpec,
   /** A face that refuses the claws: bigger lobes, cut deeper and standing further out. */
   loose: { notch: -24, peak: [16, 42], w: [80, 220], gap: [-40, 30] } as LobeSpec,
   /** An underside: lobes hanging below the collision, never above it (she must not seem to bump air). */
@@ -39,11 +43,19 @@ export const EDGE = {
   /** How deep a lobe's knob reaches into the mass: share of its width, clamped px. */
   knob: [0.42, 34, 96] as readonly number[],
   /** The moss band under a walk top: depth range and its drape lobes' width range, px. */
-  band: [30, 60] as readonly number[],
+  band: [44, 84] as readonly number[],
   bandLobe: [40, 130] as readonly number[],
   /** Its albedo (the bake multiplies by the light: the walk's moss must come out the brightest mass value). */
-  bandLow: 0x37503f,
-  bandHigh: 0x648a6c,
+  bandLow: 0x2c643a,
+  bandHigh: 0x64a44e,
+  /** Its foot's cushions and crest domes: radius ranges, px; the crest rises at most `dome` px over the walk line;
+   *  share of foot cushions with a strand of moss hanging off. */
+  footR: [16, 40] as readonly number[],
+  crestR: [12, 30] as readonly number[],
+  dome: 9,
+  strand: 0.16,
+  /** One stipple puff in the band per this many px² of it. */
+  puff: 260,
   /** The fringe under a ceiling: length and spacing, px. */
   fringeLen: [60, 200] as readonly number[],
   fringeGap: [40, 120] as readonly number[],
@@ -126,8 +138,9 @@ export interface EdgeTone {
   lift: number;
   rim: number;
   rimA: number;
-  /** Moss on the upper arc of a face's lobes (0 = none: earth, frost). */
+  /** Moss on the upper arc of a face's lobes (0 = none: earth, frost) and its lit caps (0 = none). */
   moss: number;
+  mossLit?: number;
 }
 
 /**
@@ -194,20 +207,43 @@ export function paintFaceLobes(
       cres.push(back[k * 2] as number, back[k * 2 + 1] as number);
     p.tint(cres, tone.rim, tone.rimA);
     if (tone.moss) {
-      // (The upper 40-70% of the arc: moss settles where the light and the wet come from.)
-      const top = range(r, 0.4, 0.7);
+      // (Canopy r7: the references' walls are furred with moss as thick as their walks.) Cushions along the upper
+      // 50-85% of the arc, centred on the edge so they swell the silhouette out, a lit cap on each, dimmer than a walk's.
+      const top = range(r, 0.75, 1);
       const m: number[] = [];
       const mb: number[] = [];
       for (let k = 0; k <= n * top; k++) {
         const u = lerp(u0, u1, k / n);
         const t = (u - L.c) / (L.w / 2);
         const x = outer[k * 2] as number;
-        const w = (rim + 6) * arc(t) ** 0.5 * (1 - k / (n * top + 1)) ** 0.6;
-        m.push(x + dir * 2, u);
+        const w = (rim + 10) * arc(t) ** 0.5 * (1 - k / (n * top + 1)) ** 0.5;
+        m.push(x + dir * 3, u);
         mb.push(x - dir * w, u + w * 0.3);
       }
       for (let k = mb.length / 2 - 1; k >= 0; k--) m.push(mb[k * 2] as number, mb[k * 2 + 1] as number);
-      p.solid(m, tone.moss, h + 0.1, { moss: 0.9 }, 0.9);
+      p.solid(m, tone.moss, h + 0.1, { moss: 0.9 });
+      const span = (u1 - u0) * top;
+      // (Evenly sized cushions spaced along a face read as a string of beads: sizes 5-22 px, overlapping.)
+      for (let q = 0, nq = Math.max(1, Math.round(span / 20)); q < nq; q++) {
+        const u = u0 + span * ((q + range(r, 0, 1)) / nq);
+        const x = at(u);
+        const cr = range(r, 5, 22) * (0.6 + 0.4 * arc((u - L.c) / (L.w / 2))) * Math.min(1, scale + 0.2);
+        const cx = x + dir * range(r, -cr * 0.4, cr * 0.35);
+        p.solid(chaikin(blob(cx, u, cr, cr * 1.15, seed + Math.round(u), 0.22, 12), 1), tone.moss, h + 0.14, {
+          moss: 1,
+        });
+        if (tone.mossLit && r() < 0.55)
+          p.solid(
+            chaikin(
+              blob(cx + dir * cr * 0.2, u - cr * 0.3, cr * 0.6, cr * 0.65, seed + Math.round(u) + 1, 0.2, 10),
+              1,
+            ),
+            tone.mossLit,
+            h + 0.18,
+            { moss: 1 },
+            range(r, 0.35, 0.65),
+          );
+      }
     }
   }
   // (Review r5 #4: within +-12 px a claw face still read as a ruler at play distance.) Overhanging paint off some
@@ -318,8 +354,16 @@ export function paintUnderLobes(
 }
 
 /**
- * The moss band under a walk top (y = `y`, x0..x1): 30-60 px of moss whose lower edge drapes in lobes, darker as it
- * goes down; the brightest mass value in the room once the key light takes it (moss relief).
+ * The moss band under a walk top (y = `y`, x0..x1), canopy r7: Silksong's and HK's rims are a thick bright cushion of
+ * moss on near-black ground, its silhouette lobed above and below. Built from cushions, not a polygon with a wavy hem
+ * (that read as cake icing with teeth):
+ * - a dark body 44-84 px deep under the walk (its depth wandering, running round a free end and down);
+ * - a row of low cushions along its foot, each its own size, a dark seam under it, and now and then a strand of moss
+ *   hanging from it (24-110 px, rounded tip);
+ * - a row of crest cushions along the walk, domes rising at most `EDGE.dome` px over the line, each with a lit cap
+ *   and a dark crease between it and its neighbour.
+ * The bake lights it (moss relief, the moss key): the walk's moss is the brightest mass value in the room. Returns the
+ * crest's painted top at x (the live rim and the growth follow it).
  */
 export function paintTopBand(
   p: Paint,
@@ -331,47 +375,143 @@ export function paintTopBand(
   dropW = 0,
   dropE = 0,
   tint: { color: number; k: number } | null = null,
-): void {
+): (x: number) => number {
   const r = rngFor(seed, x0, y, 421);
-  if (x1 - x0 < 24) return;
-  const [d0, d1] = EDGE.band as [number, number];
-  // The band's depth wanders slowly between 30 and 60 px (a row of even scallops read as a valance), with tongues
-  // of moss hanging further here and there, each its own width and length.
-  const tongues: Array<[number, number, number]> = [];
-  for (let x = x0 + range(r, 20, 160); x < x1 - 20; x += range(r, 90, 340))
-    tongues.push([x, range(r, 14, 46), range(r, 12, 46)]);
-  const depth = (x: number) => {
-    let d = lerp(d0, d1, 0.5 + 0.38 * wobble(x, seed + 1, 210) + 0.12 * wobble(x, seed + 2, 47));
-    for (const [tx, tw, tl] of tongues) {
-      const t = (x - tx) / tw;
-      if (t > -1 && t < 1) d += tl * (1 - t * t) ** 1.5;
+  /** Each crest dome: centre x, rise over the walk line, half width. */
+  const domes: Array<[number, number, number]> = [];
+  const crestAt = (x: number): number => {
+    let t = y;
+    for (const [cx, rise, rx] of domes) {
+      const u = (x - cx) / rx;
+      if (u > -1 && u < 1) t = Math.min(t, y - rise * Math.sqrt(1 - u * u));
     }
+    return t;
+  };
+  if (x1 - x0 < 24) return crestAt;
+  const B = BRANCH;
+  const [d0, d1] = EDGE.band as [number, number];
+  const col = (c: number) => (tint ? lerp3(c, tint.color, tint.k) : c);
+  const deep = col(B.walkDeep);
+  const body = col(EDGE.bandLow);
+  const high = col(EDGE.bandHigh);
+  const lit = col(B.walkLit);
+  // (It thins toward a wall it meets: no box corner of moss.)
+  const endK = (x: number) => 0.5 + 0.5 * smoothstep(0, 40, Math.min(x - x0, x1 - x));
+  const depth = (x: number) => {
+    const d = lerp(d0, d1, 0.5 + 0.38 * wobble(x, seed + 1, 210) + 0.12 * wobble(x, seed + 2, 47));
     // (Over a free end the band runs round the corner and down.)
     const ew = dropW ? clamp((x0 + 24 - x) / 24, 0, 1) * dropW : 0;
     const ee = dropE ? clamp((x - (x1 - 24)) / 24, 0, 1) * dropE : 0;
-    // (It thins toward a wall it meets: no box corner of moss.)
-    const end = smoothstep(0, 40, Math.min(x - x0, x1 - x));
-    return (d + ew + ee) * (0.5 + 0.5 * end);
+    return (d + ew + ee) * endK(x);
   };
+  // 1. The body: opaque (a band at 0.85 let the root's grain through as streaks of glass).
   const top: number[] = [];
   const low: number[] = [];
-  const mid: number[] = [];
-  for (let x = x0; x <= x1 + 0.01; x += 5) {
-    const d = depth(x);
+  for (let x = x0; x <= x1 + 0.01; x += 6) {
     top.push(x, y - 1);
-    low.push(x, y + d);
-    mid.push(x, y + d * (0.42 + 0.14 * wobble(x, seed + 3, 50)));
+    low.push(x, y + depth(x) * 0.7);
   }
-  const close = (lower: number[]) => {
-    const pts = top.slice();
-    for (let k = lower.length / 2 - 1; k >= 0; k--)
-      pts.push(lower[k * 2] as number, lower[k * 2 + 1] as number);
-    return pts;
-  };
-  const lowC = tint ? lerp3(EDGE.bandLow, tint.color, tint.k) : EDGE.bandLow;
-  const highC = tint ? lerp3(EDGE.bandHigh, tint.color, tint.k) : EDGE.bandHigh;
-  p.solid(close(low), lowC, h + 0.12, { moss: 0.85 });
-  p.solid(close(mid), highC, h + 0.16, { moss: 1 }, 0.85);
+  const shape = top.slice();
+  for (let k = low.length / 2 - 1; k >= 0; k--) shape.push(low[k * 2] as number, low[k * 2 + 1] as number);
+  p.solid(shape, deep, h + 0.12, { moss: 0.85 });
+  // 2. The foot: low cushions, each its own size and a step darker, with a seam under it; strands hang from some.
+  let x = x0 + range(r, 0, 20);
+  while (x < x1 - 8) {
+    const rx = range(r, EDGE.footR[0] as number, EDGE.footR[1] as number) * endK(x);
+    const ry = rx * range(r, 0.55, 0.85);
+    const cy = y + depth(x) * 0.7 + ry * range(r, -0.2, 0.25);
+    const sd = seed + Math.round(x);
+    p.solid(chaikin(blob(x, cy, rx, ry, sd, 0.22, 14), 1), lerp3(deep, body, range(r, 0.2, 0.6)), h + 0.1, {
+      moss: 1,
+    });
+    p.tint(
+      chaikin(blob(x, cy - ry * 0.25, rx * 0.8, ry * 0.6, sd + 1, 0.2, 12), 1),
+      body,
+      range(r, 0.4, 0.75),
+    );
+    if (r() < EDGE.strand) {
+      // A clump of hanging moss: 1-3 drips from one root, wide at the root, lumpy flanks, a soft end (a ball on a
+      // thin stalk read as a lollipop).
+      const n = 1 + Math.floor(r() * 3);
+      for (let k = 0; k < n; k++) {
+        const len = range(r, 20, 72) * (k ? 0.6 : 1);
+        const sx = x + range(r, -rx * 0.5, rx * 0.5);
+        const sy = cy + ry * 0.4;
+        const w0 = range(r, 10, 22) * (k ? 0.7 : 1);
+        const sway = range(r, -0.15, 0.15) * len;
+        const L: number[] = [];
+        const R: number[] = [];
+        // (Wide nearly to the end, then a round end: a point read as a thorn, a green icicle.)
+        for (let i = 0; i <= 12; i++) {
+          const t = i / 12;
+          const yy = sy + t * len;
+          const cx = sx + sway * t * t;
+          const hw =
+            (w0 / 2) *
+            (1 - t ** 1.8) ** 0.5 *
+            (0.75 + 0.25 * (1 - t)) *
+            (1 + 0.3 * wobble(yy, sd + k * 7, 14));
+          L.push(cx - hw, yy);
+          R.push(cx + hw, yy);
+        }
+        const drip = [...L];
+        drip.push(sx + sway, sy + len + w0 * 0.25);
+        for (let i = R.length / 2 - 1; i >= 0; i--) drip.push(R[i * 2] as number, R[i * 2 + 1] as number);
+        p.solid(drip, lerp3(deep, body, range(r, 0, 0.5)), h + 0.08, { moss: 0.9 });
+        // Its lit flank.
+        p.tint(
+          strand(
+            L.slice(0, 16).map((v, i) => (i % 2 ? v : v + 2.5)),
+            Math.max(2, w0 * 0.25),
+            0.3,
+          ),
+          high,
+          0.5,
+        );
+      }
+    }
+    x += rx * range(r, 1.1, 1.8);
+  }
+  // 2b. Moss is made of small cushions: a stipple of puffs over the body, lighter toward the top, darker low.
+  for (let k = 0, n = Math.round(((x1 - x0) * (d0 + d1) * 0.5) / (EDGE.puff as number)); k < n; k++) {
+    const px = range(r, x0 + 6, x1 - 6);
+    const t = r() ** 1.3;
+    const py = y + 4 + t * depth(px) * 0.75;
+    const pr = range(r, 4, 11);
+    const light = r() < 0.6 - t * 0.5;
+    p.solid(
+      blob(px, py, pr, pr * 0.8, seed + k, 0.25, 8),
+      light ? lerp3(body, high, range(r, 0.3, 0.9)) : lerp3(deep, body, range(r, 0, 0.4)),
+      h + 0.14 + (light ? 0.04 : 0),
+      { moss: 1 },
+      range(r, 0.5, 0.9),
+    );
+  }
+  // 3. The crest: domes along the walk, each a lit cap over a body, a crease between neighbours.
+  x = x0 + range(r, 0, 16);
+  while (x < x1 - 6) {
+    const rx = range(r, EDGE.crestR[0] as number, EDGE.crestR[1] as number) * endK(x);
+    const ry = rx * range(r, 0.5, 0.75);
+    const rise = range(r, 0.15, 1) * (EDGE.dome as number) * endK(x);
+    const cy = y - rise + ry;
+    domes.push([x, rise, rx * 0.8]);
+    const sd = seed + Math.round(x) * 3;
+    p.solid(chaikin(blob(x, cy, rx, ry, sd, 0.18, 14), 1), high, h + 0.24, { moss: 1 });
+    // The cap: the upper half, a little toward the light.
+    p.solid(
+      chaikin(blob(x - rx * 0.08, cy - ry * 0.35, rx * 0.78, ry * 0.5, sd + 1, 0.2, 12), 1),
+      lit,
+      h + 0.3,
+      { moss: 1 },
+      range(r, 0.55, 0.9),
+    );
+    // The crease where it meets the next one.
+    const cx = x + rx * 0.95;
+    if (cx < x1 - 10)
+      p.tint(strand([cx, y - rise * 0.4, cx + 2, y + ry * 0.8, cx - 2, y + ry * 1.5], 4, 0.4), deep, 0.55);
+    x += rx * range(r, 1.0, 1.6);
+  }
+  return crestAt;
 }
 
 /**

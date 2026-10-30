@@ -20,6 +20,10 @@ breaks through in a few slanted shafts. Small plants glow.
   blooming. These are the brightest things after the character.
 - The player's path must always read: platform tops carry a lit moss rim and are the highest local
   contrast in the playfield. Background shapes never look like platforms.
+- **Figure-ground (2026-10-31, the Canopy r7, measured against Silksong's and Hollow Knight's first areas):** the air
+  behind the play plane is mid-value (mean luma ~45-70 in a wide frame), the solid is near-black (under ~12), and a
+  thick, bright, lobed moss rim sits between them (40-80 px deep at our hero's 80 px, domes and drips off it). Dark
+  ground on dark air does not read. Bright walk moss belongs only to what she stands on and the faces she clings to.
 
 ## Layers, back to front
 1. Sky glow: vertical gradient with a soft warm bloom where the light enters.

@@ -26,10 +26,13 @@ import { Secondary } from './vesper/wings';
 
 /** Knobs (seconds of render time, world px). */
 export const TATTER = {
-  /** Its size next to hers. */
-  scale: 0.82,
-  /** The re-palette: saturation and value of its solids and of its lights, and a tint (greyer, a little cooler). */
-  grade: { sat: 0.42, val: 0.92, tint: rgb(0xf2f0f6), lightSat: 0.4, lightVal: 0.55 },
+  /** Its size next to hers (canopy review r6 #10: at 0.82 and her value it read as a second Wing). */
+  scale: 0.7,
+  /**
+   * The re-palette: saturation and value of its solids and of its lights, a tint, and `lift` toward a pale of it: an
+   * old dusty ash-pale moth against her dark one (review r6 #10: a different value, not only a greyer one).
+   */
+  grade: { sat: 0.3, val: 0.95, tint: rgb(0xe6ddd0), lightSat: 0.4, lightVal: 0.55, lift: 0.42 },
   /** Its lantern tips are nearly out; its eyes are dim. */
   glow: 0.28,
   eyes: 0.62,

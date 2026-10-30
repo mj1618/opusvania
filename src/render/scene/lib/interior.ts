@@ -29,7 +29,8 @@ export const INTERIOR = {
   midCover: 0.32,
   /** Spacing of the lights along exposed tops, faces and undersides (px), and the fallback cell. */
   mossEvery: 640,
-  fungusEvery: 560,
+  // (Review r6 #5: at 560 px apart the face fungi read as a dotted line of LEDs: fewer, each a clump.)
+  fungusEvery: 1100,
   wormEvery: 420,
   shaftEvery: 1500,
   cell: { w: 1500, h: 860 },
@@ -336,7 +337,7 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
             kind: sap ? 'sap' : 'fungus',
             x: fx,
             y,
-            s: 18 + 16 * hash1(k + i, seed + 11),
+            s: 30 + 22 * hash1(k + i, seed + 11),
             dir,
             violet: !sap && hash1(k * 3 + i, seed + 13) < (look === 'den' ? 0.35 : 0.18),
             len: 0,
@@ -1051,6 +1052,121 @@ function leaf(x: number, y: number, l: number, a: number): number[] {
   return pts;
 }
 
+type Poly = { poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown } };
+
+/** A moss mound in a mid plane: overlapping round lobes over a dark base, each lit along its upper arc. Returns its area. */
+function mossMound(
+  g: Poly,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  col: number,
+  lit: number,
+  dark: number,
+  seed: number,
+  r: () => number,
+): number {
+  g.poly(chaikin(blob(cx, cy, rx * 0.9, ry * 0.9, seed, 0.3, 18), 2)).fill({ color: dark, alpha: 0.55 });
+  const n = 5 + Math.floor(r() * 8);
+  for (let q = 0; q < n; q++) {
+    const a = range(r, 0, 6.28);
+    const d = Math.sqrt(r()) * 0.7;
+    const x = cx + Math.cos(a) * rx * d;
+    const y = cy + Math.sin(a) * ry * d;
+    const lr = range(r, 0.3, 0.5) * rx;
+    g.poly(chaikin(blob(x, y, lr, lr * 0.85, seed + q * 7, 0.2, 14), 1)).fill({ color: col, alpha: 0.95 });
+    // The lit upper arc: a lighter lobe a little up, then the body again a little down over it.
+    g.poly(
+      chaikin(blob(x - lr * 0.08, y - lr * 0.22, lr * 0.82, lr * 0.62, seed + q * 7 + 1, 0.2, 12), 1),
+    ).fill({
+      color: lit,
+      alpha: 0.55,
+    });
+    g.poly(
+      chaikin(blob(x + lr * 0.05, y + lr * 0.08, lr * 0.78, lr * 0.66, seed + q * 7 + 2, 0.2, 12), 1),
+    ).fill({
+      color: col,
+      alpha: 0.95,
+    });
+  }
+  return Math.PI * rx * ry * 0.9;
+}
+
+/** A thick root hanging in a mid plane, twisting and tapering, a lit flank. Returns its area. */
+function hangRoot(
+  g: Poly,
+  x: number,
+  y: number,
+  len: number,
+  w0: number,
+  col: number,
+  lit: number,
+  seed: number,
+  r: () => number,
+): number {
+  const raw: number[] = [];
+  const sway = range(r, -0.2, 0.2) * len;
+  for (let t = 0; t <= 12; t++)
+    raw.push(x + sway * (t / 12) ** 2 + Math.sin(t * 0.7 + x) * 18 * (t / 12), y + (len * t) / 12);
+  const line = wander(raw, 16, seed, 200);
+  g.poly(ribbon(line, (t) => Math.max(3, w0 * (1 - t) ** 0.6))).fill({ color: col, alpha: 0.92 });
+  g.poly(
+    ribbon(
+      line.map((v, j) => (j % 2 ? v : v - w0 * 0.25)),
+      (t) => Math.max(1.5, w0 * 0.22 * (1 - t) ** 0.6),
+    ),
+  ).fill({ color: lit, alpha: 0.6 });
+  return len * w0 * 0.6;
+}
+
+/** A fiddlehead fern in a mid plane: a stem rising and curling into a spiral, leaflets along it. Returns its area. */
+function fernCurl(
+  g: Poly,
+  x: number,
+  y: number,
+  h: number,
+  dir: number,
+  col: number,
+  lit: number,
+  _seed: number,
+  r: () => number,
+): number {
+  const pts: number[] = [];
+  // Rise, then the curl: an inward spiral of 1.3 turns at the top.
+  for (let k = 0; k <= 10; k++)
+    pts.push(x + dir * Math.sin((k / 10) * 1.2) * h * 0.15, y - (k / 10) * h * 0.75);
+  const cxs = (pts[pts.length - 2] as number) + dir * h * 0.14;
+  const cys = pts[pts.length - 1] as number;
+  for (let k = 1; k <= 16; k++) {
+    const t = k / 16;
+    const a = Math.PI + t * Math.PI * 2.6;
+    const rr = h * 0.14 * (1 - t * 0.75);
+    pts.push(cxs + Math.cos(a) * rr * dir, cys + Math.sin(a) * rr);
+  }
+  const w0 = h * 0.06;
+  g.poly(strand(pts, w0, 0.15)).fill({ color: col, alpha: 0.95 });
+  g.poly(
+    strand(
+      pts.map((v, j) => (j % 2 ? v - w0 * 0.25 : v)),
+      w0 * 0.35,
+      0.2,
+    ),
+  ).fill({ color: lit, alpha: 0.55 });
+  for (let k = 2; k < 10; k++) {
+    const px = pts[k * 2] as number;
+    const py = pts[k * 2 + 1] as number;
+    for (const side of [-1, 1]) {
+      const l = h * range(r, 0.1, 0.18) * (1 - k / 14);
+      g.poly(leaf(px + side * l * 0.45, py - l * 0.1, l, side < 0 ? Math.PI + 0.35 : -0.35)).fill({
+        color: r() < 0.3 ? lit : col,
+        alpha: 0.92,
+      });
+    }
+  }
+  return h * h * 0.12;
+}
+
 function chaikin2(pts: number[]): number[] {
   let out = pts;
   for (let k = 0; k < 2; k++) {
@@ -1094,12 +1210,30 @@ export function paintGlowFlora(p: Paint, plan: InteriorPlan): void {
         );
       }
     } else if (l.kind === 'fungus') {
-      const n = 2 + Math.floor(r() * 3);
+      // A clump (review r6 #5): a cushion of moss on the face, 4-8 shelves of very different sizes crowded on it.
+      for (let k = 0; k < 6; k++)
+        p.solid(
+          chaikin(
+            blob(
+              l.x + l.dir * range(r, 0, 8),
+              l.y + range(r, -1.4, 1.4) * l.s,
+              range(r, 6, 14),
+              range(r, 8, 18),
+              l.seed + k,
+              0.3,
+              10,
+            ),
+            1,
+          ),
+          l.violet ? 0x24183a : 0x16343a,
+          B.walkH + 0.08,
+          { moss: 0.6 },
+        );
+      const n = 4 + Math.floor(r() * 5);
       for (let k = 0; k < n; k++) {
-        const y = l.y + (k - (n - 1) / 2) * l.s * 0.9 + range(r, -6, 6);
-        const w = l.s * range(r, 0.7, 1.2);
-        const x = l.x + l.dir * w * 0.45;
-        // The cap: a half-disc out of the face, the gills a pale band under it.
+        const y = l.y + range(r, -1.5, 1.5) * l.s;
+        const w = l.s * range(r, 0.3, 0.85) * (1 - Math.abs(y - l.y) / (l.s * 2.4));
+        const x = l.x + l.dir * (w * 0.4 + range(r, -4, 8));
         const cap: number[] = [];
         for (let a = 0; a <= 10; a++) {
           const t = (a / 10) * Math.PI;
@@ -1605,9 +1739,11 @@ export function drawMidBack(
   massBody: number,
 ): void {
   const T = plan.tone;
-  // (In the pale shaft a mid-grey reads as a cut-out against the fog: its mid plane sits nearer the fog.)
-  const v = plan.look === 'shaft' ? INTERIOR.midValue + 0.18 : INTERIOR.midValue;
-  const col = mixC(massBody, T.fog, v);
+  // (r6: in the pale shaft a flat mid-grey read as a cut-out, so it sat near the fog, and its pale arches read as brush
+  // marks. Review r6 #9: lobed moss mounds a step darker than the fog, leaning to the frost moss's blue-green.)
+  const v = plan.look === 'shaft' ? INTERIOR.midValue - 0.12 : INTERIOR.midValue;
+  const col0 = mixC(massBody, T.fog, v);
+  const col = plan.look === 'shaft' ? mixC(col0, 0x4a6e70, 0.3) : col0;
   const dark = mixC(massBody, T.fog, v * 0.55);
   const lit = mixC(massBody, T.fog, Math.min(0.85, v + 0.25));
   plan.backs.forEach((b0) => {
@@ -1615,7 +1751,7 @@ export function drawMidBack(
     const r = rngFor(seed, b0.x, b0.y, 97);
     const area = b.w * b.h;
     let covered = 0;
-    const want = area * INTERIOR.midCover;
+    const want = area * (plan.look === 'shaft' ? INTERIOR.midCover + 0.08 : INTERIOR.midCover);
     const fill = (pts: number[], c: number, a = 0.92, est = 0): void => {
       g.poly(pts).fill({ color: c, alpha: a });
       covered += est;
@@ -1664,49 +1800,42 @@ export function drawMidBack(
         }
       }
     } else if (plan.look === 'shaft') {
+      // (Review r6 #9: wide pale root arches over the fog read as brush marks on the glass.) Moss mounds bulging off
+      // the shaft's far walls (Silksong Tut_01's back) and thick roots hanging from above, silhouettes with lit edges.
       while (covered < want && guard++ < 400) {
-        if (r() < 0.55) {
-          // A frost-root arch: a root bowing across, broken off partway, its width swelling and pinching (an even
-          // full arc with a lit edge read as a rail).
-          const x0 = b.x + r() * b.w;
-          const y0 = b.y + r() * b.h;
-          const span = range(r, 300, 820);
-          const rise = span * range(r, 0.25, 0.6);
-          const dir = r() < 0.5 ? -1 : 1;
-          const tEnd = range(r, 0.55, 1);
-          const line: number[] = [];
-          for (let q = 0; q <= 14; q++) {
-            const t = (q / 14) * tEnd;
-            line.push(
-              x0 + dir * span * t,
-              y0 - rise * Math.sin(Math.PI * t) + 30 * wobble(t * 900, seed + guard, 300),
+        if (r() < 0.7) {
+          // (Mounds floating in the fog read as clouds: they grow in columns, the far walls of the shaft.)
+          const cx = b.x + r() * b.w;
+          let cy = b.y + range(r, -100, 200);
+          const w = range(r, 140, 300);
+          while (cy < b.y + b.h + 100) {
+            const rx = w * range(r, 0.7, 1.15);
+            covered += mossMound(
+              g,
+              cx + range(r, -0.3, 0.3) * w,
+              cy,
+              rx,
+              rx * range(r, 0.7, 1.0),
+              col,
+              lit,
+              dark,
+              seed + guard * 13 + Math.round(cy),
+              r,
             );
+            cy += rx * range(r, 1.1, 1.5);
           }
-          const wl = wander(line, 18, seed + guard * 3, 160);
-          const w0 = range(r, 22, 58);
-          fill(
-            ribbon(
-              wl,
-              (t) =>
-                w0 *
-                (0.55 + 0.45 * wobble(t * 1300, seed + guard, 260) ** 2 + 0.3 * t) *
-                (t > 0.9 ? (1 - t) * 8 + 0.2 : 1),
-            ),
-            col,
-            0.8,
-            span * w0 * tEnd,
-          );
         } else {
-          // Hanging lichen: a cluster of fine strands from a root above.
-          const x = b.x + r() * b.w;
-          const y = b.y + r() * b.h * 0.7;
-          const n = 6 + Math.floor(r() * 10);
-          for (let q = 0; q < n; q++) {
-            const len = range(r, 80, 340);
-            const xx = x + range(r, -50, 50);
-            const line = [xx, y, xx + range(r, -10, 10), y + len * 0.5, xx + range(r, -20, 20), y + len];
-            fill(strand(chaikin2(line), range(r, 4, 10), 0.6), q % 3 ? col : lit, 0.85, len * 7);
-          }
+          covered += hangRoot(
+            g,
+            b.x + r() * b.w,
+            b.y + r() * b.h * 0.5,
+            range(r, 260, 700),
+            range(r, 26, 64),
+            col,
+            dark,
+            seed + guard,
+            r,
+          );
         }
       }
     } else if (plan.look === 'nest') {
@@ -1748,52 +1877,31 @@ export function drawMidBack(
         g.poly(strand(pts, range(r, 14, 22), 0.15)).fill({ color: dark, alpha: 0.9 });
       }
     } else if (plan.look === 'canopy') {
+      // (Review r6 #9: leaf masses and fern curls, Silksong Tut_02's back.) Big masses of leaves, each a dense clump
+      // with a lit upper edge, and fiddlehead ferns curling up out of them.
       while (covered < want && guard++ < 400) {
-        // A branch fork: a limb rising at a slant and splitting, leaf clumps at its tips.
-        const x0 = b.x + r() * b.w;
-        const y0 = b.y + r() * b.h;
-        const a0 = -Math.PI / 2 + range(r, -0.9, 0.9);
-        const len = range(r, 300, 700);
-        const xm = x0 + Math.cos(a0) * len;
-        const ym = y0 + Math.sin(a0) * len;
-        const w0 = range(r, 24, 60);
-        fill(
-          ribbon(
-            wander([x0, y0, (x0 + xm) / 2, (y0 + ym) / 2, xm, ym], 20, seed + guard, 200),
-            (t) => w0 * (1 - t * 0.35),
-          ),
-          col,
-          0.9,
-          len * w0,
-        );
-        for (const da of [-1, 1]) {
-          const a1 = a0 + da * range(r, 0.3, 0.8);
-          const l1 = len * range(r, 0.4, 0.8);
-          const xe = xm + Math.cos(a1) * l1;
-          const ye = ym + Math.sin(a1) * l1;
-          fill(
-            ribbon([xm, ym, (xm + xe) / 2, (ym + ye) / 2 + 10, xe, ye], (t) => w0 * 0.62 * (1 - t * 0.7)),
-            col,
-            0.9,
-            l1 * w0 * 0.4,
-          );
-          const rx = range(r, 80, 170);
-          for (let q = 0; q < Math.round(rx / 4); q++) {
+        const cx = b.x + r() * b.w;
+        const cy = b.y + r() * b.h;
+        if (r() < 0.7) {
+          const rx = range(r, 140, 340);
+          const ry = rx * range(r, 0.5, 0.85);
+          g.poly(chaikin(blob(cx, cy + ry * 0.1, rx * 0.9, ry * 0.85, seed + guard, 0.3, 16), 2)).fill({
+            color: dark,
+            alpha: 0.9,
+          });
+          for (let q = 0; q < Math.round(rx / 2.5); q++) {
             const ang = range(r, 0, 6.28);
             const d = Math.sqrt(r());
-            g.poly(
-              leaf(
-                xe + Math.cos(ang) * rx * d,
-                ye + Math.sin(ang) * rx * 0.6 * d,
-                range(r, 18, 34),
-                range(r, 0, 6.28),
-              ),
-            ).fill({
-              color: q % 4 ? col : lit,
-              alpha: 0.9,
+            const ly = cy + Math.sin(ang) * ry * d;
+            const up = (cy - ly) / ry;
+            g.poly(leaf(cx + Math.cos(ang) * rx * d, ly, range(r, 26, 52), range(r, 0, 6.28))).fill({
+              color: up > 0.35 && r() < 0.7 ? lit : r() < 0.3 ? dark : col,
+              alpha: 0.92,
             });
           }
-          covered += rx * rx * 0.9;
+          covered += Math.PI * rx * ry * 0.85;
+        } else {
+          covered += fernCurl(g, cx, cy, range(r, 160, 380), r() < 0.5 ? -1 : 1, col, lit, seed + guard, r);
         }
       }
     } else {

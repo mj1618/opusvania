@@ -1,7 +1,7 @@
-# The Canopy: the first area built to the reference numbers (v6, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v7, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
-docs/design/levels/reviews/canopy-r1.md .. canopy-r5.md; the reference data: docs/design/reference-levels/ (all four
+docs/design/levels/reviews/canopy-r1.md .. canopy-r6.md; the reference data: docs/design/reference-levels/ (all four
 exact since 2026-10-30).
 Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
@@ -23,6 +23,40 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v7 (review r6): peaks and quiet, not even coverage
+- **Measure the spread, not the totals** (review r6 #1: v6 met every total and got flatter). `canopy-furniture.ts
+  --check --rooms` (after `export-area.ts canopy`): things per box screen room by room (enemies, pickups, pods, bark,
+  lamps, thorn strips, one-ways), their CV, rooms under 0.5, the busiest over the median, the share of thorn length in
+  runs >= 640. Round 7's bar: CV >= 0.8, >= 6 quiet rooms, peak >= 5x median, >= 50% long runs, thorns in <= 14
+  rooms, thorns >= 10,800 px, hit + ledges >= 1.5 per air screen. Reproduces the review's numbers exactly (population
+  sd, raw box screens, hazards hero-scaled).
+- **What moves the spread**: every thorn strip, glint, lamp and knuckle is one thing, whatever its size. Quiet rooms
+  are near empty (a 1.8-screen room must hold 0 things to be under 0.5; a 2.4-screen one 1), so a quiet dead end pays
+  one major. The peak (the Grove) needs ~9 a screen. The median falls by thinning the middle rooms (one find, no
+  hoard), not by emptying the loud ones. Join trays into runs (one strip of 1,664 is one thing, 7 trays are 7).
+- **Long runs and drops**: a run under a ledge she runs off lands her in it (the trunk's tier 1: a full-speed run off
+  the top's lip travels ~190 px over a 192 drop): start the knuckle line where she comes down. A knuckle near a glide
+  lock's lip is a skip (the gap: only east of x 2700 at y >= 2048).
+- **Patches stand on solid ground, 128 wide and 192 clear** (the scene check): not on a one-way root; the well's
+  `p-hollow` sits in the 128 px between the ambush block and the chimney.
+- **A gate does not tie a dangler** (the scene check wants a solid's underside or a one-way): the Grove's wave dangler
+  hangs under the Grovemother's trunk. A flyer's territory + 100 must hold no pod or great (the scene check).
+- **Lamps' cores clear of solids** (40 px for a wick): mind the overhangs.
+- **Fling lines in the proofs**: `tools/solve/canopy.ts` claims take `lit: true` (lamps burn, `keepLamps`), and every
+  lock claim in a room with an unconditional wick runs a second time lit (`... lit` in the output). A fling west from
+  a lamp carries ~400-500 px (15 px/f kept at 0.97 a frame) plus her air control: keep lamps that far from any lip
+  a lock guards.
+- **climbs.ts with creatures** (`runClimb(..., { creatures: true })`, `--creatures`, `CREATURE_CLIMBS`, `restSafe`): a
+  lampwing notices her at 260 px; one 456 px over a rest never dives at her there (the rest is safe), so "watch its
+  dive from the rest" needs her to draw it (hops on the lip). The plain plan past it takes 0-1 hits from two starts
+  of three.
+- **Grown rooms keep their world coords**: the tunnel and burrow grew 3,520 west (`TX`), their old content `+ TX`; the
+  links' `at` are world px and did not move. The hollow root grew 480 down (the map's east edge).
+- **The arena gates** (`arena-w`, `arena-e`, h 64 under y 1088, `shut: cn-grove-wave`): a gate is carved air plus its
+  own solid; the zone `fit` + `until: cn-grove-clear` frames the pit.
+- **Rewards**: majors are glades 2 + upgrades 4 + seeds 3 + stones 5 + moon shards 6 + greats; at 23 that leaves 3
+  greats (the review's "greats 6" and "majors <= 23" cannot both hold).
 
 ## v6 (review r5): what changed in how it is built
 - **The hub is 8,000 wide** (`HX` = 3520: the old hub's content sits that far east in it) and the west rooms (limbs,
@@ -151,6 +185,9 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - r6 (canopy-r6, canopy-r6-fork): all three start bots on the well's landing in 1:36-3:53 (the bottom as a start
   works), none past leg 3 (2,070-2,170), well <-> trunk loops after. A pit a bot meets before the claws must be a
   plain jump (the hub's 448 px pit turned all three back); no thorns where a limb's drop lands (the hub's east pit).
+- r7 (canopy-r7): all three up leg 3 to the hollow (8:36, 8:55, 23:12; r6 none), two fought the ambush, one left by
+  the limbs; still well <-> trunk loops, leg 2's strip 6-15 hits a run. The bots rest at a patch only when they
+  happen to stand still in it: the casual one never rested at `p-hollow`, so its ambush fades cost legs 2-3 again.
 - r6: **they read strips** (lines.ts: a climb move whose face has a thorn strip in its span offers the clean far face
   first, `wall climb (the far face: ...)`, and `humanPick` takes it first).
 

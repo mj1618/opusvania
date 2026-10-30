@@ -1,7 +1,8 @@
 /**
  * The wood's mass edges (canopy review r5 #4): every free face and underside is a chain of lobes, so no painted mass
  * outline runs straight for more than 300 px (the reviewer's Sobel check on the chimney and hub shots, made a test
- * on the geometry the painter draws). Claw faces keep their lobes within +-12 px of the collision.
+ * on the geometry the painter draws). Claw faces keep their lobes within 24 px of the collision (canopy r7: +-12 still
+ * read as a ruler at play distance; past 24 her hold on the wall stops reading).
  */
 import { describe, expect, it } from 'vitest';
 import { EDGE } from '../../src/render/scene/lib/pf-edge';
@@ -53,9 +54,9 @@ describe('wood mass edges', () => {
     expect(bad).toEqual([]);
   });
 
-  it('claw faces stay within 12 px of the collision', () => {
-    expect(EDGE.claw.notch).toBeGreaterThanOrEqual(-12);
-    expect(EDGE.claw.peak[1]).toBeLessThanOrEqual(12);
+  it('claw faces stay within 24 px of the collision', () => {
+    expect(EDGE.claw.notch).toBeGreaterThanOrEqual(-24);
+    expect(EDGE.claw.peak[1]).toBeLessThanOrEqual(24);
     for (const room of woodRooms) {
       for (const e of massEdgeLines(room)) {
         if (e.kind !== 'face') continue;
@@ -64,7 +65,7 @@ describe('wood mass edges', () => {
         );
         if (!solid || (solid as { kick?: unknown }).kick === false) continue;
         for (let k = 0; k < e.pts.length; k += 2)
-          expect(Math.abs((e.pts[k] as number) - e.key)).toBeLessThanOrEqual(12.01);
+          expect(Math.abs((e.pts[k] as number) - e.key)).toBeLessThanOrEqual(24.01);
       }
     }
   });

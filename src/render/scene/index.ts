@@ -41,6 +41,7 @@ import { LanternBackLayer } from './layers/lantern-back';
 import { MidLayer } from './layers/mid';
 import { PlayfieldLayer } from './layers/playfield';
 import { SkyLayer } from './layers/sky';
+import { VeilLayer } from './layers/veil';
 import { isInterior, isLantern } from './lib/room-look';
 
 /** What a module gets once, at init. */
@@ -70,6 +71,7 @@ const MODULES: ReadonlyArray<new () => EnvModule> = [
   SkyLayer,
   FarLayers,
   MidLayer,
+  VeilLayer,
   PlayfieldLayer,
   ForegroundLayer,
   AirLayer,

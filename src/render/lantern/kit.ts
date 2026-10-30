@@ -24,6 +24,7 @@ import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
+import { thornFamilies } from '../scene/lib/families';
 import { mix, wind } from '../scene/lib/look';
 import { MASS_PATCHES } from '../scene/lib/mass-patches';
 import { LOOK } from '../scene/lib/room-look';
@@ -55,6 +56,8 @@ export const KIT = {
     barbDark: 0x3a1a14,
     rim: 0xffa868,
     mat: 0x120a0c,
+    /** Dead stems off a bed (no barbs: only the strip hurts). */
+    stem: 0x5a4a3c,
   },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
   cover: { body: 0x040302, root: 0x120c08, edge: 0x2a1c12 },
@@ -721,64 +724,135 @@ export class Kit {
       if (along) return [x + u, ny < 0 ? y + h - v : y + v];
       return [nx > 0 ? x + v : x + w - v, y + u];
     };
-    // The mat: a lumpy dark tangle along the wood side.
+    // (Review r6 #8: the same 64 px tray in 20 rooms.) Each bed is a family (scene/lib/families.ts): its mat, its
+    // barbs, what grows off it; and its own outline: it spills over the strip's ends by its own amounts (no barbs
+    // there: only the strip hurts).
+    const [matK, barbK, extraK] = (thornFamilies().get(`${LOOK.roomId}:${id}`) ?? 'mat-spike-creep').split(
+      '-',
+    );
+    const spillA = 14 + 46 * hash01(id, 201);
+    const spillB = 14 + 46 * hash01(id, 202);
+    // The mat: a lumpy dark tangle along the wood side (low and even, a thin coil, or a tall ragged thicket).
     const mat: number[] = [];
-    for (let u = -6; u <= len + 6; u += 12) {
-      const [px, py] = at(u, depth * (0.45 + 0.25 * hash01(id, Math.round(u) + 3)));
+    const [m0, m1] = matK === 'coil' ? [0.25, 0.15] : matK === 'thicket' ? [0.55, 0.45] : [0.45, 0.25];
+    for (let u = -spillA; u <= len + spillB; u += 12) {
+      const edge = Math.min(1, (u + spillA) / 40, (len + spillB - u) / 40);
+      const [px, py] = at(u, depth * (m0 + m1 * hash01(id, Math.round(u) + 3)) * Math.max(0.2, edge));
       mat.push(px, py);
     }
-    for (let u = len + 6; u >= -6; u -= 24) {
+    for (let u = len + spillB; u >= -spillA; u -= 24) {
       const [px, py] = at(u, -4);
       mat.push(px, py);
     }
     g.poly(mat).fill({ color: T.mat, alpha: 0.95 });
-    // A few canes through the mat (lit now and then).
-    const nc = Math.max(2, Math.round(len / 60));
+    // A few canes through the mat (lit now and then); a coil's loop over and back.
+    const nc = Math.max(2, Math.round(len / (matK === 'thicket' ? 40 : 60)));
     for (let c = 0; c < nc; c++) {
-      const u0 = hash01(id, c * 3) * len;
-      const u1 = Math.min(len, u0 + 40 + hash01(id, c * 3 + 1) * 90);
+      const u0 = hash01(id, c * 3) * (len + spillA + spillB) - spillA;
+      const u1 = u0 + 40 + hash01(id, c * 3 + 1) * 90;
       const [ax, ay] = at(u0, depth * 0.15);
-      const [bx, by] = at((u0 + u1) / 2, depth * (0.5 + 0.3 * hash01(id, c * 3 + 2)));
+      const [bx, by] = at((u0 + u1) / 2, depth * (matK === 'coil' ? 0.9 : 0.5 + 0.3 * hash01(id, c * 3 + 2)));
       const [ex, ey] = at(u1, depth * 0.2);
       const sw = wind(ax, clock, hash01(id, c)) * 1.5;
       g.moveTo(ax, ay).quadraticCurveTo(bx + sw, by + sw, ex, ey);
       g.stroke({ color: c % 3 === 0 ? T.caneLit : T.cane, width: 3 + hash01(id, c + 40) * 3, cap: 'round' });
+      if (matK === 'coil' && c % 2 === 0) {
+        const [lx, ly] = at((u0 + u1) / 2, depth * 0.7);
+        g.circle(lx + sw, ly, 9 + 8 * hash01(id, c + 60)).stroke({ color: T.cane, width: 2.5 });
+      }
     }
-    // The barbs.
+    // What grows off it: canes creeping over the lips and up a wall beside it, or a tuft of dead stems.
+    if (extraK === 'creep') {
+      for (const [end, sgn] of [
+        [-spillA, -1],
+        [len + spillB, 1],
+      ] as const) {
+        const climb = 40 + 120 * hash01(id, 210 + sgn);
+        const [ax, ay] = at(end - sgn * 10, depth * 0.2);
+        // Up the wood beside the end if there is any, else along the ground past it.
+        const wall = along && solidAt(ax + sgn * 16, ay - 24 * (ny < 0 ? 1 : -1));
+        const ex = wall ? ax + sgn * 6 : ax + sgn * climb * 0.8;
+        const ey = wall ? ay + (ny < 0 ? -climb : climb) : ay + (ny < 0 ? -6 : 6);
+        g.moveTo(ax, ay).quadraticCurveTo((ax + ex) / 2 + sgn * 14, (ay + ey) / 2, ex, ey);
+        g.stroke({ color: T.caneLit, width: 3, cap: 'round' });
+        for (let q = 1; q < 4; q++) {
+          const t = q / 4;
+          const qx = lerpN(ax, ex, t);
+          const qy = lerpN(ay, ey, t);
+          g.moveTo(qx, qy)
+            .lineTo(qx + sgn * 8, qy - 7)
+            .stroke({ color: T.cane, width: 2, cap: 'round' });
+        }
+      }
+    } else {
+      const ns = 3 + Math.floor(hash01(id, 220) * 4);
+      for (let q = 0; q < ns; q++) {
+        const u = hash01(id, 221 + q) * len;
+        const sl = 30 + 60 * hash01(id, 230 + q);
+        const [sx, sy] = at(u, depth * 0.3);
+        const lean = (hash01(id, 240 + q) - 0.5) * 0.6;
+        const dx = along ? lean : nx;
+        const dy = along ? (ny < 0 ? -1 : 1) : lean;
+        const tx = sx + dx * sl + wind(sx, clock, q) * 2;
+        const ty = sy + dy * sl;
+        g.moveTo(sx, sy).lineTo(tx, ty).stroke({ color: T.stem, width: 2, cap: 'round', alpha: 0.85 });
+        g.moveTo(lerpN(sx, tx, 0.6), lerpN(sy, ty, 0.6))
+          .lineTo(lerpN(sx, tx, 0.6) + dy * 10, lerpN(sy, ty, 0.6) - dx * 10 - 6)
+          .stroke({ color: T.stem, width: 1.5, cap: 'round', alpha: 0.85 });
+      }
+    }
+    // The barbs: straight spikes, hooks (the tip bent along the strip) or pairs splayed from one base.
     let u = 6 + hash01(id, 90) * 10;
     let k = 0;
     while (u < len - 4) {
       const r1 = hash01(id, k * 5 + 100);
       const r2 = hash01(id, k * 5 + 101);
-      const blen = 24 + 16 * r1;
-      const spread = (r2 - 0.5) * 0.9;
-      const base = 5 + 4 * r2;
       const [bx, by] = at(u, depth * 0.3);
-      // Direction: out, turned by the spread (along the strip).
-      const ax = along ? spread : nx;
-      const ay = along ? (ny < 0 ? -1 : 1) : spread;
-      const n = Math.hypot(ax, ay);
-      const dx = ax / n;
-      const dy = ay / n;
-      const px = -dy;
-      const py = dx;
-      const tx = bx + dx * blen;
-      const ty = by + dy * blen;
       const pale = k % 3 !== 1;
-      g.poly([bx + px * base, by + py * base, tx, ty, bx - px * base, by - py * base]).fill(T.barbDark);
-      g.poly([
-        bx + dx * blen * 0.35 + px * base * 0.55,
-        by + dy * blen * 0.35 + py * base * 0.55,
-        tx,
-        ty,
-        bx + dx * blen * 0.35 - px * base * 0.3,
-        by + dy * blen * 0.35 - py * base * 0.3,
-      ]).fill(pale ? T.bone : T.rust);
-      // The warm rim on the barb's lit edge.
-      g.moveTo(bx + dx * blen * 0.3 + px * base * 0.6, by + dy * blen * 0.3 + py * base * 0.6)
-        .lineTo(tx, ty)
-        .stroke({ color: T.rim, width: 1.2, alpha: 0.6 });
-      u += 18 + 16 * hash01(id, k * 5 + 102);
+      const one = (spread: number, blen: number, base: number, hook: number): void => {
+        // Direction: out, turned by the spread (along the strip).
+        const ax = along ? spread : nx;
+        const ay = along ? (ny < 0 ? -1 : 1) : spread;
+        const n = Math.hypot(ax, ay);
+        const dx = ax / n;
+        const dy = ay / n;
+        const px = -dy;
+        const py = dx;
+        // A hook's tip bends sideways over its last third.
+        const tx = bx + dx * blen + px * hook;
+        const ty = by + dy * blen + py * hook;
+        const mx = bx + dx * blen * 0.65;
+        const my = by + dy * blen * 0.65;
+        g.poly([
+          bx + px * base,
+          by + py * base,
+          mx + px * base * 0.4,
+          my + py * base * 0.4,
+          tx,
+          ty,
+          bx - px * base,
+          by - py * base,
+        ]).fill(T.barbDark);
+        g.poly([
+          bx + dx * blen * 0.35 + px * base * 0.55,
+          by + dy * blen * 0.35 + py * base * 0.55,
+          tx,
+          ty,
+          bx + dx * blen * 0.35 - px * base * 0.3,
+          by + dy * blen * 0.35 - py * base * 0.3,
+        ]).fill(pale ? T.bone : T.rust);
+        // The warm rim on the barb's lit edge.
+        g.moveTo(bx + dx * blen * 0.3 + px * base * 0.6, by + dy * blen * 0.3 + py * base * 0.6)
+          .lineTo(tx, ty)
+          .stroke({ color: T.rim, width: 1.2, alpha: 0.6 });
+      };
+      if (barbK === 'pair') {
+        one(-0.45 + (r2 - 0.5) * 0.3, (22 + 12 * r1) * 0.85, 4 + 3 * r2, 0);
+        one(0.45 + (r2 - 0.5) * 0.3, (22 + 12 * r1) * 0.8, 4 + 3 * r2, 0);
+      } else if (barbK === 'hook') {
+        one((r2 - 0.5) * 0.5, 26 + 14 * r1, 5 + 4 * r2, (k % 2 ? 1 : -1) * (6 + 6 * r1));
+      } else one((r2 - 0.5) * 0.9, 24 + 16 * r1, 5 + 4 * r2, 0);
+      u += (barbK === 'pair' ? 26 : 18) + 16 * hash01(id, k * 5 + 102);
       k++;
     }
     // A faint warm glow along the strip, so it reads against any back.
@@ -1513,4 +1587,8 @@ export function phraseLit(rhythm: string, clock: number): number {
     }
   }
   return 0;
+}
+
+function lerpN(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
 }

@@ -22,6 +22,7 @@
     "firsttimer": "tsx tools/playtest/firsttimer.ts",
     "humanplay": "tsx tools/playtest/humanrun.ts",
     "look:stats": "tsx tools/look-stats.ts",
+    "look:check": "tsx tools/look-check.ts",
     "leak": "tsx tools/leak.ts",
     "solve": "tsx tools/solve/proto-1.ts"
   },

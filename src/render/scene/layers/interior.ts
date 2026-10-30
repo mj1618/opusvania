@@ -302,7 +302,16 @@ export class InteriorLayer implements EnvModule {
           0.28 * breathe,
           l.s * 3.5,
         );
-        this.glow.add(l.x + l.dir * l.s * 0.5, l.y + 4, l.s * 1.6, col, 0.55 * breathe, l.s * 0.9);
+        // (A clump's light, not a dot: small cores scattered up and down it.)
+        for (let k = 0; k < 5; k++)
+          this.glow.add(
+            l.x + l.dir * l.s * (0.2 + 0.4 * hash1(l.seed + k, 21)),
+            l.y + (hash1(l.seed + k, 23) * 2 - 1) * l.s * 1.3,
+            10 + 8 * hash1(l.seed + k, 25),
+            col,
+            0.45 * breathe,
+            8,
+          );
       } else if (l.kind === 'worm') {
         this.glow.add(l.x, l.y + l.s * 0.55, 34, col, 0.2 * breathe, l.s * 0.7);
         const n = 3 + Math.floor(hash1(l.seed, 3) * 4);
