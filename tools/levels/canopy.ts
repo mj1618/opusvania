@@ -1282,25 +1282,22 @@ function webs(): Json {
 
 function elder(): Json {
   const r = new Wood('cn-elder', "The Elder's root room", [2300, 2496], 7207, { back: true, mood: 'deep' });
-  r.cave(1280, 2176, 2560, 2496, { ceil: 64, w: 0, e: 0, corner: 0 });
-  // The climb: a wide shaft with root shelves on alternate walls (the claws), to the gallery at the top.
-  r.hole(768, 512, 1536, 2496);
-  r.cave(256, 192, 1536, 512, { ceil: 96, w: 64, e: 0 });
-  r.cave(1536, 128, 2560, 384, { ceil: 0, w: 0, e: 0, corner: 0 });
+  r.cave(1152, 2240, 2560, 2496, { ceil: 64, w: 0, e: 0, corner: 0 });
+  // The climb: a 384 px chimney in three legs, each up one face to a rest carved into the other wall.
+  r.hole(768, 128, 1152, 2496);
+  r.hole(1152, 1472, 1408, 1856);
+  r.hole(512, 832, 768, 1216);
+  r.cave(256, 192, 768, 512, { ceil: 96, w: 64, e: 0 });
+  r.cave(1152, 128, 2560, 384, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.fill();
-  r.mass(768, 2112, 256, 48);
-  r.mass(1280, 1728, 256, 48);
-  r.mass(768, 1408, 256, 48);
-  r.mass(768, 1088, 256, 48);
-  r.mass(1280, 704, 256, 48);
   r.hollow('drop-elder', 500, 512, 'moonDrop');
-  r.hoard('elder-', 900, 400, 200, 60, 4);
+  r.hoard('elder-', 300, 400, 160, 60, 4);
   r.place('in', 2300, 2496);
   r.place('top', 700, 512);
   r.place('plug', 2400, 384);
   r.shotStops([
     ['in', 2200, 2496],
-    ['climb', 1150, 1300],
+    ['climb', 960, 1500],
     ['top', 700, 512],
   ]);
   r.route('webs', 'in');
