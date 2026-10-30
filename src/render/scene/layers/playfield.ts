@@ -110,7 +110,9 @@ export class PlayfieldLayer implements EnvModule {
       pt.paint.albedo.destroy();
       pt.paint.relief.destroy();
       const m = pt.show ?? pt.rect;
-      const mask = new Graphics().rect(m.x, m.y, m.w, m.h).fill(0xffffff);
+      const mask = (
+        !pt.show && pt.poly ? new Graphics().poly(pt.poly) : new Graphics().rect(m.x, m.y, m.w, m.h)
+      ).fill(0xffffff);
       const holder = new Container({ label: pt.key });
       holder.addChild(b.layer, mask);
       holder.mask = mask;

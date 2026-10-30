@@ -291,6 +291,7 @@ const SceneSchema = z
         anchorY: int.optional(),
         anchorX: int.optional(),
         pieces: z.boolean().optional(),
+        look: z.enum(['heartwood', 'shaft', 'nest', 'canopy', 'den']).optional(),
       })
       .strict()
       .optional(),

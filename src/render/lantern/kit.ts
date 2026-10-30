@@ -40,6 +40,10 @@ export const KIT = {
     skin: 0x5a4a30,
     skinLit: 0xa08a5a,
   },
+  /** Rotten heartwood in the wood: its face over the mass, rot blooms, the crack's lit lip, chips, a cut's dust. */
+  rot: { face: 0x1e120c, soft: 0x2e1c12, bloom: 0x8a7458, lit: 0xb08a5a, chip: 0x3a2618, dust: 0x9a8468 },
+  /** Seconds a cut's dust hangs. */
+  dust: 0.6,
   heart: { body: 0x2c1410, ring: 0x401c14, ringLit: 0x6a3020, scar: 0xc8a888, sheen: 0x9a5a40 },
   thorn: { cane: 0x1a0e12, caneLit: 0x4a2a2a, tip: 0xe0d0c0 },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
@@ -82,6 +86,8 @@ export const KIT = {
   coverEase: 3,
   shake: 0.25,
 } as const;
+
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 interface Hit {
   t: number;
@@ -176,7 +182,7 @@ export class Kit {
       x + w > cam.x - hw && x < cam.x + hw && y + h > cam.y - hh && y < cam.y + hh;
     for (const [k, h] of this.hits) {
       h.t += dt;
-      if (h.t > KIT.shake + 0.2) this.hits.delete(k);
+      if (h.t > Math.max(KIT.shake + 0.2, KIT.dust)) this.hits.delete(k);
     }
     for (const [k, t] of this.opening) this.opening.set(k, t + dt);
     for (const [k, b] of this.bellT) {
@@ -313,7 +319,14 @@ export class Kit {
       // In the wood the wall is the mass it sits in (baked: mass-patches.ts); only a faint seam and its cuts show.
       if (patch) {
         patch.x = ox;
+        // (The wall a room teaches with reads a little stronger than a secret, never a different shape.)
+        const teach = (
+          (S as { marks?: { landmarks?: Array<{ id: string; kind: string }> } }).marks?.landmarks ?? []
+        ).some((l) => l.kind === 'teach' && l.id === b.id);
+        this.rot(back, b.x + ox, b.y, b.w, b.h, b.floor === true, teach ? 1 : 0.7, b.id);
         this.seam(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
+        if (hit && hit.t < KIT.dust)
+          this.dust(back, b.x + b.w / 2, b.y + b.h / 2, b.w, b.h, hit.t / KIT.dust, b.id);
         return;
       }
       if ((b as { heartwood?: boolean }).heartwood) this.heartwood(back, b.x + ox * 0.4, b.y, b.w, b.h, b.id);
@@ -571,6 +584,73 @@ export class Kit {
     }
   }
 
+  /**
+   * Rotten heartwood in the wood (review r3 #9: the teaching wall read as a post): over the baked mass, a darker,
+   * softer, warmer face with pale rot blooms, a lit crack running across it on the slant, loose chips at its foot.
+   */
+  private rot(
+    g: Graphics,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    floor: boolean,
+    k: number,
+    id: string,
+  ): void {
+    const R = KIT.rot;
+    g.poly(ragged(x + 3, y + 3, w - 6, h - 6, `${id}r`, 6)).fill({ color: R.face, alpha: 0.55 * k });
+    g.poly(ragged(x + w * 0.2, y + h * 0.15, w * 0.6, h * 0.7, `${id}q`, 5)).fill({
+      color: R.soft,
+      alpha: 0.4 * k,
+    });
+    // Blooms of rot: pale soft spots.
+    for (let q = 0; q < 5; q++) {
+      const bx = x + w * (0.15 + 0.7 * hash01(id, q + 60));
+      const by = y + h * (0.1 + 0.8 * hash01(id, q + 70));
+      g.ellipse(bx, by, 3 + 5 * hash01(id, q + 80), 2 + 4 * hash01(id, q + 90)).fill({
+        color: R.bloom,
+        alpha: 0.35 * k,
+      });
+    }
+    // The crack: corner to corner on the slant, dark with a lit lip.
+    const pts: number[] = [];
+    for (let q = 0; q <= 6; q++) {
+      const u = q / 6;
+      const j = (hash01(id, q + 100) - 0.5) * (floor ? 10 : 12);
+      if (floor) pts.push(x + w * (0.05 + 0.9 * u), y + h * (0.2 + 0.6 * u) + j);
+      else pts.push(x + w * (0.15 + 0.7 * u) + j, y + h * (0.06 + 0.88 * u));
+    }
+    g.moveTo(pts[0] as number, pts[1] as number);
+    for (let q = 2; q < pts.length; q += 2) g.lineTo(pts[q] as number, pts[q + 1] as number);
+    g.stroke({ color: KIT.bark.crack, width: 3.2, alpha: 0.85 * k });
+    g.moveTo((pts[0] as number) + 2, (pts[1] as number) - 1);
+    for (let q = 2; q < pts.length; q += 2) g.lineTo((pts[q] as number) + 2, (pts[q + 1] as number) - 1);
+    g.stroke({ color: R.lit, width: 1.2, alpha: 0.6 * k });
+    // Chips fallen at its foot (a wall's; a floor panel's sit round its edges).
+    for (let q = 0; q < 6; q++) {
+      const cx = floor ? x + w * hash01(id, q + 120) : x - 10 + (w + 20) * hash01(id, q + 120);
+      const cy = floor ? y - 2 : y + h - 2;
+      const sz = 3 + 4 * hash01(id, q + 130);
+      g.poly([cx, cy, cx + sz, cy - sz * 0.6, cx + sz * 1.4, cy + 1]).fill({
+        color: R.chip,
+        alpha: 0.85 * k,
+      });
+    }
+  }
+
+  /** A puff of rot dust from a cut (t: 0..1 of its life). */
+  private dust(g: Graphics, cx: number, cy: number, w: number, h: number, t: number, id: string): void {
+    for (let q = 0; q < 7; q++) {
+      const a = hash01(id, q + 150) * 6.28;
+      const d = (10 + 40 * hash01(id, q + 160)) * t;
+      g.circle(cx + Math.cos(a) * d * (w > h ? 2 : 1), cy + Math.sin(a) * d - 14 * t, 4 + 10 * t).fill({
+        color: KIT.rot.dust,
+        alpha: 0.35 * (1 - t),
+      });
+    }
+  }
+
   private heartwood(g: Graphics, x: number, y: number, w: number, h: number, id: string): void {
     const H = KIT.heart;
     g.poly(ragged(x, y, w, h, id, 2)).fill(H.body);
@@ -743,63 +823,111 @@ export class Kit {
     id: string,
   ): void {
     const G = KIT.gate;
-    const a = 1 - fall * 0.6;
+    const a = 1 - fall * 0.7;
     const cx = x + w / 2;
-    // The hole and the light beyond it.
-    g.roundRect(x - 10, y - 16, w + 20, h + 16, Math.min(60, w * 0.45)).fill({ color: G.hole, alpha: 0.95 });
+    const R = w / 2 + 18;
+    const archTop = y - 26;
+    // The hole: an arch (round at the top, never a box) and the light beyond it.
+    const hole: number[] = [x - 12, y + h + 4];
+    for (let k = 0; k <= 16; k++) {
+      const t = Math.PI + (Math.PI * k) / 16;
+      hole.push(cx + Math.cos(t) * (R - 6), archTop + R + Math.sin(t) * R * 0.9);
+    }
+    hole.push(x + w + 12, y + h + 4);
+    g.poly(hole).fill({ color: G.hole, alpha: 0.95 });
     const pulse = 0.85 + 0.15 * Math.sin(clock * 0.8 + hash01(id, 1) * 6);
-    glow.add(cx, y + h * 0.55, w * 0.9, G.light, (0.26 + 0.5 * fall) * pulse, h * 0.6);
+    glow.add(cx, y + h * 0.55, w * 0.9, G.light, (0.24 + 0.5 * fall) * pulse, h * 0.6);
     glow.add(cx, y + h - 8, w * 1.6, G.light, 0.12 + 0.3 * fall, 24);
-    // The weave: thick roots down the opening, drawn up as it opens, crossed by thinner diagonals.
-    const lift = fall * fall * h;
-    const n = Math.max(3, Math.round(w / 26));
+    // The tangle across it (review r3 #2: even bars read as a bird-cage): roots of uneven weight grown from both sides
+    // and down from the crown, crossing on the slant and sagging; opening, each draws back toward where it grew.
+    const keep = 1 - fall * fall;
+    const n = Math.max(5, Math.round(h / 34));
     for (let k = 0; k < n; k++) {
-      const r = hash01(id, k + 3);
-      const sx = x + (w * (k + 0.5)) / n;
-      const len = Math.max(0, h - lift * (0.7 + 0.3 * r));
-      if (len < 4) continue;
-      g.moveTo(sx, y - 6);
+      const r1 = hash01(id, k + 3);
+      const r2 = hash01(id, k + 77);
+      const fromW = k % 2 === 0;
+      const ya = y + h * (0.05 + 0.9 * r1);
+      const yb = Math.min(y + h, ya + (r2 - 0.35) * h * 0.7);
+      const xa = fromW ? x - 6 : x + w + 6;
+      const xb = fromW ? x + w + 6 : x - 6;
+      const sag = 20 + 40 * r2;
+      const ex = lerp(xa, xb, keep);
+      const ey = lerp(ya, yb, keep);
+      if (keep < 0.05) continue;
+      g.moveTo(xa, ya).quadraticCurveTo((xa + ex) / 2 + (r1 - 0.5) * 30, (ya + ey) / 2 + sag * keep, ex, ey);
+      g.stroke({ color: G.root, width: 5 + 9 * r2 * (1 - 0.5 * fall), alpha: a, cap: 'round' });
+      g.moveTo(xa, ya - 3).quadraticCurveTo(
+        (xa + ex) / 2 + (r1 - 0.5) * 30,
+        (ya + ey) / 2 + sag * keep - 3,
+        ex,
+        ey - 3,
+      );
+      g.stroke({ color: G.rootLit, width: 1.6, alpha: 0.4 * a, cap: 'round' });
+    }
+    // A few long roots hanging from the crown, swaying.
+    for (let k = 0; k < 4; k++) {
+      const r = hash01(id, k + 140);
+      const sx = x + w * (0.15 + 0.7 * r);
+      const len = h * (0.5 + 0.45 * hash01(id, k + 150)) * keep;
+      if (len < 6) continue;
+      g.moveTo(sx, archTop + 18);
       for (let s2 = 1; s2 <= 6; s2++) {
         const u = s2 / 6;
-        g.lineTo(sx + Math.sin(u * 5 + r * 9) * 6 + wind(sx, clock, r) * 1.5 * u, y - 6 + len * u);
+        g.lineTo(sx + Math.sin(u * 4 + r * 9) * 10 + wind(sx, clock, r) * 3 * u, archTop + 18 + len * u);
       }
-      g.stroke({ color: G.root, width: 11 + r * 6, alpha: a, cap: 'round' });
-      g.moveTo(sx - 3, y);
-      for (let s2 = 1; s2 <= 6; s2++) {
-        const u = s2 / 6;
-        g.lineTo(sx - 3 + Math.sin(u * 5 + r * 9) * 6, y + len * u);
+      g.stroke({ color: G.root, width: 8 + r * 6, alpha: a, cap: 'round' });
+    }
+    // The arch: on each side two great roots twisting round each other out of a flared foot, over the top to meet in
+    // a knot; lit on their moon side.
+    for (const side of [-1, 1] as const) {
+      for (let q = 0; q < 2; q++) {
+        const ph = q * Math.PI;
+        const path: Array<[number, number]> = [];
+        for (let k = 0; k <= 14; k++) {
+          const u = k / 14;
+          // Up the side (u < 0.6), then over the crown to the middle.
+          const t = u < 0.6 ? 0 : (u - 0.6) / 0.4;
+          const baseX = cx + side * (R + 4);
+          const px =
+            u < 0.6
+              ? baseX + side * 26 * (1 - u / 0.6) ** 2
+              : cx + side * Math.cos((t * Math.PI) / 2) * (R + 4);
+          const py =
+            u < 0.6
+              ? lerp(y + h + 8, archTop + R, u / 0.6)
+              : archTop + R - Math.sin((t * Math.PI) / 2) * R * 0.9;
+          const tw = Math.sin(u * 9 + ph) * 9;
+          path.push([px + tw * (u < 0.6 ? 1 : 0.6), py + (u < 0.6 ? 0 : tw * 0.5)]);
+        }
+        const wd = q ? 26 : 34;
+        g.moveTo(path[0]?.[0] ?? 0, path[0]?.[1] ?? 0);
+        for (const [px, py] of path.slice(1)) g.lineTo(px, py);
+        g.stroke({ color: G.post, width: wd, cap: 'round', join: 'round' });
+        g.moveTo((path[0]?.[0] ?? 0) - side * 6, (path[0]?.[1] ?? 0) - 4);
+        for (const [px, py] of path.slice(1)) g.lineTo(px - side * wd * 0.28, py - wd * 0.2);
+        g.stroke({ color: G.rootLit, width: 2.2, alpha: 0.45, cap: 'round', join: 'round' });
       }
-      g.stroke({ color: G.rootLit, width: 2, alpha: 0.5 * a, cap: 'round' });
+      // The foot: roots spreading out over the floor.
+      for (let q = 0; q < 3; q++) {
+        const fx = cx + side * (R + 10);
+        const reach = 50 + 40 * q + 30 * hash01(id, q + (side > 0 ? 200 : 210));
+        g.moveTo(fx, y + h - 30 - q * 10).quadraticCurveTo(
+          fx + side * reach * 0.5,
+          y + h - 6,
+          fx + side * reach,
+          y + h + 6,
+        );
+        g.stroke({ color: G.post, width: 18 - q * 4, cap: 'round' });
+      }
     }
-    for (let k = 0; k < Math.round(h / 60); k++) {
-      const r = hash01(id, k + 40);
-      const yy = y + (h * (k + 0.5)) / Math.round(h / 60);
-      if (yy > y + h - lift) continue;
-      const d = k % 2 ? 1 : -1;
-      g.moveTo(x - 4, yy - d * 18).quadraticCurveTo(cx, yy + (r - 0.5) * 14, x + w + 4, yy + d * 18);
-      g.stroke({ color: G.root, width: 6 + r * 3, alpha: a, cap: 'round' });
-    }
-    // The frame: two root posts and the lintel over the arch, lit on their upper edges.
-    for (const side of [-1, 1]) {
-      const px = side < 0 ? x - 14 : x + w + 14;
-      g.moveTo(px - side * 4, y - 40)
-        .bezierCurveTo(px + side * 10, y + h * 0.3, px - side * 6, y + h * 0.7, px + side * 14, y + h + 6)
-        .stroke({ color: G.post, width: 30, cap: 'round' });
-      g.moveTo(px - side * 12, y - 30)
-        .bezierCurveTo(px + side * 2, y + h * 0.3, px - side * 14, y + h * 0.7, px + side * 4, y + h)
-        .stroke({ color: G.rootLit, width: 2.5, alpha: 0.55 });
-    }
-    g.moveTo(x - 40, y - 6)
-      .quadraticCurveTo(cx, y - 52, x + w + 40, y - 6)
-      .stroke({ color: G.post, width: 34, cap: 'round' });
-    g.moveTo(x - 30, y - 20)
-      .quadraticCurveTo(cx, y - 64, x + w + 30, y - 20)
-      .stroke({ color: G.rootLit, width: 3, alpha: 0.6 });
-    // Cyan moss beads on the lintel: the gate is a place, found in the dark.
-    for (let k = 0; k < 5; k++) {
-      const u = (k + 0.5) / 5;
-      const bx = x - 20 + (w + 40) * u;
-      const by = y - 18 - Math.sin(u * Math.PI) * 24;
+    // The knot where they meet, and cyan moss beads along the crown: the gate is a place, found in the dark.
+    g.ellipse(cx, archTop + R * 0.1, 30, 22).fill({ color: G.post });
+    g.ellipse(cx - 4, archTop + R * 0.1 - 6, 14, 6).fill({ color: G.rootLit, alpha: 0.25 });
+    for (let k = 0; k < 6; k++) {
+      const u = (k + 0.5) / 6;
+      const t = Math.PI + Math.PI * u;
+      const bx = cx + Math.cos(t) * (R + 22);
+      const by = archTop + R + Math.sin(t) * R * 0.9 - 14;
       g.circle(bx, by, 3.5).fill({ color: KIT.cap.spot, alpha: 0.9 });
       glow.add(bx, by, 18, KIT.cap.glow, 0.3 + 0.08 * Math.sin(clock * 1.7 + k));
     }

@@ -159,6 +159,13 @@ export interface RoomArt {
    * the hawker and the dangler: render/lantern), as Lanternroot's night rooms do.
    */
   pieces?: boolean;
+  /**
+   * A wood room's inside (canopy review r3 #4): `heartwood` (the fallen giant: rings, split grain, sap), `shaft` (a
+   * moonlit shaft: cold white, a beam down it), `nest` (the ants': packed earth, tunnels, larvae), `canopy` (bark and
+   * leaf up high, the air through gaps), `den` (the burrbacks': root curtains, scrapes, shed shells). Absent: derived
+   * by the renderer (render/scene/lib/interior.ts `lookOf`).
+   */
+  look?: 'heartwood' | 'shaft' | 'nest' | 'canopy' | 'den';
 }
 
 /** A cocoon on the hatching branch: `x`, `y` = where its thread is tied (the hang point), `len` its length. */

@@ -20,9 +20,21 @@ import type { SolidRect } from '../../../sim/scene';
 import { interiorPlan, paintGlowFlora, paintNearBacks } from './interior';
 import { mix } from './look';
 import type { BakeLook, MistFill } from './pf-bake';
-import { MASS, paintMasses } from './pf-mass';
+import { MASS, type MassRect, massOutline, paintMasses, paintShelves } from './pf-mass';
 import { Paint } from './pf-paint';
-import { blob, chaikin, clamp, cubic, lerp, quad, range, rngFor, smoothstep, wobble } from './pf-shape';
+import {
+  blob,
+  chaikin,
+  clamp,
+  cubic,
+  lerp,
+  quad,
+  range,
+  ribbon,
+  rngFor,
+  smoothstep,
+  wobble,
+} from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
 
 export const BRANCH = {
@@ -1323,6 +1335,110 @@ function paintTrunk(p: Paint, tree: TreeLike, joins: Join[], roomH: number, seed
   p.tint(clipAbove(poly, y0 + 26), B.barkDeep, 0.35);
 }
 
+/**
+ * A tree's foot (review r3 #3: the Grovemother hung as a slab on stilts, the lampoak had no base): great roots flaring
+ * out of the trunk's lower part onto the floor under it. Over a gap (her stilts) the inner roots arch down to where the
+ * stilts stood, the trunk's underside an arch between them (the walk goes under it); the outer ones reach wide.
+ */
+function rootBase(p: Paint, room: Room, t: TreeLike, stilts: TreeLike[], seed: number): void {
+  const B = BRANCH;
+  if (t.bottom >= room.height - 8 || t.plane === 'back') return;
+  // The floor under it: the highest solid top at or below its foot, across its middle.
+  let floor = Number.POSITIVE_INFINITY;
+  for (const q of room.solids)
+    if (q.tag !== 'trunk' && q.x < t.x + t.w * 0.3 && q.x + q.w > t.x - t.w * 0.3 && q.y >= t.bottom - 24)
+      floor = Math.min(floor, q.y);
+  if (!Number.isFinite(floor) || floor - t.bottom > 600) return;
+  const r = rngFor(seed, 503);
+  const h0 = t.solid ? 0.5 : B.decorH;
+  const half = t.w / 2;
+  const gap = floor - t.bottom;
+  const roots: Array<{ x0: number; x1: number; w: number; arch: boolean }> = [];
+  for (const st of stilts)
+    roots.push({ x0: t.x + Math.sign(st.x - t.x) * half * 0.55, x1: st.x, w: st.w * 1.25, arch: true });
+  for (const side of [-1, 1]) {
+    roots.push({
+      x0: t.x + side * half * 0.8,
+      x1: t.x + side * (half + 160 + 120 * r()),
+      w: t.w * 0.26,
+      arch: false,
+    });
+    roots.push({
+      x0: t.x + side * half * 0.3,
+      x1: t.x + side * (half * 0.6 + 60 * r()),
+      w: t.w * 0.18,
+      arch: false,
+    });
+    if (!stilts.length)
+      roots.push({
+        x0: t.x + side * half * 0.95,
+        x1: t.x + side * (half + 300 + 100 * r()),
+        w: t.w * 0.16,
+        arch: false,
+      });
+  }
+  // (Thinnest first: the great ones over them.)
+  roots.sort((a, b) => a.w - b.w);
+  for (const rt of roots) {
+    const dir = Math.sign(rt.x1 - t.x) || 1;
+    const ya = t.bottom - 160 - 80 * r();
+    const pts = [
+      rt.x0,
+      ya,
+      lerp(rt.x0, rt.x1, 0.35) + dir * 20,
+      t.bottom - 20 + gap * 0.2,
+      lerp(rt.x0, rt.x1, 0.8),
+      floor - Math.min(60, gap * 0.4),
+      rt.x1 + dir * (rt.arch ? 10 : 70),
+      floor + 10,
+    ];
+    const line = cubic(
+      pts[0] as number,
+      pts[1] as number,
+      pts[2] as number,
+      pts[3] as number,
+      pts[4] as number,
+      pts[5] as number,
+      pts[6] as number,
+      pts[7] as number,
+      20,
+    );
+    const L = lineLimb(
+      line,
+      (u) => rt.w * (1.15 - 0.55 * u) * (u > 0.85 ? 0.7 + (1 - u) * 2 : 1),
+      h0,
+      seed + Math.round(rt.x1),
+      0.35,
+      0.8,
+    );
+    paintLimb(p, L, knotsFor(L, seed + Math.round(rt.x0), 300));
+  }
+  // Between the arching roots: the trunk's underside as an arch (no square cut), dark under it.
+  if (stilts.length >= 2) {
+    const xs = stilts.map((st) => st.x).sort((a, b) => a - b);
+    const xl = xs[0] as number;
+    const xr = xs[xs.length - 1] as number;
+    const arc: number[] = [];
+    for (let k = 0; k <= 16; k++) {
+      const u = k / 16;
+      arc.push(
+        lerp(xl, xr, u),
+        t.bottom + 60 - Math.sin(u * Math.PI) * 40 + gap * 0.45 * (1 - Math.sin(u * Math.PI)),
+      );
+    }
+    const L = lineLimb(arc, () => 90, h0, seed + 7, 0.1, 0.7);
+    paintLimb(p, L);
+    p.tint(
+      ribbon(
+        arc.map((v, j) => (j % 2 ? v + 40 : v)),
+        () => 30,
+      ),
+      B.barkDeep,
+      0.6,
+    );
+  }
+}
+
 /** A broken-topped tree's crown: a few limbs drooping out and down from under the break, leaves on them. */
 function droopCrown(p: Paint, plan: BranchPlan, tree: TreeLike, seed: number): void {
   const B = BRANCH;
@@ -1861,6 +1977,8 @@ export interface MassPatch {
   front: boolean;
   /** Where it shows, if more than `rect` (a hanging clump's tips). */
   show?: { x: number; y: number; w: number; h: number };
+  /** Its painted silhouette (lumps, rounded free corners), the mask when there is no `show` (review r3 #3). */
+  poly?: number[];
   paint: Paint;
 }
 
@@ -1911,8 +2029,18 @@ export function paintBranchTerrain(
     }
     return joins;
   };
+  // A tree standing on another's foot is one of its roots (the Grovemother's stilts): its root base paints it.
+  const stilt = (t: TreeLike): boolean =>
+    trees.some((o) => o !== t && Math.abs(o.bottom - t.top) < 4 && Math.abs(o.x - t.x) < o.w / 2 + t.w);
   for (const t of trees) {
-    if (t.solid) continue;
+    if (t.solid || stilt(t)) continue;
+    rootBase(
+      p,
+      room,
+      t,
+      trees.filter((o) => o !== t && stilt(o) && Math.abs(o.x - t.x) < t.w + o.w),
+      seed + Math.round(t.x),
+    );
     paintTrunk(p, t, joinsOf(t), room.height, seed + Math.round(t.x));
     if (t.top > -40) droopCrown(p, plan, t, seed + Math.round(t.x) + 3);
   }
@@ -1921,6 +2049,8 @@ export function paintBranchTerrain(
   // join the stretches (rim, growth) after the limbs are painted.
   const massPlan: BranchPlan = { stretches: [], sprigs: [], hangs: [], clear: [], cocoons: [], clumps: [] };
   paintMasses(p, massPlan, room.solids.filter(isMass), room.width, room.height, seed);
+  // The one-way ledges: root shelves (review r3 #2).
+  paintShelves(p, massPlan, room, seed + 61);
   // The glowing growth on them (its light is live: layers/interior.ts).
   if (inside) paintGlowFlora(p, inside);
 
@@ -1992,6 +2122,13 @@ export function paintBranchTerrain(
   // 3. Solid trees, wrapping the roots of the limbs that grow out of them.
   for (const t of trees) {
     if (!t.solid) continue;
+    rootBase(
+      p,
+      room,
+      t,
+      trees.filter((o) => o !== t && stilt(o) && Math.abs(o.x - t.x) < t.w + o.w),
+      seed + Math.round(t.x),
+    );
     paintTrunk(p, t, joinsOf(t), room.height, seed + Math.round(t.x));
     if (t.top > -40) droopCrown(p, plan, t, seed + Math.round(t.x) + 3);
   }
@@ -2119,7 +2256,9 @@ export function paintBranchTerrain(
       // (A cover hanging from the top into open air is a root clump: shown past its rect, its strands' ragged tips.)
       const hangs = front && r.y <= 0 && r.w <= MASS.pillarW;
       const show = hangs ? { x: r.x - 260, y: r.y, w: r.w + 520, h: r.h + 380 } : undefined;
-      patches.push({ key, rect: { x: r.x, y: r.y, w: r.w, h: r.h }, front, paint: pp, show });
+      const all = [...masses, { ...r, tag }];
+      const poly = massOutline(all[all.length - 1] as MassRect, all, room.width, room.height, seed);
+      patches.push({ key, rect: { x: r.x, y: r.y, w: r.w, h: r.h }, front, paint: pp, show, poly });
     };
     for (const b of (room as { bark?: Array<{ id: string; x: number; y: number; w: number; h: number }> })
       .bark ?? [])

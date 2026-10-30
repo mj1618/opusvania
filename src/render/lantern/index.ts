@@ -25,7 +25,7 @@ import { Kit } from './kit';
 import { Lamps } from './lamps';
 import { Moonlight } from './moonlight';
 import { NightBack } from './night-back';
-import { Vista } from './vista';
+import { Vista, WoodVista } from './vista';
 import { RootWater } from './water';
 
 export class LanternPieces implements EnvModule {
@@ -35,7 +35,7 @@ export class LanternPieces implements EnvModule {
   private fx!: Fx;
   private water: RootWater | null = null;
   private depth: InteriorDepth | null = null;
-  private vista: Vista | null = null;
+  private vista: Vista | WoodVista | null = null;
   private moon: Moonlight | null = null;
   private night: NightBack | null = null;
   private anchorY = 0;
@@ -56,6 +56,16 @@ export class LanternPieces implements EnvModule {
     // The night's own backdrop (the forest below, the giant's crown) under the vista.
     if (LOOK.band === 'night') this.night = new NightBack(ctx);
     if (v && LOOK.band === 'night') this.vista = new Vista(ctx.layers, v);
+    // The wood's vista (review r3 #5): the mountain under the moon and the valley's lamps, from the way out's cliff.
+    else if (v && LOOK.kit === 'wood') {
+      const lm = marks?.landmarks ?? [];
+      this.vista = new WoodVista(
+        ctx.layers,
+        v,
+        lm.find((l) => l.kind === 'mountain'),
+        lm.find((l) => l.kind === 'valley') as { x: number; y: number; w?: number; h?: number } | undefined,
+      );
+    }
     this.anchorY = ctx.layers.anchor.y;
     if (isInterior() && LOOK.band) this.moon = new Moonlight(ctx.scene, ctx.layers, ctx.lights, LOOK.band);
     if (isInterior() && LOOK.band)

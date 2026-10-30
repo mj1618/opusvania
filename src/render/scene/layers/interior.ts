@@ -28,6 +28,8 @@ export class InteriorLayer implements EnvModule {
   private readonly deep = new Graphics({ label: 'interior-deep' });
   private readonly mask = new Graphics({ label: 'interior-mask' });
   private readonly beyond = new Graphics({ label: 'interior-beyond' });
+  private readonly edge = new Graphics({ label: 'interior-edge' });
+  private readonly edgeMask = new Graphics({ label: 'interior-edge-mask' });
   private readonly beads = new Graphics({ label: 'interior-beads' });
   private readonly glow = new GlowPool('interior-glow');
   private readonly root = new Container({ label: 'interior-light' });
@@ -43,10 +45,24 @@ export class InteriorLayer implements EnvModule {
     const pad = Math.max(W, H) * (1 - INTERIOR.deepParallax) + 240;
     drawDeepBack(this.deep, plan, LOOK.seed, pad);
     ctx.layers.get('interiorDeep').addChild(this.deep);
-    for (const m of backMask(plan, LOOK.seed)) this.mask.poly(m).fill({ color: 0xffffff });
+    const polys = backMask(plan, LOOK.seed);
+    for (const m of polys) this.mask.poly(m).fill({ color: 0xffffff });
     const airBack = ctx.layers.get('airBack');
     airBack.addChild(this.mask);
     this.deep.mask = this.mask;
+    // The torn edge falls into shadow (review r3 #2: where a back met open air its hard mask edge cut flat pale shapes
+    // out of the night: the Grove's and the hub's "mint"): dark bands along it, inside only (masked by a twin).
+    for (const m of polys) {
+      this.edgeMask.poly(m).fill({ color: 0xffffff });
+      for (const [w, a] of [
+        [360, 0.22],
+        [220, 0.28],
+        [110, 0.34],
+      ] as const)
+        this.edge.poly(m).stroke({ color: plan.tone.grain, width: w, alpha: a, join: 'round' });
+    }
+    airBack.addChild(this.edgeMask, this.edge);
+    this.edge.mask = this.edgeMask;
 
     // Beyond the room: the wood's body all round, a dark way on through each exit. (Only in a room that is mostly
     // enclosed: a glade with a back for one pocket keeps its sky past the edges.)
@@ -195,8 +211,39 @@ export class InteriorLayer implements EnvModule {
       if (Math.abs(l.x - cam.x) > hw + l.len || Math.abs(l.y - cam.y) > hh + l.len) continue;
       const ph = hash1(l.seed, 7) * 6.28;
       const breathe = 0.85 + 0.15 * Math.sin(clock * (0.7 + hash1(l.seed, 9) * 0.6) + ph);
-      const col = l.violet ? I.violet : I.cyan;
-      if (l.kind === 'moss') {
+      const col = l.violet ? I.violet : plan.look === 'shaft' ? I.frost : I.cyan;
+      if (l.kind === 'sap') {
+        // Amber beads: a small warm glow, steady (sap, not a lamp: no pull, no moths).
+        this.glow.add(l.x - l.dir * 6, l.y, l.s * 2.2, I.sap, 0.22 * breathe, l.s * 2.6);
+        this.glow.add(l.x - l.dir * 6, l.y, l.s * 0.7, 0xffd8a0, 0.35 * breathe, l.s * 0.9);
+      } else if (l.kind === 'larva') {
+        this.glow.add(l.x, l.y, l.s * 2.4, I.larva, 0.2 * breathe, l.s * 1.8);
+        this.glow.add(l.x, l.y, l.s * 0.9, 0xf4f8d8, 0.35 * breathe, l.s * 0.6);
+      } else if (l.kind === 'beam') {
+        // The moonlit shaft's key: one tall cold beam, motes turning slowly in it.
+        const mx = l.x;
+        const my = l.y + l.len * 0.5;
+        this.glow.add(mx, my, l.s * 0.5, I.moon, 0.14 * breathe, l.len * 0.52, l.dir);
+        this.glow.add(mx, my, l.s * 0.2, 0xe8f2ff, 0.12 * breathe, l.len * 0.5, l.dir);
+        if (Math.abs(cam.y - my) < hh + l.len * 0.5)
+          for (let k = 0; k < 30; k++) {
+            const u = (hash1(l.seed + k, 13) + clock * (0.01 + 0.01 * hash1(k, 17))) % 1;
+            const y = l.y + l.len * u;
+            if (Math.abs(y - cam.y) > hh) continue;
+            const across = (hash1(l.seed + k, 19) - 0.5) * l.s * 0.7 + Math.sin(clock * 0.4 + k) * 10;
+            this.glow.add(l.x + across, y, 3, 0xeef4ff, 0.55 * Math.sin(u * Math.PI * 7) ** 2, 3);
+          }
+      } else if (l.kind === 'trail') {
+        // The ants' trail: a dotted line of pale light walking along the floor.
+        const n = Math.floor(l.len / 26);
+        for (let k = 0; k < n; k++) {
+          const u = (((k / n + clock * 0.012) % 1) + 1) % 1;
+          const x = l.x + l.len * u;
+          if (Math.abs(x - cam.x) > hw) continue;
+          const tw = 0.5 + 0.5 * Math.sin(clock * 3 + k * 1.3);
+          this.glow.add(x, l.y - 3, 4, I.larva, 0.45 * tw, 2.5);
+        }
+      } else if (l.kind === 'moss') {
         this.glow.add(l.x, l.y - 6, l.s * 2.6, I.cyanDeep, 0.3 * breathe, l.s * 1.3);
         this.glow.add(l.x, l.y - 4, l.s * 1.2, col, 0.38 * breathe, l.s * 0.5);
       } else if (l.kind === 'fungus') {
@@ -255,5 +302,6 @@ export class InteriorLayer implements EnvModule {
 
   destroy(): void {
     this.deep.mask = null;
+    this.edge.mask = null;
   }
 }

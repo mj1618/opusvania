@@ -32,11 +32,56 @@ export const INTERIOR = {
   cyanDeep: 0x46c8d8,
   violet: 0xc58bff,
   moon: 0xb8d0f0,
+  /** The moonlit shaft's frost moss, the heartwood's sap, the nest's larvae and trails. */
+  frost: 0xdcecff,
+  sap: 0xff9a40,
+  larva: 0xe8f0b0,
   /** How far the near back's torn edge reaches into it where it meets open air (px). */
   tear: 420,
 } as const;
 
-export type BackMat = 'root' | 'earth';
+export type BackMat = 'root' | 'earth' | 'grain' | 'leaf';
+
+/** The five insides of the wood (canopy review r3 #4: twenty rooms, two looks). */
+export type Look = 'heartwood' | 'shaft' | 'nest' | 'canopy' | 'den';
+
+/** Each look's near-back material. */
+const MAT: Record<Look, BackMat> = {
+  heartwood: 'grain',
+  shaft: 'root',
+  nest: 'earth',
+  canopy: 'leaf',
+  den: 'earth',
+};
+
+/** The Canopy's rooms whose look the heuristics in `lookOf` would get wrong (a room's `art.look` wins over this). */
+const ROOM_LOOKS: Record<string, Look> = {
+  'cn-hub': 'heartwood',
+  'cn-elder': 'shaft',
+  'cn-nook': 'nest',
+  'cn-hollowroot': 'nest',
+  'cn-tunnel': 'den',
+  'cn-burrow': 'den',
+  'cn-ledge': 'den',
+};
+
+/**
+ * A wood room's look: its `art.look`, else (a room the table above names) that, else from what is in it: ants make a
+ * nest, the burrbacks' earth a den, a shaft twice as tall as wide a moonlit shaft, a deep mood the giant's heartwood,
+ * anything else the canopy.
+ */
+export function lookOf(room: Room): Look {
+  const set = (room.art as { look?: Look } | undefined)?.look;
+  if (set) return set;
+  const named = ROOM_LOOKS[room.id];
+  if (named) return named;
+  const kinds = new Set((room.enemies ?? []).map((e) => e.kind as string));
+  if (kinds.has('carrier')) return 'nest';
+  if (kinds.has('oldBurrback') || room.solids.some((s) => s.tag === 'ground')) return 'den';
+  if (room.height >= room.width * 1.7) return 'shaft';
+  if ((room.art?.moods ?? []).some((m) => m.mood === 'deep')) return 'heartwood';
+  return 'canopy';
+}
 
 export interface Tone {
   /** The deep back: body, its grain lit, the fog band. */
@@ -52,28 +97,72 @@ export interface Tone {
   rootLit: number;
 }
 
-const TONES: Record<'cool' | 'warm' | 'deep', Tone> = {
-  cool: {
-    deep: 0x22384e,
-    deepLit: 0x34526e,
-    fog: 0x5a80a0,
-    near: 0x182a3e,
-    nearLit: 0x5a7c9a,
-    grain: 0x0e1a28,
-    root: 0x14202c,
-    rootLit: 0x6a88a0,
+/**
+ * Tones per look. (Round 3's warm tone, a saturated moss green, painted the hub's hollow, the seed shaft and the
+ * Grove's back as flat mint polygons under the lamps' wash: the warm variants here stay dark and grey-green.)
+ */
+const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
+  heartwood: {
+    deep: 0x2a2228,
+    deepLit: 0x4c3c3a,
+    fog: 0x4a4c5c,
+    near: 0x2e2426,
+    nearLit: 0x8a6a52,
+    grain: 0x140e12,
+    root: 0x3a2c24,
+    rootLit: 0xa88866,
   },
-  warm: {
-    deep: 0x1e3830,
-    deepLit: 0x30544a,
-    fog: 0x5a8274,
-    near: 0x16302a,
-    nearLit: 0x5e866e,
-    grain: 0x0c1a16,
-    root: 0x12201c,
-    rootLit: 0x6a8a74,
+  heartwoodWarm: {
+    deep: 0x262420,
+    deepLit: 0x463e34,
+    fog: 0x46504c,
+    near: 0x2a2622,
+    nearLit: 0x84705a,
+    grain: 0x12100e,
+    root: 0x342c24,
+    rootLit: 0x9c8a6a,
   },
-  deep: {
+  shaft: {
+    deep: 0x2c4260,
+    deepLit: 0x5a789e,
+    fog: 0x8eaacc,
+    near: 0x1a2c42,
+    nearLit: 0x8aaed0,
+    grain: 0x101c2c,
+    root: 0x1a2838,
+    rootLit: 0x9ab8d8,
+  },
+  nest: {
+    deep: 0x2c2a32,
+    deepLit: 0x4c4650,
+    fog: 0x4a5a68,
+    near: 0x36303a,
+    nearLit: 0x8c7c6c,
+    grain: 0x15131a,
+    root: 0x3a3028,
+    rootLit: 0x9a8a70,
+  },
+  canopy: {
+    deep: 0x1c303e,
+    deepLit: 0x30505e,
+    fog: 0x4e7084,
+    near: 0x162632,
+    nearLit: 0x5a7c88,
+    grain: 0x0c161e,
+    root: 0x14202a,
+    rootLit: 0x6a8890,
+  },
+  canopyWarm: {
+    deep: 0x1a2a2e,
+    deepLit: 0x2e4644,
+    fog: 0x46605e,
+    near: 0x16242a,
+    nearLit: 0x5c7870,
+    grain: 0x0c1618,
+    root: 0x142024,
+    rootLit: 0x688478,
+  },
+  den: {
     deep: 0x262838,
     deepLit: 0x3e3a50,
     fog: 0x3a5a70,
@@ -101,7 +190,7 @@ export interface BackEdges {
 }
 
 export interface Glow {
-  kind: 'moss' | 'fungus' | 'worm' | 'spore' | 'shaft';
+  kind: 'moss' | 'fungus' | 'worm' | 'spore' | 'shaft' | 'sap' | 'larva' | 'beam' | 'trail';
   x: number;
   y: number;
   /** Size (px): a cluster's radius, a worm's length, a shaft's width. */
@@ -115,6 +204,7 @@ export interface Glow {
 }
 
 export interface InteriorPlan {
+  look: Look;
   mat: BackMat;
   tone: Tone;
   backs: Rect[];
@@ -163,8 +253,11 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
   const masses = room.solids.filter(massOf) as MassRect[];
   const cx = backs.reduce((a, b) => a + b.x + b.w / 2, 0) / backs.length;
   const mood = moodAt(room, cx);
-  const mat: BackMat = mood === 'deep' || masses.some((m) => m.tag === 'ground') ? 'earth' : 'root';
-  const tone = TONES[mood];
+  const look = lookOf(room);
+  const mat = MAT[look];
+  const warm = mood === 'warm';
+  const tone =
+    TONES[warm && look === 'canopy' ? 'canopyWarm' : warm && look === 'heartwood' ? 'heartwoodWarm' : look];
   const edges = backs.map((b) => freeEdges(b, room, masses));
   const lights: Glow[] = [];
   const I = INTERIOR;
@@ -173,10 +266,12 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
   };
   masses.forEach((r, i) => {
     const sd = exposedSides(r, masses, room.width, room.height);
-    // Glow moss on the tops (a cluster now and then along the walk's edge).
+    // Glow moss on the tops (a cluster now and then along the walk's edge); in the nest, the ants' lit trails.
     for (const [x0, x1] of sd.top) {
       const len = x1 - x0;
       if (len < 180) continue;
+      if (look === 'nest' && len >= 360 && inBacks(backs, (x0 + x1) / 2, r.y, 32))
+        add({ kind: 'trail', x: x0 + 40, y: r.y, s: 0, dir: 0, violet: false, len: len - 80 });
       const n = Math.max(1, Math.floor(len / I.mossEvery));
       for (let k = 0; k < n; k++) {
         const x = x0 + ((k + 0.25 + 0.5 * hash1(k + i * 7, seed + 3)) * len) / n;
@@ -197,13 +292,15 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
         for (let k = 0; k < n; k++) {
           const y = y0 + ((k + 0.3 + 0.4 * hash1(k + i * 5, seed + 9)) * len) / n;
           if (!inBacks(backs, fx, y, 32)) continue;
+          // (In the giant's heartwood most of them are sap welling from the wood: amber beads.)
+          const sap = look === 'heartwood' && hash1(k * 7 + i, seed + 15) < 0.65;
           add({
-            kind: 'fungus',
+            kind: sap ? 'sap' : 'fungus',
             x: fx,
             y,
             s: 18 + 16 * hash1(k + i, seed + 11),
             dir,
-            violet: hash1(k * 3 + i, seed + 13) < 0.18,
+            violet: !sap && hash1(k * 3 + i, seed + 13) < (look === 'den' ? 0.35 : 0.18),
             len: 0,
           });
         }
@@ -224,31 +321,55 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
           y,
           s: 60 + 160 * hash1(k + i * 11, seed + 19),
           dir: 0,
-          violet: mat === 'earth' && hash1(k + i, seed + 23) < 0.25,
+          violet: (look === 'den' || look === 'nest') && hash1(k + i, seed + 23) < 0.25,
           len: 0,
         });
       }
     }
   });
-  // Moonlight through cracks in a root room's ceiling.
-  if (mat === 'root')
+  // Moonlight: one cold beam down a moonlit shaft (its key light); through cracks in a canopy's or a heartwood's roof.
+  backs.forEach((b, j) => {
+    if (look === 'shaft') {
+      add({
+        kind: 'beam',
+        x: b.x + b.w * (0.45 + 0.1 * hash1(j, seed + 27)),
+        y: b.y - 40,
+        s: Math.min(b.w * 0.55, 460),
+        dir: -0.04,
+        violet: false,
+        len: b.h + 80,
+      });
+      return;
+    }
+    if (look !== 'canopy' && look !== 'heartwood') return;
+    const every = look === 'heartwood' ? I.shaftEvery * 1.8 : I.shaftEvery;
+    const n = Math.max(1, Math.round(b.w / every));
+    for (let k = 0; k < n; k++) {
+      const x = b.x + ((k + 0.3 + 0.4 * hash1(k + j, seed + 29)) * b.w) / n;
+      // The crack opens where the ceiling is: the lowest mass bottom over the back's top half at x.
+      let y = b.y;
+      for (const m of masses)
+        if (x > m.x && x < m.x + m.w && m.y + m.h <= b.y + b.h * 0.5) y = Math.max(y, m.y + m.h);
+      add({
+        kind: 'shaft',
+        x,
+        y: y - 20,
+        s: 110 + 90 * hash1(k, seed + 31),
+        dir: -0.22 + 0.1 * hash1(k, seed + 37),
+        violet: false,
+        len: Math.min(b.y + b.h - y, 1400),
+      });
+    }
+  });
+  // The nest's larvae: pale clusters in cells of the back plane, near the walls.
+  if (look === 'nest')
     backs.forEach((b, j) => {
-      const n = Math.max(1, Math.round(b.w / I.shaftEvery));
+      const n = Math.max(2, Math.round((b.w * b.h) / 900000));
       for (let k = 0; k < n; k++) {
-        const x = b.x + ((k + 0.3 + 0.4 * hash1(k + j, seed + 29)) * b.w) / n;
-        // The crack opens where the ceiling is: the lowest mass bottom over the back's top half at x.
-        let y = b.y;
-        for (const m of masses)
-          if (x > m.x && x < m.x + m.w && m.y + m.h <= b.y + b.h * 0.5) y = Math.max(y, m.y + m.h);
-        add({
-          kind: 'shaft',
-          x,
-          y: y - 20,
-          s: 110 + 90 * hash1(k, seed + 31),
-          dir: -0.22 + 0.1 * hash1(k, seed + 37),
-          violet: false,
-          len: Math.min(b.y + b.h - y, 1400),
-        });
+        const x = b.x + b.w * (0.08 + 0.84 * hash1(k * 5 + j, seed + 47));
+        const y = b.y + b.h * (0.2 + 0.6 * hash1(k * 7 + j, seed + 49));
+        if (inSolid(masses, x, y)) continue;
+        add({ kind: 'larva', x, y, s: 30 + 24 * hash1(k, seed + 51), dir: 0, violet: false, len: 0 });
       }
     });
   // Every screen-sized cell of air gets something (spores drifting in it) if nothing else lights it.
@@ -273,7 +394,7 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
       }
     }
   }
-  return { mat, tone, backs, edges, lights, masses };
+  return { look, mat, tone, backs, edges, lights, masses };
 }
 
 /** How far into the back the torn edge reaches at (x, y): 0 at a free edge, 1 deep inside or along a closed edge. */
@@ -375,6 +496,10 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
           0.4,
         );
       }
+    } else if (plan.mat === 'grain') {
+      heartwoodNear(p, plan, b, e, seed + i * 7);
+    } else if (plan.mat === 'leaf') {
+      canopyNear(p, plan, b, e, seed + i * 7);
     } else {
       // Earth: big soft clumps of packed earth, close in value to the deep back (so none reads as a ledge), with
       // gaps between where the deep and its fog show; stones and short roots in them.
@@ -449,7 +574,290 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
           );
         }
     }
+    if (plan.look === 'nest') nestNear(p, plan, b, e, seed + i * 11);
+    if (plan.look === 'den') denNear(p, plan, b, e, seed + i * 11);
   });
+}
+
+/** The tops of the room's masses that lie in back `b` (where she walks in front of the back). */
+function topsIn(plan: InteriorPlan, b: Rect): Array<[number, number, number]> {
+  const out: Array<[number, number, number]> = [];
+  for (const m of plan.masses)
+    for (const [x0, x1] of exposedSides(m, plan.masses, 1e9, 1e9).top)
+      if (m.y > b.y && m.y <= b.y + b.h + 4 && x1 > b.x && x0 < b.x + b.w)
+        out.push([Math.max(x0, b.x), Math.min(x1, b.x + b.w), m.y]);
+  return out;
+}
+
+/**
+ * The giant's heartwood, near (review r3 #4): long split panels whose grain runs along the trunk, dark splits, knots
+ * with sap weeping from them. Low in contrast, no lit top edge (a lit top behind her reads as a ledge).
+ */
+function heartwoodNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 401);
+  const n = Math.round((b.w * b.h) / 160000);
+  for (let k = 0; k < n; k++) {
+    const cx = b.x + range(r, -0.05, 1.05) * b.w;
+    const cy = b.y + range(r, -0.05, 1.05) * b.h;
+    const kx = tornK(b, e, clamp(cx, b.x, b.x + b.w), clamp(cy, b.y, b.y + b.h));
+    if (kx < range(r, 0, 0.6)) continue;
+    const rx = range(r, 300, 800) * (0.6 + 0.4 * kx);
+    const ry = range(r, 30, 80);
+    p.solid(
+      chaikin(blob(cx, cy, rx, ry, seed + k * 3, 0.25, 22), 2),
+      T.near,
+      B.backH + 0.02,
+      { bark: 0.6, alpha: 0.4 },
+      0.3,
+    );
+    // Grain along it.
+    for (let q = 0; q < 3; q++) {
+      const y = cy + range(r, -0.6, 0.6) * ry;
+      const line: number[] = [];
+      for (let t = 0; t <= 10; t++)
+        line.push(cx - rx * 0.8 + (rx * 1.6 * t) / 10, y + 6 * wobble(cx + t * 90, seed + q, 200));
+      p.tint(strand(line, range(r, 2, 5), 0.2), T.grain, 0.5);
+    }
+  }
+  // Splits: long dark cracks along the grain, a lit lip under each.
+  for (let k = 0; k < Math.max(1, Math.round((b.w * b.h) / 1400000)); k++) {
+    const x0 = b.x + range(r, 0, 0.7) * b.w;
+    const y0 = b.y + range(r, 0.1, 0.8) * b.h;
+    if (tornK(b, e, x0, y0) < 0.3) continue;
+    const len = range(r, 400, 1100);
+    const line: number[] = [];
+    for (let t = 0; t <= 14; t++)
+      line.push(x0 + (len * t) / 14, y0 + 14 * wobble(x0 + t * 80, seed + k, 260));
+    p.solid(strand(line, range(r, 8, 16), 0.08), T.grain, B.backH, { bark: 0.2 }, 0.85);
+    p.tint(
+      strand(
+        line.map((v, j) => (j % 2 ? v + 7 : v)),
+        2.5,
+        0.08,
+      ),
+      T.nearLit,
+      0.25,
+    );
+  }
+  // Knots weeping sap (the sap's glow is live: layers/interior.ts).
+  for (let k = 0; k < Math.max(1, Math.round((b.w * b.h) / 700000)); k++) {
+    const x = b.x + range(r, 0.05, 0.95) * b.w;
+    const y = b.y + range(r, 0.1, 0.7) * b.h;
+    if (tornK(b, e, x, y) < 0.4) continue;
+    const rr = range(r, 14, 26);
+    for (let q = 0; q < 4; q++) {
+      const ring = blob(x, y, rr + q * 9, (rr + q * 9) * 0.6, seed + k + q, 0.15, 18);
+      ring.push(ring[0] as number, ring[1] as number, ring[2] as number, ring[3] as number);
+      p.tint(strand(ring, 3, 0.05), q % 2 ? T.nearLit : T.grain, 0.4);
+    }
+    p.solid(chaikin(blob(x, y, rr * 0.6, rr * 0.4, seed + k, 0.3, 10), 1), T.grain, B.backH + 0.06, {
+      bark: 0.3,
+    });
+    const drip = [
+      x,
+      y + rr * 0.3,
+      x + range(r, -4, 4),
+      y + rr + 30,
+      x + range(r, -6, 6),
+      y + rr + range(r, 60, 140),
+    ];
+    p.tint(strand(chaikin2(drip), 4, 0.4), 0x7a4e26, 0.75);
+  }
+}
+
+/**
+ * Up high, near: bark strips with wide gaps (the air of the deep back shows), leaf-litter mats caught on them and
+ * hanging from the ceilings.
+ */
+function canopyNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 409);
+  for (let x = b.x + range(r, 0, 200); x < b.x + b.w; x += range(r, 220, 460)) {
+    const w = range(r, 40, 110);
+    const kx = tornK(b, e, x, b.y + b.h / 2);
+    if (kx < 0.15) continue;
+    const yTop = b.y - 30 + (e.n ? range(r, 0.2, 1) * INTERIOR.tear : 0);
+    const yBot = b.y + b.h + 30 - (e.s ? range(r, 0.3, 1) * INTERIOR.tear : 0);
+    const line: number[] = [];
+    for (let t = 0; t <= 12; t++) line.push(x + range(r, -8, 8), lerp(yTop, yBot, t / 12));
+    const wl = wander(line, 30, seed + Math.round(x), 300);
+    p.solid(
+      ribbon(wl, (t) => w * (0.8 + 0.3 * wobble(t * 900, seed, 160))),
+      T.near,
+      B.backH + 0.03,
+      { bark: 0.9 },
+      0.85,
+    );
+    p.tint(
+      ribbon(
+        wl.map((v, j) => (j % 2 ? v : v + w * 0.3)),
+        () => w * 0.2,
+      ),
+      T.nearLit,
+      0.22,
+    );
+  }
+  // Leaf-litter mats: clumps of fallen leaves caught on the bark and hanging from every ceiling.
+  const spots: Array<[number, number]> = [];
+  for (const m of plan.masses)
+    for (const [x0, x1] of exposedSides(m, plan.masses, 1e9, 1e9).bottom) {
+      const y = m.y + m.h;
+      if (y > b.y && y < b.y + b.h)
+        for (
+          let x = Math.max(x0, b.x) + range(r, 40, 200);
+          x < Math.min(x1, b.x + b.w);
+          x += range(r, 260, 520)
+        )
+          spots.push([x, y + 20]);
+    }
+  for (let k = 0; k < Math.round((b.w * b.h) / 500000); k++)
+    spots.push([b.x + range(r, 0, 1) * b.w, b.y + range(r, 0.05, 0.6) * b.h]);
+  for (const [cx, cy] of spots) {
+    if (tornK(b, e, cx, cy) < 0.2) continue;
+    const n = 10 + Math.floor(r() * 16);
+    for (let q = 0; q < n; q++) {
+      const lx = cx + range(r, -50, 50);
+      const ly = cy + range(r, -10, 70) * (1 - Math.abs(lx - cx) / 70);
+      p.solid(
+        leaf(lx, ly, range(r, 14, 30), range(r, 1.0, 2.2)),
+        q % 3 ? T.near : T.nearLit,
+        B.backH + 0.08,
+        { bark: 0, moss: 0.4 },
+        q % 3 ? 0.9 : 0.5,
+      );
+    }
+  }
+}
+
+/** The ants' nest, near: tunnel mouths in the back with a lit rim, seed caches piled against the walls. */
+function nestNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 419);
+  for (let k = 0; k < Math.max(2, Math.round((b.w * b.h) / 600000)); k++) {
+    const cx = b.x + range(r, 0.05, 0.95) * b.w;
+    const cy = b.y + range(r, 0.15, 0.85) * b.h;
+    if (tornK(b, e, cx, cy) < 0.4) continue;
+    const rx = range(r, 40, 90);
+    const ry = rx * range(r, 0.55, 0.8);
+    // A mouth that deepens into the dark (rings of shade, no hard hole), its lip a little proud.
+    p.solid(
+      chaikin(blob(cx, cy, rx + 16, ry + 12, seed + k, 0.35, 16), 2),
+      T.near,
+      B.backH + 0.05,
+      { bark: 0.1 },
+      0.6,
+    );
+    for (let q = 0; q < 4; q++) {
+      const f = 1 - q * 0.2;
+      p.solid(
+        chaikin(blob(cx + q * 3, cy + 4 + q * 3, rx * f, ry * f, seed + k + 5 + q, 0.35, 16), 2),
+        T.grain,
+        B.backH - 0.04 - q * 0.02,
+        { bark: 0 },
+        0.35,
+      );
+    }
+    const rim: number[] = [];
+    for (let t = 0; t <= 10; t++) {
+      const a = Math.PI * (1.1 + 0.8 * (t / 10));
+      rim.push(cx + Math.cos(a) * (rx + 4), cy + Math.sin(a) * (ry + 4));
+    }
+    p.tint(strand(rim, 3, 0.3), T.nearLit, 0.25);
+  }
+  // Seed caches against the walls on the floors.
+  for (const [x0, x1, y] of topsIn(plan, b)) {
+    if (x1 - x0 < 300 || r() < 0.4) continue;
+    const x = r() < 0.5 ? x0 + range(r, 40, 120) : x1 - range(r, 40, 120);
+    for (let q = 0; q < 9; q++) {
+      const rad = range(r, 8, 15);
+      const sx = x + range(r, -40, 40);
+      const sy = y - rad * 0.8 - (q > 5 ? rad * 1.2 : 0);
+      p.solid(chaikin(blob(sx, sy, rad * 1.2, rad, seed + q, 0.15, 12), 1), T.root, B.walkH - 0.04, {
+        bark: 0.2,
+      });
+      p.tint(
+        chaikin(blob(sx - rad * 0.3, sy - rad * 0.4, rad * 0.5, rad * 0.3, seed + q + 3, 0.2, 8), 1),
+        T.rootLit,
+        0.6,
+      );
+    }
+  }
+}
+
+/** The burrbacks' den, near: shed shells against the walls, the old one's scrapes low on the back. */
+function denNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 431);
+  for (const [x0, x1, y] of topsIn(plan, b)) {
+    if (x1 - x0 < 360) continue;
+    // A shed shell or two (pale plated domes, cast off and lying on their side).
+    for (let q = 0; q < (x1 - x0 > 1400 ? 2 : 1); q++) {
+      const x = r() < 0.5 ? x0 + range(r, 60, 260) : x1 - range(r, 60, 260);
+      const R = range(r, 30, 56);
+      const dome: number[] = [];
+      for (let t = 0; t <= 14; t++) {
+        const a = Math.PI + (Math.PI * t) / 14;
+        dome.push(x + Math.cos(a) * R * 1.3, y + 4 + Math.sin(a) * R);
+      }
+      p.solid(dome, 0x4a4456, B.backH + 0.2, { bark: 0.1 });
+      for (let k = 1; k < 4; k++) {
+        const a = Math.PI + (Math.PI * k) / 4;
+        p.tint(
+          strand([x, y + 4, x + Math.cos(a) * R * 1.3, y + 4 + Math.sin(a) * R], 2.5, 0.3),
+          0x1a1620,
+          0.7,
+        );
+      }
+      p.tint(chaikin(blob(x - R * 0.3, y - R * 0.6, R * 0.5, R * 0.18, seed + q, 0.2, 10), 1), 0x8a8094, 0.5);
+    }
+    // Scrapes on the back above the floor.
+    for (let x = x0 + range(r, 100, 400); x < x1 - 100; x += range(r, 500, 900)) {
+      const yy = y - range(r, 80, 260);
+      if (tornK(b, e, x, yy) < 0.3) continue;
+      const len = range(r, 90, 170);
+      const sl = range(r, -0.6, 0.6);
+      for (let q = 0; q < 3; q++) {
+        const ox = q * 14;
+        const line = [
+          x + ox,
+          yy + q * 5,
+          x + ox + len * sl * 0.5,
+          yy + len * 0.5,
+          x + ox + len * sl,
+          yy + len,
+        ];
+        p.tint(strand(line, 6, 0.5), T.grain, 0.8);
+        p.tint(
+          strand(
+            line.map((v, j) => (j % 2 ? v : v + 3)),
+            2,
+            0.5,
+          ),
+          T.nearLit,
+          0.45,
+        );
+      }
+    }
+  }
+}
+
+/** A leaf: a pointed lens at (x, y), `l` long, turned by `a`. */
+function leaf(x: number, y: number, l: number, a: number): number[] {
+  const pts: number[] = [];
+  const c = Math.cos(a);
+  const sn = Math.sin(a);
+  for (let k = 0; k <= 12; k++) {
+    const t = (k / 12) * Math.PI * 2;
+    const u = Math.cos(t) * l * 0.5;
+    const v = Math.sin(t) * l * 0.2 * Math.abs(Math.sin(t / 2) + 0.3);
+    pts.push(x + u * c - v * sn, y + u * sn + v * c);
+  }
+  return pts;
 }
 
 function chaikin2(pts: number[]): number[] {
@@ -484,13 +892,13 @@ export function paintGlowFlora(p: Paint, plan: InteriorPlan): void {
         const rad = range(r, 4, 9);
         p.solid(
           chaikin(blob(x, l.y - rad * 0.35, rad * 1.3, rad * 0.8, l.seed + k, 0.3, 10), 1),
-          0x2a6a70,
+          plan.look === 'shaft' ? 0x4a6a88 : 0x2a6a70,
           B.walkH + 0.24,
           { moss: 1 },
         );
         p.tint(
           chaikin(blob(x - rad * 0.2, l.y - rad * 0.6, rad * 0.7, rad * 0.4, l.seed + k + 9, 0.3, 8), 1),
-          0x9fe8e8,
+          plan.look === 'shaft' ? 0xdcecff : 0x9fe8e8,
           0.8,
         );
       }
@@ -513,6 +921,40 @@ export function paintGlowFlora(p: Paint, plan: InteriorPlan): void {
           0.85,
         );
       }
+    } else if (l.kind === 'sap') {
+      // Sap welling out of the face in beads, a run of it down the bark.
+      for (let k = 0; k < 5; k++) {
+        const y = l.y + range(r, -l.s, l.s);
+        const x = l.x - l.dir * range(r, 2, 10);
+        const rad = range(r, 3, 6);
+        p.solid(chaikin(blob(x, y, rad, rad * 1.2, l.seed + k, 0.15, 10), 1), 0x6a3c18, B.walkH + 0.12, {
+          bark: 0,
+        });
+        p.tint(
+          chaikin(blob(x - rad * 0.3, y - rad * 0.4, rad * 0.4, rad * 0.4, l.seed + k + 9, 0.1, 8), 1),
+          0xffc070,
+          0.8,
+        );
+      }
+      p.tint(
+        strand(
+          [l.x - l.dir * 6, l.y, l.x - l.dir * 7, l.y + l.s * 2, l.x - l.dir * 5, l.y + l.s * 3.5],
+          3,
+          0.5,
+        ),
+        0x8a5020,
+        0.7,
+      );
+    } else if (l.kind === 'larva') {
+      // A cell in the earth, pale grubs curled in it.
+      p.solid(chaikin(blob(l.x, l.y, l.s * 1.2, l.s * 0.8, l.seed, 0.25, 14), 2), 0x15131a, B.backH + 0.02, {
+        bark: 0,
+      });
+      for (let k = 0; k < 4; k++) {
+        const x = l.x + range(r, -0.6, 0.6) * l.s;
+        const y = l.y + range(r, -0.3, 0.4) * l.s;
+        p.solid(chaikin(blob(x, y, 9, 6, l.seed + k, 0.2, 10), 1), 0xd8d8b0, B.backH + 0.1, { bark: 0 }, 0.9);
+      }
     } else if (l.kind === 'worm') {
       // (The thread only: the beads are live.)
       const line = [l.x, l.y, l.x + 3, l.y + l.s * 0.5, l.x - 2, l.y + l.s];
@@ -526,6 +968,7 @@ export function drawDeepBack(
   g: {
     poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown };
     rect(x: number, y: number, w: number, h: number): { fill(o: { color: number; alpha?: number }): unknown };
+    circle(x: number, y: number, r: number): { fill(o: { color: number; alpha?: number }): unknown };
   },
   plan: InteriorPlan,
   seed: number,
@@ -536,8 +979,8 @@ export function drawDeepBack(
     const b = { x: b0.x - pad, y: b0.y - pad, w: b0.w + pad * 2, h: b0.h + pad * 2 };
     const r = rngFor(seed, b0.x, b0.y, 71);
     g.rect(b.x, b.y, b.w, b.h).fill({ color: T.deep });
-    if (plan.mat === 'root') {
-      // Broad grain down the heartwood, a step lit and a step dark.
+    if (plan.look === 'shaft' || plan.look === 'canopy') {
+      // Broad grain down the wood, a step lit and a step dark., a step lit and a step dark.
       for (let x = b.x; x < b.x + b.w; x += range(r, 60, 180)) {
         const w = range(r, 30, 120);
         const line: number[] = [];
@@ -547,6 +990,33 @@ export function drawDeepBack(
           color: r() < 0.5 ? T.deepLit : T.grain,
           alpha: range(r, 0.18, 0.4),
         });
+      }
+    } else if (plan.look === 'heartwood') {
+      // Inside the fallen giant: the grain runs along it (across the screen), split by long dark cracks.
+      for (let y = b.y; y < b.y + b.h; y += range(r, 26, 90)) {
+        const line: number[] = [];
+        for (let x = b.x; x <= b.x + b.w; x += 60)
+          line.push(x, y + 30 * wobble(x, seed + Math.round(y), 900) + 10 * wobble(x, seed + 7, 140));
+        g.poly(strand(line, range(r, 8, 30), 0.02)).fill({
+          color: r() < 0.45 ? T.deepLit : T.grain,
+          alpha: range(r, 0.16, 0.34),
+        });
+      }
+      for (let k = 0; k < Math.max(2, Math.round((b.w * b.h) / 900000)); k++) {
+        const x0 = b.x + range(r, -0.1, 0.8) * b.w;
+        const y0 = b.y + range(r, 0.1, 0.9) * b.h;
+        const len = range(r, 500, 1600);
+        const line: number[] = [];
+        for (let t = 0; t <= 16; t++)
+          line.push(x0 + (len * t) / 16, y0 + 18 * wobble(x0 + t * 100, seed + k, 300));
+        g.poly(strand(line, range(r, 6, 14), 0.05)).fill({ color: T.grain, alpha: 0.75 });
+        g.poly(
+          strand(
+            line.map((v, j) => (j % 2 ? v - 8 : v)),
+            2.5,
+            0.05,
+          ),
+        ).fill({ color: T.deepLit, alpha: 0.5 });
       }
       // Growth rings where the giant split: great soft ellipses.
       for (let k = 0; k < Math.max(1, Math.round((b.w * b.h) / 2400000)); k++) {
@@ -584,6 +1054,95 @@ export function drawDeepBack(
         g.poly(strand(chaikin2(line), range(r, 3, 7), 0.6)).fill({ color: T.rootLit, alpha: 0.16 });
       }
     }
+    // What only this place has.
+    if (plan.look === 'canopy') {
+      // Gaps in the canopy: the night air through them, leaves round their rims, and leaf clusters on the bark.
+      for (let k = 0; k < Math.max(2, Math.round(b0.w / 900)); k++) {
+        const cx = b0.x + range(r, 0.1, 0.9) * b0.w;
+        const cy = b0.y + range(r, 0.05, 0.45) * b0.h;
+        const rx = range(r, 90, 220);
+        const ry = rx * range(r, 0.6, 1.1);
+        // (A hole to the night sky, darker than the bark round it: pale blobs read as smoke.)
+        g.poly(chaikin(blob(cx, cy, rx, ry, seed + k * 11, 0.4, 18), 2)).fill({
+          color: 0x0c1828,
+          alpha: 0.7,
+        });
+        for (let q = 0; q < 6; q++)
+          g.circle(cx + (r() - 0.5) * rx, cy + (r() - 0.5) * ry, 1.4 + r()).fill({
+            color: 0xcfe0f4,
+            alpha: 0.6,
+          });
+        for (let q = 0; q < 26; q++) {
+          const a = (q / 26) * 6.28 + range(r, -0.1, 0.1);
+          const lx = cx + Math.cos(a) * rx * range(r, 0.8, 1.15);
+          const ly = cy + Math.sin(a) * ry * range(r, 0.8, 1.15);
+          g.poly(leaf(lx, ly, range(r, 12, 26), a + range(r, -0.6, 0.6))).fill({
+            color: T.grain,
+            alpha: 0.85,
+          });
+        }
+      }
+      for (let k = 0; k < Math.round((b0.w * b0.h) / 400000); k++) {
+        const cx = b0.x + range(r, 0, 1) * b0.w;
+        const cy = b0.y + range(r, 0, 1) * b0.h;
+        for (let q = 0; q < 14; q++)
+          g.poly(
+            leaf(cx + range(r, -60, 60), cy + range(r, -30, 50), range(r, 10, 22), range(r, 0.8, 2.4)),
+          ).fill({ color: r() < 0.5 ? T.deepLit : T.grain, alpha: 0.4 });
+      }
+    } else if (plan.look === 'shaft') {
+      // The cold beam's haze down the middle of the shaft.
+      const mx = b0.x + b0.w * 0.5;
+      for (let k = 0; k < 6; k++) {
+        const w = b0.w * (0.12 + k * 0.08);
+        g.rect(mx - w / 2, b.y, w, b.h).fill({ color: T.fog, alpha: 0.05 });
+      }
+    } else if (plan.look === 'nest') {
+      // Tunnels and chambers through the earth.
+      for (let k = 0; k < Math.max(2, Math.round((b0.w * b0.h) / 700000)); k++) {
+        const pts: number[] = [];
+        let x = b0.x + range(r, 0, 1) * b0.w;
+        let y = b0.y + range(r, 0.1, 0.9) * b0.h;
+        let a = range(r, 0, 6.28);
+        for (let t = 0; t < 14; t++) {
+          pts.push(x, y);
+          a += range(r, -0.7, 0.7);
+          x += Math.cos(a) * 60;
+          y += Math.sin(a) * 36;
+        }
+        const w = range(r, 26, 44);
+        g.poly(strand(pts, w, 0.15)).fill({ color: T.grain, alpha: 0.4 });
+        g.poly(
+          strand(
+            pts.map((v, j) => (j % 2 ? v - w * 0.45 : v)),
+            3,
+            0.15,
+          ),
+        ).fill({ color: T.deepLit, alpha: 0.4 });
+        g.poly(chaikin(blob(x, y, range(r, 50, 90), range(r, 30, 50), seed + k, 0.3, 14), 2)).fill({
+          color: T.grain,
+          alpha: 0.6,
+        });
+      }
+    } else if (plan.look === 'den') {
+      // Scrapes: the old burrback's claws, raked across the earth in threes.
+      for (let k = 0; k < Math.max(3, Math.round(b0.w / 500)); k++) {
+        const x = b0.x + range(r, 0, 1) * b0.w;
+        const y = b0.y + range(r, 0.3, 0.9) * b0.h;
+        const len = range(r, 120, 240);
+        const sl = range(r, -0.5, 0.5);
+        for (let q = 0; q < 3 + (r() < 0.4 ? 1 : 0); q++) {
+          const ox = q * 16;
+          g.poly(
+            strand(
+              [x + ox, y + q * 6, x + ox + len * sl * 0.5, y + len * 0.5, x + ox + len * sl, y + len],
+              7,
+              0.5,
+            ),
+          ).fill({ color: T.deepLit, alpha: 0.32 });
+        }
+      }
+    }
     // Dim great roots crossing, far off.
     for (let k = 0; k < Math.max(1, Math.round(b.w / 1100)); k++) {
       const x = b.x + range(r, 0, b.w);
@@ -597,11 +1156,11 @@ export function drawDeepBack(
     const fogY = b0.y + b0.h * 0.62;
     for (let k = 0; k < 9; k++) {
       const h = b0.h * (0.12 + k * 0.07);
-      g.rect(b.x, fogY - h / 2, b.w, h).fill({ color: T.fog, alpha: 0.045 });
+      g.rect(b.x, fogY - h / 2, b.w, h).fill({ color: T.fog, alpha: 0.03 });
     }
     for (let k = 0; k < 5; k++) {
       const h = 120 + k * 120;
-      g.rect(b.x, b0.y + b0.h - h, b.w, h + pad).fill({ color: T.fog, alpha: 0.05 });
+      g.rect(b.x, b0.y + b0.h - h, b.w, h + pad).fill({ color: T.fog, alpha: 0.035 });
     }
   });
 }
