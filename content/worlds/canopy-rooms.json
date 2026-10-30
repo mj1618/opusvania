@@ -2506,7 +2506,7 @@
         "y": 704,
         "w": 96,
         "h": 576,
-        "kick": false
+        "kick": true
       },
       {
         "tag": "trunk",

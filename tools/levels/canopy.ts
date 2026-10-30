@@ -1133,8 +1133,9 @@ function limbs(): Json {
   // The first limb, then the second 384 px on and 192 up: a jump at its edge, thorns under the whole gap.
   r.limb('l1', 384, 1088, 768, { grows: 'east', end: 'snap' });
   r.limb('l2', 1472, 2176, 576, { grows: 'east', end: 'snap', h: 80, calm: true });
-  // The chimney: a stump and a tall trunk; she kicks up the trunk's west face (claws) and drops onto the last limb.
-  r.tree('stump', 2240, 96, 704, 1280, true);
+  // The chimney: a stump (a way back up from the floor between the thorns) and a tall trunk; she kicks up the
+  // trunk's west face (claws) and drops onto the last limb.
+  r.tree('stump', 2240, 96, 704, 1280, true, true);
   r.tree('tall', 2560, 128, 320, 1280, true, 'west');
   r.limb('l3', 2688, 2880, 448, { parent: 'tall', grows: 'east', end: 'burl', h: 80, calm: true });
   r.thorns('thorn-g1', 1056, 1280, 448);
