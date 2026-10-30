@@ -46,8 +46,13 @@ export const MASS = {
   roundOver: 24,
   /** The root filling a square inner corner: its reach along the floor / up the wall, px. */
   corner: [38, 64] as readonly number[],
+  /** ...only where the wall over the corner stands at least this tall (px). */
+  cornerMinWall: 160,
+  /** ...and the floor before it runs at least this far (a narrowing stack's short steps get none). */
+  cornerMinFloor: 200,
   /** A pillar (both faces free, narrower than this) flares at its foot by up to `flare` px a side. */
   pillarW: 420,
+  pillarMinH: 320,
   flare: 22,
   /** Earth (`ground`). */
   soil: 0x161a22,
@@ -272,7 +277,8 @@ export function paintMasses(
         const ya = dir > 0 ? yTop : y1 + 10;
         const yb = dir > 0 ? y1 + 10 : yTop;
         // A free-standing pillar flares into its foot (and a face leans a little either way), never a plumb post.
-        const pillar = r.w <= MASS.pillarW && s.left.length > 0 && s.right.length > 0;
+        // (Only a tall one: the steps of a narrowing stack, each flared at its foot, read as a pagoda.)
+        const pillar = r.w <= MASS.pillarW && r.h >= MASS.pillarMinH && s.left.length > 0 && s.right.length > 0;
         const yLo = Math.max(ya, yb);
         const flare = (yy: number) => (pillar ? MASS.flare * clamp((yy - (yLo - 200)) / 200, 0, 1) ** 2 : 0);
         const line: number[] = [];
@@ -437,9 +443,17 @@ export function paintMasses(
       plan?.stretches.push(topStretch(`mass-${i}-${x0}`, x0, x1, y, th, wallW, wallE));
       // Where the floor meets a wall rising from it: a root buttress out of the wall onto the floor, so the corner is
       // never a square box (review r2 #2). Not on earth (the earth's own corner is soft already).
-      if (!earth(r)) {
-        if (wallW) cornerRoot(p, x0, y, 1, -1, seed + i * 19 + x0);
-        if (wallE) cornerRoot(p, x1, y, -1, -1, seed + i * 23 + x1);
+      // (Not under a short step: a stack of narrowing rects with a buttress at every step read as a pagoda.)
+      const wallUp = (x: number) =>
+        Math.max(
+          0,
+          ...masses
+            .filter((q) => q !== r && x >= q.x - 1 && x <= q.x + q.w + 1 && q.y < y)
+            .map((q) => y - q.y),
+        );
+      if (!earth(r) && x1 - x0 >= MASS.cornerMinFloor) {
+        if (wallW && wallUp(x0 - 2) >= MASS.cornerMinWall) cornerRoot(p, x0, y, 1, -1, seed + i * 19 + x0);
+        if (wallE && wallUp(x1 + 2) >= MASS.cornerMinWall) cornerRoot(p, x1, y, -1, -1, seed + i * 23 + x1);
       }
     }
   });

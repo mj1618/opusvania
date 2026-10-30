@@ -41,8 +41,10 @@ docs/design/levels/reviews/canopy-r2.md. Shots: `shots/canopy-r3/` (21:9 in `sho
   any aspect), a smooth hanging lip where its edge is open air, and a narrowing dark tunnel through each exit.
 
 ## Mass shape (pf-mass.ts)
-- Square inner corners get a root buttress (`cornerRoot`: floor meets wall, ceiling meets wall); a pillar's faces
-  flare at the foot (`MASS.flare`) and lean; a free top's lip is 4 px and rounds over (no flared capitals).
+- Square inner corners get a root buttress (`cornerRoot`: floor meets wall, ceiling meets wall); a tall pillar's faces
+  flare at the foot (`MASS.flare`) and lean; a free top's lip is 4 px and rounds over (no flared capitals). Neither
+  on a narrowing stack's short steps (`cornerMinFloor`, `cornerMinWall`, `pillarMinH`): a buttress or a flare at
+  every step read as a pagoda.
 - A narrow mass hanging from the room's top into open air is a clump of root strands with ragged tips; a front cover
   of that shape shows past its rect (`MassPatch.show`) so the tips are not cut square.
 
