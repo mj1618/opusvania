@@ -45,7 +45,17 @@ export const KIT = {
   /** Seconds a cut's dust hangs. */
   dust: 0.6,
   heart: { body: 0x2c1410, ring: 0x401c14, ringLit: 0x6a3020, scar: 0xc8a888, sheen: 0x9a5a40 },
-  thorn: { cane: 0x1a0e12, caneLit: 0x4a2a2a, tip: 0xe0d0c0 },
+  thorn: {
+    cane: 0x1a0e12,
+    caneLit: 0x4a2a2a,
+    tip: 0xe0d0c0,
+    /** The barbs (review r4 #8: thin dark twigs on dark faces did not read): bone and rust, a warm rim. */
+    bone: 0xe8dcc4,
+    rust: 0xb8573a,
+    barbDark: 0x3a1a14,
+    rim: 0xffa868,
+    mat: 0x120a0c,
+  },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
   cover: { body: 0x040302, root: 0x120c08, edge: 0x2a1c12 },
   /** The wood's leaf cover: the canopy clumps' near-black blue-green, a lighter tone inside, moonlit leaf tips. */
@@ -342,7 +352,7 @@ export class Kit {
     // Thorns: brambles.
     for (const t of S.thorns ?? []) {
       if (!seen(t.x, t.y, t.w, t.h)) continue;
-      this.bramble(back, t.x, t.y, t.w, t.h, t.id, clock);
+      this.bramble(back, glow, t.x, t.y, t.w, t.h, t.id, clock, S.solids);
     }
 
     // Gates: silk curtains and seals; open, they fall away.
@@ -675,46 +685,108 @@ export class Kit {
     }
   }
 
-  private bramble(g: Graphics, x: number, y: number, w: number, h: number, id: string, clock: number): void {
+  /**
+   * Thorns: a dark bramble mat along the strip and, out of it, a row of barbs pointing into the open air (away from
+   * the wood it grows on), bone-pale and rust, 24-40 px, with a faint warm rim (review r4 #8: a hazard shape nothing
+   * else in the wood shares, the brightest thing on its face).
+   */
+  private bramble(
+    g: Graphics,
+    glow: GlowPool,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    id: string,
+    clock: number,
+    solids: ReadonlyArray<{ x: number; y: number; w: number; h: number }>,
+  ): void {
     const T = KIT.thorn;
-    // Canes arch out of the tangle's foot (and its sides when it is tall), cross and droop: never a lattice.
-    const n = Math.max(4, Math.min(34, Math.round((w * h) / 2600)));
-    for (let c = 0; c < n; c++) {
-      const r1 = hash01(id, c * 3);
-      const r2 = hash01(id, c * 3 + 1);
-      const r3 = hash01(id, c * 3 + 2);
-      const tall = h > w * 0.8;
-      const fromSide = tall && r3 < 0.5;
-      const sx = fromSide ? (r1 < 0.5 ? x : x + w) : x + r1 * w;
-      const sy = fromSide ? y + h * (0.2 + 0.8 * r2) : y + h + 4;
-      const dir = fromSide ? (sx === x ? 1 : -1) : r2 < 0.5 ? -1 : 1;
-      const reachX = dir * (0.3 + 0.7 * r3) * Math.min(w, 220);
-      const peakY = fromSide ? sy - (0.2 + 0.5 * r1) * h : y + (0.05 + 0.5 * r3) * h;
-      const ex = Math.max(x - 10, Math.min(x + w + 10, sx + reachX));
-      const ey = Math.min(y + h, peakY + (0.3 + 0.5 * r1) * h * 0.6);
-      const sw = wind(sx, clock, r1) * 3;
-      const cx1 = sx + reachX * 0.15;
-      const cy1 = peakY - 10;
-      const cx2 = sx + reachX * 0.75 + sw;
-      const cy2 = peakY - 6 + sw;
-      g.moveTo(sx, sy).bezierCurveTo(cx1, cy1, cx2, cy2, ex + sw, ey);
-      const lit = c % 4 === 0;
-      g.stroke({ color: lit ? T.caneLit : T.cane, width: 2.4 + r2 * 2.6, cap: 'round' });
-      // Thorns along the cane: hooked, dark, the tips pale.
-      for (let k = 1; k < 9; k++) {
-        const t = k / 9;
-        const it = 1 - t;
-        const px = it * it * it * sx + 3 * it * it * t * cx1 + 3 * it * t * t * cx2 + t * t * t * (ex + sw);
-        const py = it * it * it * sy + 3 * it * it * t * cy1 + 3 * it * t * t * cy2 + t * t * t * ey;
-        const side = k % 2 === 0 ? -1 : 1;
-        const len = 5 + hash01(id, c * 17 + k) * 5;
-        const tx = px + side * len * 0.6 * dir;
-        const ty = py - len * 0.8;
-        g.poly([px - 2, py + 1, px + 2, py - 1, tx, ty]).fill(T.cane);
-        g.circle(tx, ty, 0.9).fill({ color: T.tip, alpha: 0.75 });
-        // Now and then a small dark leaf.
-        if (hash01(id, c * 23 + k) < 0.12) g.ellipse(px + dir * 5, py + 3, 5, 2.4).fill(0x14100c);
-      }
+    const solidAt = (px: number, py: number) =>
+      solids.some((q) => px >= q.x && px <= q.x + q.w && py >= q.y && py <= q.y + q.h);
+    // Which way is out: away from the wood beside it (a floor strip points up, a wall strip into the shaft).
+    const along = w >= h;
+    let nx = 0;
+    let ny = -1;
+    if (along) {
+      if (solidAt(x + w / 2, y - 10) && !solidAt(x + w / 2, y + h + 10)) ny = 1;
+    } else {
+      ny = 0;
+      nx = solidAt(x - 10, y + h / 2) || !solidAt(x + w + 10, y + h / 2) ? 1 : -1;
+    }
+    const len = along ? w : h;
+    const depth = along ? h : w;
+    // A point on the strip: u along it, v out from its wood side (0) to its air side (depth).
+    const at = (u: number, v: number): [number, number] => {
+      if (along) return [x + u, ny < 0 ? y + h - v : y + v];
+      return [nx > 0 ? x + v : x + w - v, y + u];
+    };
+    // The mat: a lumpy dark tangle along the wood side.
+    const mat: number[] = [];
+    for (let u = -6; u <= len + 6; u += 12) {
+      const [px, py] = at(u, depth * (0.45 + 0.25 * hash01(id, Math.round(u) + 3)));
+      mat.push(px, py);
+    }
+    for (let u = len + 6; u >= -6; u -= 24) {
+      const [px, py] = at(u, -4);
+      mat.push(px, py);
+    }
+    g.poly(mat).fill({ color: T.mat, alpha: 0.95 });
+    // A few canes through the mat (lit now and then).
+    const nc = Math.max(2, Math.round(len / 60));
+    for (let c = 0; c < nc; c++) {
+      const u0 = hash01(id, c * 3) * len;
+      const u1 = Math.min(len, u0 + 40 + hash01(id, c * 3 + 1) * 90);
+      const [ax, ay] = at(u0, depth * 0.15);
+      const [bx, by] = at((u0 + u1) / 2, depth * (0.5 + 0.3 * hash01(id, c * 3 + 2)));
+      const [ex, ey] = at(u1, depth * 0.2);
+      const sw = wind(ax, clock, hash01(id, c)) * 1.5;
+      g.moveTo(ax, ay).quadraticCurveTo(bx + sw, by + sw, ex, ey);
+      g.stroke({ color: c % 3 === 0 ? T.caneLit : T.cane, width: 3 + hash01(id, c + 40) * 3, cap: 'round' });
+    }
+    // The barbs.
+    let u = 6 + hash01(id, 90) * 10;
+    let k = 0;
+    while (u < len - 4) {
+      const r1 = hash01(id, k * 5 + 100);
+      const r2 = hash01(id, k * 5 + 101);
+      const blen = 24 + 16 * r1;
+      const spread = (r2 - 0.5) * 0.9;
+      const base = 5 + 4 * r2;
+      const [bx, by] = at(u, depth * 0.3);
+      // Direction: out, turned by the spread (along the strip).
+      const ax = along ? spread : nx;
+      const ay = along ? (ny < 0 ? -1 : 1) : spread;
+      const n = Math.hypot(ax, ay);
+      const dx = ax / n;
+      const dy = ay / n;
+      const px = -dy;
+      const py = dx;
+      const tx = bx + dx * blen;
+      const ty = by + dy * blen;
+      const pale = k % 3 !== 1;
+      g.poly([bx + px * base, by + py * base, tx, ty, bx - px * base, by - py * base]).fill(T.barbDark);
+      g.poly([
+        bx + dx * blen * 0.35 + px * base * 0.55,
+        by + dy * blen * 0.35 + py * base * 0.55,
+        tx,
+        ty,
+        bx + dx * blen * 0.35 - px * base * 0.3,
+        by + dy * blen * 0.35 - py * base * 0.3,
+      ]).fill(pale ? T.bone : T.rust);
+      // The warm rim on the barb's lit edge.
+      g.moveTo(bx + dx * blen * 0.3 + px * base * 0.6, by + dy * blen * 0.3 + py * base * 0.6)
+        .lineTo(tx, ty)
+        .stroke({ color: T.rim, width: 1.2, alpha: 0.6 });
+      u += 18 + 16 * hash01(id, k * 5 + 102);
+      k++;
+    }
+    // A faint warm glow along the strip, so it reads against any back.
+    const nGlow = Math.max(1, Math.round(len / 120));
+    for (let q = 0; q < nGlow; q++) {
+      const [gx, gy] = at(((q + 0.5) * len) / nGlow, depth * 0.8);
+      const rr = Math.min(70, len / nGlow / 1.6 + 20);
+      glow.add(gx, gy, along ? rr : 30, T.rim, 0.1 + 0.03 * Math.sin(clock * 1.3 + q), along ? 30 : rr);
     }
   }
 

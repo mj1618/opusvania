@@ -14,7 +14,9 @@
  * - The moon and the afterglow in the sky, the seed, and the background layers' vertical anchor.
  * Defaults (no room set: unit tests) are the Grove's, so nothing changes there.
  */
+
 import type { Room } from '../../../scene/room';
+import { gradeLookOf, type Look } from './looks';
 
 /** The Grove's zone centres: the cool / warm and warm / deep edges (pf-shape, fx-zones, bg-bake agree on these). */
 const GROVE_COOL_END = 1950;
@@ -45,6 +47,8 @@ export interface RoomLook {
   afterglow: { x: number; y: number; strength: number } | null;
   /** The camera centre y the background layers are composed for (null = the lowest resting view: the Grove's rule). */
   anchorY: number | null;
+  /** An enclosed wood room's look (looks.ts `gradeLookOf`): the post grades it as its place; null = the open night. */
+  inside: Look | null;
 }
 
 /** The look in use. Read it; only `setRoomLook` writes it. */
@@ -59,6 +63,7 @@ export const LOOK: RoomLook = {
   moon: null,
   afterglow: null,
   anchorY: null,
+  inside: null,
 };
 
 /** The wood kit's moon: cool silver-blue (docs/design/scenes/01-look-target.md, `#dce8f6`). */
@@ -100,6 +105,7 @@ export function setRoomLook(room: Room): void {
         ? band
         : 'night';
   LOOK.seed = art?.seed ?? 1;
+  LOOK.inside = LOOK.kit === 'wood' ? gradeLookOf(room) : null;
   if (LOOK.kit === 'grove') {
     LOOK.zoneShift = { left: 0, right: 0 };
     LOOK.keyEntryX = 3400;

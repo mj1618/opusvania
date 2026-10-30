@@ -13,13 +13,23 @@
 import { Container, Graphics } from 'pixi.js';
 import { GlowPool } from '../../lantern/glow';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
-import { backMask, drawDeepBack, INTERIOR, type InteriorPlan, interiorPlan } from '../lib/interior';
-import { MASS } from '../lib/pf-mass';
+import {
+  backEdgeShade,
+  backMask,
+  drawDeepBack,
+  INTERIOR,
+  type InteriorPlan,
+  interiorPlan,
+} from '../lib/interior';
+import { massTone } from '../lib/pf-mass';
 import { chaikin, hash1, wobble } from '../lib/pf-shape';
 import { LOOK } from '../lib/room-look';
 
 /** How far the mass beyond the room's edges reaches (px): past the widest view and the parallax. */
 const BEYOND = 3200;
+/** The boss's snuffed lamp (review r4 #5): seconds the dark takes to spread, how much it takes off the back and off
+ * the room's bake, and how far round the lamp the growth's light goes out with it (px). */
+const SNUFF = { secs: 1.5, back: 0.36, near: 0.16, reach: 700 };
 /** The share of the room its backs must cover for the wood to close in past its edges. */
 const ENCLOSED = 0.35;
 
@@ -31,6 +41,13 @@ export class InteriorLayer implements EnvModule {
   private readonly edge = new Graphics({ label: 'interior-edge' });
   private readonly edgeMask = new Graphics({ label: 'interior-edge-mask' });
   private readonly beads = new Graphics({ label: 'interior-beads' });
+  /** The worms' beads near a boss's lamp (they go out with it) and the dark that spreads when it is snuffed. */
+  private readonly beadsNear = new Graphics({ label: 'interior-beads-near' });
+  private readonly darkBack = new Graphics({ label: 'interior-snuff-back' });
+  private readonly darkNear = new Graphics({ label: 'interior-snuff-near' });
+  /** The lamp a boss puts out as its last phase begins (`snuffs`): its index and x; the dark's render time. */
+  private snuff: { i: number; x: number; y: number } | null = null;
+  private snuffT = 0;
   private readonly glow = new GlowPool('interior-glow');
   private readonly root = new Container({ label: 'interior-light' });
 
@@ -51,16 +68,10 @@ export class InteriorLayer implements EnvModule {
     airBack.addChild(this.mask);
     this.deep.mask = this.mask;
     // The torn edge falls into shadow (review r3 #2: where a back met open air its hard mask edge cut flat pale shapes
-    // out of the night: the Grove's and the hub's "mint"): dark bands along it, inside only (masked by a twin).
-    for (const m of polys) {
-      this.edgeMask.poly(m).fill({ color: 0xffffff });
-      for (const [w, a] of [
-        [360, 0.22],
-        [220, 0.28],
-        [110, 0.34],
-      ] as const)
-        this.edge.poly(m).stroke({ color: plan.tone.grain, width: w, alpha: a, join: 'round' });
-    }
+    // out of the night: the Grove's and the hub's "mint"): bands following the edge inward (inside only: a twin mask).
+    for (const m of polys) this.edgeMask.poly(m).fill({ color: 0xffffff });
+    for (const band of backEdgeShade(plan, LOOK.seed))
+      this.edge.poly(band.pts).fill({ color: plan.tone.grain, alpha: band.alpha });
     airBack.addChild(this.edgeMask, this.edge);
     this.edge.mask = this.edgeMask;
 
@@ -69,20 +80,31 @@ export class InteriorLayer implements EnvModule {
     const backArea = plan.backs.reduce((a, b) => a + b.w * b.h, 0);
     if (backArea >= ENCLOSED * W * H) this.paintBeyond(ctx, plan);
 
+    // The lamp a boss snuffs (the den's taproot wick, review r4 #5: phase 3's dark did not show).
+    const named = (room.enemies ?? []).find((e) => (e as { snuffs?: string }).snuffs);
+    const lures = (room as { lures?: Array<{ id: string; x: number; y: number }> }).lures ?? [];
+    const li = named ? lures.findIndex((l) => l.id === (named as { snuffs?: string }).snuffs) : -1;
+    const lure = lures[li];
+    if (lure) this.snuff = { i: li, x: lure.x, y: lure.y };
     // The glow worms' beads (their threads are baked).
     for (const l of plan.lights) {
       if (l.kind !== 'worm') continue;
+      const g = this.snuff && Math.abs(l.x - this.snuff.x) < SNUFF.reach ? this.beadsNear : this.beads;
       const n = 3 + Math.floor(hash1(l.seed, 3) * 4);
       for (let k = 0; k < n; k++) {
         const t = (k + 1) / (n + 0.5);
-        this.beads.circle(l.x + Math.sin(t * 5 + l.seed) * 2, l.y + l.s * t, 2.2 + 1.2 * (1 - t)).fill({
+        g.circle(l.x + Math.sin(t * 5 + l.seed) * 2, l.y + l.s * t, 2.2 + 1.2 * (1 - t)).fill({
           color: l.violet ? 0xe8d0ff : 0xd8fcff,
           alpha: 0.95,
         });
       }
     }
-    this.root.addChild(this.glow.container, this.beads);
+    this.root.addChild(this.glow.container, this.beads, this.beadsNear);
     ctx.layers.get('goal').addChildAt(this.root, 0);
+    if (this.snuff) {
+      airBack.addChild(this.darkBack);
+      ctx.layers.get('goal').addChildAt(this.darkNear, 0);
+    }
     // (In front of the room's bake, so its ragged lip overhangs the back; under the light and everything alive.)
     ctx.layers.get('goal').addChildAt(this.beyond, 0);
   }
@@ -94,7 +116,7 @@ export class InteriorLayer implements EnvModule {
     const H = room.height;
 
     const g = this.beyond;
-    const body = MASS.body;
+    const body = massTone(room).body;
     const exits = (room as { exits?: Array<{ edge: string; from: number; to: number }> }).exits ?? [];
     const gaps = (edge: string): Array<[number, number]> =>
       exits.filter((e) => e.edge === edge).map((e) => [e.from, e.to] as [number, number]);
@@ -206,9 +228,24 @@ export class InteriorLayer implements EnvModule {
     const hw = cam.w / 2 / cam.zoom + 400;
     const hh = cam.h / 2 / cam.zoom + 400;
     const I = INTERIOR;
+    // The snuff: once the boss's lamp is out, the dark spreads out from it over SNUFF.secs.
+    let dk = 0;
+    const sn = this.snuff;
+    if (sn) {
+      const out = (frame.sim.lures.hp[sn.i] ?? 1) <= 0;
+      this.snuffT = out ? this.snuffT + frame.dt : 0;
+      dk = Math.min(1, this.snuffT / SNUFF.secs);
+      this.paintSnuff(frame, dk);
+    }
     this.glow.begin();
     for (const l of plan.lights) {
       if (Math.abs(l.x - cam.x) > hw + l.len || Math.abs(l.y - cam.y) > hh + l.len) continue;
+      if (sn && dk > 0 && Math.abs(l.x - sn.x) < SNUFF.reach && l.kind !== 'sap') {
+        // (Near the lamp the growth's light goes with it; the shafts and spores dim.)
+        if (l.kind === 'worm' || l.kind === 'fungus' || l.kind === 'moss') {
+          if (dk >= 1) continue;
+        }
+      }
       const ph = hash1(l.seed, 7) * 6.28;
       const breathe = 0.85 + 0.15 * Math.sin(clock * (0.7 + hash1(l.seed, 9) * 0.6) + ph);
       const col = l.violet ? I.violet : plan.look === 'shaft' ? I.frost : I.cyan;
@@ -298,6 +335,37 @@ export class InteriorLayer implements EnvModule {
       }
     }
     this.glow.end();
+  }
+
+  /**
+   * The den in its last phase: the back darkens by `SNUFF.back` and the room's bake by `SNUFF.near`, spreading out from
+   * the snuffed lamp (strips, each dark once the front has passed it); the beads near the lamp fade out.
+   */
+  private paintSnuff(frame: SceneFrame, dk: number): void {
+    const sn = this.snuff;
+    if (!sn) return;
+    const room = frame.sim.scene;
+    const W = room.width;
+    const H = room.height;
+    this.darkBack.clear();
+    this.darkNear.clear();
+    this.beadsNear.alpha = 1 - dk;
+    if (dk <= 0) return;
+    const front = dk * Math.max(sn.x, W - sn.x) * 1.15;
+    const st = 64;
+    for (let x = -400; x < W + 400; x += st) {
+      const d = Math.abs(x + st / 2 - sn.x);
+      const k = Math.max(0, Math.min(1, (front - d) / 500 + 0.15 * dk));
+      if (k <= 0) continue;
+      // (Deepest near the lamp: its light is what left.)
+      const near = 1 + 0.35 * Math.max(0, 1 - d / SNUFF.reach);
+      this.darkBack
+        .rect(x, -400, st, H + 800)
+        .fill({ color: 0x020304, alpha: Math.min(0.75, SNUFF.back * k * near) });
+      this.darkNear
+        .rect(x, -400, st, H + 800)
+        .fill({ color: 0x020304, alpha: Math.min(0.5, SNUFF.near * k * near) });
+    }
   }
 
   destroy(): void {

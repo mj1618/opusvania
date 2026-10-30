@@ -13,6 +13,7 @@
  *   ceiling, and drifting spores where a screen-sized cell would otherwise have none.
  */
 import type { Room } from '../../../scene/room';
+import { type Look, lookOf } from './looks';
 import { BRANCH, strand } from './pf-branch';
 import { exposedSides, type MassRect } from './pf-mass';
 import type { Paint } from './pf-paint';
@@ -40,48 +41,18 @@ export const INTERIOR = {
   tear: 420,
 } as const;
 
-export type BackMat = 'root' | 'earth' | 'grain' | 'leaf';
+export type BackMat = 'root' | 'earth' | 'grain' | 'leaf' | 'frost';
 
-/** The five insides of the wood (canopy review r3 #4: twenty rooms, two looks). */
-export type Look = 'heartwood' | 'shaft' | 'nest' | 'canopy' | 'den';
+export { type Look, lookOf };
 
 /** Each look's near-back material. */
 const MAT: Record<Look, BackMat> = {
   heartwood: 'grain',
-  shaft: 'root',
+  shaft: 'frost',
   nest: 'earth',
   canopy: 'leaf',
   den: 'earth',
 };
-
-/** The Canopy's rooms whose look the heuristics in `lookOf` would get wrong (a room's `art.look` wins over this). */
-const ROOM_LOOKS: Record<string, Look> = {
-  'cn-hub': 'heartwood',
-  'cn-elder': 'shaft',
-  'cn-nook': 'nest',
-  'cn-hollowroot': 'nest',
-  'cn-tunnel': 'den',
-  'cn-burrow': 'den',
-  'cn-ledge': 'den',
-};
-
-/**
- * A wood room's look: its `art.look`, else (a room the table above names) that, else from what is in it: ants make a
- * nest, the burrbacks' earth a den, a shaft twice as tall as wide a moonlit shaft, a deep mood the giant's heartwood,
- * anything else the canopy.
- */
-export function lookOf(room: Room): Look {
-  const set = (room.art as { look?: Look } | undefined)?.look;
-  if (set) return set;
-  const named = ROOM_LOOKS[room.id];
-  if (named) return named;
-  const kinds = new Set((room.enemies ?? []).map((e) => e.kind as string));
-  if (kinds.has('carrier')) return 'nest';
-  if (kinds.has('oldBurrback') || room.solids.some((s) => s.tag === 'ground')) return 'den';
-  if (room.height >= room.width * 1.7) return 'shaft';
-  if ((room.art?.moods ?? []).some((m) => m.mood === 'deep')) return 'heartwood';
-  return 'canopy';
-}
 
 export interface Tone {
   /** The deep back: body, its grain lit, the fog band. */
@@ -98,79 +69,81 @@ export interface Tone {
 }
 
 /**
- * Tones per look. (Round 3's warm tone, a saturated moss green, painted the hub's hollow, the seed shaft and the
- * Grove's back as flat mint polygons under the lamps' wash: the warm variants here stay dark and grey-green.)
+ * Tones per look. Each look is its own hue as well as its own pattern (review r4 #4: heartwood's grain and the nest's
+ * bands were the same purple-grey): heartwood amber-brown, shaft cold white-blue, nest ochre-grey, canopy green-teal,
+ * den umber. (Round 3's warm tone, a saturated moss green, painted flat mint polygons under the lamps' wash: the warm
+ * variants stay dark.)
  */
 const TONES: Record<Look | 'canopyWarm' | 'heartwoodWarm', Tone> = {
   heartwood: {
-    deep: 0x2a2228,
-    deepLit: 0x4c3c3a,
-    fog: 0x4a4c5c,
-    near: 0x2e2426,
-    nearLit: 0x8a6a52,
-    grain: 0x140e12,
-    root: 0x3a2c24,
-    rootLit: 0xa88866,
+    deep: 0x3a2a1e,
+    deepLit: 0x6c4c32,
+    fog: 0x584a3e,
+    near: 0x3a2a1e,
+    nearLit: 0xbc8c5c,
+    grain: 0x1e140d,
+    root: 0x4a3424,
+    rootLit: 0xc09c70,
   },
   heartwoodWarm: {
-    deep: 0x262420,
-    deepLit: 0x463e34,
-    fog: 0x46504c,
-    near: 0x2a2622,
-    nearLit: 0x84705a,
-    grain: 0x12100e,
-    root: 0x342c24,
-    rootLit: 0x9c8a6a,
+    deep: 0x36281c,
+    deepLit: 0x664a30,
+    fog: 0x56483a,
+    near: 0x382a1e,
+    nearLit: 0xb08a60,
+    grain: 0x1a120c,
+    root: 0x443224,
+    rootLit: 0xb49470,
   },
   shaft: {
-    deep: 0x2c4260,
-    deepLit: 0x5a789e,
-    fog: 0x8eaacc,
-    near: 0x1a2c42,
-    nearLit: 0x8aaed0,
-    grain: 0x101c2c,
-    root: 0x1a2838,
-    rootLit: 0x9ab8d8,
+    deep: 0x3a5674,
+    deepLit: 0x8eaccc,
+    fog: 0xb4cce4,
+    near: 0x25394f,
+    nearLit: 0xc8def4,
+    grain: 0x15243a,
+    root: 0x203248,
+    rootLit: 0xb0c8e4,
   },
   nest: {
-    deep: 0x2c2a32,
-    deepLit: 0x4c4650,
-    fog: 0x4a5a68,
-    near: 0x36303a,
-    nearLit: 0x8c7c6c,
-    grain: 0x15131a,
-    root: 0x3a3028,
-    rootLit: 0x9a8a70,
+    deep: 0x38362c,
+    deepLit: 0x66604a,
+    fog: 0x5a5c50,
+    near: 0x403a2e,
+    nearLit: 0xaaa07a,
+    grain: 0x1a1810,
+    root: 0x48402e,
+    rootLit: 0xb4a87c,
   },
   canopy: {
-    deep: 0x1c303e,
-    deepLit: 0x30505e,
-    fog: 0x4e7084,
-    near: 0x162632,
-    nearLit: 0x5a7c88,
-    grain: 0x0c161e,
-    root: 0x14202a,
-    rootLit: 0x6a8890,
+    deep: 0x1a3638,
+    deepLit: 0x325c58,
+    fog: 0x426c6c,
+    near: 0x132c2c,
+    nearLit: 0x5c9488,
+    grain: 0x0a1a1a,
+    root: 0x12282a,
+    rootLit: 0x6a9a8e,
   },
   canopyWarm: {
-    deep: 0x1a2a2e,
-    deepLit: 0x2e4644,
-    fog: 0x46605e,
-    near: 0x16242a,
-    nearLit: 0x5c7870,
-    grain: 0x0c1618,
-    root: 0x142024,
-    rootLit: 0x688478,
+    deep: 0x18302c,
+    deepLit: 0x30544a,
+    fog: 0x42645a,
+    near: 0x142a26,
+    nearLit: 0x5c8070,
+    grain: 0x0a1614,
+    root: 0x142420,
+    rootLit: 0x688878,
   },
   den: {
-    deep: 0x262838,
-    deepLit: 0x3e3a50,
-    fog: 0x3a5a70,
-    near: 0x342a30,
-    nearLit: 0x86705a,
-    grain: 0x16121a,
-    root: 0x3a2c24,
-    rootLit: 0xa88866,
+    deep: 0x34241a,
+    deepLit: 0x5c3e2a,
+    fog: 0x4c3c34,
+    near: 0x3c2a1e,
+    nearLit: 0x9e7250,
+    grain: 0x1a0f0a,
+    root: 0x4c3424,
+    rootLit: 0xb08a60,
   },
 };
 
@@ -182,11 +155,17 @@ export interface Rect {
 }
 
 export interface BackEdges {
-  /** True where that edge of the back meets open air inside the room (not the room's edge, not mass). */
+  /** True where that edge of the back meets open air inside the room (not the room's edge, not mass), anywhere on it. */
   w: boolean;
   e: boolean;
   n: boolean;
   s: boolean;
+  /**
+   * How open the air past an edge is at a point along it (0..1, smoothed; v = x on n / s, y on w / e): a back's top
+   * that is under mass for half its length and open sky for the rest tears only where the sky is (review r4 #6: the
+   * fork's ruled seam).
+   */
+  at?: (side: 'n' | 's' | 'w' | 'e', v: number) => number;
 }
 
 export interface Glow {
@@ -231,18 +210,45 @@ function inBacks(backs: readonly Rect[], x: number, y: number, pad = 0): boolean
   return backs.some((b) => x > b.x - pad && x < b.x + b.w + pad && y > b.y - pad && y < b.y + b.h + pad);
 }
 
-/** Which edges of `b` lie in open air (sampled: more than a third of the edge outside any mass). */
+/** Which edges of `b` meet open air, and how open each is along its length. */
 function freeEdges(b: Rect, room: Room, masses: readonly MassRect[]): BackEdges {
-  const open = (pts: Array<[number, number]>): boolean =>
-    pts.filter(([x, y]) => !inSolid(masses, x, y)).length > pts.length / 3;
-  const along = (a: number, c: number, n: number): number[] =>
-    Array.from({ length: n }, (_, i) => lerp(a, c, (i + 0.5) / n));
-  const n = 16;
+  const out = (side: 'n' | 's' | 'w' | 'e', v: number): [number, number] =>
+    side === 'n'
+      ? [v, b.y - 24]
+      : side === 's'
+        ? [v, b.y + b.h + 24]
+        : side === 'w'
+          ? [b.x - 24, v]
+          : [b.x + b.w + 24, v];
+  const raw = (side: 'n' | 's' | 'w' | 'e', v: number): number => {
+    const [x, y] = out(side, v);
+    if (x <= 1 || y <= 1 || x >= room.width - 1 || y >= room.height - 1) return 0;
+    return inSolid(masses, x, y) ? 0 : 1;
+  };
+  const cache = new Map<string, number>();
+  const at = (side: 'n' | 's' | 'w' | 'e', v: number): number => {
+    const q = Math.round(v / 20);
+    const key = `${side}${q}`;
+    const hit = cache.get(key);
+    if (hit !== undefined) return hit;
+    let a = 0;
+    for (let k = -4; k <= 4; k++) a += raw(side, q * 20 + k * 50);
+    const o = clamp((a / 9 - 0.15) / 0.7, 0, 1);
+    cache.set(key, o);
+    return o;
+  };
+  const any = (side: 'n' | 's' | 'w' | 'e', a: number, c: number): boolean => {
+    const n = 24;
+    let open = 0;
+    for (let k = 0; k < n; k++) open += raw(side, lerp(a, c, (k + 0.5) / n));
+    return open >= 2;
+  };
   return {
-    w: b.x > 1 && open(along(b.y, b.y + b.h, n).map((y) => [b.x - 4, y])),
-    e: b.x + b.w < room.width - 1 && open(along(b.y, b.y + b.h, n).map((y) => [b.x + b.w + 4, y])),
-    n: b.y > 1 && open(along(b.x, b.x + b.w, n).map((x) => [x, b.y - 4])),
-    s: b.y + b.h < room.height - 1 && open(along(b.x, b.x + b.w, n).map((x) => [x, b.y + b.h + 4])),
+    w: any('w', b.y, b.y + b.h),
+    e: any('e', b.y, b.y + b.h),
+    n: any('n', b.x, b.x + b.w),
+    s: any('s', b.x, b.x + b.w),
+    at,
   };
 }
 
@@ -267,13 +273,23 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
   const warm = mood === 'warm';
   const tone =
     TONES[warm && look === 'canopy' ? 'canopyWarm' : warm && look === 'heartwood' ? 'heartwoodWarm' : look];
-  // (A cover's hollow is closed all round: no torn edge, the wood's own walls bound it.)
-  const edges = backs.map((b, i) =>
-    i < marked.length ? freeEdges(b, room, masses) : { w: false, e: false, n: false, s: false },
-  );
+  // (A cover's hollow is usually closed all round by the wood's own walls; where its rect runs out into open air (the
+  // fork's cellar cover spans the corridor over it) that edge tears like any back's: review r4 #6, the ruled seam.)
+  const edges = backs.map((b) => freeEdges(b, room, masses));
   const lights: Glow[] = [];
   const I = INTERIOR;
+  // (Review r4 #8: on a claw face no glow grows within 64 px of a thorn strip: the hazard is the brightest thing there.)
+  const thorns = ((room as { thorns?: Rect[] }).thorns ?? []) as Rect[];
+  const byThorn = (x: number, y: number, s: number): boolean =>
+    thorns.some(
+      (t) => x > t.x - 64 - s && x < t.x + t.w + 64 + s && y > t.y - 64 - s && y < t.y + t.h + 64 + s,
+    );
   const add = (g: Omit<Glow, 'seed'>): void => {
+    if (
+      (g.kind === 'fungus' || g.kind === 'sap' || g.kind === 'moss' || g.kind === 'worm') &&
+      byThorn(g.x, g.y, g.s)
+    )
+      return;
     lights.push({ ...g, seed: seed + lights.length * 31 + Math.round(g.x * 3 + g.y) });
   };
   masses.forEach((r, i) => {
@@ -412,10 +428,12 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
 /** How far into the back the torn edge reaches at (x, y): 0 at a free edge, 1 deep inside or along a closed edge. */
 function tornK(b: Rect, e: BackEdges, x: number, y: number): number {
   let k = 1;
-  if (e.w) k = Math.min(k, (x - b.x) / INTERIOR.tear);
-  if (e.e) k = Math.min(k, (b.x + b.w - x) / INTERIOR.tear);
-  if (e.n) k = Math.min(k, (y - b.y) / INTERIOR.tear);
-  if (e.s) k = Math.min(k, (b.y + b.h - y) / INTERIOR.tear);
+  const o = (side: 'n' | 's' | 'w' | 'e', v: number) => (e.at ? e.at(side, v) : 1);
+  const T = INTERIOR.tear;
+  if (e.w) k = Math.min(k, lerp(1, (x - b.x) / T, o('w', y)));
+  if (e.e) k = Math.min(k, lerp(1, (b.x + b.w - x) / T, o('e', y)));
+  if (e.n) k = Math.min(k, lerp(1, (y - b.y) / T, o('n', x)));
+  if (e.s) k = Math.min(k, lerp(1, (b.y + b.h - y) / T, o('s', x)));
   return clamp(k, 0, 1);
 }
 
@@ -512,6 +530,8 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
       heartwoodNear(p, plan, b, e, seed + i * 7);
     } else if (plan.mat === 'leaf') {
       canopyNear(p, plan, b, e, seed + i * 7);
+    } else if (plan.mat === 'frost') {
+      shaftNear(p, plan, b, e, seed + i * 7);
     } else {
       // Earth: big soft clumps of packed earth, close in value to the deep back (so none reads as a ledge), with
       // gaps between where the deep and its fog show; stones and short roots in them.
@@ -741,6 +761,102 @@ function canopyNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: n
         q % 3 ? 0.9 : 0.5,
       );
     }
+  }
+}
+
+/**
+ * The moonlit shaft, near (review r4 #4: the blue fibre posts ran through the chimneys and fought the faces she reads):
+ * the inside of a hollow trunk, pale and cold. Its grain is fine lines, not posts: long thin strands of dark and frost,
+ * broken and staggered, shallow washes of lighter wood, frost lichen in patches, a few knotholes with a lit lower lip.
+ * Nothing in it stands proud or reads as a thing to climb.
+ */
+function shaftNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 437);
+  // Washes: very soft broad streaks of lighter and darker wood, ragged ends, low alpha (never a post).
+  for (let x = b.x + range(r, -60, 60); x < b.x + b.w; x += range(r, 140, 360)) {
+    const y0 = b.y + range(r, -0.1, 0.6) * b.h;
+    const len = range(r, 0.3, 0.9) * b.h;
+    const kx = tornK(b, e, clamp(x, b.x, b.x + b.w), clamp(y0 + len / 2, b.y, b.y + b.h));
+    if (kx < 0.2) continue;
+    const line: number[] = [];
+    for (let t = 0; t <= 10; t++) line.push(x + range(r, -10, 10), y0 + (len * t) / 10);
+    const wl = wander(line, 34, seed + Math.round(x), 320);
+    const w = range(r, 60, 180);
+    p.tint(
+      ribbon(wl, (t) => w * Math.sin(Math.PI * t) ** 0.6),
+      r() < 0.5 ? T.nearLit : T.grain,
+      range(r, 0.05, 0.1),
+    );
+  }
+  // The grain: fine strands in staggered runs.
+  for (let x = b.x + range(r, 0, 30); x < b.x + b.w; x += range(r, 18, 70)) {
+    let y = b.y + range(r, -200, 200);
+    while (y < b.y + b.h) {
+      const len = range(r, 160, 900);
+      const kx = tornK(b, e, clamp(x, b.x, b.x + b.w), clamp(y + len / 2, b.y, b.y + b.h));
+      if (kx > 0.15 && r() < 0.8) {
+        const line: number[] = [];
+        for (let t = 0; t <= 8; t++) line.push(x + range(r, -3, 3), y + (len * t) / 8);
+        const wl = wander(line, 10, seed + Math.round(x + y), 200);
+        const lit = r() < 0.3;
+        p.tint(
+          strand(wl, lit ? range(r, 1.5, 3) : range(r, 2, 5), 0.5),
+          lit ? T.nearLit : T.grain,
+          lit ? 0.22 : 0.4,
+        );
+      }
+      y += len + range(r, 40, 260);
+    }
+  }
+  // Frost lichen: pale crusts in loose patches.
+  for (let k = 0; k < Math.max(3, Math.round((b.w * b.h) / 260000)); k++) {
+    const cx = b.x + range(r, 0.02, 0.98) * b.w;
+    const cy = b.y + range(r, 0.02, 0.98) * b.h;
+    if (tornK(b, e, cx, cy) < 0.3 || inSolid(plan.masses, cx, cy)) continue;
+    const rad = range(r, 30, 90);
+    for (let q = 0; q < 16; q++) {
+      const a = range(r, 0, 6.28);
+      const d = rad * Math.sqrt(r());
+      const sr = range(r, 2, 6) * (1 - (0.5 * d) / rad);
+      p.tint(
+        chaikin(
+          blob(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 1.4, sr * 1.3, sr, seed + k * 17 + q, 0.3, 8),
+          1,
+        ),
+        INTERIOR.frost,
+        range(r, 0.18, 0.4),
+      );
+    }
+  }
+  // Knotholes: dark, tall, a frosted lower lip.
+  for (let k = 0; k < Math.max(1, Math.round((b.w * b.h) / 1500000)); k++) {
+    const x = b.x + range(r, 0.1, 0.9) * b.w;
+    const y = b.y + range(r, 0.1, 0.85) * b.h;
+    if (tornK(b, e, x, y) < 0.4 || inSolid(plan.masses, x, y)) continue;
+    const rx = range(r, 16, 30);
+    const ry = rx * range(r, 1.6, 2.4);
+    p.solid(
+      chaikin(blob(x, y, rx + 8, ry + 10, seed + k, 0.25, 14), 2),
+      T.near,
+      B.backH + 0.05,
+      { bark: 0.4 },
+      0.6,
+    );
+    p.solid(
+      chaikin(blob(x, y + 4, rx, ry, seed + k + 3, 0.25, 14), 2),
+      T.grain,
+      B.backH + 0.02,
+      { bark: 0 },
+      0.9,
+    );
+    const lip: number[] = [];
+    for (let t = 0; t <= 8; t++) {
+      const a = Math.PI * (0.15 + 0.7 * (t / 8));
+      lip.push(x + Math.cos(a) * (rx + 3), y + 4 + Math.sin(a) * (ry + 3));
+    }
+    p.tint(strand(lip, 3, 0.3), INTERIOR.frost, 0.35);
   }
 }
 
@@ -975,6 +1091,44 @@ export function paintGlowFlora(p: Paint, plan: InteriorPlan): void {
   }
 }
 
+/** A band across [x0, x1] centred on y, `h` tall, its edges wavering (no ruled line: the fork's seam, the checker). */
+function wavyBand(x0: number, x1: number, y: number, h: number, seed: number, amp = 0.35): number[] {
+  const top: number[] = [];
+  const bot: number[] = [];
+  const st = Math.max(40, (x1 - x0) / 60);
+  for (let x = x0; x <= x1 + 0.01; x += st) {
+    top.push(x, y - h / 2 + h * amp * wobble(x, seed, 520) + h * 0.15 * wobble(x, seed + 3, 140));
+    bot.push(x, y + h / 2 + h * amp * wobble(x, seed + 7, 610) + h * 0.15 * wobble(x, seed + 9, 160));
+  }
+  for (let k = bot.length / 2 - 1; k >= 0; k--) top.push(bot[k * 2] as number, bot[k * 2 + 1] as number);
+  return top;
+}
+
+/** A soft gradient as many faint wavering bands: from y0 (alpha 0) to y1 (alpha `a`), or the reverse. */
+function softGrad(
+  g: { poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown } },
+  x0: number,
+  x1: number,
+  y0: number,
+  y1: number,
+  color: number,
+  a: number,
+  seed: number,
+): void {
+  const n = 18;
+  const lo = Math.min(y0, y1);
+  const hi = Math.max(y0, y1);
+  for (let k = 0; k < n; k++) {
+    // Each band reaches from the dense end to a step further: their overlaps build the ramp.
+    const f = (k + 1) / n;
+    const yA = y1 > y0 ? y1 - (y1 - y0) * f : y1;
+    const yB = y1 > y0 ? y1 + 60 : y1 + (y0 - y1) * f;
+    const yc = (Math.max(lo - 60, yA) + Math.min(hi + 60, yB)) / 2;
+    const h = Math.abs(yB - yA);
+    g.poly(wavyBand(x0, x1, yc, h, seed + k * 13, 0.12)).fill({ color, alpha: a / n });
+  }
+}
+
 /** The deep back: lighter and softer than the near back, grain and dim roots, a fog band across it (layer coords). */
 export function drawDeepBack(
   g: {
@@ -991,28 +1145,79 @@ export function drawDeepBack(
     const b = { x: b0.x - pad, y: b0.y - pad, w: b0.w + pad * 2, h: b0.h + pad * 2 };
     const r = rngFor(seed, b0.x, b0.y, 71);
     g.rect(b.x, b.y, b.w, b.h).fill({ color: T.deep });
-    if (plan.look === 'shaft' || plan.look === 'canopy') {
-      // Broad grain down the wood, a step lit and a step dark., a step lit and a step dark.
-      for (let x = b.x; x < b.x + b.w; x += range(r, 60, 180)) {
-        const w = range(r, 30, 120);
+    // (Review r4 #6: straight vertical grain ribbons crossed by ruled fog rects read as a checker. Nothing here is a
+    // ruled band: grain wanders and breaks, fog and light are wavering gradients.)
+    if (plan.look === 'shaft') {
+      // The hollow trunk's inside: a cold glow down from the moon, darker low; fine broken grain.
+      softGrad(g, b.x, b.x + b.w, b0.y - 200, b0.y + b0.h * 0.7, T.fog, 0.32, seed + i * 5);
+      softGrad(g, b.x, b.x + b.w, b0.y + b0.h * 0.55, b0.y + b0.h + pad, T.grain, 0.4, seed + i * 5 + 3);
+      for (let x = b.x; x < b.x + b.w; x += range(r, 30, 110)) {
+        let y = b.y + range(r, 0, 300);
+        while (y < b.y + b.h) {
+          const len = range(r, 300, 1400);
+          const line: number[] = [];
+          for (let t = 0; t <= 10; t++) line.push(x + range(r, -3, 3), y + (len * t) / 10);
+          const wl = wander(line, 26, seed + Math.round(x + y), 400);
+          g.poly(strand(wl, range(r, 3, 14), 0.5)).fill({
+            color: r() < 0.4 ? T.deepLit : T.grain,
+            alpha: range(r, 0.1, 0.24),
+          });
+          y += len + range(r, 60, 400);
+        }
+      }
+    } else if (plan.look === 'canopy') {
+      // Up in the crowns: dim limbs crossing at angles, leaf mats over them (below: the gaps to the night).
+      for (let k = 0; k < Math.max(2, Math.round((b.w * b.h) / 1400000)); k++) {
+        const x0 = b.x + range(r, 0, 1) * b.w;
+        const y0 = b.y + range(r, 0, 1) * b.h;
+        const a = range(r, -1.2, 1.2) + (r() < 0.5 ? Math.PI : 0);
+        const len = range(r, 500, 1300);
         const line: number[] = [];
-        for (let t = 0; t <= 10; t++) line.push(x + range(r, -4, 4), lerp(b.y, b.y + b.h, t / 10));
-        const wl = wander(line, 40, seed + i * 3 + Math.round(x), 400);
-        g.poly(ribbon(wl, () => w)).fill({
-          color: r() < 0.5 ? T.deepLit : T.grain,
-          alpha: range(r, 0.18, 0.4),
-        });
+        for (let t = 0; t <= 10; t++)
+          line.push(x0 + Math.cos(a) * len * (t / 10), y0 + Math.sin(a) * len * (t / 10));
+        const wl = wander(line, 50, seed + k * 7 + i, 300);
+        const w0 = range(r, 30, 80);
+        g.poly(ribbon(wl, (t) => w0 * (1 - t * 0.7))).fill({ color: T.grain, alpha: range(r, 0.35, 0.55) });
+      }
+      for (let k = 0; k < Math.round((b.w * b.h) / 220000); k++) {
+        const cx = b.x + range(r, 0, 1) * b.w;
+        const cy = b.y + range(r, 0, 1) * b.h;
+        const rx = range(r, 50, 160);
+        const ry = rx * range(r, 0.35, 0.6);
+        const lit = r() < 0.45;
+        const nl = Math.round(rx / 5);
+        for (let q = 0; q < nl; q++) {
+          const ang = range(r, 0, 6.28);
+          const d = Math.sqrt(r());
+          g.poly(
+            leaf(
+              cx + Math.cos(ang) * rx * d,
+              cy + Math.sin(ang) * ry * d,
+              range(r, 12, 28),
+              range(r, 0.6, 2.6),
+            ),
+          ).fill({ color: lit && q % 3 ? T.deepLit : T.grain, alpha: range(r, 0.25, 0.55) });
+        }
       }
     } else if (plan.look === 'heartwood') {
-      // Inside the fallen giant: the grain runs along it (across the screen), split by long dark cracks.
-      for (let y = b.y; y < b.y + b.h; y += range(r, 26, 90)) {
-        const line: number[] = [];
-        for (let x = b.x; x <= b.x + b.w; x += 60)
-          line.push(x, y + 30 * wobble(x, seed + Math.round(y), 900) + 10 * wobble(x, seed + 7, 140));
-        g.poly(strand(line, range(r, 8, 30), 0.02)).fill({
-          color: r() < 0.45 ? T.deepLit : T.grain,
-          alpha: range(r, 0.16, 0.34),
-        });
+      // Inside the fallen giant: the grain runs along it (across the screen), in broken runs of uneven period and
+      // swell (review r4: even waves read as cartoon plank stripes), split by long dark cracks.
+      for (let y = b.y; y < b.y + b.h; y += range(r, 20, 110)) {
+        let x = b.x - range(r, 0, 400);
+        const amp = range(r, 6, 46);
+        const per = range(r, 380, 1500);
+        while (x < b.x + b.w) {
+          const len = range(r, 500, 2400);
+          const line: number[] = [];
+          for (let xx = x; xx <= x + len; xx += 60)
+            line.push(xx, y + amp * wobble(xx, seed + Math.round(y), per) + 10 * wobble(xx, seed + 7, 140));
+          if (line.length >= 6)
+            g.poly(strand(line, range(r, 4, 26), 0.25)).fill({
+              color: r() < 0.45 ? T.deepLit : T.grain,
+              alpha: range(r, 0.12, 0.3),
+            });
+          x += len + range(r, 40, 500);
+        }
       }
       for (let k = 0; k < Math.max(2, Math.round((b.w * b.h) / 900000)); k++) {
         const x0 = b.x + range(r, -0.1, 0.8) * b.w;
@@ -1042,15 +1247,21 @@ export function drawDeepBack(
         }
       }
     } else {
-      // Strata: long soft bands across the earth.
-      for (let y = b.y; y < b.y + b.h; y += range(r, 50, 140)) {
-        const line: number[] = [];
-        for (let x = b.x; x <= b.x + b.w; x += 80)
-          line.push(x, y + 24 * wobble(x, seed + Math.round(y), 600));
-        g.poly(strand(line, range(r, 14, 46), 0.02)).fill({
-          color: r() < 0.5 ? T.deepLit : T.grain,
-          alpha: range(r, 0.2, 0.4),
-        });
+      // Strata: long soft lenses across the earth, broken, of uneven thickness.
+      for (let y = b.y; y < b.y + b.h; y += range(r, 40, 160)) {
+        let x = b.x - range(r, 0, 300);
+        while (x < b.x + b.w) {
+          const len = range(r, 400, 1800);
+          const line: number[] = [];
+          for (let xx = x; xx <= x + len; xx += 80)
+            line.push(xx, y + 24 * wobble(xx, seed + Math.round(y), 600));
+          if (line.length >= 6)
+            g.poly(strand(line, range(r, 12, 50), 0.3)).fill({
+              color: r() < 0.5 ? T.deepLit : T.grain,
+              alpha: range(r, 0.16, 0.36),
+            });
+          x += len + range(r, 30, 300);
+        }
       }
       // Far root curtains, faint.
       for (let x = b.x; x < b.x + b.w; x += range(r, 30, 110)) {
@@ -1095,20 +1306,18 @@ export function drawDeepBack(
           });
         }
       }
-      for (let k = 0; k < Math.round((b0.w * b0.h) / 400000); k++) {
-        const cx = b0.x + range(r, 0, 1) * b0.w;
-        const cy = b0.y + range(r, 0, 1) * b0.h;
-        for (let q = 0; q < 14; q++)
-          g.poly(
-            leaf(cx + range(r, -60, 60), cy + range(r, -30, 50), range(r, 10, 22), range(r, 0.8, 2.4)),
-          ).fill({ color: r() < 0.5 ? T.deepLit : T.grain, alpha: 0.4 });
-      }
     } else if (plan.look === 'shaft') {
-      // The cold beam's haze down the middle of the shaft.
+      // The cold beam's haze down the middle of the shaft: wavering soft columns (ruled rects made a checker).
       const mx = b0.x + b0.w * 0.5;
-      for (let k = 0; k < 6; k++) {
-        const w = b0.w * (0.12 + k * 0.08);
-        g.rect(mx - w / 2, b.y, w, b.h).fill({ color: T.fog, alpha: 0.05 });
+      for (let k = 0; k < 8; k++) {
+        const w = b0.w * (0.1 + k * 0.07);
+        const line: number[] = [];
+        for (let t = 0; t <= 12; t++)
+          line.push(mx + 30 * wobble(t * 300, seed + k, 900), lerp(b.y, b.y + b.h, t / 12));
+        g.poly(ribbon(line, (t) => w * (0.85 + 0.3 * wobble(t * 3000, seed + k * 3, 700)))).fill({
+          color: T.fog,
+          alpha: 0.035,
+        });
       }
     } else if (plan.look === 'nest') {
       // Tunnels and chambers through the earth.
@@ -1165,33 +1374,99 @@ export function drawDeepBack(
       const w0 = range(r, 50, 110);
       g.poly(ribbon(wl, (t) => w0 * (1 - t * 0.5))).fill({ color: T.grain, alpha: 0.45 });
     }
-    // The fog between the planes: soft bands, thicker low, so the deep reads as far.
+    // The fog between the planes: a soft wavering swell, thicker low, so the deep reads as far.
     const fogY = b0.y + b0.h * 0.62;
-    for (let k = 0; k < 9; k++) {
-      const h = b0.h * (0.12 + k * 0.07);
-      g.rect(b.x, fogY - h / 2, b.w, h).fill({ color: T.fog, alpha: 0.03 });
+    for (let k = 0; k < 14; k++) {
+      const h = b0.h * (0.1 + k * 0.045);
+      g.poly(wavyBand(b.x, b.x + b.w, fogY, h, seed + i * 31 + k * 7, 0.18)).fill({
+        color: T.fog,
+        alpha: 0.02,
+      });
     }
-    for (let k = 0; k < 5; k++) {
-      const h = 120 + k * 120;
-      g.rect(b.x, b0.y + b0.h - h, b.w, h + pad).fill({ color: T.fog, alpha: 0.035 });
-    }
+    softGrad(g, b.x, b.x + b.w, b0.y + b0.h - 700, b0.y + b0.h + pad, T.fog, 0.16, seed + i * 37);
   });
+}
+
+/**
+ * How far into back i the deep mask is drawn at a point along an edge (px; negative = out past it, under the mass): a
+ * free edge well in, behind the near back's torn fibres (they stand against the open air beyond it), wavering so no
+ * ruled line shows; partly open edges only where they are open.
+ */
+export function backBite(
+  plan: InteriorPlan,
+  i: number,
+  seed: number,
+): (side: 'n' | 's' | 'w' | 'e', v: number) => number {
+  const e = plan.edges[i] as BackEdges;
+  const off: Record<string, number> = { n: 0, e: 500, s: 900, w: 1300 };
+  return (side, v) => {
+    if (!e[side]) return -40;
+    const o = e.at ? e.at(side, v) : 1;
+    const k = Math.round(v / 20) + (off[side] as number);
+    const deep =
+      INTERIOR.tear * 0.75 +
+      120 * wobble(k * 20, seed + i * 13, 140) +
+      60 * wobble(k * 20, seed + i * 7, 600);
+    return lerp(-40, deep, o);
+  };
 }
 
 /** The deep back's mask: each back, its free edges torn and drawn in (playfield coords). */
 export function backMask(plan: InteriorPlan, seed: number): number[][] {
   return plan.backs.map((b, i) => {
-    const e = plan.edges[i] as BackEdges;
+    const bite = backBite(plan, i, seed);
     const pts: number[] = [];
     const st = 20;
-    // A free edge is drawn well in, behind the near back's torn fibres (they stand against the open air beyond it), and
-    // wavers so no ruled line shows between them.
-    const bite = (k: number, on: boolean) =>
-      on ? INTERIOR.tear * 0.75 + 120 * wobble(k * st, seed + i * 13, 140) : -40;
-    for (let x = b.x; x < b.x + b.w; x += st) pts.push(x, b.y + bite(Math.round(x / st), e.n));
-    for (let y = b.y; y < b.y + b.h; y += st) pts.push(b.x + b.w - bite(Math.round(y / st) + 500, e.e), y);
-    for (let x = b.x + b.w; x > b.x; x -= st) pts.push(x, b.y + b.h - bite(Math.round(x / st) + 900, e.s));
-    for (let y = b.y + b.h; y > b.y; y -= st) pts.push(b.x + bite(Math.round(y / st) + 1300, e.w), y);
+    for (let x = b.x; x < b.x + b.w; x += st) pts.push(x, b.y + bite('n', x));
+    for (let y = b.y; y < b.y + b.h; y += st) pts.push(b.x + b.w - bite('e', y), y);
+    for (let x = b.x + b.w; x > b.x; x -= st) pts.push(x, b.y + b.h - bite('s', x));
+    for (let y = b.y + b.h; y > b.y; y -= st) pts.push(b.x + bite('w', y), y);
     return chaikin(pts, 2);
   });
+}
+
+/**
+ * The shade along each free edge of the deep mask, inside it (review r3 #2: the hard edge cut pale shapes out of the
+ * night; r4 #6: wide strokes along a jagged outline made angular flaps and fans): bands that follow the bite inward,
+ * each a step deeper, so the deep fades into shadow toward the open air. Playfield coords.
+ */
+export function backEdgeShade(plan: InteriorPlan, seed: number): Array<{ pts: number[]; alpha: number }> {
+  const out: Array<{ pts: number[]; alpha: number }> = [];
+  const steps = 7;
+  const reach = 300;
+  plan.backs.forEach((b, i) => {
+    const e = plan.edges[i] as BackEdges;
+    const bite = backBite(plan, i, seed);
+    const st = 20;
+    for (const side of ['n', 's', 'w', 'e'] as const) {
+      if (!e[side]) continue;
+      const horiz = side === 'n' || side === 's';
+      const a0 = horiz ? b.x : b.y;
+      const a1 = horiz ? b.x + b.w : b.y + b.h;
+      for (let k = 0; k < steps; k++) {
+        const d = (reach * (k + 1)) / steps;
+        const outer: number[] = [];
+        const inner: number[] = [];
+        for (let v = a0; v <= a1 + 0.01; v += st) {
+          const o = e.at ? e.at(side, v) : 1;
+          const b0 = bite(side, v) - 8;
+          const b1 = b0 + d * o;
+          const at = (dd: number): [number, number] =>
+            side === 'n'
+              ? [v, b.y + dd]
+              : side === 's'
+                ? [v, b.y + b.h - dd]
+                : side === 'w'
+                  ? [b.x + dd, v]
+                  : [b.x + b.w - dd, v];
+          outer.push(...at(b0));
+          inner.push(...at(b1));
+        }
+        for (let j = inner.length / 2 - 1; j >= 0; j--)
+          outer.push(inner[j * 2] as number, inner[j * 2 + 1] as number);
+        out.push({ pts: outer, alpha: 0.13 });
+      }
+    }
+  });
+  return out;
 }

@@ -20,7 +20,7 @@ import type { SolidRect } from '../../../sim/scene';
 import { interiorPlan, paintGlowFlora, paintNearBacks } from './interior';
 import { mix } from './look';
 import type { BakeLook, MistFill } from './pf-bake';
-import { MASS, type MassRect, massOutline, paintMasses, paintShelves } from './pf-mass';
+import { MASS, type MassRect, massOutline, massTone, paintMasses, paintRoost, paintShelves } from './pf-mass';
 import { Paint } from './pf-paint';
 import {
   blob,
@@ -2058,7 +2058,17 @@ export function paintBranchTerrain(
       tag: 'root',
     }),
   );
-  paintMasses(p, massPlan, room.solids.filter(isMass), room.width, room.height, seed, undefined, walls);
+  paintMasses(
+    p,
+    massPlan,
+    room.solids.filter(isMass),
+    room.width,
+    room.height,
+    seed,
+    undefined,
+    walls,
+    massTone(room),
+  );
   // The one-way ledges: root shelves (review r3 #2).
   paintShelves(p, massPlan, room, seed + 61);
   // The glowing growth on them (its light is live: layers/interior.ts).
@@ -2262,9 +2272,31 @@ export function paintBranchTerrain(
     const tag = masses.some((q) => q.tag === 'ground') ? 'ground' : 'root';
     const one = (key: string, r: { x: number; y: number; w: number; h: number }, front: boolean) => {
       const pp = new Paint(room.width, room.height);
-      paintMasses(pp, null, [...masses, { ...r, tag }], room.width, room.height, seed, r);
+      // (A wide cover hanging from the room's top over open air is a roost: a hanging nest of roots and old leaves,
+      // review r4 #3: it painted as a rounded black box. Its masses are under it, unpainted by it.)
+      const solidUnder = masses.some(
+        (q) =>
+          r.x + r.w / 2 >= q.x &&
+          r.x + r.w / 2 <= q.x + q.w &&
+          r.y + r.h + 12 >= q.y &&
+          r.y + r.h + 12 <= q.y + q.h,
+      );
+      const roost = front && r.y <= 0 && r.w > MASS.pillarW && !solidUnder;
+      if (roost) paintRoost(pp, r, seed + r.x * 3, massTone(room));
+      else
+        paintMasses(
+          pp,
+          null,
+          [...masses, { ...r, tag }],
+          room.width,
+          room.height,
+          seed,
+          r,
+          [],
+          massTone(room),
+        );
       // (A cover hanging from the top into open air is a root clump: shown past its rect, its strands' ragged tips.)
-      const hangs = front && r.y <= 0 && r.w <= MASS.pillarW;
+      const hangs = front && r.y <= 0 && (r.w <= MASS.pillarW || roost);
       const show = hangs ? { x: r.x - 260, y: r.y, w: r.w + 520, h: r.h + 380 } : undefined;
       const all = [...masses, { ...r, tag }];
       const poly = massOutline(all[all.length - 1] as MassRect, all, room.width, room.height, seed);

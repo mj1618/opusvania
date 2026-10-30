@@ -271,6 +271,69 @@ export const WOOD_GRADE: ZoneGrade = {
 };
 
 /**
+ * The wood's enclosed rooms graded as their place (review r4 #4: five looks in the code, two on the screen, the west
+ * at mean luma 12): each look leans its darks to its own hue and lifts them. The open rooms keep WOOD_GRADE.
+ */
+export const WOOD_LOOK_GRADE: Record<'heartwood' | 'shaft' | 'nest' | 'canopy' | 'den', ZoneGrade> = {
+  heartwood: {
+    ...WOOD_GRADE,
+    exposure: [1.3, 1.3, 1.3],
+    shadowTint: [0x32200e, 0x32200e, 0x32200e],
+    shadowLift: [0.24, 0.24, 0.24],
+    highlightTint: [0xffe6c4, 0xffe6c4, 0xffe6c4],
+    highlightWarmth: [0.45, 0.45, 0.45],
+    saturation: [0.96, 0.96, 0.96],
+    richSaturation: [1.12, 1.12, 1.12],
+    richTint: [0xffe8d0, 0xffe8d0, 0xffe8d0],
+    vignetteTint: [0x7a5a3a, 0x7a5a3a, 0x7a5a3a],
+  },
+  shaft: {
+    ...WOOD_GRADE,
+    exposure: [1.06, 1.06, 1.06],
+    shadowTint: [0x10223e, 0x10223e, 0x10223e],
+    shadowLift: [0.2, 0.2, 0.2],
+    highlightTint: [0xf0f6ff, 0xf0f6ff, 0xf0f6ff],
+    highlightWarmth: [0.15, 0.15, 0.15],
+    saturation: [0.9, 0.9, 0.9],
+    richSaturation: [1.05, 1.05, 1.05],
+    richTint: [0xe8f2ff, 0xe8f2ff, 0xe8f2ff],
+    vignetteTint: [0x6a88b0, 0x6a88b0, 0x6a88b0],
+  },
+  nest: {
+    ...WOOD_GRADE,
+    exposure: [1.28, 1.28, 1.28],
+    shadowTint: [0x262616, 0x262616, 0x262616],
+    shadowLift: [0.22, 0.22, 0.22],
+    highlightTint: [0xfff0d0, 0xfff0d0, 0xfff0d0],
+    highlightWarmth: [0.35, 0.35, 0.35],
+    saturation: [0.9, 0.9, 0.9],
+    richSaturation: [1.0, 1.0, 1.0],
+    richTint: [0xf4f4e0, 0xf4f4e0, 0xf4f4e0],
+    vignetteTint: [0x6a6040, 0x6a6040, 0x6a6040],
+  },
+  canopy: {
+    ...WOOD_GRADE,
+    exposure: [1.16, 1.16, 1.16],
+    shadowTint: [0x0a2a2a, 0x0a2a2a, 0x0a2a2a],
+    shadowLift: [0.18, 0.18, 0.18],
+    richSaturation: [1.15, 1.15, 1.15],
+    richTint: [0xd4fff0, 0xd4fff0, 0xd4fff0],
+    vignetteTint: [0x3a7a70, 0x3a7a70, 0x3a7a70],
+  },
+  den: {
+    ...WOOD_GRADE,
+    exposure: [1.22, 1.22, 1.22],
+    shadowTint: [0x2c1408, 0x2c1408, 0x2c1408],
+    shadowLift: [0.2, 0.2, 0.2],
+    highlightTint: [0xffe0c0, 0xffe0c0, 0xffe0c0],
+    highlightWarmth: [0.4, 0.4, 0.4],
+    richSaturation: [1.25, 1.25, 1.25],
+    richTint: [0xffdcc4, 0xffdcc4, 0xffdcc4],
+    vignetteTint: [0x6a4030, 0x6a4030, 0x6a4030],
+  },
+};
+
+/**
  * Lanternroot's grades inside the giant (room-look.ts `band`; the night layer keeps WOOD_GRADE). The hall is
  * amber lamplight in umber dark: warm shadows that stay dark, gold highlights, the rich darks leaned brown, so
  * the moon's silver (cracks, moonwicks, her) is the one cool thing. The roots are blue-black with cold teal

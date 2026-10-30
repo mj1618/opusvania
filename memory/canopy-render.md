@@ -1,4 +1,4 @@
-# The Canopy, render side (rounds 3 and 4, 2026-10-30)
+# The Canopy, render side (rounds 3-5, 2026-10-30)
 
 What the wood kit draws in `?world=canopy` beyond the mass painter (memory/canopy.md "Render"); reviews that drove it:
 docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`, round 4 before / after in
@@ -75,8 +75,9 @@ docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`
 - **Root bases** (pf-branch.ts `rootBase`): a tree whose foot is in the room flares into the floor under it; trees
   standing on its foot (the Grovemother's stilts) are not painted, the base draws them as arching roots with the
   trunk's underside an arch between.
-- **Five looks** (lib/interior.ts `lookOf`): `art.look` (schema, src/scene) wins; then `ROOM_LOOKS` (a few Canopy ids);
-  then carriers = nest, old burrback or `ground` = den, h >= 1.7 w = shaft, a deep mood = heartwood, else canopy.
+- **Five looks** (lib/looks.ts `lookOf`; round 5 below): `art.look` (schema, src/scene) wins; then `ROOM_LOOKS` (every
+  Canopy room, by region); then carriers = nest, old burrback or `ground` = den, h >= 1.7 w = shaft, a deep mood =
+  heartwood, else canopy.
   Material per look (`MAT`): heartwood `grain` (panels along the trunk, splits, knots weeping sap; rings and horizontal
   grain in the deep), shaft `root` fibres + one `beam` light + frost moss, nest `earth` + tunnel mouths, seed caches,
   `larva` cells, ant `trail` lights, canopy `leaf` (bark strips, leaf mats, dark ragged gaps to the night in the deep),
@@ -94,3 +95,54 @@ docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`
   firs, the valley's false lights in clusters with mist. Near screen-fixed (`parallax` 0.05).
 - Gotchas: narrow spikes over an edge read as thorns; pale alpha blobs in a back read as smoke or ghosts; a lit
   sinusoidal width on a short column reads as turned wood. Debug a look: `look` in `interiorPlan(room)`.
+
+## Round 5 (review r4 #3, #4, #5/#6, #7, #8 render items)
+Shots: round 5 before / after in `shots/canopy-r5-render/before|after/<room>/`.
+- **Looks by region, with hue** (lib/looks.ts): `ROOM_LOOKS` names every Canopy room (heartwood = hub, trunk, rot,
+  crawl, webs; shaft = well, Elder; nest = cellar, galleries, larder; canopy = the high band, its pockets, the way out
+  and ledge; den = tunnel, burrow, den). The level builder can override with `art.look`. Tones (lib/interior.ts
+  `TONES`): heartwood amber-brown, shaft cold white-blue, nest ochre-grey, canopy green-teal, den umber.
+- **Three levers carry a look; all three are needed** (the backs alone moved nothing: masses fill 55-73% of an
+  enclosed room): the near / deep back tones; the **mass tone** (pf-mass.ts `MassTone`, `massTone(room)`: body, veins,
+  lift, `liftReach` doubled, plates, a `crust` wash over faces and tops so the bark takes the hue); and the **post grade
+  per look** (post/config.ts `WOOD_LOOK_GRADE`, chosen by `LOOK.inside`). All three apply only to an enclosed room
+  (`gradeLookOf`: backs cover >= half of it); rooms open to the sky (hub, fork, Grove, gap, way out) keep the cool night.
+  The beyond-the-edge fill (layers/interior.ts) uses the same body, or the room's edge shows a seam.
+- **Mean luma** (`magick -colorspace Gray` of the wide shots, same metric before / after): trunk 12 -> 25, rot 12 -> 23,
+  crawl 12 -> 23, cellar 13 -> 26, galleries 16 -> 29; the open rooms unchanged (20-27). The well went 27 -> 49 (pale
+  chimney, dark faces: the faces read).
+- **Shaft: no fibre posts** (`shaftNear`, mat `frost`): fine broken grain strands, faint washes, frost lichen,
+  knotholes. Nothing stands proud.
+- **No ruled bands in a deep back** (review r4 #6, the checker): it was straight vertical grain ribbons crossed by the
+  fog's stacked rects (a plaid). Now grain wanders and breaks into runs; fog and light are wavering gradients
+  (`wavyBand`, `softGrad`). `tests/unit/wood-looks.test.ts` fails if `drawDeepBack` fills any rect but the base.
+- **Edges open by the sample** (`BackEdges.at`, `backBite`): a back's edge tears only where the air past it is open,
+  smoothed; a **cover's hollow back gets the same test** (the fork's cellar cover spans the corridor: its closed top
+  was the ruled seam across the fork's entry).
+- **The Grove's "flaps" were the edge shade**: 110-360 px strokes with round joins along the jagged mask polygon drew
+  fans and torn paper. Now `backEdgeShade`: filled bands following the bite inward.
+- **A big lift needs tapered ends**: at 400 px a lift band of even depth ending square drew lighter boxes in the mass.
+  Its inner edge wanders by a third of the reach and it tapers off at the run's ends.
+- **Cover patches feathered** (layers/playfield.ts `featherMask`): baked alone, a cover's lift and the light round it
+  differ from the mass it sits in; a hard mask drew its rect (the well's niche).
+- **Masses as wood** (pf-mass.ts): plates and long lit-lipped fissures across any mass >= 260 px; a root running
+  down across every free face >= 600 px, inside the collision; underside corners are knuckles (uneven radii, a lobe)
+  not quarter circles.
+- **Props** (`paintTaper`): a burl's foot slides aside (the top stays on the collision), each flank flares its own
+  amount, roots at 40-140 px spacing that wrap (top lane != foot lane), 2-3 roots split off across the floor, 1-3
+  knobs, a broken top of splinters. A hang (`hangClump`): a dark core torn into points, 3-7 strands (widest <= 40% of
+  the clump) twisting, tips at very different heights; no hem. A narrow mass hung from the room's top: 4-9 uneven
+  twisting strands (one every 12 px fanned evenly was the organ pipes). `brokenTop`: few uneven splinters, gaps.
+- **The roost** (`paintRoost`): a wide front cover hung from the top over air is a ragged pouch of roots and old leaves,
+  shown past its rect.
+- **Thorns** (lantern/kit.ts `bramble`): a dark mat on the wood side, bone and rust barbs 24-40 px pointing into the
+  air (out = away from the solid beside it), a warm rim line and a faint warm glow along the strip. No moss / fungus /
+  sap / worm light within 64 px of a strip (`interiorPlan`).
+- **The snuff** (layers/interior.ts `SNUFF`): when the lamp an enemy `snuffs` is out, a dark spreads out from it over
+  1.5 s (back 0.36, bake 0.16, deepest near the lamp) and the growth's light near it goes. Den mean luma 23 -> ~12.
+  To see it: `phased = true` + `oldBurrback.p2At / p3At` 1, then **`step`** (not `tick`: tick is render only).
+- **The vista** (lantern/vista.ts `WoodVista`): five peaks (`WOOD_VISTA.peaks`, the main off-centre under the moon),
+  concave flanks with shoulders, a shadow face and a faint lit face per peak split down a spur, snow from the crest to
+  a ragged snowline (never floating), dark valley walls converging on its foot over a valley floor, a soft river of
+  mist, lamps at three depths (the near ones with moths) and a lamp tree on the drop. `half` 1900 for 21:9.
+- Gotchas: a pale flat quad at low alpha reads as a slab of glass; a thin straight lit line reads as a wire.

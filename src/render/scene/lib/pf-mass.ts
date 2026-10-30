@@ -15,6 +15,7 @@
  */
 
 import type { Room } from '../../../scene/room';
+import { gradeLookOf, type Look } from './looks';
 import {
   BRANCH,
   type BranchPlan,
@@ -74,6 +75,104 @@ export const MASS = {
   soilLit: 0x3a4250,
   stone: 0x2a323c,
 } as const;
+
+/**
+ * The colour of a room's mass (review r4 #4: five looks in the code, two on the screen, the west darker): the body,
+ * its dim roots, the lift near the playfield and its reach, the bark plates, and a wash over the crust (faces and tops)
+ * so the bark takes the place's hue. An enclosed room takes its look's (`gradeLookOf`); a room open to the night keeps
+ * the wood's teal-black.
+ */
+export interface MassTone {
+  body: number;
+  deep: number;
+  vein: number;
+  veinLit: number;
+  lift: number;
+  liftReach: number;
+  plate: number;
+  crust: number;
+  crustA: number;
+}
+
+const NIGHT_TONE: MassTone = {
+  body: MASS.body,
+  deep: MASS.deep,
+  vein: 0x0f1c28,
+  veinLit: 0x26384a,
+  lift: MASS.lift,
+  liftReach: 300,
+  plate: 0x12263a,
+  crust: 0x23303c,
+  crustA: 0,
+};
+
+/** Per look (lifted: review r4 #4 asks the heartwood rooms' mean luma for 20+, and the lift doubled). */
+export const MASS_TONES: Record<Look, MassTone> = {
+  heartwood: {
+    body: 0x1e140e,
+    deep: 0x140d09,
+    vein: 0x2e1f14,
+    veinLit: 0x5a3c24,
+    lift: 0x4e3622,
+    liftReach: 380,
+    plate: 0x342216,
+    crust: 0x6a4428,
+    crustA: 0.34,
+  },
+  shaft: {
+    body: 0x0e1a2a,
+    deep: 0x09121e,
+    vein: 0x18283c,
+    veinLit: 0x34506c,
+    lift: 0x284660,
+    liftReach: 320,
+    plate: 0x1c3046,
+    crust: 0x6a88a8,
+    crustA: 0.2,
+  },
+  nest: {
+    body: 0x1a160f,
+    deep: 0x100d09,
+    vein: 0x282116,
+    veinLit: 0x4a3e2a,
+    lift: 0x4a3e26,
+    liftReach: 400,
+    plate: 0x2e2618,
+    crust: 0x6a5a38,
+    crustA: 0.3,
+  },
+  canopy: {
+    body: 0x0a1816,
+    deep: 0x06100e,
+    vein: 0x122622,
+    veinLit: 0x24443c,
+    lift: 0x1a4a40,
+    liftReach: 400,
+    plate: 0x142e2a,
+    crust: 0x2e5a50,
+    crustA: 0.26,
+  },
+  den: {
+    body: 0x18100c,
+    deep: 0x100a08,
+    vein: 0x261810,
+    veinLit: 0x48301e,
+    lift: 0x4a2e1a,
+    liftReach: 400,
+    plate: 0x2e1e14,
+    crust: 0x6a4630,
+    crustA: 0.3,
+  },
+};
+
+/** The mass tone of a room (see `MassTone`). */
+export function massTone(room: Room): MassTone {
+  const look = gradeLookOf(room);
+  return look ? MASS_TONES[look] : NIGHT_TONE;
+}
+
+/** The tone of the paint in progress (set by `paintMasses` / `paintShelves`; they paint synchronously). */
+let T: MassTone = NIGHT_TONE;
 
 export interface MassRect {
   x: number;
@@ -163,12 +262,21 @@ function outline(r: MassRect, s: Sides, seed: number): number[] {
     const out = inSegs(y, s.right) ? bulge(y, k, 1) * clamp((y - r.y) / 40, 0.2, 1) : o;
     pts.push(r.x + r.w + out, y);
   }
+  // (Review r4 #3: a quarter circle at every free underside corner made the cabinets' rounded rects. The corner is a
+  // knuckle: uneven radii, lumpy, a lobe pushed out where a root turns.)
+  const knuckle = (a: number, sd: number): number =>
+    0.82 +
+    0.3 * wobble(a * 37, seed + sd, 60) +
+    0.22 * Math.max(0, Math.sin((a / 8) * Math.PI)) * hash1(sd, seed);
+  const Rx = R * (0.55 + 0.8 * hash1(seed, 11));
+  const Ry = R * (0.55 + 0.8 * hash1(seed, 13));
   if (brC)
     for (let a = 0; a <= 8; a++) {
       const t = (a / 8) * (Math.PI / 2);
+      const q = knuckle(a, 5);
       pts.push(
-        r.x + r.w - R + Math.cos(t) * R,
-        yb - R + Math.sin(t) * (R + matSag(r.x + r.w - R, seed) * 0.6),
+        r.x + r.w - R + Math.cos(t) * Rx * q + (R - Rx) * (1 - Math.sin(t)),
+        yb - R + Math.sin(t) * (Ry * q + matSag(r.x + r.w - R, seed) * 0.6) + (R - Ry) * Math.cos(t) * 0,
       );
     }
   for (let x = r.x + r.w; x > r.x; x -= st) {
@@ -181,7 +289,11 @@ function outline(r: MassRect, s: Sides, seed: number): number[] {
   if (blC)
     for (let a = 8; a >= 0; a--) {
       const t = (a / 8) * (Math.PI / 2);
-      pts.push(r.x + R - Math.cos(t) * R, yb - R + Math.sin(t) * (R + matSag(r.x + R, seed) * 0.6));
+      const q = knuckle(a, 9);
+      pts.push(
+        r.x + R - Math.cos(t) * Rx * q - (R - Rx) * (1 - Math.sin(t)),
+        yb - R + Math.sin(t) * (Ry * q + matSag(r.x + R, seed) * 0.6),
+      );
     }
   for (let y = blC ? yb - R : yb; y > r.y; y -= st) {
     const k = Math.round(y / st);
@@ -323,7 +435,9 @@ export function paintMasses(
   only?: { x: number; y: number; w: number; h: number },
   /** Rects that are mass for the edges (a rotten wall, baked on its own) but not painted here. */
   ghosts: readonly MassRect[] = [],
+  tone: MassTone = NIGHT_TONE,
 ): void {
+  T = tone;
   const B = BRANCH;
   const near = (x0: number, y0: number, x1: number, y1: number) =>
     !only ||
@@ -338,7 +452,7 @@ export function paintMasses(
   masses.forEach((r, i) => {
     if (inTaper.has(i) || !near(r.x, r.y, r.x + r.w, r.y + r.h)) return;
     const s = sides[i] as Sides;
-    p.solid(outline(r, s, seed + i * 7), earth(r) ? MASS.deep : MASS.body, B.walkH - 0.12, { bark: 0.25 });
+    p.solid(outline(r, s, seed + i * 7), earth(r) ? T.deep : T.body, B.walkH - 0.12, { bark: 0.25 });
   });
 
   // The merged runs of exposed edge: a face down two stacked rects is one face (no seam where they meet).
@@ -381,7 +495,7 @@ export function paintMasses(
       const wd = range(rr, 8, 26);
       p.solid(
         ribbon(wl, (t) => wd * (0.35 + Math.sin(t * Math.PI) * 0.65)),
-        MASS.vein,
+        T.vein,
         B.walkH - 0.06,
         { bark: 0.5, alpha: 0.8 },
       );
@@ -390,7 +504,7 @@ export function paintMasses(
           wl.map((v, j) => (j % 2 ? v - wd * 0.28 : v)),
           wd * 0.22,
         ),
-        MASS.veinLit,
+        T.veinLit,
         0.4,
       );
     }
@@ -398,6 +512,51 @@ export function paintMasses(
       const cx = r.x + range(rr, 40, Math.max(41, r.w - 40));
       const cy = r.y + range(rr, 40, Math.max(41, r.h - 40));
       knot(p, cx, cy, range(rr, 8, 16), range(rr, -0.6, 0.6), B.walkH - 0.08, seed + k * 13 + i);
+    }
+    // A big mass is wood, not a plane (review r4 #3, #5: the well's walls, the way out's blocks, the hub's high block
+    // read as black cabinets): great bark plates across it and the grain's long fissures, each with a lit lip.
+    if (!earth(r) && Math.min(r.w, r.h) >= 260) {
+      const vert = r.h >= r.w * 0.8;
+      for (let k = 0; k < Math.round(area / 110000); k++) {
+        const cx = r.x + range(rr, 0.1, 0.9) * r.w;
+        const cy = r.y + range(rr, 0.1, 0.9) * r.h;
+        const l = range(rr, 200, 520);
+        const d = range(rr, 70, 170);
+        const shape = vert
+          ? chaikin(blob(cx, cy, d / 2, l / 2, seed + k * 41 + i, 0.3, 16), 2)
+          : chaikin(blob(cx, cy, l / 2, d / 2, seed + k * 41 + i, 0.3, 16), 2);
+        p.solid(
+          shape,
+          rr() < 0.5 ? T.plate : T.vein,
+          B.walkH - 0.07,
+          { bark: 0.7, alpha: 0.6 },
+          range(rr, 0.35, 0.7),
+        );
+      }
+      for (let k = 0; k < Math.round(area / 90000); k++) {
+        const xa = r.x + range(rr, 0.05, 0.95) * r.w;
+        const ya = r.y + range(rr, 0.05, 0.95) * r.h;
+        const len = range(rr, 260, 1000);
+        const ang = (vert ? Math.PI / 2 : 0) + range(rr, -0.3, 0.3);
+        const line: number[] = [];
+        for (let t = 0; t <= 10; t++)
+          line.push(
+            clamp(xa + Math.cos(ang) * len * (t / 10 - 0.5), r.x + 20, r.x + r.w - 20),
+            clamp(ya + Math.sin(ang) * len * (t / 10 - 0.5), r.y + 20, r.y + r.h - 20),
+          );
+        const wl = wander(line, 14, seed + k * 53 + i, 160);
+        const wd = range(rr, 4, 11);
+        p.solid(strand(wl, wd, 0.3), T.deep, B.walkH - 0.09, { bark: 0.2 }, 0.8);
+        p.tint(
+          strand(
+            wl.map((v, j) => (j % 2 ? v : v + wd * 0.7)),
+            wd * 0.35,
+            0.3,
+          ),
+          T.veinLit,
+          0.6,
+        );
+      }
     }
   });
 
@@ -413,12 +572,17 @@ export function paintMasses(
     const rr = rngFor(seed, run.key, run.a, 37);
     const into = side === 'top' ? 1 : -run.dir;
     for (let k = 0; k < 5; k++) {
-      const d = MASS.liftReach * ((k + 1) / 5);
+      const d = T.liftReach * ((k + 1) / 5);
       const pts: number[] = [];
       const edge: number[] = [];
       for (let u = run.a; u <= run.b + 0.01; u += 24) {
-        const wob = 26 * wobble(u, seed + k * 3 + run.key, 160);
-        const dd = clamp(d + wob, 10, MASS.liftReach + 30);
+        // (Its inner edge wanders by a third of the reach and it tapers off at the run's ends: at 400 px a band of
+        // even depth ending square read as a lighter box in the mass.)
+        const R = T.liftReach;
+        const wob =
+          R * (0.13 * wobble(u, seed + k * 3 + run.key, 160) + 0.22 * wobble(u, seed + run.key + 11, 520));
+        const endK = clamp(Math.min(u - run.a, run.b - u) / Math.min(R, len * 0.5), 0.12, 1) ** 0.6;
+        const dd = clamp((d + wob) * endK, 8, R + 30);
         if (side === 'top') {
           edge.push(u, run.key + 2);
           pts.push(u, run.key + dd);
@@ -428,7 +592,7 @@ export function paintMasses(
         }
       }
       for (let j = pts.length / 2 - 1; j >= 0; j--) edge.push(pts[j * 2] as number, pts[j * 2 + 1] as number);
-      p.tint(edge, MASS.lift, 0.28);
+      p.tint(edge, T.lift, 0.28);
     }
     // Plates: long irregular shells along the edge, a little proud, dark seams between them.
     let u = run.a + range(rr, 10, 80);
@@ -445,7 +609,7 @@ export function paintMasses(
           side === 'top'
             ? chaikin(blob(cx, cy, l / 2, dep / 2, seed + Math.round(u), 0.25, 14), 2)
             : chaikin(blob(cx, cy, dep / 2, l / 2, seed + Math.round(u), 0.25, 14), 2);
-        p.solid(shape, MASS.plate, B.walkH - 0.08 + range(rr, 0, 0.05), { bark: 0.7, alpha: 0.7 }, 0.75);
+        p.solid(shape, T.plate, B.walkH - 0.08 + range(rr, 0, 0.05), { bark: 0.7, alpha: 0.7 }, 0.75);
       }
       u += l + range(rr, 14, 40);
     }
@@ -535,14 +699,59 @@ export function paintMasses(
         0.8,
       );
       paintLimb(p, L, knotsFor(L, seed + y0, 520));
+      // (The place's hue in the bark.)
+      if (T.crustA > 0)
+        p.tint(
+          ribbon(line, () => th + 8),
+          T.crust,
+          T.crustA,
+        );
       // (A face is not a walk: it sinks a step under the tops, the brightest wood she stands on.)
       p.tint(
         ribbon(line, () => th + 4),
-        MASS.body,
+        T.body,
         0.3,
       );
-      fadeInto(p, line, () => th * 1.05, -dir, 0, MASS.body);
+      fadeInto(p, line, () => th * 1.05, -dir, 0, T.body);
       roots(p, line, -dir, th, seed + i * 7 + y0, 'side');
+    }
+  }
+
+  // 3b. A long free face (600+ px) gets a root running down across it, inside the collision (review r4 #3: the
+  // silhouette rule for a face she may cling to: its line stays near plumb, so the break is a root, a plate, a split).
+  for (const f of faces) {
+    const len = f.b - f.a;
+    const r = masses[f.i] as MassRect;
+    if (len < 600 || earth(r) || r.w < 220 || !near(f.key - 400, f.a, f.key + 400, f.b)) continue;
+    const rr = rngFor(seed, f.key, f.a, 97);
+    const n = Math.max(1, Math.round(len / 1100));
+    for (let k = 0; k < n; k++) {
+      const y0 = f.a + ((k + range(rr, 0.1, 0.4)) * len) / n;
+      const y1 = Math.min(f.b - 40, y0 + range(rr, 300, 620));
+      const inA = range(rr, 24, 60);
+      const inB = range(rr, 130, Math.min(320, r.w * 0.6));
+      const line = chaikinLine([
+        f.key - f.dir * inA,
+        y0,
+        f.key - f.dir * lerp(inA, inB, 0.35),
+        lerp(y0, y1, 0.4),
+        f.key - f.dir * lerp(inA, inB, 0.8),
+        lerp(y0, y1, 0.75),
+        f.key - f.dir * inB,
+        y1,
+      ]);
+      const w0 = range(rr, 22, 40);
+      paintLimb(
+        p,
+        lineLimb(
+          line,
+          (t) => Math.max(4, w0 * (1 - t * 0.7)),
+          B.walkH - 0.04,
+          seed + k * 7 + f.key,
+          0.2,
+          0.6,
+        ),
+      );
     }
   }
 
@@ -637,7 +846,13 @@ export function paintMasses(
           Math.min(ws.length - 1, Math.round((k / Math.max(1, n - 1)) * (ws.length - 1)))
         ] as number;
       paintLimb(p, L, knotsFor(L, seed + x0 + 1, 480));
-      fadeInto(p, line, (k) => (ws[Math.min(ws.length - 1, k)] as number) * 1.04, 0, 1, MASS.body);
+      if (T.crustA > 0)
+        p.tint(
+          ribbon(line, (t) => (ws[Math.min(ws.length - 1, Math.round(t * (ws.length - 1)))] as number) + 6),
+          T.crust,
+          T.crustA,
+        );
+      fadeInto(p, line, (k) => (ws[Math.min(ws.length - 1, k)] as number) * 1.04, 0, 1, T.body);
       roots(p, line, 1, th * 0.8, seed + i * 13 + x0, 'down');
     }
     mossBlanket(
@@ -685,31 +900,34 @@ export function paintMasses(
       return;
     if (!near(r.x - 300, r.y, r.x + r.w + 300, r.y + r.h + 400)) return;
     const rr = rngFor(seed, r.x, r.h, 83);
-    const n = Math.round(r.w / 12) + 5;
+    // (Review r4 #3: a strand every 12 px, fanned evenly from above, read as organ pipes. A few uneven strands
+    // twisting round each other, spreading unevenly up into the roof, tips at very different heights.)
+    const n = clamp(Math.round(r.w / 40) + 2 + Math.floor(rr() * 3), 4, 9);
     const foot = r.y + r.h;
     for (let k = 0; k < n; k++) {
-      const u = n > 1 ? k / (n - 1) : 0.5;
-      const xTop = r.x + r.w / 2 + (u - 0.5) * r.w * 2.4;
-      const xMid = r.x + r.w / 2 + (u - 0.5) * r.w * 0.9;
-      const tipLen = range(rr, 40, 320) * (1 - Math.abs(u - 0.5));
-      const xTip = r.x + r.w / 2 + (u - 0.5) * r.w * 1.3 + range(rr, -30, 30);
+      const u = range(rr, 0.05, 0.95);
+      const xTop = r.x + r.w / 2 + (u - 0.5) * r.w * range(rr, 1.2, 3);
+      const xMid = r.x + r.w / 2 + (u - 0.5) * r.w * 0.8;
+      const tipLen = range(rr, 20, 380) * (0.4 + rr());
+      const xTip = r.x + r.w / 2 + (u - 0.5) * r.w * range(rr, 0.6, 1.6) + range(rr, -40, 40);
+      const twist = range(rr, -0.3, 0.3) * r.w;
       const line = chaikinLine([
         xTop,
         -60,
-        xMid,
+        xMid + twist,
         foot * 0.35,
-        xMid + range(rr, -10, 10),
+        xMid - twist + range(rr, -10, 10),
         foot * 0.8,
         xTip,
         foot + tipLen,
       ]);
-      const w0 = range(rr, 14, 30);
+      const w0 = range(rr, 10, Math.max(14, r.w * 0.38));
       paintLimb(
         p,
         lineLimb(
           line,
-          (t) => Math.max(2, w0 * (1 - t * 0.85)),
-          B.walkH - 0.01,
+          (t) => Math.max(2, w0 * (1 - t * 0.85) * (0.85 + 0.3 * wobble(t * 700, seed + k, 90))),
+          B.walkH - 0.01 + (k % 2) * 0.02,
           seed + k * 13 + r.x,
           0.05,
           0.1,
@@ -741,10 +959,11 @@ function brokenTop(p: Paint, x: number, y: number, dir: number, seed: number): v
   const r = rngFor(seed, 233);
   // The break: broad blunt slabs of snapped wood standing off the edge, leaning out, their torn tips pale (thin
   // spikes read as thorns); a cushion of moss in front of them.
-  let xx = x - dir * 150;
+  let xx = x - dir * range(r, 70, 170);
   let k = 0;
+  // (Review r4 #3: a row of even slabs along the edge read as a cornice of pipes: few, uneven, gaps between.)
   while (dir > 0 ? xx < x - 10 : xx > x + 10) {
-    const w = range(r, 22, 44);
+    const w = range(r, 14, 52);
     const u = 1 - Math.abs(x - xx) / 150;
     const hi = range(r, 8, 16) + 22 * u * u * (k % 2 ? 0.5 : 1);
     const lean = dir * hi * range(r, 0.15, 0.4);
@@ -759,7 +978,7 @@ function brokenTop(p: Paint, x: number, y: number, dir: number, seed: number): v
     }
     p.solid([x0, y + 16, ...tear, x1, y + 16], B.bark, B.walkH - 0.03, { bark: 1 });
     p.tint(strand(tear, 2.2, 0.2), B.barkLit, 0.45);
-    xx = x1 + dir * range(r, 2, 10);
+    xx = x1 + dir * range(r, 6, 46);
     k++;
   }
   p.solid(chaikin(blob(x - dir * 40, y - 2, 60, 12, seed + 3, 0.35, 14), 2), B.mossDark, B.walkH + 0.22, {
@@ -806,7 +1025,7 @@ function cornerFill(p: Paint, x: number, y: number, dir: number, seed: number): 
     const a = (k / 10) * (Math.PI / 2);
     fill.push(x + dir * R * (1 - Math.sin(a)), y + R * (1 - Math.cos(a)) * 0.85);
   }
-  p.solid(fill, MASS.body, BRANCH.walkH - 0.1, { bark: 0.3 });
+  p.solid(fill, T.body, BRANCH.walkH - 0.1, { bark: 0.3 });
 }
 
 /**
@@ -866,7 +1085,7 @@ function rootMat(p: Paint, x0: number, x1: number, y: number, seed: number, eart
         ),
         1,
       ),
-      MASS.body,
+      T.body,
       B.walkH - 0.05,
       { bark: 0.5 },
     );
@@ -888,9 +1107,14 @@ function rootMat(p: Paint, x0: number, x1: number, y: number, seed: number, eart
 }
 
 /**
- * A taper painted as one shape (review r3 #3). A burl (`up`): a single swelling flare from the floor narrowing to its
- * top, roots running down its flanks and out onto the floor; its tiers' tops keep a little moss and their stretches.
- * A hanging clump (`down`): one bundle of roots, wide at the roof, narrowing, running out in ragged tips.
+ * A taper painted as one shape (review r3 #3), each its own (review r4 #3: the same pleated cone in seven rooms, the
+ * same hemmed curtain in five).
+ * - A burl (`up`): a swelling root flare from the floor to its top, by seed: its foot slid aside (a lean, the top kept
+ *   on the collision), one flank running long into the floor, its roots at uneven spacing, two or three splitting off
+ *   the body and running out across the floor, and a broken top (splinters, not a cap). Its tiers' tops keep a little
+ *   moss and their stretches.
+ * - A hanging clump (`down`): 3-7 root strands of uneven weight twisting round each other over a dark core, no hem:
+ *   the core ends in ragged points and the strands run out past it to tips at very different heights.
  */
 function paintTaper(
   p: Paint,
@@ -908,96 +1132,233 @@ function paintTaper(
   const up = t.up;
   const yFar = up ? base.y + base.h : base.y;
   const yTip = up ? tip.y : tip.y + tip.h;
-  const fl = clamp(base.w * 0.14, 28, 70);
-  // The profile on each side, from the far end (floor / roof) to the tip, through the tiers' outer corners and the
-  // inner corners between them (chaikin then rounds the stairs into one swelling line).
+  const span = Math.abs(yFar - yTip) || 1;
+  // The burl's foot slides aside (lean), the tip stays on the collision; each flank flares its own amount.
+  const lean = up ? range(r, -0.08, 0.08) * span : 0;
+  const shift = (y: number) => (up ? lean * clamp((y - yTip) / span, 0, 1) ** 1.4 : 0);
+  const flW = clamp(base.w * 0.14, 28, 70) * range(r, 0.5, 1.9);
+  const flE = clamp(base.w * 0.14, 28, 70) * range(r, 0.5, 1.9);
   const profile = (side: -1 | 1): number[] => {
+    const fl = side < 0 ? flW : flE;
     const ex = (m: MassRect) => (side < 0 ? m.x : m.x + m.w);
     const pts: number[] = [
-      ex(base) + side * fl,
+      ex(base) + side * fl + shift(yFar),
       yFar + (up ? 6 : -6),
-      ex(base) + side * fl * 0.3,
+      ex(base) + side * fl * 0.3 + shift(yFar - 24),
       yFar + (up ? -24 : 24),
     ];
     ms.forEach((m, k) => {
       const near = up ? m.y + m.h : m.y;
       const farY = up ? m.y : m.y + m.h;
-      if (k > 0) pts.push(ex(m), near);
-      pts.push(ex(m), farY);
+      if (k > 0) pts.push(ex(m) + shift(near), near);
+      pts.push(ex(m) + shift(farY), farY);
     });
     return pts;
   };
+  if (!up) {
+    hangClump(p, plan, masses, sides, t, seed);
+    return;
+  }
   const L = profile(-1);
   const R = profile(1);
   const poly: number[] = [...L];
   for (let k = R.length / 2 - 1; k >= 0; k--) poly.push(R[k * 2] as number, R[k * 2 + 1] as number);
-  // Close along the floor / roof, a little into it.
-  poly.push(base.x + base.w + fl, yFar + (up ? 30 : -30), base.x - fl, yFar + (up ? 30 : -30));
+  poly.push(base.x + base.w + flE + shift(yFar), yFar + 30, base.x - flW + shift(yFar), yFar + 30);
   const body = chaikin(poly, 3);
-  p.solid(body, MASS.body, B.walkH - 0.1, { bark: 0.3 });
-  p.tint(body, MASS.lift, 0.35);
-  // The roots: from the tip down the flanks (or from the roof down to the tip), fanning out as it widens.
-  const n = up ? clamp(Math.round(base.w / 54), 4, 10) : clamp(Math.round(base.w / 36), 5, 16);
-  const order = Array.from({ length: n }, (_, k) => k).sort(
-    (a, b) => Math.abs(a / (n - 1) - 0.5) - Math.abs(b / (n - 1) - 0.5),
-  );
-  for (const k of order) {
-    const u = k / (n - 1);
-    // The centre line as points from the far end (floor / roof) to the tip.
-    const pts: Array<[number, number]> = [];
-    if (up) {
-      for (const m of ms) pts.push([lerp(m.x + 16, m.x + m.w - 16, u) + range(r, -8, 8), m.y + m.h * 0.65]);
-      pts.push([lerp(tip.x + 18, tip.x + tip.w - 18, u), yTip + 20]);
-      // Out onto the floor, beyond the foot.
-      pts.unshift([lerp(base.x - fl * 1.3, base.x + base.w + fl * 1.3, u), yFar - 4]);
-      pts.unshift([lerp(base.x - fl * 2.4, base.x + base.w + fl * 2.4, u) + range(r, -20, 20), yFar + 10]);
-      pts.reverse();
-    } else {
-      // A clump hangs: its roots run down (never sideways), each kept inside the tiers it passes, and run out past
-      // the bottom in ragged tips.
-      const x0 = lerp(base.x + 14, base.x + base.w - 14, u) + range(r, -0.45, 0.45) * (base.w / n);
-      pts.push([x0, yFar - 50]);
-      let x = x0;
-      for (const m of ms) {
-        x = clamp(x, m.x + 14, m.x + m.w - 14);
-        pts.push([x + range(r, -6, 6), m.y + m.h * 0.5]);
-      }
-      pts.push([x + range(r, -26, 26), yTip + range(r, 30, 220) * (0.4 + 0.6 * (1 - Math.abs(u - 0.5) * 2))]);
-    }
-    const line = pts.flat();
-    const c = chaikinLine(line);
-    const outer = Math.abs(u - 0.5) * 2;
-    const w0 =
-      (up ? base.w / n : Math.min(48, base.w / n)) *
-      (up ? range(r, 0.8, 1.2) : range(r, 0.45, 1.5)) *
-      (0.8 + 0.4 * outer);
-    const width = up
-      ? (tt: number) => Math.max(4, w0 * (0.55 + 0.45 * tt) * (tt > 0.85 ? (1 - tt) / 0.15 + 0.2 : 1))
-      : (tt: number) => Math.max(2, w0 * (1.1 - tt * 0.95));
-    paintLimb(p, lineLimb(c, width, B.walkH + (outer > 0.8 ? 0.02 : -0.02), seed + k * 17, 0.15, 0.7));
-  }
-  if (up)
-    knot(
-      p,
-      (tip.x + tip.x + tip.w) / 2 + range(r, -20, 20),
-      tip.y + tip.h * 0.6,
-      range(r, 10, 16),
-      0.2,
-      B.walkH,
-      seed + 5,
+  p.solid(body, T.body, B.walkH - 0.1, { bark: 0.3 });
+  p.tint(body, T.lift, 0.35);
+  // Burl knobs swelling out of a flank (never both sides alike).
+  for (let k = 0; k < 1 + Math.floor(r() * 3); k++) {
+    const side = r() < 0.5 ? -1 : 1;
+    const y = lerp(yFar - 30, yTip + 40, range(r, 0.15, 0.7));
+    const m = ms.find((mm) => y >= mm.y && y <= mm.y + mm.h) ?? base;
+    const x = (side < 0 ? m.x : m.x + m.w) + shift(y);
+    const rad = range(r, 16, 30);
+    const knob = chaikin(
+      blob(x + side * rad * 0.2, y, rad, rad * range(r, 0.7, 1.2), seed + k * 29, 0.3, 14),
+      2,
     );
+    p.solid(knob, T.body, B.walkH - 0.05, { bark: 0.6 });
+    p.tint(knob, T.lift, 0.4);
+    knot(p, x + side * rad * 0.15, y, rad * 0.4, range(r, -0.6, 0.6), B.walkH, seed + k * 31);
+  }
+  // The roots up its flanks, at uneven spacing (40-140 px), each its own weight.
+  const us: number[] = [];
+  for (let x = range(r, 0, 30); x <= base.w; x += range(r, 40, 140)) us.push(x / base.w);
+  if (us.length < 3) us.splice(0, us.length, 0.1, 0.5, 0.9);
+  const order = us
+    .map((u, k) => ({ u, k }))
+    .sort((a, c) => Math.abs(a.u - 0.5) - Math.abs(c.u - 0.5))
+    .map((o) => o.u);
+  for (const u of order) {
+    const pts: Array<[number, number]> = [];
+    // (Each root wraps the body on its way up: its lane at the top is not its lane at the foot, so the roots cross
+    // and the flanks never read as even flutes.)
+    const uTop = clamp(u + range(r, -0.4, 0.4), 0.02, 0.98);
+    ms.forEach((m, mi) => {
+      const y = m.y + m.h * range(r, 0.45, 0.8);
+      const uu = lerp(u, uTop, (mi + 0.5) / ms.length);
+      pts.push([lerp(m.x + 16, m.x + m.w - 16, uu) + range(r, -10, 10) + shift(y), y]);
+    });
+    pts.push([lerp(tip.x + 18, tip.x + tip.w - 18, uTop) + range(r, -6, 6), yTip + 20]);
+    const reach = u < 0.5 ? flW : flE;
+    pts.unshift([lerp(base.x - reach * 1.3, base.x + base.w + reach * 1.3, u) + shift(yFar), yFar - 4]);
+    pts.unshift([
+      lerp(base.x - reach * 2.4, base.x + base.w + reach * 2.4, u) + range(r, -30, 30) + shift(yFar),
+      yFar + 10,
+    ]);
+    pts.reverse();
+    const c = chaikinLine(pts.flat());
+    const outer = Math.abs(u - 0.5) * 2;
+    const w0 = (base.w / us.length) * range(r, 0.6, 1.5) * (0.8 + 0.4 * outer);
+    const width = (tt: number) =>
+      Math.max(4, w0 * (0.55 + 0.45 * tt) * (tt > 0.85 ? (1 - tt) / 0.15 + 0.2 : 1));
+    paintLimb(
+      p,
+      lineLimb(c, width, B.walkH + (outer > 0.8 ? 0.02 : -0.02), seed + Math.round(u * 997), 0.15, 0.7),
+    );
+  }
+  // Two or three roots splitting off the body low on a flank and running out across the floor.
+  const nSplit = 2 + (r() < 0.5 ? 1 : 0);
+  for (let k = 0; k < nSplit; k++) {
+    const side = k === 0 ? (flW > flE ? -1 : 1) : r() < 0.5 ? -1 : 1;
+    const y0 = yFar - range(r, 0.15, 0.5) * Math.min(span, 260);
+    const x0 = (side < 0 ? base.x + 10 : base.x + base.w - 10) + shift(y0);
+    const out = range(r, 120, 320);
+    const line = chaikinLine([
+      x0,
+      y0,
+      x0 + side * out * 0.35,
+      y0 + (yFar - y0) * 0.6,
+      x0 + side * out * 0.7,
+      yFar - 2,
+      x0 + side * out,
+      yFar + 6,
+    ]);
+    const w0 = range(r, 16, 30);
+    paintLimb(
+      p,
+      lineLimb(line, (tt) => Math.max(3, w0 * (1 - tt) ** 0.8), B.walkH + 0.01, seed + 31 * k, 0.2, 0.6),
+    );
+  }
+  // The top: broken off (a few splinters and a torn rim), never a round cap.
+  const tx0 = tip.x + shift(yTip);
+  const nSp = 2 + Math.floor(r() * 3);
+  for (let k = 0; k < nSp; k++) {
+    const w = range(r, 10, 26);
+    const x = tx0 + range(r, 0.05, 0.95) * Math.max(10, tip.w - w);
+    const hi = range(r, 10, 34);
+    const lean2 = range(r, -0.5, 0.5) * hi;
+    p.solid(
+      [
+        x,
+        yTip + 10,
+        x + lean2 * 0.6,
+        yTip - hi * 0.7,
+        x + w * 0.4 + lean2,
+        yTip - hi,
+        x + w,
+        yTip - hi * 0.5,
+        x + w,
+        yTip + 10,
+      ],
+      B.bark,
+      B.walkH - 0.03,
+      { bark: 1 },
+    );
+    p.tint(
+      strand([x + lean2 * 0.6, yTip - hi * 0.7, x + w * 0.4 + lean2, yTip - hi], 2, 0.2),
+      B.barkLit,
+      0.45,
+    );
+  }
   // The tops she stands on: the tip's moss in full, a few tufts on each tier; all join the stretches (rim, growth).
   t.idx.forEach((i) => {
     const m = masses[i] as MassRect;
     const sd = sides[i] as Sides;
     for (const [x0, x1] of sd.top) {
-      const full = m === tip && up;
+      const full = m === tip;
       mossBlanket(p, x0, x1, () => m.y, seed + x0, full ? 22 : 10, full ? 22 : 10);
       plan?.stretches.push(topStretch(`taper-${i}-${x0}`, x0, x1, m.y, 60, false, false));
     }
-    if (!up)
-      for (const [x0, x1] of sd.bottom)
-        plan?.hangs.push({ x0: x0 + 10, x1: x1 - 10, y: () => m.y + m.h + 4, deep: false, reach: 120 });
+  });
+}
+
+/** A hanging taper as a clump of strands over a dark ragged core (see `paintTaper`). */
+function hangClump(
+  p: Paint,
+  plan: BranchPlan | null,
+  masses: readonly MassRect[],
+  sides: readonly Sides[],
+  t: Taper,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 239);
+  const ms = t.idx.map((i) => masses[i] as MassRect);
+  const base = ms[0] as MassRect;
+  const tip = ms[ms.length - 1] as MassRect;
+  const yRoof = base.y;
+  const yEnd = tip.y + tip.h;
+  // The core: the tiers' outline, its bottom torn into points (no hem), a little in from the collision's sides.
+  const core: number[] = [base.x - 10, yRoof - 20];
+  for (const m of ms) core.push(m.x - 3, m.y + 6, m.x - 3, m.y + m.h - 4);
+  const nPts = 3 + Math.floor(r() * 3);
+  for (let k = 0; k <= nPts * 2; k++) {
+    const u = k / (nPts * 2);
+    const x = lerp(tip.x, tip.x + tip.w, u);
+    core.push(x, yEnd + (k % 2 ? range(r, 20, 90) : range(r, -14, 6)));
+  }
+  for (let k = ms.length - 1; k >= 0; k--) {
+    const m = ms[k] as MassRect;
+    core.push(m.x + m.w + 3, m.y + m.h - 4, m.x + m.w + 3, m.y + 6);
+  }
+  core.push(base.x + base.w + 10, yRoof - 20);
+  p.solid(chaikin(core, 2), T.body, B.walkH - 0.1, { bark: 0.3 });
+  // 3-7 strands, the widest at most 40% of the clump, twisting across each other, tips at very different heights.
+  const n = clamp(Math.round(base.w / 70) + Math.floor(r() * 3), 3, 7);
+  const lanes: number[] = [];
+  for (let k = 0; k < n; k++) lanes.push(range(r, 0.05, 0.95));
+  lanes.sort((a, c) => a - c);
+  for (let k = 0; k < n; k++) {
+    const u = lanes[k] as number;
+    const w0 = Math.min(base.w * 0.4, range(r, 0.12, 0.38) * base.w) * (k % 3 === 1 ? 1 : range(r, 0.5, 0.9));
+    const twist = range(r, 0.6, 1.8);
+    const amp = range(r, 0.08, 0.22) * base.w;
+    const ph = range(r, 0, 6.28);
+    const tipY = yEnd + range(r, -40, 220) * (0.5 + r());
+    const raw: number[] = [];
+    for (let q = 0; q <= 14; q++) {
+      const v = q / 14;
+      const y = lerp(yRoof - 40, tipY, v);
+      // Kept within the tier it passes (its collision), loose only below the core.
+      const m = ms.find((mm) => y >= mm.y && y <= mm.y + mm.h) ?? tip;
+      let x = lerp(m.x + 10, m.x + m.w - 10, u) + Math.sin(v * Math.PI * twist + ph) * amp * (0.4 + v);
+      if (y <= yEnd) x = clamp(x, m.x + w0 * 0.3, m.x + m.w - w0 * 0.3);
+      raw.push(x, y);
+    }
+    const line = wander(raw, 8, seed + k * 19, 90);
+    paintLimb(
+      p,
+      lineLimb(
+        line,
+        (tt) => Math.max(1.5, w0 * (1 - tt ** 1.6) * (0.85 + 0.25 * wobble(tt * 900, seed + k, 120))),
+        B.walkH + (k % 2 ? 0.02 : -0.02),
+        seed + k * 17,
+        0.1,
+        0.6,
+      ),
+    );
+  }
+  t.idx.forEach((i) => {
+    const m = masses[i] as MassRect;
+    const sd = sides[i] as Sides;
+    for (const [x0, x1] of sd.top) {
+      mossBlanket(p, x0, x1, () => m.y, seed + x0, 10, 10);
+      plan?.stretches.push(topStretch(`taper-${i}-${x0}`, x0, x1, m.y, 60, false, false));
+    }
+    for (const [x0, x1] of sd.bottom)
+      plan?.hangs.push({ x0: x0 + 10, x1: x1 - 10, y: () => m.y + m.h + 4, deep: false, reach: 120 });
   });
 }
 
@@ -1014,7 +1375,7 @@ function cornerRoot(p: Paint, x: number, y: number, dir: number, vy: number, see
     const a = (k / 8) * (Math.PI / 2);
     fill.push(x + dir * R * (1 - Math.cos(a)) * 0.9, y + vy * R * (1 - Math.sin(a)));
   }
-  p.solid(fill, MASS.body, BRANCH.walkH - 0.05, { bark: 0.4 });
+  p.solid(fill, T.body, BRANCH.walkH - 0.05, { bark: 0.4 });
   // The root over it: from up the wall, curving out along the floor (or the ceiling) and tapering.
   const line = [
     x - dir * 6,
@@ -1155,6 +1516,7 @@ function stones(p: Paint, x: number, y: number, w: number, h: number, seed: numb
  * run up into the dark). The tops join the stretches (rim, growth).
  */
 export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed: number): void {
+  T = massTone(room);
   const B = BRANCH;
   room.oneWays.forEach((o, i) => {
     const sh = shelfFor(room, o);
@@ -1210,7 +1572,7 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
         // (Into the dark of the roof.)
         p.tint(
           ribbon(pts.slice(0, Math.round(pts.length * 0.45) & ~1), () => w0 * 1.6),
-          MASS.body,
+          T.body,
           0.55,
         );
       }
@@ -1241,4 +1603,95 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
     );
     plan?.stretches.push(topStretch(`shelf-${i}`, sh.x0, sh.x1, y, th, wallW, wallE));
   });
+}
+
+/**
+ * A roost (a wide cover hung from the room's top over open air: the gap's): a hanging nest of roots and old leaves,
+ * wider at the top, ragged, thinning down into loose strands and a fringe of dead leaves, dense enough to hide what
+ * is in it (review r4 #3: it was a rounded black box, unchanged since round 2).
+ */
+export function paintRoost(
+  p: Paint,
+  rect: { x: number; y: number; w: number; h: number },
+  seed: number,
+  tone: MassTone,
+): void {
+  T = tone;
+  const B = BRANCH;
+  const r = rngFor(seed, 251);
+  const { x, y, w, h } = rect;
+  const cx = x + w / 2;
+  const bot = y + h;
+  // The core: a ragged pouch, wider than the rect at the top, narrowing, its bottom torn into hanging lobes.
+  const half = (t: number) => (w / 2) * (1.25 - 0.5 * t ** 1.3) + 26 * wobble(t * 900, seed + 3, 120);
+  const L: number[] = [];
+  const R: number[] = [];
+  for (let k = 0; k <= 24; k++) {
+    const t = k / 24;
+    const yy = lerp(y - 40, bot - 30, t);
+    L.push(cx - half(t) - 14 * wobble(yy, seed + 5, 60), yy);
+    R.push(cx + half(t) + 14 * wobble(yy, seed + 7, 60), yy);
+  }
+  const lobes: number[] = [];
+  const nl = 5 + Math.floor(r() * 4);
+  for (let k = 0; k <= nl * 2; k++) {
+    const u = k / (nl * 2);
+    const xx = lerp(cx - half(1), cx + half(1), u);
+    lobes.push(xx, bot - 30 + (k % 2 ? range(r, 40, 150) : range(r, -20, 10)));
+  }
+  const core = [...L, ...lobes];
+  for (let k = R.length / 2 - 1; k >= 0; k--) core.push(R[k * 2] as number, R[k * 2 + 1] as number);
+  const body = chaikin(core, 2);
+  p.solid(body, T.body, B.walkH - 0.1, { bark: 0.3 });
+  p.tint(body, T.lift, 0.3);
+  // Roots woven down it: from the roof, twisting, crossing, some running out past the bottom.
+  const n = Math.round(w / 26);
+  for (let k = 0; k < n; k++) {
+    const u0 = k % 3 === 0 ? (k % 2 ? range(r, -0.15, 0.05) : range(r, 0.95, 1.15)) : range(r, -0.1, 1.1);
+    const u1 = clamp(u0 + range(r, -0.5, 0.5), 0.05, 0.95);
+    const len = h * range(r, 0.4, 1.15);
+    const raw: number[] = [];
+    for (let q = 0; q <= 12; q++) {
+      const t = q / 12;
+      const yy = lerp(y - 60, y + len, t);
+      const hw = half(clamp((yy - y) / h, 0, 1));
+      raw.push(cx + (lerp(u0, u1, t) - 0.5) * 2 * hw * 0.9, yy);
+    }
+    const line = wander(raw, 16, seed + k * 13, 160);
+    const w0 = range(r, 10, 34);
+    paintLimb(
+      p,
+      lineLimb(
+        line,
+        (t) => Math.max(1.5, w0 * (1 - t * 0.8)),
+        B.walkH + (k % 2 ? 0.02 : -0.03),
+        seed + k * 7,
+        0.1,
+        0.4,
+      ),
+    );
+  }
+  // Old leaves caught in it: clumps, thickest at the bottom fringe.
+  for (let k = 0; k < Math.round((w * h) / 5000); k++) {
+    const t = Math.sqrt(r());
+    const yy = lerp(y + 40, bot + 60, t);
+    const hw = half(clamp((yy - y) / h, 0, 1));
+    const lx = cx + range(r, -1, 1) * hw;
+    const a = range(r, 1.1, 2.1);
+    const l = range(r, 26, 58);
+    const pts: number[] = [];
+    for (let q = 0; q <= 10; q++) {
+      const th = (q / 10) * Math.PI * 2;
+      const u = Math.cos(th) * l * 0.5;
+      const v = Math.sin(th) * l * 0.2 * Math.abs(Math.sin(th / 2) + 0.3);
+      pts.push(lx + u * Math.cos(a) - v * Math.sin(a), yy + u * Math.sin(a) + v * Math.cos(a));
+    }
+    p.solid(
+      pts,
+      k % 5 ? (k % 2 ? T.plate : B.bark) : B.barkLit,
+      B.walkH + 0.05,
+      { bark: 0.2 },
+      k % 5 ? 0.9 : 0.22,
+    );
+  }
 }
