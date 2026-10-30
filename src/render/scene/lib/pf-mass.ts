@@ -90,6 +90,9 @@ export const MASS = {
   plateLen: [140, 300] as readonly number[],
   pillarMinH: 320,
   flare: 22,
+  /** Knuckles deep in a big mass (canopy r7): one per this many px² of it, their half width range, px. */
+  knuckleArea: 180000,
+  knuckleR: [140, 340] as readonly number[],
   /** Earth (`ground`). */
   soil: 0x161a22,
   soilLit: 0x3a4250,
@@ -202,7 +205,11 @@ function edgeTone(): EdgeTone {
     lift: T.lift,
     rim: night ? BRANCH.barkLit : T.crust,
     rimA: night ? 0.6 : Math.min(0.8, T.crustA * 2.4),
-    moss: shaft ? 0 : BRANCH.mossDark,
+    // (Canopy r7: the walk's moss on the faces too, a step under it; tinted with the place like the walk's band.)
+    moss: shaft
+      ? 0
+      : lerp3(BRANCH.walkDeep, T.crustA > 0 ? lerp3(BRANCH.walkMoss, T.crust, 0.35) : BRANCH.walkMoss, 0.6),
+    mossLit: shaft ? 0 : T.crustA > 0 ? lerp3(BRANCH.walkLit, T.crust, 0.35) : BRANCH.walkLit,
   };
 }
 
@@ -525,6 +532,8 @@ function topStretch(
   th: number,
   wallW: boolean,
   wallE: boolean,
+  /** The painted crest (pf-edge.ts `paintTopBand`): the rim and the growth follow it. */
+  crest: (x: number) => number = () => y,
 ): Stretch {
   const s = { tag: 'root', x: x0, y, w: x1 - x0, h: th } as unknown as Stretch['s'];
   return {
@@ -541,7 +550,7 @@ function topStretch(
     from: [x0, y],
     th: () => th,
     under: () => y + th,
-    top: () => y,
+    top: crest,
     far: false,
     reachW: 0,
     reachE: 0,
@@ -693,6 +702,52 @@ export function paintMasses(
           0.6 * kf,
         );
       }
+    }
+  });
+
+  // 2a. (Canopy r7, review r6: the insides were the largest flat planes on screen; HK draws its rock as big shapes.) Deep
+  // in a big mass, a few great knuckles of wood or earth: each only its upper arc, a dark seam over a faint lit lip,
+  // broken where the arc turns (a closed ring read as a coin). The inside stays the darkest plane.
+  masses.forEach((r, i) => {
+    if (inTaper.has(i) || !near(r.x, r.y, r.x + r.w, r.y + r.h) || Math.min(r.w, r.h) < 360) return;
+    const rr = rngFor(seed, r.x, r.y, 61);
+    const n = Math.round((r.w * r.h) / (MASS.knuckleArea as number));
+    for (let k = 0; k < n; k++) {
+      const rx = range(rr, MASS.knuckleR[0] as number, MASS.knuckleR[1] as number);
+      const ry = rx * range(rr, 0.45, 0.75);
+      const cx = r.x + range(rr, 0.15, 0.85) * r.w;
+      const cy = r.y + range(rr, 0.2, 0.9) * r.h;
+      if (innerK(cx, cy) === 1 || innerK(cx - rx, cy) === 1 || innerK(cx + rx, cy) === 1) continue;
+      const tilt = range(rr, -0.25, 0.25);
+      const a0 = Math.PI * range(rr, 1.05, 1.25);
+      const a1 = Math.PI * range(rr, 1.75, 1.95);
+      const line: number[] = [];
+      for (let q = 0; q <= 16; q++) {
+        const a = lerp(a0, a1, q / 16);
+        const wob = 1 + 0.08 * wobble(q * 20, seed + k + i, 30);
+        const x = Math.cos(a) * rx * wob;
+        const y = Math.sin(a) * ry * wob;
+        line.push(cx + x * Math.cos(tilt) - y * Math.sin(tilt), cy + x * Math.sin(tilt) + y * Math.cos(tilt));
+      }
+      // Its body a breath lighter under the arc (a shape, not only a line), the seam, the lit lip under it.
+      const body: number[] = [];
+      for (let q = 0; q <= 16; q++) body.push(line[q * 2] as number, (line[q * 2 + 1] as number) + 8);
+      for (let q = 16; q >= 0; q--)
+        body.push(
+          line[q * 2] as number,
+          (line[q * 2 + 1] as number) + ry * range(rr, 0.5, 0.9) * Math.sin((q / 16) * Math.PI) + 8,
+        );
+      p.tint(chaikin(body, 2), T.lift, range(rr, 0.1, 0.18));
+      p.tint(strand(line, range(rr, 5, 9), 0.35), T.deep, 0.9);
+      p.tint(
+        strand(
+          line.map((v, j) => (j % 2 ? v + 6 : v)),
+          range(rr, 4, 8),
+          0.4,
+        ),
+        T.veinLit,
+        range(rr, 0.4, 0.6),
+      );
     }
   });
 
@@ -975,8 +1030,18 @@ export function paintMasses(
         );
       fadeInto(p, line, (k) => (ws[Math.min(ws.length - 1, k)] as number) * 1.04, 0, 1, T.body);
     }
+    // (Canopy r7: the blanket under the band, so the band's crest domes are the walk's silhouette.)
+    mossBlanket(
+      p,
+      x0 - (wallW ? 6 : 0),
+      x1 + (wallE ? 6 : 0),
+      () => y,
+      seed + i * 17 + x0,
+      freeW ? 22 : 0,
+      freeE ? 22 : 0,
+    );
     // (Review r5 #4: a thick lit moss band on every walk, its lower edge draping in lobes.)
-    paintTopBand(
+    const crest = paintTopBand(
       p,
       x0 - (wallW ? 6 : 0),
       x1 + (wallE ? 6 : 0),
@@ -987,16 +1052,7 @@ export function paintMasses(
       freeE ? 30 : 0,
       earth(r) ? { color: MASS.soilLit, k: 0.6 } : T.crustA > 0 ? { color: T.crust, k: 0.35 } : null,
     );
-    mossBlanket(
-      p,
-      x0 - (wallW ? 6 : 0),
-      x1 + (wallE ? 6 : 0),
-      () => y,
-      seed + i * 17 + x0,
-      freeW ? 22 : 0,
-      freeE ? 22 : 0,
-    );
-    plan?.stretches.push(topStretch(`mass-${i}-${x0}`, x0, x1, y, th, wallW, wallE));
+    plan?.stretches.push(topStretch(`mass-${i}-${x0}`, x0, x1, y, th, wallW, wallE, crest));
     // Over a tall sheer face the top's free corner is a broken trunk's: splinters, the bark split down the face
     // (review r3 #3: the hub's high block and the way out's blocks read as cubes).
     if (!earth(r) && x1 - x0 >= 240)

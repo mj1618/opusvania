@@ -16,13 +16,13 @@ import { type BranchPlan, freeEast, freeWest } from './pf-branch';
 
 export const RIM = {
   /** Lit and leaf-shaded rim colours (before post). */
-  lit: 0x7aa69e,
-  shade: 0x2b4846,
+  lit: 0xa6d884,
+  shade: 0x3e6e4a,
   /** The crest's brightest band: px under the moss edge, and the soft glow under it. */
-  band: 2.2,
-  glow: 6,
+  band: 3.6,
+  glow: 11,
   /** Moss edge: how far fibres and cushions rise over the walk line, px. */
-  fuzz: 4.5,
+  fuzz: 7,
   /** Share of the rim in leaf shade (0..1) and how fast the dapples drift (px/s along x). */
   shadeShare: 0.4,
   drift: 9,
@@ -171,8 +171,8 @@ export class Rim {
               RIM.patch * Math.sin(x * 0.011 + seed * 3.1) * Math.sin(x * 0.0043 + seed),
           ),
         );
-        verts.push(x, y - 12, y, fade, seed, glow);
-        verts.push(x, y + 12, y, fade, seed, glow);
+        verts.push(x, y - 16, y, fade, seed, glow);
+        verts.push(x, y + 24, y, fade, seed, glow);
         if (i > 0) {
           const k = base + i * 2;
           index.push(k - 2, k - 1, k, k - 1, k + 1, k);
