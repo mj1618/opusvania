@@ -57,10 +57,9 @@ export function h01(...v: number[]): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/** A trap lamp (the premise, review r9 #2): one whose snuff is kept (no relight). Its own flag if the level gives one. */
-export function isTrap(l: { relight?: number; keep?: boolean; kind?: string; trap?: boolean }): boolean {
-  if (typeof l.trap === 'boolean') return l.trap;
-  return l.relight === undefined && !l.keep && l.kind !== 'moonwick';
+/** A trap lamp (the premise, review r9 #2: `Lure.trap`): its snuff is kept and frees its moths. */
+export function isTrap(l: { trap?: boolean }): boolean {
+  return l.trap === true;
 }
 
 export interface MapRoom {
