@@ -34,7 +34,7 @@ export const EDGE = {
    * lobes 100-280 px long reaching up to 18 px out, notches up to 24 px in, so her hold reads on the crests and the
    * moss cushions on them.
    */
-  claw: { notch: -24, peak: [6, 18], w: [100, 280], gap: [-40, 10] } as LobeSpec,
+  claw: { notch: -24, peak: [6, 18], w: [100, 400], gap: [-40, 10] } as LobeSpec,
   /** A face that refuses the claws: bigger lobes, cut deeper and standing further out. */
   loose: { notch: -24, peak: [16, 42], w: [80, 220], gap: [-40, 30] } as LobeSpec,
   /** An underside: lobes hanging below the collision, never above it (she must not seem to bump air). */
@@ -86,7 +86,8 @@ export function lobesFor(spec: LobeSpec, seed: number, a: number, b: number): Lo
   } else {
     let u = a + range(r, -spec.w[0] * 0.4, 0);
     while (u < b) {
-      const w = range(r, spec.w[0], spec.w[1]);
+      // (Canopy review r7 #8: lobes of one length stacked like pillows. More short than long, a few very long.)
+      const w = spec.w[0] + (spec.w[1] - spec.w[0]) * r() ** 1.5;
       out.push({ c: u + w / 2, w, peak: range(r, spec.peak[0], spec.peak[1]) });
       u += w + range(r, spec.gap[0], spec.gap[1]);
     }
@@ -186,8 +187,9 @@ export function paintFaceLobes(
     const knob = [...outer];
     for (let k = inner.length / 2 - 1; k >= 0; k--)
       knob.push(inner[k * 2] as number, inner[k * 2 + 1] as number);
-    // The knob: a step lighter than the body (each its own), its relief domed (the bake rounds it).
-    p.solid(knob, lerp3(tone.body, tone.lift, range(r, 0.12, 0.4)), h - 0.06, { bark: 0.5 });
+    // The knob: a breath lighter than the body (each its own), its relief domed (the bake rounds it). (Canopy r8: at a
+    // full step lighter each knob read as a pillow.)
+    p.solid(knob, lerp3(tone.body, tone.lift, range(r, 0.04, 0.2)), h - 0.06, { bark: 0.5 });
     // The seam round part of its inner side (the outline the eye reads lobe by lobe; a full ring read as a coin).
     const s0 = Math.floor(range(r, 0, 0.35) * n);
     const s1 = Math.ceil(range(r, 0.6, 1) * n);
@@ -245,6 +247,34 @@ export function paintFaceLobes(
             range(r, 0.35, 0.65),
           );
       }
+    }
+  }
+  // Roots crossing the seams (canopy review r7 #8): down a long face, a root or two running in and out of the edge
+  // across several lobes, so the knobs read as one wall grown over, not a stack.
+  if (b - a >= 400) {
+    const nr = 1 + Math.floor(r() * Math.min(3, (b - a) / 400));
+    for (let q = 0; q < nr; q++) {
+      const len = range(r, 220, Math.min(620, b - a - 40));
+      const u0 = range(r, a + 20, b - 20 - len);
+      const deep = range(r, 18, 46);
+      const ph = range(r, 0, 6.28);
+      const line: number[] = [];
+      for (let u = u0; u <= u0 + len; u += 10) {
+        const t = (u - u0) / len;
+        const inn = deep * (0.5 + 0.5 * Math.sin(t * 5 + ph)) + 6;
+        line.push(at(u) - dir * inn, u);
+      }
+      const w0 = range(r, 9, 18);
+      p.solid(strand(line, w0, 0.45), tone.deep, h - 0.02, { bark: 0.8 });
+      p.tint(
+        strand(
+          line.map((v, j) => (j % 2 ? v : v + dir * w0 * 0.3)),
+          w0 * 0.25,
+          0.45,
+        ),
+        tone.rim,
+        tone.rimA * 0.8,
+      );
     }
   }
   // (Review r5 #4: within +-12 px a claw face still read as a ruler at play distance.) Overhanging paint off some

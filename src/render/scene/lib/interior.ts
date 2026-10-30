@@ -1054,45 +1054,6 @@ function leaf(x: number, y: number, l: number, a: number): number[] {
 
 type Poly = { poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown } };
 
-/** A moss mound in a mid plane: overlapping round lobes over a dark base, each lit along its upper arc. Returns its area. */
-function mossMound(
-  g: Poly,
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  col: number,
-  lit: number,
-  dark: number,
-  seed: number,
-  r: () => number,
-): number {
-  g.poly(chaikin(blob(cx, cy, rx * 0.9, ry * 0.9, seed, 0.3, 18), 2)).fill({ color: dark, alpha: 0.55 });
-  const n = 5 + Math.floor(r() * 8);
-  for (let q = 0; q < n; q++) {
-    const a = range(r, 0, 6.28);
-    const d = Math.sqrt(r()) * 0.7;
-    const x = cx + Math.cos(a) * rx * d;
-    const y = cy + Math.sin(a) * ry * d;
-    const lr = range(r, 0.3, 0.5) * rx;
-    g.poly(chaikin(blob(x, y, lr, lr * 0.85, seed + q * 7, 0.2, 14), 1)).fill({ color: col, alpha: 0.95 });
-    // The lit upper arc: a lighter lobe a little up, then the body again a little down over it.
-    g.poly(
-      chaikin(blob(x - lr * 0.08, y - lr * 0.22, lr * 0.82, lr * 0.62, seed + q * 7 + 1, 0.2, 12), 1),
-    ).fill({
-      color: lit,
-      alpha: 0.55,
-    });
-    g.poly(
-      chaikin(blob(x + lr * 0.05, y + lr * 0.08, lr * 0.78, lr * 0.66, seed + q * 7 + 2, 0.2, 12), 1),
-    ).fill({
-      color: col,
-      alpha: 0.95,
-    });
-  }
-  return Math.PI * rx * ry * 0.9;
-}
-
 /** A thick root hanging in a mid plane, twisting and tapering, a lit flank. Returns its area. */
 function hangRoot(
   g: Poly,
@@ -1800,42 +1761,43 @@ export function drawMidBack(
         }
       }
     } else if (plan.look === 'shaft') {
-      // (Review r6 #9: wide pale root arches over the fog read as brush marks on the glass.) Moss mounds bulging off
-      // the shaft's far walls (Silksong Tut_01's back) and thick roots hanging from above, silhouettes with lit edges.
+      // (Review r6 #9: wide pale root arches over the fog read as brush marks on the glass. Canopy review r7 #8: lobed
+      // mounds stacked in columns read as cartoon cumulus or smoke stacks.) The shaft's far walls as ribs running off
+      // the top and the bottom of the back, frost-lit down one edge, and curtains of roots hanging from above. Nothing
+      // closed and round floats free.
       while (covered < want && guard++ < 400) {
-        if (r() < 0.7) {
-          // (Mounds floating in the fog read as clouds: they grow in columns, the far walls of the shaft.)
+        if (r() < 0.5) {
+          const x0 = b.x + r() * b.w;
+          const w0 = range(r, 60, 190);
+          const line: number[] = [];
+          for (let y = b.y - 160; y <= b.y + b.h + 160; y += 60)
+            line.push(
+              x0 + 46 * wobble(y, seed + guard * 7, 420) + 12 * wobble(y, seed + guard * 7 + 1, 90),
+              y,
+            );
+          const wd = (t: number) => w0 * (0.75 + 0.3 * wobble(t * 3000, seed + guard, 700));
+          fill(ribbon(line, wd), mixC(col, dark, 0.35), 0.9, b.h * w0 * 0.9);
+          const lean = r() < 0.5 ? -1 : 1;
+          // Its frost-lit edge, a dark crease on the other side.
+          const edge = (k: number) => line.map((v, j) => (j % 2 ? v : v + lean * wd(j / line.length) * k));
+          g.poly(strand(edge(0.36), range(r, 5, 11), 0.15)).fill({ color: lit, alpha: 0.55 });
+          g.poly(strand(edge(-0.3), range(r, 8, 16), 0.15)).fill({ color: dark, alpha: 0.75 });
+        } else {
+          // A curtain: 3-8 roots from one place in the roof, of very different lengths, twisting.
           const cx = b.x + r() * b.w;
-          let cy = b.y + range(r, -100, 200);
-          const w = range(r, 140, 300);
-          while (cy < b.y + b.h + 100) {
-            const rx = w * range(r, 0.7, 1.15);
-            covered += mossMound(
+          const n = 3 + Math.floor(r() * 6);
+          for (let k = 0; k < n; k++)
+            covered += hangRoot(
               g,
-              cx + range(r, -0.3, 0.3) * w,
-              cy,
-              rx,
-              rx * range(r, 0.7, 1.0),
-              col,
-              lit,
+              cx + range(r, -70, 70),
+              b.y - 80,
+              range(r, 0.3, 0.95) * b.h,
+              range(r, 12, 40),
+              r() < 0.3 ? dark : col,
               dark,
-              seed + guard * 13 + Math.round(cy),
+              seed + guard * 17 + k,
               r,
             );
-            cy += rx * range(r, 1.1, 1.5);
-          }
-        } else {
-          covered += hangRoot(
-            g,
-            b.x + r() * b.w,
-            b.y + r() * b.h * 0.5,
-            range(r, 260, 700),
-            range(r, 26, 64),
-            col,
-            dark,
-            seed + guard,
-            r,
-          );
         }
       }
     } else if (plan.look === 'nest') {
