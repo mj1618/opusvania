@@ -1060,6 +1060,9 @@ function trunk(): Json {
   // The drop to tier 2; tier 2 under a low roof.
   r.hole(1088, 704, 1280, 1024);
   r.hole(448, 768, 1088, 1024);
+  // (The roof lifts over the thorn bed (r5 bots: under the low roof a jump bumped its head and every one, from any
+  // lip, came down in the bed): a full jump clears it.)
+  r.hole(704, 640, 1024, 768);
   // The rot branch (review r4 #2: it swallowed the no-claws player): a rotten wall high in tier 3's east face, its sill
   // 320 over the floor (out of a jump: the claws first), the shaft behind it down to the rot hall.
   r.bark('rot-door', 1024, 1216, 64, 128);
@@ -1075,7 +1078,7 @@ function trunk(): Json {
   // (v3's shaft started 448 over the floor: tier 3 was a pocket the bots wandered for minutes).
   r.mass(640, 1216, 64, 256);
   // (Review r4 #2: the floor strip alone is the lesson; the roof strip over it is cut.)
-  r.thorns('thorn-t2', 768, 1024, 192);
+  r.thorns('thorn-t2', 832, 1024, 128);
   r.thorns('thorn-t3', 256, 1664, 192);
   r.juvenile('juv-t1', 2480, 704, -1, 140);
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
