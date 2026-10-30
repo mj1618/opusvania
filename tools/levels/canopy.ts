@@ -139,7 +139,8 @@ const LINKS: Link[] = [
   { a: 'cn-gap', b: 'cn-bower', at: 832 },
   { a: 'cn-sky', b: 'cn-gap', at: 9344, span: 192 },
   // Deep.
-  { a: 'cn-tunnel', b: 'cn-den', at: 6144 },
+  // (r10: the den's mouth at the warning's floor, an arch in the tunnel's east wall.)
+  { a: 'cn-tunnel', b: 'cn-den', at: 5952 },
   { a: 'cn-tunnel', b: 'cn-cellar', at: 5504 },
   { a: 'cn-tunnel', b: 'cn-burrow', at: 3328, span: 192 },
   // (r8, review r7 #7: the nest's shaft from the tunnel's west hall.)
@@ -1070,6 +1071,9 @@ function hatch(): Json {
         y: FIRST_WICK[1],
         sets: 'cn-first-fling',
         relight: 90,
+        // (r10, review r9 #1: in its reach her fall slows to a drift until she has flung once.)
+        lesson: true,
+        moths: 0,
       },
     ],
     // The notice (review r7 #1): on S5's east half the view holds the lamp and the limb across the gap (the droop's,
@@ -1133,6 +1137,10 @@ function hatch(): Json {
 
 /** The old hub's content sits this far east in the widened hub. */
 const HX = 3520;
+/** The three trap lamps (r10, review r9 #2): the hub's, the Grove's west, the den's warning's. */
+const HUB_TRAP = 'trap-crossing';
+const GROVE_TRAP = 'trap-grove';
+const WARN_TRAP = 'trap-warn';
 
 function hub(): Json {
   const r = new Wood('cn-hub', 'The Crossing', [2640 + HX, 1152], 7101, {
@@ -1232,6 +1240,17 @@ function hub(): Json {
   r.lamp('socket-3', 3020 + HX, 640, { after: 'seeds:3' });
   // The way west: a lamp in the giant's mouth (warm light under the block, seen from the clearing's west end).
   r.lamp('wick-mouth', 520, 1790);
+  // The premise (r10, review r9 #2): the first trap lamp, a cage of moths hung over the root floor west of the seed
+  // door, the first thing she meets walking west from the drop. Three cuts free it for good; its moths settle on the
+  // high block's claw face (the shard chamber's way up, lit), the Grove's over the kin's lamp, the warning's in the
+  // lampoak's crown over the drop: the hub changes with each lamp freed (`roosts`, render draws them).
+  r.lamp(HUB_TRAP, 5200, 1380, { trap: true, moths: 30 });
+  r.set('roosts', [
+    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 1024, y: 1088, w: 128, h: 448 },
+    { id: 'roost-grove', lure: `cn-grove:${GROVE_TRAP}`, x: 2560, y: 1344, w: 320, h: 192 },
+    { id: 'roost-warn', lure: `cn-tunnel:${WARN_TRAP}`, x: 6144, y: 640, w: 512, h: 320 },
+  ]);
+  r.place('trap', 5200, 1600);
   // (r7, review r6 #7: each pocket pays one thing that matters: the bank the heart's map, the high chamber a moon
   // shard, the wings' shelf a great.)
   r.stone('stone-heart', 3800 + HX, 896, 'cn-heart');
@@ -2070,7 +2089,9 @@ function grove(): Json {
   r.hollow('keen-hollow', 1560, 704, 'keenBlade');
   // (r7, review r6 #4 / #6: the pit's two lamps hang 220 over its floor, in a jump's fling reach: the wave is fought
   // with the throw-cut and the fling's escape over a ram.)
-  r.lamp('wick-a', 1760, GROVE_WICK_Y);
+  // (r10, review r9 #2: the west lamp is a trap, a cage of moths cut open in the fight or after it; the east one the
+  // fling's escape.)
+  r.lamp(GROVE_TRAP, 1760, GROVE_WICK_Y, { trap: true, moths: 30 });
   r.lamp('wick-b', 2800, GROVE_WICK_Y);
   r.lamp('wick-c', 3500, 900);
   // The pit as an arena wave in two beats (review r5 #5): landing in the pit shuts the west door (`pit-door`) and
@@ -2498,6 +2519,29 @@ function gap(): Json {
   r.lamp('wick-gap-1', 3400, 1420);
   r.lamp('wick-gap-2', 3250, 1460);
   r.lamp('wick-gap-3', GAP_WICK3[0], GAP_WICK3[1]);
+  // The firefly once (r10, review r9 #2: "a light that flees and relights lamps behind her"; Kuro's first pass). As she
+  // lands below the chain (the pod garden, or anywhere on the floor's east half) the first time, a light comes out of
+  // the roost's mouth, touches the three lamps (any she flung burns again), crosses the gap to the moon's side and is
+  // gone over the far canopy: 4 s, no control lost. The gap's lamps relight slowly on their own (`GAP_RELIGHT`): the
+  // firefly is what lights them the first time.
+  r.set('fireflies', [
+    {
+      id: 'firefly-gap',
+      trigger: { x: 2688, y: 1856, w: 3456 - 2688, h: 2240 - 1856 },
+      flag: 'cn-firefly-gap',
+      path: [
+        [3040, 1150],
+        [3400, 1400],
+        [3250, 1450],
+        [2800, 1570],
+        [2000, 1300],
+        [700, 520],
+        [380, 200],
+      ],
+      frames: 240,
+      relights: ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'],
+    },
+  ]);
   r.place('shelf', 4000, 1344);
   r.place('far', 1200, 1856);
   r.place('floor', 2944, 2048);
@@ -2562,13 +2606,17 @@ const TUNNEL_RUN: [number, number] = [1056, 3072];
  * The pit's west and east ends (r9: 1,024 -> 768 long, the den's warning floor wider; r9b: 960, its west end the
  * hump's plumb east face, the take-off 384 over the far floor) and the glide line's lamp.
  */
-const PIT_W = 2560 + 3520;
-const PIT_E = 3520 + 3520;
-const PIT_WICK: [number, number] = [3480 + 3520, 1560];
+// (r10, review r9 #6: the hump and the pit moved 128 west, so the warning's floor is 1,024 flat to the den's mouth.)
+const PIT_W = 2432 + 3520;
+const PIT_E = 3392 + 3520;
+const PIT_WICK: [number, number] = [3352 + 3520, 1560];
 /** The pit's hawker's home (r9b: under the roof, over the pit's east half). */
-const PIT_HAWK: [number, number] = [6800, 1170];
+const PIT_HAWK: [number, number] = [6672, 1170];
 /** The hump's west foot and its top (r9b: the take-off, 384 over the warning's floor). */
-const HUMP: [number, number] = [2272 + 3520, 1472];
+const HUMP: [number, number] = [2144 + 3520, 1472];
+/** The den's mouth (r10): an arch in the tunnel's east wall at the warning's floor, its lid a root gate in it. */
+const MOUTH_X = 7808;
+const LID_X = 7936;
 /** The den's warning's floor. */
 const WARN_FLOOR = 1856;
 /** The knuckles over it (x, top). */
@@ -2603,8 +2651,9 @@ function tunnel(): Json {
   // px under the hump's top, already falling fast), drops into the pit ~200 short. A lower floor (1,984) let the apex
   // glide land clean but opened the pit to a jump and a kick: the solver's lock leaked.)
   r.cave(3712 + TX, 1088, 4480 + TX, 1856, { ceil: 96, w: 0, e: 0, corner: 0 });
-  r.hole(4096 + TX, 1792, 4480 + TX, 2048);
-  r.gate('den-lid', 4096 + TX, 1792, 192, 64, 'cn-tunnel-clear');
+  // (r10, review r9 #6: the den's mouth is an arch in the east wall at the floor, not a drop at its edge; its lid a
+  // root gate standing in it until the warning is cleared.)
+  r.gate('den-lid', LID_X, 1600, 8000 - LID_X, 256, 'cn-tunnel-clear');
   r.bark('burrow-panel', 768 + TX, 1856, 192, 64, true);
   r.hole(768 + TX, 1920, 960 + TX, 2176);
   // A covered tube in the roof over the pit (review r5 #10: a hidden route, Nine Sols' vents): the way back west for
@@ -2622,7 +2671,8 @@ function tunnel(): Json {
   r.fill();
   // Root curtains either side of the door's shaft, down to 224 over the floor (plumb on the shaft's side).
   r.hang(1536 + TX, 1280, 256, 352, 3, 'r');
-  r.hang(2048 + TX, 1280, 192, 352, 3, 'l');
+  // (r10: narrower, the hump moved under its old east half.)
+  r.hang(2048 + TX, 1280, 96, 352, 2, 'l');
   // The hump, the pit (thorns all along its floor), the block under the shortcut.
   // (r9b: the hump steps up from the west to a take-off 384 over the far floor, its east face plumb at the pit's lip:
   // the highest ground is where she jumps. Over the old 256 drop a jump held through landed 25 px past the lip. Now a
@@ -2630,7 +2680,8 @@ function tunnel(): Json {
   // the far face.)
   r.mass(HUMP[0], 1856 - 192, PIT_W - HUMP[0], 192);
   r.mass(HUMP[0] + 96, HUMP[1], PIT_W - HUMP[0] - 96, 1856 - 192 - HUMP[1]);
-  r.mass(4288 + TX, 1408, 192, 384);
+  // The mouth's lintel (r10): the ledge under the cellar's shortcut, over the arch.
+  r.mass(MOUTH_X, 1408, 8000 - MOUTH_X, 192);
   r.noClaws(PIT_W - 128, 768, 1088);
   r.noClaws(PIT_W, 896, 1088);
   // (r9b: the pit's far face is slick: a jump that falls short slides into the thorns, no kick up it.)
@@ -2691,41 +2742,53 @@ function tunnel(): Json {
   // beats: the lampwings down from the roof first (from over the pit and down the tube's east shaft), then, both
   // down, a juvenile pair and a burrback up out of the den's mouth under the lid (or down the shaft if she stands by
   // it). Two lamps hang a jump over the floor (a fling is a dodge, a throw-cut). The lid opens when the last falls.
+  // r10 (review r9 #6: a scuffle on a bench, the mouth a smear under the frame): the floor is 1,024 flat from the pit's
+  // far lip to the lid, no knuckle in it, the den's mouth an arch in the east wall at the floor (the link to the den
+  // moved up to it), the frame a set zoom 1.0 over the floor and the mouth. A lamp over each end of the floor: the
+  // springboard by the pit's lip, the trap (r10, review r9 #2) by the mouth.
   const warn = { wakes: 'cn-tunnel-wave', sets: 'cn-tunnel-beat2' };
   const warn2 = { wakes: 'cn-tunnel-beat2', sets: 'cn-tunnel-clear' };
   r.add('triggers', {
     id: 'den-warn',
     x: PIT_E,
     y: WARN_FLOOR - 256,
-    w: 4096 + TX - PIT_E,
+    w: LID_X - PIT_E,
     h: 256,
     sets: 'cn-tunnel-wave',
     rearm: true,
   });
-  r.flyer('lampwing', 'wing-warn-1', 3700 + TX, 1560, 1, {
+  r.flyer('lampwing', 'wing-warn-1', PIT_E + 260, 1560, 1, {
     radius: 140,
     sight: 360,
     ...warn,
-    arrive: [[3200 + TX, 1300]],
+    arrive: [[PIT_E - 300, 1300]],
   });
-  r.flyer('lampwing', 'wing-warn-2', 4020 + TX, 1520, -1, {
+  r.flyer('lampwing', 'wing-warn-2', LID_X - 220, 1520, -1, {
     radius: 120,
     sight: 360,
     ...warn,
-    arrive: [[4224 + TX, 1120]],
+    arrive: [[7744, 1120]],
   });
-  const mouth: Array<[number, number]> = [
-    [4320 + TX, 2048],
-    [4224 + TX, 1120],
-  ];
-  r.juvenile('juv-warn', 3600 + TX, WARN_FLOOR, 1, 200, { fenced: true, ...warn2, arrive: mouth });
-  r.juvenile('juv-warn-2', 3900 + TX, WARN_FLOOR, -1, 120, { fenced: true, ...warn2, arrive: mouth });
-  r.burrback('burr-warn', 3750 + TX, WARN_FLOOR, -1, 240, { fenced: true, ...warn2, arrive: mouth });
-  // Two root knuckles over the floor (a step out of a ram's line, a perch under the lampwings' dives).
-  r.oneWay(3600 + TX, WARN_FLOOR - 192, 128, 'branch');
-  r.oneWay(3888 + TX, WARN_FLOOR - 256, 128, 'branch');
-  r.lamp('wick-warn-1', 3640 + TX, WARN_FLOOR - 220);
-  r.lamp('wick-warn-2', 4180 + TX, 1792 - 220);
+  // (Beat 2 comes out of the den's mouth, behind the lid.)
+  const mouth: Array<[number, number]> = [[7980, WARN_FLOOR]];
+  r.juvenile('juv-warn', PIT_E + 300, WARN_FLOOR, 1, 240, { fenced: true, ...warn2, arrive: mouth });
+  r.juvenile('juv-warn-2', LID_X - 340, WARN_FLOOR, -1, 200, { fenced: true, ...warn2, arrive: mouth });
+  r.burrback('burr-warn', PIT_E + 520, WARN_FLOOR, -1, 300, { fenced: true, ...warn2, arrive: mouth });
+  r.lamp('wick-warn-1', PIT_E + 140, WARN_FLOOR - 220);
+  r.lamp(WARN_TRAP, MOUTH_X - 64, WARN_FLOOR - 206, { trap: true, moths: 40 });
+  // A re-form point on the floor (r10, review r9 #3: faded in the warning she came back west of the pit, behind the
+  // glide and the hawker): a mark patch at the pit's far lip, marked anywhere on the floor (`area`), never a rest.
+  r.patch('p-warn', PIT_E + 128, WARN_FLOOR, {
+    mark: true,
+    area: { x: PIT_E, y: WARN_FLOOR - 256, w: LID_X - PIT_E, h: 256 },
+  });
+  // The boss foreshadowed (r10, review r9 #7): shed shells the size of the old burrback's back on the tunnel's floor,
+  // claw scrapes four times a burrback's on the hump's face and by the mouth (render draws `shell` / `scrape`). Beat 2
+  // starting (`flagSet cn-tunnel-beat2`) is felt: a deep slam from the den (render / audio, 0.3 trauma).
+  r.landmark('shell-land', 'shell', 1700 + TX, 1856);
+  r.landmark('scrape-hump', 'scrape', HUMP[0] + 140, 1664);
+  r.landmark('shell-warn', 'shell', PIT_E + 760, WARN_FLOOR);
+  r.landmark('scrape-mouth', 'scrape', MOUTH_X - 24, 1700);
   r.set('camera', {
     ...(r.data.camera as Json),
     zones: [
@@ -2735,12 +2798,11 @@ function tunnel(): Json {
         y: 1088,
         w: 8000 - PIT_E,
         h: WARN_FLOOR - 1088,
-        // (r9b, render's note: the bounds stopped at the mouth's floor (2,048), so beat 2's tell and its arrivals up
-        // out of the den's mouth played on the frame's bottom edge. Now a set zoom (0.85: the view 2,260 x 1,270 at
-        // 16:9) centred on a small frame over the mouth's corner: the view asks for more than the room's foot and its
-        // east edge, and the room's soft edges (the zones' 220 px knee) stop it ~20 px short of both. The mouth and
-        // its step sit well inside the frame at 16:9, 16:10 and 21:9; the pit's east half and the roof still show.)
-        zoom: 0.85,
+        // (r9b: a set zoom centred on a small frame in the room's south-east corner: the view asks for more than the
+        // room's foot and east edge, and the room's soft edges (the zones' 220 px knee) stop it ~20 px short of both.
+        // r10, review r9 #6: zoom 1.0 (0.85 made the fight small), the mouth an arch at the floor's east end now: the
+        // floor and the mouth fill the frame, the pit's far lip on its left.)
+        zoom: 1,
         bounds: { x: 8000 - 640, y: 2176 - 640, w: 640, h: 640 },
         until: 'cn-tunnel-clear',
       },
@@ -2752,9 +2814,9 @@ function tunnel(): Json {
   r.place('land', 1920 + TX, 1856);
   r.place('floor', 1000 + TX, 1856);
   r.place('hump', PIT_W - 96, HUMP[1]);
-  r.place('east', 3900 + TX, WARN_FLOOR);
-  r.place('low', 4300 + TX, 2048);
-  r.place('ledge', 4350 + TX, 1408);
+  r.place('east', PIT_E + 512, WARN_FLOOR);
+  r.place('mouth', 7900, WARN_FLOOR);
+  r.place('ledge', 7904, 1408);
   r.place('tube', 3200 + TX, 896);
   r.place('pile', 800, 1856);
   r.shotStops([
@@ -2763,7 +2825,8 @@ function tunnel(): Json {
     ['run', 2000, 1700],
     ['pile', 900, 1856],
     ['pit', 3100 + TX, 1700],
-    ['east', 3900 + TX, WARN_FLOOR],
+    ['east', PIT_E + 512, WARN_FLOOR],
+    ['mouth', 7700, WARN_FLOOR],
   ]);
   r.route('hub', 'land', { oneWay: true });
   r.route('land', 'hub', { needs: [C], oneWay: true });
@@ -2774,16 +2837,17 @@ function tunnel(): Json {
   r.route('nest', 'pile', { needs: [C], oneWay: true });
   r.route('land', 'hump');
   r.route('hump', 'east', { needs: [G], oneWay: true });
-  r.route('east', 'low');
-  r.route('low', 'den');
-  r.route('low', 'ledge', { needs: [C] });
+  r.route('east', 'mouth');
+  r.route('mouth', 'east');
+  r.route('mouth', 'den');
+  r.route('east', 'ledge', { needs: [C] });
   r.route('ledge', 'cellar', { door: 'sc-cellar' });
   r.route('ledge', 'tube', { needs: [C] });
   r.route('tube', 'hump', { oneWay: true });
   // Furniture between the fights (review r5 #3: the exact references' thorns, things to hit and small ledges).
   r.oneWay(640 + TX, 1664, 128, 'branch');
   r.oneWay(1024 + TX, 1600, 160, 'branch');
-  r.pod('pod-low', 4200 + TX, 2048, 1200, 'sit');
+  r.pod('pod-low', 7680, WARN_FLOOR, 1200, 'sit');
   return r.finish();
 }
 
@@ -2841,17 +2905,21 @@ function burrow(): Json {
   return r.finish();
 }
 
+/** The den's balcony floor (r10: the tunnel's warning floor, world 5,952, through the mouth). */
+const DEN_IN = 320;
+
 function den(): Json {
-  const r = new Wood('cn-den', 'The burrow under the roots', [300, 512], 7503, {
+  const r = new Wood('cn-den', 'The burrow under the roots', [300, DEN_IN], 7503, {
     back: true,
     mood: 'deep',
     mass: 'ground',
   });
-  r.cave(0, 256, 640, 512, { ceil: 64, w: 0, e: 0, corner: 0 });
+  // (r10: in at the tunnel's warning floor through the den's mouth: the balcony 192 higher than v9's.)
+  r.cave(0, DEN_IN - 256, 640, DEN_IN, { ceil: 0, w: 0, e: 0, corner: 0 });
   // The arena: 2688 wide (a 21:9 view sees wall to wall), 896 tall, its roof bitten.
   r.cave(576, 448, 3264, 1344, { ceil: 96, w: 0, e: 0, corner: 128, skip: [[2816, 3136]] });
   // The balcony's lip into the arena (the bitten corner sealed it off in v3: a softlock found on video).
-  r.hole(576, 256, 832, 512);
+  r.hole(576, DEN_IN - 256, 832, 512);
   r.gate('root-gate', 3264, 1088, 128, 256, 'cn-den-down');
   r.hole(3392, 1088, 3840, 1344);
   // (r9, review r8 #2: the mass more than 256 px from the air is sealed air with the back behind it.)
@@ -2876,8 +2944,8 @@ function den(): Json {
   r.mass(2944, 448, 96, 808, false);
   // A lamp over the taproot: its third phase plants it there and the lamp goes out (`snuffs`): the den darkens.
   r.lamp('wick-taproot', 2860, 640);
-  r.patch('p-den', 300, 512);
-  r.lamp('wick-den', 380, 380);
+  r.patch('p-den', 300, DEN_IN);
+  r.lamp('wick-den', 380, DEN_IN - 132);
   r.enemy({
     id: 'old-burr',
     kind: 'oldBurrback',
@@ -2895,11 +2963,11 @@ function den(): Json {
   });
   r.landmark('arena', 'arena', 1900, 1344);
   r.landmark('root-gate', 'gate', 3328, 1344);
-  r.place('balcony', 300, 512);
+  r.place('balcony', 300, DEN_IN);
   r.place('floor', 1700, 1344);
   r.place('door', 3700, 1344);
   r.shotStops([
-    ['balcony', 400, 512],
+    ['balcony', 400, DEN_IN],
     ['reveal', 700, 704],
     ['floor', 1700, 1344],
     ['taproot', 2800, 1344],
@@ -3078,6 +3146,31 @@ const AREAS = [
   { id: 'cn-deep', rooms: ['cn-tunnel', 'cn-burrow', 'cn-den', 'cn-out', 'cn-ledge'] },
 ];
 
+/** A springboard's relight (r10): the firefly's hung lights burn again behind her; the gap's wait for its pass. */
+const SPRING_RELIGHT = 240;
+const GAP_RELIGHT = 900;
+
+/**
+ * Two kinds of lamp (r10, review r9 #2: "what to use and what to free"): every plain lamp she can fling off is a
+ * springboard, one of the firefly's hung lights: it holds no trapped moths (`moths` 0) and burns again after it goes
+ * out (`relight`, never saved, nothing counted). The traps (`trap`) are cut out for good and free their moths. Not
+ * touched: lamps that burn on a flag (`after`, the seed sockets), a boss's (the den's), the valley's (out of reach).
+ */
+function springboards(rooms: Json[]): void {
+  for (const room of rooms) {
+    const snuffed = new Set(
+      ((room.enemies as Json[] | undefined) ?? []).map((e) => e.snuffs as string | undefined).filter(Boolean),
+    );
+    for (const l of (room.lures as Json[] | undefined) ?? []) {
+      if (l.kind !== 'wick' || l.trap || l.after || l.relight) continue;
+      if (snuffed.has(l.id as string) || room.id === 'cn-den') continue;
+      if (String(l.id).startsWith('wick-valley')) continue;
+      l.relight = room.id === 'cn-gap' ? GAP_RELIGHT : SPRING_RELIGHT;
+      l.moths = 0;
+    }
+  }
+}
+
 export function buildCanopy(): { rooms: Json[]; world: Json } {
   for (const [id, p] of Object.entries(PLACE))
     if (p.w < MIN_W || p.h < MIN_H)
@@ -3111,6 +3204,7 @@ export function buildCanopy(): { rooms: Json[]; world: Json } {
     out(),
     ledge(),
   ];
+  springboards(rooms);
   const ids = new Set(rooms.map((r) => r.id as string));
   const world = {
     start: 'cn-hatch',

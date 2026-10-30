@@ -64,6 +64,42 @@ export function returnPoint(sx: number, sy: number, scene: Scene, t: Tuning): { 
   return { x, y: groundY(x, sy, scene, step) };
 }
 
+/**
+ * A thorn return inside a shut arena (the Canopy r10, review r9 #3: four returns in a row put her back on the Grove's
+ * pit floor facing the bed she had walked into): on the top she last stood on, the end farthest from bed `bed`, inset
+ * `room.returnInset`, and at least `room.arenaThornPx` from every thorn rect. Null when the top cannot be found.
+ */
+export function arenaReturn(
+  sx: number,
+  sy: number,
+  bed: { x: number; y: number; w: number; h: number },
+  scene: Scene,
+  t: Tuning,
+): { x: number; y: number } | null {
+  const step = Math.max(0, Math.round(t.ground.stepUp));
+  const run = topRun(sx, sy, scene, step);
+  if (!run) return null;
+  const inset = Math.min(Math.round(t.room.returnInset), Math.floor((run.x1 - run.x0) / 2));
+  const bc = bed.x + bed.w / 2;
+  const far =
+    Math.abs(run.x0 + inset - bc) >= Math.abs(run.x1 - inset - bc) ? run.x0 + inset : run.x1 - inset;
+  const dir = far < bc ? 1 : -1;
+  const keep = Math.round(t.room.arenaThornPx);
+  const w = t.body.width;
+  // From the far end toward the bed until no thorns lie within `keep` of her box.
+  for (let x = far; dir > 0 ? x <= run.x1 - inset : x >= run.x0 + inset; x += dir * 16) {
+    const y = groundY(x, sy, scene, step);
+    const near = (scene.thorns ?? []).some(
+      (r) =>
+        x - w / 2 - keep < r.x + r.w && r.x < x + w / 2 + keep && y - 2 * keep < r.y + r.h && r.y < y + keep,
+    );
+    if (near) continue;
+    if (solidAt(scene, Math.round(x - w / 2), y - t.body.height, w, t.body.height)) continue;
+    return { x: Math.round(x), y };
+  }
+  return null;
+}
+
 /** Scratch events for the probe (thrown away). */
 const PROBE_EVENTS: SimEvent[] = [];
 

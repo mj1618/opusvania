@@ -3,12 +3,14 @@ import type { BossSpec } from './boss/data';
 import type {
   Bark,
   BounceCap,
+  FireflyPass,
   FireflySign,
   FlagGate,
   FlagTrigger,
   Hollow,
   Moonseed,
   MothStone,
+  Roost,
   SeedCase,
   Swing,
   Thorns,
@@ -253,10 +255,22 @@ export interface Lure {
   /** It burns only once this story flag is set (the firefly's glow-cap after the glimpse: src/sim/kit.ts). */
   after?: string;
   /**
-   * A toy room's lamp (lab-feel): out, it burns again this many frames later, and its snuff is never saved
-   * (no moths counted). Real rooms never use it.
+   * Out, it burns again this many frames later, and its snuff is never saved (no moths counted): a toy room's lamp
+   * (lab-feel), and since the Canopy r10 a springboard, one of the firefly's hung lights she flings off (the
+   * firefly relights them behind her). A `trap` never relights.
    */
   relight?: number;
+  /**
+   * A trap lamp (the Canopy r10, review r9 #2: the story's verb): a cage of moths, not a springboard. No fling off
+   * it (`flingTarget` skips it); the blade puts it out in `lures.trapHp` cuts, for good (saved), and its `moths`
+   * are freed (`lureSnuff` with `trap: true`; `save.moths` counts them). Render draws it unlike a springboard.
+   */
+  trap?: boolean;
+  /**
+   * The first fling's lesson (the Canopy r10, review r9 #1): until its `sets` flag is in the save, her fall slows
+   * while she is in its fling reach (`lures.lessonFall`, `lessonKeep`): the window to press Lamp is wide.
+   */
+  lesson?: boolean;
   /**
    * A moonwick (`kind: 'moonwick'`, Lanternroot): once kindled it burns for good (the save keeps `room:id` in
    * `opened`): a route light.
@@ -350,6 +364,13 @@ export interface MoonPatch {
    * `flag` not yet set sets `flag` (`stoneHung`): one more each time she comes back. Render draws the hung ones.
    */
   hangs?: Array<{ stone: string; flag: string }>;
+  /**
+   * A re-form point only (the Canopy r10, review r9 #3: the den's warning's west lip): passing it marks it
+   * (`patchMark`), standing on it never rests her (no heal, no `patchRest`). Mid-arena, a light to come back to.
+   */
+  mark?: boolean;
+  /** Where passing marks it, if not its box (a `mark` patch: the den's warning's whole floor). */
+  area?: { x: number; y: number; w: number; h: number };
 }
 
 /**
@@ -486,6 +507,10 @@ export interface Scene {
   hollows?: Hollow[];
   /** Moonseeds (the Downwood's keys, src/sim/finds.ts): a door that counts them is a gate on `seeds:<n>`. */
   moonseeds?: Moonseed[];
+  /** The firefly's scripted passes (src/sim/firefly.ts): a light that flees and relights lamps behind her. */
+  fireflies?: FireflyPass[];
+  /** Where freed moths gather in this room, one rect per trap lamp freed anywhere (src/sim/firefly.ts). */
+  roosts?: Roost[];
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).

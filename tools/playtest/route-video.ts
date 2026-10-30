@@ -33,6 +33,10 @@
  * landing's floor, the terraces, the bough and the stair to the hollow; the hollow lamp's fling to the shard after the
  * ambush; the gap's three-lamp chain down to the pod garden and out by the fork; the tunnel's glide onto the den's
  * warning, its two beats, then the den).
+ *
+ * v7 (2026-10-31, video v9): a rest at the hub's map station (the kin's lamp, `p-crossing`) after the high chamber,
+ * captioned with the map and the hung moth-stones; a fight never picks a tactic whose look-ahead cuts a lamp down with
+ * the blade (out for good in the save: the ambush lampwing's dives cut the hollow lamp, the shard's only way up).
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -45,6 +49,7 @@ import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { cloneState, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import { flingTarget } from '../../src/sim/lures';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { chimneyMacros, type ExploreNode, explore, feet, glideClimbMacros, pathTo } from '../solve/explore';
@@ -105,6 +110,11 @@ const taken = (id: string) => (s: GameState) => s.save.taken.includes(id);
 const picked = (room: string, id: string) => {
   const k = (getRoom(room).pickups ?? []).findIndex((p) => p.id === id);
   return (s: GameState) => s.room === room && (s.pickups.timers[k] ?? 0) !== 0;
+};
+/** She has rested at a patch (stood still in it or pressed up: whole again, saved), not only passed it (a mark). */
+const rested = (room: string, id: string) => {
+  const k = (getRoom(room).patches ?? []).findIndex((p) => p.id === id);
+  return (s: GameState) => s.room === room && s.rest.done && s.rest.at === k;
 };
 const owns = (a: string) => (s: GameState) => (s.save.abilities as readonly string[]).includes(a);
 const flag = (f: string) => (s: GameState) => s.save.flags.includes(f);
@@ -229,6 +239,15 @@ export const ROUTE: Leg[] = [
     max: 12000,
     optional: true,
   },
+  // v7 (the v9 layout's map station): the kin's lamp in the clearing. A rest there shows the map and hangs the
+  // moth-stones she has read (the well's west stone by now).
+  {
+    name: "cn-hub: a rest at the kin's lamp (the map station)",
+    kind: 'goal',
+    test: rested('cn-hub', 'p-crossing'),
+    max: 20000,
+    optional: true,
+  },
   { name: 'cn-hub: east to the fork', kind: 'exit', exit: 'fork', max: 20000 },
   { name: 'cn-fork: the claw climb to the Grove', kind: 'exit', exit: 'grove', max: 12000 },
   // The Grove: landing in the pit shuts the root gates; both open when the wave is down.
@@ -251,7 +270,15 @@ export const ROUTE: Leg[] = [
   { name: 'cn-grove: the seed', kind: 'goal', test: flag('seeds:2'), max: 16000 },
   { name: 'cn-grove: through the gate to the Spire', kind: 'exit', exit: 'spire', max: 16000 },
   { name: "cn-spire: the climb through the hawker's orbit", kind: 'exit', exit: 'bower', max: 16000 },
-  { name: 'cn-bower: the save', kind: 'goal', test: (s) => s.save.patch?.room === 'cn-bower', max: 6000 },
+  // (Standing in the bower's patch, then a press of up: a rest, not only the mark a pass leaves.)
+  {
+    name: 'cn-bower: the save',
+    kind: 'goal',
+    test: (s) =>
+      s.room === 'cn-bower' && s.player.grounded && Math.abs(feet(s).x - 3800) < 52 && feet(s).y === 1408,
+    max: 6000,
+  },
+  { name: 'cn-bower: a rest', kind: 'script', script: 'U4 .40' },
   { name: 'cn-bower: the kin climb to the crown', kind: 'exit', exit: 'crown', max: 12000 },
   { name: 'cn-crown: the glide', kind: 'goal', test: owns('glide'), max: 12000 },
   { name: 'cn-crown: back down', kind: 'exit', exit: 'bower', max: 12000 },
@@ -380,7 +407,36 @@ class Driver {
   }
 
   play(tape: readonly number[]): void {
-    for (const m of tape) this.push(m);
+    for (let k = 0; k < tape.length; k++) {
+      const m = tape[k] as number;
+      if (!this.flung && m & ActionBit.lamp && !(this.s.prevInput & ActionBit.lamp))
+        this.firstFling(m, tape, k);
+      else this.push(m);
+    }
+  }
+
+  /** Whether she has pressed the Lamp at a flame yet (the first fling's lesson, below). */
+  private flung = false;
+
+  /**
+   * The first fling (v7): the explorer presses the Lamp the frame a flame comes into reach, before the Lamp prompt
+   * (hud/prompts.ts: in reach `flingAfter`) can show. So the first press waits while the flame stays in reach (up to 5
+   * frames, 2 short of its last), and the aim is held a beat longer (time stands still while she aims).
+   */
+  private firstFling(m: number, tape: readonly number[], k: number): void {
+    this.flung = true;
+    const before = this.s.prevInput & ~ActionBit.lamp;
+    if (flingTarget(this.s, this.game.scene, tuning) >= 0) {
+      const probe = cloneState(this.s);
+      let reach = 0;
+      for (; reach < 12; reach++) {
+        step(probe, before, tuning, this.game.scene, [], world);
+        if (flingTarget(probe, this.game.scene, tuning) < 0) break;
+      }
+      for (let d = 0; d < Math.min(5, reach - 2); d++) this.push(before);
+    }
+    this.push(m);
+    if (this.s.player.fling >= 0 && tape[k + 1] === m) for (let h = 0; h < 36; h++) this.push(m);
   }
 
   /** Replays a saved tape with its teleports (a resumed plan). */
@@ -393,6 +449,7 @@ class Driver {
         }
       this.push(m);
     }
+    this.flung = this.events.some(({ e }) => e.type === 'fling');
   }
 
   warp(x: number, y: number, why: string): void {
@@ -570,6 +627,7 @@ class Driver {
       const r = { dealt: 0, taken: 0, killed: false, faded: false, caught: 0, frames: 300, stunned: false };
       let prev = s.prevInput;
       let low = 0;
+      let cut = false;
       for (let k = 0; k < 300; k++) {
         const m = line.act(s, k, prev);
         prev = m;
@@ -581,6 +639,9 @@ class Driver {
           if (x.type === 'enemyDie' && x.id === id) r.killed = true;
           if (x.type === 'fade') r.faded = true;
           if (x.type === 'fallCatch' || x.type === 'roomExit') r.caught++;
+          // (v7: a lamp cut down by the blade is out for good (the save keeps it): the well's hollow lamp, beside
+          // the ambush lampwing's post, is the only way to the ambush's shard.)
+          if (x.type === 'lureSnuff' && !(x as { fling?: boolean }).fling) cut = true;
         }
         low = Math.max(low, feet(s).y - y0);
         if (r.killed || r.faded) {
@@ -588,7 +649,8 @@ class Driver {
           break;
         }
       }
-      const sc = fightScore(r, c.name) - (c.name === current ? 300 : 0) + (low > 260 ? 5000 : 0);
+      const sc =
+        fightScore(r, c.name) - (c.name === current ? 300 : 0) + (low > 260 ? 5000 : 0) + (cut ? 8000 : 0);
       if (sc < bs) {
         bs = sc;
         best = c;
@@ -723,6 +785,8 @@ const KEEP = new Set([
   'barkBreak',
   'gateOpen',
   'patchRest',
+  'mapStation',
+  'stoneHung',
   'bossPhase',
   'flagSet',
   'enemyAware',
@@ -819,7 +883,8 @@ async function render(out: string): Promise<void> {
     );
     page.setDefaultTimeout(0);
     await page.evaluate(
-      `(() => { const g = window.__game; g.cam(null); g.debug.labels?.(false); g.load(); g.input(${JSON.stringify(tape)}); })()`,
+      // (v7: the key prompts on, as a first-timer sees them: `?manual` turns them off for captures.)
+      `(() => { const g = window.__game; g.cam(null); g.debug.labels?.(false); const pr = window.__prompts; if (pr) { pr.enabled = true; pr.reset(); } g.load(); g.input(${JSON.stringify(tape)}); })()`,
     );
     const canvas = page.locator('#game');
     let done = 0;
@@ -948,6 +1013,10 @@ function eventText(e: SimEvent): string | null {
         : `Hollow: ${UPGRADE[x.upgrade as string] ?? x.upgrade}`;
     case 'patchRest':
       return x.room === 'cn-bower' ? 'A save: the bower' : null;
+    case 'mapStation':
+      return "A rest at the kin's lamp: the map";
+    case 'stoneHung':
+      return "A moth-stone hung on the kin's lamp";
     case 'lureSnuff':
       return x.id === 'wick-taproot' ? "The den's lamp goes out" : null;
     case 'stoneRead':
@@ -979,7 +1048,13 @@ function eventText(e: SimEvent): string | null {
           ? 'The pit wakes: the gates shut'
           : x.flag === 'cn-grove-clear'
             ? 'The wave is down: the gates open'
-            : null;
+            : x.flag === 'cn-first-fling'
+              ? 'The first fling'
+              : x.flag === 'cn-tunnel-wave'
+                ? "The den's warning: the arena shuts"
+                : x.flag === 'cn-tunnel-clear'
+                  ? "The warning is down: the den's lid opens"
+                  : null;
     case 'fade':
       return 'She fades';
     default:

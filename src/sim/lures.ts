@@ -94,7 +94,29 @@ const F = { x: 0, y: 0 };
 
 /** Cuts it takes to put out. */
 export function lureHpMax(l: Lure, t: Tuning): number {
+  if (l.trap) return Math.max(1, Math.round(t.lures.trapHp));
   return Math.max(1, Math.round(lureRow(t, l.kind).hp));
+}
+
+/**
+ * Is she within `lures.lessonPx` of a burning lesson lamp (`Lure.lesson`) whose `sets` flag the save lacks? (The first fling,
+ * the Canopy r10: her fall slows there, src/sim/player/player.ts `gravity`.)
+ */
+export function lessonInReach(state: GameState, scene: Scene, t: Tuning): boolean {
+  const list = scene.lures;
+  if (!list) return false;
+  const p = state.player;
+  const cx = centreX(p);
+  const cy = centreY(p);
+  for (let i = 0; i < list.length; i++) {
+    const l = list[i];
+    if (!l?.lesson || (state.lures.hp[i] ?? 0) <= 0) continue;
+    if (l.sets && state.save.flags.includes(l.sets)) continue;
+    const r = t.lures.lessonPx;
+    const f = flameAt(state.lures, i, l, state.frame, t, F);
+    if ((f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy) <= r * r) return true;
+  }
+  return false;
 }
 
 /**
@@ -193,6 +215,8 @@ export function flingTarget(state: GameState, scene: Scene, t: Tuning): number {
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     if (!l || (state.lures.hp[i] ?? 0) <= 0 || (state.lures.live?.shield[i] ?? 0) > 0) continue;
+    // (A trap lamp is a cage to cut open, never a springboard: the Canopy r10.)
+    if (l.trap) continue;
     const r = lureRowNow(state.lures, i, l, t).fling;
     if (!(r > 0)) continue;
     const f = flameAt(state.lures, i, l, state.frame, t, F);
@@ -460,6 +484,7 @@ export function snuffLure(
     fling: by === 'fling',
     side,
     ...(by === 'gust' ? { gust: true } : {}),
+    ...(l.trap ? { trap: true, total: state.save.moths } : {}),
   });
   // A lamp-held gate (Lanternroot): its flag is set as it goes out.
   if (l.sets && !state.save.flags.includes(l.sets)) {

@@ -4,7 +4,16 @@ import { beatGrab, freeGrab, tickGrab } from '../grab';
 import { ActionBit, axisX, type InputFrame } from '../input';
 import { floorBarkAt, slashKit, thornAt } from '../kit';
 import { kindle, kindleTarget, spendGlow, startGust } from '../light';
-import { flameAt, flingAim, flingLaunch, flingTarget, lurePull, slashLures, tickLures } from '../lures';
+import {
+  flameAt,
+  flingAim,
+  flingLaunch,
+  flingTarget,
+  lessonInReach,
+  lurePull,
+  slashLures,
+  tickLures,
+} from '../lures';
 import {
   type Body,
   type Collider,
@@ -120,6 +129,8 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     flingFrames: 0,
     flingCd: 0,
     flingBuf: 0,
+    lampArmed: false,
+    lessonK: 0,
     chainX: Math.round(feetX),
     chainY: y + h,
     lureBack: -1,
@@ -1023,6 +1034,19 @@ function gravity(c: Ctx): void {
   if (p.cut && P.releaseZero && p.framesSinceJump >= P.minJumpFrames && p.vy < 0) p.vy = 0;
   // Air hang of a slash: the fall is held back for a few frames. It never lifts her.
   if (p.hang > 0 && p.vy > P.hangVy) p.vy = P.hangVy + (p.vy - P.hangVy) * P.hangKeep;
+  // The first fling's lesson (`Lure.lesson`, the Canopy r10): in its reach, her fall slows to a drift.
+  // (`lessonK` eases in over `lessonEase` frames near the flame and out away from it: her caps across and down go from
+  // the usual to `lessonRun` / `lessonFall` with it, so the slowing reads as time thickening, not a wall.)
+  const L = P.tuning.lures;
+  const ease = 1 / Math.max(1, L.lessonEase);
+  const near = !p.grounded && lessonInReach(c.state, c.scene, P.tuning);
+  p.lessonK = near ? Math.min(1, p.lessonK + ease) : Math.max(0, p.lessonK - ease);
+  if (p.lessonK > 0) {
+    const capX = P.maxRun + (L.lessonRun - P.maxRun) * p.lessonK;
+    const capY = P.maxFall + (L.lessonFall - P.maxFall) * p.lessonK;
+    if (Math.abs(p.vx) > capX) p.vx = p.vx > 0 ? capX : -capX;
+    if (p.vy > capY) p.vy = capY;
+  }
 }
 
 function normal(c: Ctx): void {
@@ -1335,16 +1359,24 @@ function fling(c: Ctx): boolean {
     // lamp comes into reach 5 frames after the first's release, inside the cooldown, and an early press was eaten). A
     // press out of the cooldown is taken now or not at all (the glow rooms' Lamp verbs take it: lampVerb).
     // (`flingBuf` counts the frames the press may still start one, this one included.)
-    if (c.pressed(ActionBit.lamp))
+    // (The Canopy r10, `heldPress`: a press with no flame in reach, held on, waits for the first flame to come into
+    // reach. Not in a glow room: Lanternroot's Lamp is held to mend.)
+    if (c.pressed(ActionBit.lamp)) {
       p.flingBuf = p.flingCd > 0 ? 1 + Math.max(0, Math.round(L.flingBufferFrames)) : 1;
-    else if (!c.held(ActionBit.lamp)) p.flingBuf = 0;
-    if (p.flingBuf <= 0) return false;
-    p.flingBuf--;
+      p.lampArmed = !!L.heldPress && !c.scene.glow;
+    } else if (!c.held(ActionBit.lamp)) {
+      p.flingBuf = 0;
+      p.lampArmed = false;
+    }
+    const armed = p.lampArmed && c.held(ActionBit.lamp);
+    if (p.flingBuf <= 0 && !armed) return false;
+    if (p.flingBuf > 0) p.flingBuf--;
     if (p.flingCd > 0 || p.mode === 'dash' || p.stagger > 0) return false;
     const i = flingTarget(c.state, c.scene, t);
     const l = i >= 0 ? c.scene.lures?.[i] : undefined;
     if (!l) return false;
     p.flingBuf = 0;
+    p.lampArmed = false;
     p.fling = i;
     p.flingFrames = 0;
     endGlide(c, 'lure');

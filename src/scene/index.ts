@@ -161,6 +161,9 @@ const SceneSchema = z
             sets: z.string().min(1).optional(),
             moths: int.min(0).max(500).optional(),
             burn: int.min(60).max(3600).optional(),
+            // The Canopy r10: a trap lamp (cut out for good, frees its moths) and the first fling's lesson.
+            trap: z.boolean().optional(),
+            lesson: z.boolean().optional(),
           })
           .strict(),
       )
@@ -213,6 +216,8 @@ const SceneSchema = z
             hangs: z
               .array(z.object({ stone: z.string().min(1), flag: z.string().min(1) }).strict())
               .optional(),
+            mark: z.boolean().optional(),
+            area: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
           })
           .strict(),
       )

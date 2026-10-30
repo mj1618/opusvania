@@ -29,9 +29,10 @@ import { probe } from '../../tools/levels/glide-probe';
 const t = cloneTuning(defaultTuning);
 const W = getWorld('canopy');
 /** The hump's top (feet), the lip she jumps from (feet x), the far floor's lip. */
-const HUMP: [number, number] = [5950, 1472];
-const LIP = 6070;
-const FAR = 7040;
+// (r10: the hump and the pit 128 further west, the warning's floor 1,024 to the den's mouth.)
+const HUMP: [number, number] = [5822, 1472];
+const LIP = 5942;
+const FAR = 6912;
 const CLAWS = ['wallJump'];
 const GLIDE = ['wallJump', 'glide'];
 
@@ -115,13 +116,14 @@ describe("the gap's chain: an early press is kept (r9b)", () => {
 });
 
 describe("the den's warning frames the den's mouth (r9b)", () => {
+  // (r10, review r9 #6: the mouth is an arch in the east wall at the floor, 7,808-8,000 x 1,600-1,856; zoom 1.0.)
   for (const [vw, vh] of [
     [1920, 1080],
     [1920, 1200],
     [2560, 1080],
   ] as const)
-    it(`the mouth (7,616-8,000 down to its floor at 2,048) and its arrivals are well inside the view at ${vw}x${vh}`, () => {
-      for (const x of [7100, 7400, 7580]) {
+    it(`the mouth and its arrivals well inside the view, the mouth in the frame's middle third, at ${vw}x${vh}`, () => {
+      for (const x of [6980, 7400, 7800]) {
         const scene = getRoom('cn-tunnel');
         const s = createState(1, t, scene, [], GLIDE as never, newSave(GLIDE as never));
         s.save.flags.push('cn-tunnel-wave');
@@ -136,10 +138,14 @@ describe("the den's warning frames the den's mouth (r9b)", () => {
         // (The view's w / h are screen px; the world rect is that over the zoom.)
         const w = vw / cam.zoom;
         const h = vh / cam.zoom;
-        expect(v.y + h / 2, `bottom at x ${x}`).toBeGreaterThanOrEqual(2048 + 96);
+        expect(cam.zoom).toBeCloseTo(1, 1);
+        expect(v.y + h / 2, `bottom at x ${x}`).toBeGreaterThanOrEqual(1856 + 96);
         expect(v.x + w / 2, `east edge at x ${x}`).toBeGreaterThanOrEqual(7960);
+        const k = (1728 - (v.y - h / 2)) / h;
+        expect(k, `mouth height in frame at x ${x}`).toBeGreaterThanOrEqual(1 / 3);
+        expect(k, `mouth height in frame at x ${x}`).toBeLessThanOrEqual(2 / 3);
         // ...and the glide's landing, the pit's far lip, still in it.
-        expect(v.x - w / 2).toBeLessThanOrEqual(7040 - 400);
+        expect(v.x - w / 2).toBeLessThanOrEqual(6912 - 200);
       }
     });
 });

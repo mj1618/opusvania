@@ -763,7 +763,9 @@
         "x": 3700,
         "y": 660,
         "sets": "cn-first-fling",
-        "relight": 90
+        "relight": 90,
+        "lesson": true,
+        "moths": 0
       }
     ],
     "pickups": [],
@@ -1184,7 +1186,17 @@
         "id": "wick-mouth",
         "kind": "wick",
         "x": 520,
-        "y": 1790
+        "y": 1790,
+        "relight": 240,
+        "moths": 0
+      },
+      {
+        "id": "trap-crossing",
+        "kind": "wick",
+        "x": 5200,
+        "y": 1380,
+        "trap": true,
+        "moths": 30
       }
     ],
     "marks": {
@@ -1268,6 +1280,11 @@
         }
       ],
       "places": [
+        {
+          "id": "trap",
+          "x": 5200,
+          "y": 1600
+        },
         {
           "id": "trader",
           "x": 3240,
@@ -1502,6 +1519,32 @@
         }
       ]
     },
+    "roosts": [
+      {
+        "id": "roost-crossing",
+        "lure": "cn-hub:trap-crossing",
+        "x": 1024,
+        "y": 1088,
+        "w": 128,
+        "h": 448
+      },
+      {
+        "id": "roost-grove",
+        "lure": "cn-grove:trap-grove",
+        "x": 2560,
+        "y": 1344,
+        "w": 320,
+        "h": 192
+      },
+      {
+        "id": "roost-warn",
+        "lure": "cn-tunnel:trap-warn",
+        "x": 6144,
+        "y": 640,
+        "w": 512,
+        "h": 320
+      }
+    ],
     "mothStones": [
       {
         "id": "stone-heart",
@@ -1994,7 +2037,9 @@
         "id": "wick-drop",
         "kind": "wick",
         "x": 1184,
-        "y": 800
+        "y": 800,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -2791,13 +2836,17 @@
         "id": "wick-shaft",
         "kind": "wick",
         "x": 1290,
-        "y": 4180
+        "y": 4180,
+        "relight": 240,
+        "moths": 0
       },
       {
         "id": "wick-hollow",
         "kind": "wick",
         "x": 1300,
-        "y": 880
+        "y": 880,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -3526,13 +3575,17 @@
         "id": "wick-limb-1",
         "kind": "wick",
         "x": 1240,
-        "y": 600
+        "y": 600,
+        "relight": 240,
+        "moths": 0
       },
       {
         "id": "wick-limb-2",
         "kind": "wick",
         "x": 1640,
-        "y": 450
+        "y": 450,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -4681,7 +4734,9 @@
         "id": "wick-webs",
         "kind": "wick",
         "x": 1280,
-        "y": 760
+        "y": 760,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -5455,7 +5510,9 @@
         "id": "wick-fork",
         "kind": "wick",
         "x": 3120,
-        "y": 400
+        "y": 400,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -7385,22 +7442,28 @@
     ],
     "lures": [
       {
-        "id": "wick-a",
+        "id": "trap-grove",
         "kind": "wick",
         "x": 1760,
-        "y": 1380
+        "y": 1380,
+        "trap": true,
+        "moths": 30
       },
       {
         "id": "wick-b",
         "kind": "wick",
         "x": 2800,
-        "y": 1380
+        "y": 1380,
+        "relight": 240,
+        "moths": 0
       },
       {
         "id": "wick-c",
         "kind": "wick",
         "x": 3500,
-        "y": 900
+        "y": 900,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -8047,7 +8110,9 @@
         "id": "wick-spire",
         "kind": "wick",
         "x": 960,
-        "y": 760
+        "y": 760,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -9213,7 +9278,9 @@
         "id": "wick-hall",
         "kind": "wick",
         "x": 3300,
-        "y": 860
+        "y": 860,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -10340,19 +10407,25 @@
         "id": "wick-gap-1",
         "kind": "wick",
         "x": 3400,
-        "y": 1420
+        "y": 1420,
+        "relight": 900,
+        "moths": 0
       },
       {
         "id": "wick-gap-2",
         "kind": "wick",
         "x": 3250,
-        "y": 1460
+        "y": 1460,
+        "relight": 900,
+        "moths": 0
       },
       {
         "id": "wick-gap-3",
         "kind": "wick",
         "x": 2800,
-        "y": 1580
+        "y": 1580,
+        "relight": 900,
+        "moths": 0
       }
     ],
     "marks": {
@@ -10441,6 +10514,29 @@
         "y": 2212,
         "w": 944,
         "h": 28
+      }
+    ],
+    "fireflies": [
+      {
+        "id": "firefly-gap",
+        "trigger": {
+          "x": 2688,
+          "y": 1856,
+          "w": 768,
+          "h": 384
+        },
+        "flag": "cn-firefly-gap",
+        "path": [
+          [3040, 1150],
+          [3400, 1400],
+          [3250, 1450],
+          [2800, 1570],
+          [2000, 1300],
+          [700, 520],
+          [380, 200]
+        ],
+        "frames": 240,
+        "relights": ["wick-gap-1", "wick-gap-2", "wick-gap-3"]
       }
     ],
     "shots": {
@@ -10691,7 +10787,9 @@
         "id": "wick-sky",
         "kind": "wick",
         "x": 1700,
-        "y": 640
+        "y": 640,
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -10811,17 +10909,9 @@
       },
       {
         "tag": "ground",
-        "x": 5568,
-        "y": 768,
-        "w": 384,
-        "h": 224,
-        "kick": false
-      },
-      {
-        "tag": "ground",
-        "x": 6080,
+        "x": 5952,
         "y": 896,
-        "w": 1600,
+        "w": 1728,
         "h": 96,
         "kick": false
       },
@@ -10834,18 +10924,10 @@
       },
       {
         "tag": "ground",
-        "x": 6080,
-        "y": 992,
-        "w": 256,
-        "h": 32,
-        "kick": false
-      },
-      {
-        "tag": "ground",
-        "x": 5568,
+        "x": 6048,
         "y": 992,
         "w": 288,
-        "h": 96
+        "h": 32
       },
       {
         "tag": "ground",
@@ -10941,9 +11023,9 @@
       {
         "tag": "ground",
         "x": 5568,
-        "y": 1088,
+        "y": 768,
         "w": 256,
-        "h": 192,
+        "h": 512,
         "kick": false
       },
       {
@@ -10985,14 +11067,14 @@
         "tag": "ground",
         "x": 4480,
         "y": 1856,
-        "w": 1600,
+        "w": 1472,
         "h": 192
       },
       {
         "tag": "ground",
-        "x": 7040,
+        "x": 6912,
         "y": 1856,
-        "w": 576,
+        "w": 1088,
         "h": 192,
         "kick": false
       },
@@ -11042,33 +11124,26 @@
         "tag": "ground",
         "x": 5568,
         "y": 1280,
-        "w": 192,
-        "h": 117
+        "w": 96,
+        "h": 176
       },
       {
         "tag": "ground",
         "x": 5568,
-        "y": 1397,
-        "w": 160,
-        "h": 117
+        "y": 1456,
+        "w": 64,
+        "h": 176
       },
       {
         "tag": "ground",
-        "x": 5568,
-        "y": 1514,
-        "w": 128,
-        "h": 118
-      },
-      {
-        "tag": "ground",
-        "x": 5792,
+        "x": 5664,
         "y": 1664,
         "w": 288,
         "h": 192
       },
       {
         "tag": "ground",
-        "x": 5888,
+        "x": 5760,
         "y": 1472,
         "w": 192,
         "h": 192
@@ -11078,7 +11153,7 @@
         "x": 7808,
         "y": 1408,
         "w": 192,
-        "h": 384
+        "h": 192
       },
       {
         "tag": "ground",
@@ -11144,18 +11219,6 @@
         "tag": "branch",
         "x": 2752,
         "y": 1696,
-        "w": 128
-      },
-      {
-        "tag": "branch",
-        "x": 7120,
-        "y": 1664,
-        "w": 128
-      },
-      {
-        "tag": "branch",
-        "x": 7408,
-        "y": 1600,
         "w": 128
       },
       {
@@ -11292,8 +11355,8 @@
       },
       {
         "id": "pod-low",
-        "x": 7720,
-        "y": 2026,
+        "x": 7680,
+        "y": 1834,
         "mount": "sit",
         "regrow": 1200
       }
@@ -11375,7 +11438,7 @@
       {
         "id": "hawk-pit",
         "kind": "hawker",
-        "x": 6800,
+        "x": 6672,
         "y": 1170,
         "facing": -1,
         "senses": "always",
@@ -11386,7 +11449,7 @@
       {
         "id": "wing-warn-1",
         "kind": "lampwing",
-        "x": 7220,
+        "x": 7172,
         "y": 1560,
         "facing": 1,
         "senses": "always",
@@ -11394,12 +11457,12 @@
         "sight": 360,
         "wakes": "cn-tunnel-wave",
         "sets": "cn-tunnel-beat2",
-        "arrive": [[6720, 1300]]
+        "arrive": [[6612, 1300]]
       },
       {
         "id": "wing-warn-2",
         "kind": "lampwing",
-        "x": 7540,
+        "x": 7716,
         "y": 1520,
         "facing": -1,
         "senses": "always",
@@ -11412,61 +11475,67 @@
       {
         "id": "juv-warn",
         "kind": "juvenileBurrback",
-        "x": 7120,
+        "x": 7212,
         "y": 1856,
         "facing": 1,
-        "radius": 200,
-        "senses": "always",
-        "fenced": true,
-        "wakes": "cn-tunnel-beat2",
-        "sets": "cn-tunnel-clear",
-        "arrive": [[7840, 2048], [7744, 1120]]
-      },
-      {
-        "id": "juv-warn-2",
-        "kind": "juvenileBurrback",
-        "x": 7420,
-        "y": 1856,
-        "facing": -1,
-        "radius": 120,
-        "senses": "always",
-        "fenced": true,
-        "wakes": "cn-tunnel-beat2",
-        "sets": "cn-tunnel-clear",
-        "arrive": [[7840, 2048], [7744, 1120]]
-      },
-      {
-        "id": "burr-warn",
-        "kind": "burrback",
-        "x": 7270,
-        "y": 1856,
-        "facing": -1,
         "radius": 240,
         "senses": "always",
         "fenced": true,
         "wakes": "cn-tunnel-beat2",
         "sets": "cn-tunnel-clear",
-        "arrive": [[7840, 2048], [7744, 1120]]
+        "arrive": [[7980, 1856]]
+      },
+      {
+        "id": "juv-warn-2",
+        "kind": "juvenileBurrback",
+        "x": 7596,
+        "y": 1856,
+        "facing": -1,
+        "radius": 200,
+        "senses": "always",
+        "fenced": true,
+        "wakes": "cn-tunnel-beat2",
+        "sets": "cn-tunnel-clear",
+        "arrive": [[7980, 1856]]
+      },
+      {
+        "id": "burr-warn",
+        "kind": "burrback",
+        "x": 7432,
+        "y": 1856,
+        "facing": -1,
+        "radius": 300,
+        "senses": "always",
+        "fenced": true,
+        "wakes": "cn-tunnel-beat2",
+        "sets": "cn-tunnel-clear",
+        "arrive": [[7980, 1856]]
       }
     ],
     "lures": [
       {
         "id": "wick-pit",
         "kind": "wick",
-        "x": 7000,
-        "y": 1560
+        "x": 6872,
+        "y": 1560,
+        "relight": 240,
+        "moths": 0
       },
       {
         "id": "wick-warn-1",
         "kind": "wick",
-        "x": 7160,
-        "y": 1636
+        "x": 7052,
+        "y": 1636,
+        "relight": 240,
+        "moths": 0
       },
       {
-        "id": "wick-warn-2",
+        "id": "trap-warn",
         "kind": "wick",
-        "x": 7700,
-        "y": 1572
+        "x": 7744,
+        "y": 1650,
+        "trap": true,
+        "moths": 40
       }
     ],
     "marks": {
@@ -11483,9 +11552,9 @@
         },
         {
           "id": "tube-cover",
-          "x": 5888,
+          "x": 5760,
           "y": 704,
-          "w": 1984,
+          "w": 2112,
           "h": 448
         }
       ],
@@ -11495,6 +11564,30 @@
           "kind": "tracks",
           "x": 6520,
           "y": 1856
+        },
+        {
+          "id": "shell-land",
+          "kind": "shell",
+          "x": 5220,
+          "y": 1856
+        },
+        {
+          "id": "scrape-hump",
+          "kind": "scrape",
+          "x": 5804,
+          "y": 1664
+        },
+        {
+          "id": "shell-warn",
+          "kind": "shell",
+          "x": 7672,
+          "y": 1856
+        },
+        {
+          "id": "scrape-mouth",
+          "kind": "scrape",
+          "x": 7784,
+          "y": 1700
         }
       ],
       "places": [
@@ -11515,22 +11608,22 @@
         },
         {
           "id": "hump",
-          "x": 5984,
+          "x": 5856,
           "y": 1472
         },
         {
           "id": "east",
-          "x": 7420,
+          "x": 7424,
           "y": 1856
         },
         {
-          "id": "low",
-          "x": 7820,
-          "y": 2048
+          "id": "mouth",
+          "x": 7900,
+          "y": 1856
         },
         {
           "id": "ledge",
-          "x": 7870,
+          "x": 7904,
           "y": 1408
         },
         {
@@ -11558,11 +11651,11 @@
       "zones": [
         {
           "id": "warning",
-          "x": 7040,
+          "x": 6912,
           "y": 1088,
-          "w": 960,
+          "w": 1088,
           "h": 768,
-          "zoom": 0.85,
+          "zoom": 1,
           "bounds": {
             "x": 7360,
             "y": 1536,
@@ -11584,8 +11677,8 @@
       {
         "id": "den",
         "edge": "e",
-        "from": 1792,
-        "to": 2048
+        "from": 1600,
+        "to": 1856
       },
       {
         "id": "cellar",
@@ -11609,10 +11702,10 @@
     "gates": [
       {
         "id": "den-lid",
-        "x": 7616,
-        "y": 1792,
-        "w": 192,
-        "h": 64,
+        "x": 7936,
+        "y": 1600,
+        "w": 64,
+        "h": 256,
         "flag": "cn-tunnel-clear",
         "kick": false
       }
@@ -11640,7 +11733,7 @@
     "thorns": [
       {
         "id": "thorn-pit",
-        "x": 6080,
+        "x": 5952,
         "y": 2020,
         "w": 960,
         "h": 28
@@ -11656,12 +11749,26 @@
     "triggers": [
       {
         "id": "den-warn",
-        "x": 7040,
+        "x": 6912,
         "y": 1600,
-        "w": 576,
+        "w": 1024,
         "h": 256,
         "sets": "cn-tunnel-wave",
         "rearm": true
+      }
+    ],
+    "patches": [
+      {
+        "id": "p-warn",
+        "x": 7040,
+        "y": 1856,
+        "mark": true,
+        "area": {
+          "x": 6912,
+          "y": 1600,
+          "w": 1024,
+          "h": 256
+        }
       }
     ],
     "shots": {
@@ -11693,7 +11800,12 @@
         },
         {
           "name": "east",
-          "x": 7420,
+          "x": 7424,
+          "y": 1856
+        },
+        {
+          "name": "mouth",
+          "x": 7700,
           "y": 1856
         }
       ],
@@ -11748,14 +11860,18 @@
       },
       {
         "from": "east",
-        "to": "low"
+        "to": "mouth"
       },
       {
-        "from": "low",
+        "from": "mouth",
+        "to": "east"
+      },
+      {
+        "from": "mouth",
         "to": "den"
       },
       {
-        "from": "low",
+        "from": "east",
         "to": "ledge",
         "needs": ["wallJump"]
       },
@@ -12293,7 +12409,7 @@
     "height": 1536,
     "spawn": {
       "x": 300,
-      "y": 512
+      "y": 320
     },
     "solids": [
       {
@@ -12301,21 +12417,14 @@
         "x": 0,
         "y": 0,
         "w": 3840,
+        "h": 64
+      },
+      {
+        "tag": "ground",
+        "x": 832,
+        "y": 64,
+        "w": 3008,
         "h": 192
-      },
-      {
-        "tag": "ground",
-        "x": 0,
-        "y": 192,
-        "w": 32,
-        "h": 64
-      },
-      {
-        "tag": "ground",
-        "x": 256,
-        "y": 192,
-        "w": 3584,
-        "h": 64
       },
       {
         "tag": "ground",
@@ -12362,6 +12471,13 @@
       {
         "tag": "ground",
         "x": 0,
+        "y": 320,
+        "w": 576,
+        "h": 192
+      },
+      {
+        "tag": "ground",
+        "x": 0,
         "y": 512,
         "w": 704,
         "h": 64
@@ -12372,14 +12488,6 @@
         "y": 448,
         "w": 384,
         "h": 128
-      },
-      {
-        "tag": "ground",
-        "x": 0,
-        "y": 576,
-        "w": 576,
-        "h": 192,
-        "kick": false
       },
       {
         "tag": "ground",
@@ -12405,16 +12513,17 @@
       {
         "tag": "ground",
         "x": 0,
-        "y": 768,
+        "y": 576,
         "w": 256,
-        "h": 512
+        "h": 704
       },
       {
         "tag": "ground",
         "x": 320,
-        "y": 768,
+        "y": 576,
         "w": 256,
-        "h": 512
+        "h": 704,
+        "kick": false
       },
       {
         "tag": "ground",
@@ -12493,7 +12602,7 @@
         "id": "wick-den",
         "kind": "wick",
         "x": 380,
-        "y": 380
+        "y": 188
       }
     ],
     "marks": {
@@ -12518,7 +12627,7 @@
         {
           "id": "balcony",
           "x": 300,
-          "y": 512
+          "y": 320
         },
         {
           "id": "floor",
@@ -12552,9 +12661,9 @@
         },
         {
           "x": 256,
-          "y": 768,
+          "y": 576,
           "w": 64,
-          "h": 512
+          "h": 704
         }
       ],
       "sealed": [
@@ -12572,9 +12681,9 @@
         },
         {
           "x": 256,
-          "y": 768,
+          "y": 576,
           "w": 64,
-          "h": 512
+          "h": 704
         }
       ]
     },
@@ -12596,8 +12705,8 @@
       {
         "id": "tunnel",
         "edge": "w",
-        "from": 256,
-        "to": 512
+        "from": 64,
+        "to": 320
       },
       {
         "id": "out",
@@ -12621,7 +12730,7 @@
       {
         "id": "p-den",
         "x": 300,
-        "y": 512
+        "y": 320
       }
     ],
     "shots": {
@@ -12629,7 +12738,7 @@
         {
           "name": "balcony",
           "x": 400,
-          "y": 512
+          "y": 320
         },
         {
           "name": "reveal",
@@ -12653,7 +12762,7 @@
         }
       ],
       "closeup": {
-        "ground": [400, 512]
+        "ground": [400, 320]
       }
     },
     "routes": [
@@ -13002,7 +13111,9 @@
         "id": "wick-door",
         "kind": "wick",
         "x": 3280,
-        "y": 900
+        "y": 900,
+        "relight": 240,
+        "moths": 0
       },
       {
         "id": "wick-valley-1",

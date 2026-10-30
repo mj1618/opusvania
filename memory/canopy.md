@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v9, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v10, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,53 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## The premise (v10, review r9 #2): sim state and events for render
+Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render reads them, never writes.
+- **Trap lamps** (`Lure.trap: true`, kind still `wick`): a cage of moths. Three on the route: `cn-hub:trap-crossing`
+  (5,200 x 1,380, 30 moths, the first thing west of the drop), `cn-grove:trap-grove` (1,760 x 1,380, the pit's west
+  lamp, 30), `cn-tunnel:trap-warn` (7,744 x 1,650, by the den's mouth, 40). The verb is the **blade**: three cuts
+  (`lures.trapHp`; each a `lureHit` with `hpLeft` / `hpMax`), from a jump off the floor under it. **No fling off a
+  trap** (`flingTarget` skips it). Out: `lureSnuff` with `trap: true`, `moths` (this lamp's), `total` (=
+  `save.moths` after it: the persistent freed count, saved, the HUD number), +1 light. It never relights; the save
+  keeps `room:id` in `save.snuffed`, so a new entry or a reload finds it out (`createLures`).
+- **Springboards** (every other flingable `wick` in the Canopy; the generator's `springboards()`): the firefly's hung
+  lights. `moths: 0`, `relight` 240 frames (the gap's 900; `wick-first` 90), never saved, never counted: a cut or a
+  fling puts one out and it burns again (`lureRelight`). This also fixed the well hollow's shard (a swing at the
+  ambush's lampwing cut `wick-hollow`, the shard's only way up, for good). Untouched: `after` lamps (the seed
+  sockets), the den's (`snuffs`), the valley's out-of-reach lights.
+- **The firefly's pass** (`scene.fireflies: [{id, trigger, flag, path, frames, relights}]`, src/sim/firefly.ts): the
+  gap's `firefly-gap`. She lands (grounded) in `trigger` (the floor below the chain, 2,688-3,456 x 1,856-2,240) the
+  first time: `flagSet cn-firefly-gap`, `fireflyStart {id, x, y, frames: 240}`. It flies `path` at a steady speed
+  (out of the roost's mouth 3,040 x 1,150, past the three lamps, west over the gap, up past the moon to 380 x 200).
+  Each lamp of `relights` it passes within `kit.firefly.relightPx` 48 while out burns again: `lureRelight {by:
+  'firefly'}` then `fireflyRelight {id, lure, x, y}`. `fireflyEnd {id, x, y}` at the path's end. Live state:
+  **`state.kit.firefly` = `{pass, frame, x, y}`** (`pass` -1 = none; render may call `fireflyAt(pass, frame +
+  alpha)` to interpolate). No control is taken, nothing hurts.
+- **Roosts** (`scene.roosts: [{id, lure, x, y, w, h}]`): where a freed trap's moths settle. The hub has three:
+  `roost-crossing` (its own trap's: the high block's claw face, 1,024 x 1,088, 128 x 448: the shard chamber's way up,
+  lit), `roost-grove` (over the kin's lamp, 2,560 x 1,344, 320 x 192: the kin turns to them), `roost-warn` (the
+  lampoak's crown over the drop, 6,144 x 640, 512 x 320). **`roostsLit(scene, save)`** (src/sim/firefly.ts) = the lit
+  ones (`save.snuffed` has the lure). The hub changes with each trap freed.
+- **The first fling's lesson** (`Lure.lesson` on `wick-first`; review r9 #1): until `cn-first-fling` is set, within
+  `lures.lessonPx` 200 of the flame in the air her caps ease (over `lessonEase` 8 frames) to `lessonFall` 2 px/f down
+  and `lessonRun` 2.5 across: a slow drift by the flame. **`player.lessonK`** (0..1) is how far in: render can thicken
+  the air with it. Every jump toward the lamp is in reach 37-81 frames (was 8-21); no jump without the fling crosses.
+- **A held Lamp is a press** (`lures.heldPress`, `player.lampArmed`): pressed with no flame in reach and held on, the
+  first flame to come into reach flings (not in glow rooms, where Lamp is held to mend).
+- **Gates never shut on her** (`gatePush {id, dx, dy, x, y}`): a gate shutting with her box in it moves her out the
+  shortest way to a clear spot.
+- **Arena thorn returns** (`room.arenaThornPx` 160): with a `shut` gate standing, a thorn return goes to the end of
+  her floor farthest from the bed, 160+ px from every bed (`arenaReturn`, src/sim/return.ts).
+- **A mark patch** (`MoonPatch.mark`, `area`): a re-form point marked anywhere in `area`, never a rest: the warning's
+  `p-warn` (its whole floor). Faded in the warning she re-forms on its floor, past the pit.
+- **The den's warning** (v10): the hump and pit 128 west; 1,024 px of flat floor from the pit (6,912) to the lid
+  (`den-lid`, now a root gate standing in the mouth, 7,936-8,000 x 1,600-1,856); the den's mouth an arch in the east
+  wall at the floor (its lintel 7,808-8,000 x 1,408-1,600, the cellar shortcut's ledge on top); the link to the den
+  moved up to it (the den's balcony at 320, was 512). Zone: zoom 1.0. Beat 2 arrives out of the mouth (7,980). Knuckles
+  gone. Foreshadowing landmarks for render: `shell-land`, `shell-warn` (kind `shell`: a shed back the old burrback's
+  size), `scrape-hump`, `scrape-mouth` (kind `scrape`: claw marks 4x a burrback's); beat 2's start (`flagSet
+  cn-tunnel-beat2`) wants a deep slam from the den (render / audio, ~0.3 trauma).
 
 ## v9b (round 9's weak list): the tunnel's glide, the hawker, the chain's press
 - **A glide lock wants a high take-off**: the glide gains ~2 px across for each px of drop, a jump ~0.4. v9's hump

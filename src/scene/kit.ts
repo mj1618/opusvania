@@ -62,6 +62,22 @@ export const KIT_FIELDS = {
         .strict(),
     )
     .optional(),
+  // --- The firefly's passes and the freed moths' roosts (the Canopy r10, src/sim/firefly.ts).
+  fireflies: z
+    .array(
+      z
+        .object({
+          id,
+          trigger: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+          flag: id,
+          path: z.array(z.tuple([int, int])).min(2),
+          frames: int.min(30).max(1200),
+          relights: z.array(id).optional(),
+        })
+        .strict(),
+    )
+    .optional(),
+  roosts: z.array(z.object({ ...rect, lure: id }).strict()).optional(),
   // --- Finds (src/sim/finds.ts).
   mothStones: z.array(z.object({ id, x: int, y: int, area: id }).strict()).optional(),
   signs: z

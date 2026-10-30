@@ -66,10 +66,11 @@ describe('the Grove arena', () => {
     for (const g of gates) expect(gateShut(g as never, s.save.flags)).toBe(false);
   });
 
-  it("hangs the pit's two lamps in a jump's fling reach from its floor (r7)", () => {
+  // (r10: the west lamp is a trap now, cut from the floor: canopy-r10.test.ts. The east one is the fling's escape.)
+  it("hangs the pit's springboard lamp in a jump's fling reach from its floor (r7)", () => {
     const scene = getRoom('cn-grove');
     const W = getWorld('canopy');
-    for (const id of ['wick-a', 'wick-b']) {
+    for (const id of ['wick-b']) {
       const i = (scene.lures ?? []).findIndex((l) => l.id === id);
       const lamp = (scene.lures ?? [])[i] as { x: number; y: number };
       const kit = ['wallJump'] as never;
