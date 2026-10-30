@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v4, 2026-10-30)
+# The Canopy: a first area built to the reference numbers (v5, 2026-10-30)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -101,22 +101,78 @@ could prove it; v4 puts the moves back and teaches the bots (the explorer's `zig
   Hoards cut to 2-3 glints (minors 82 -> 58). Orchestrator: the giant's seed now sits behind the teaching wall (in a
   chamber over the drop), the well's ambush lampwing hangs low enough to see her.
 
+## v5: the level side of review round 4 (`reviews/canopy-r4.md`, 5.5/10)
+Round 4's verdict: the set-piece climbs were traps (the well 3 of 24 human-like tries, the Elder 1 of 36, the way
+out 1 of 32), the west swallowed the player and the way east was invisible. v5 makes every required climb fair by a
+test and points the clawed player east. Item by item:
+- **#1, fair climbs.** The rule now: a thorn strip on one face at a time, and a clean stretch on both faces where she
+  changes wall, so the strips decide *which* face, never *when* to press (memory/canopy.md has the numbers). Every
+  climb starts from a rest, and a thorn puts her back on that rest.
+  - *The test.* `tools/levels/climbs.ts` plays each climb the way a person does: she stands on the rest, jumps at a
+    face (or walks to the lip first), and at every wall touch kicks after a reaction delay, up the same face or across
+    as the plan says from her height. `tests/unit/canopy-climbs.test.ts`: each passes at delays 0, 6 and 10 frames
+    from three start x, with every strip grown 64 px at both ends; one face alone hits a strip; the hit returns her
+    to the rest she climbed from. (The explorer's frame-perfect zigs still prove reachability.)
+  - *The well* (the teach): the chimney moved east (1920-2304) under the mouth's roof, so leg 1 (clean, the claws'
+    first use) ends standing on the mouth's floor. Two root lips carry the chimney's faces down to 128 over that
+    floor. Leg 2: one strip on the east face (2592-2740); the west face is clean to the landing, and a jump at the
+    east face changes wall at once. The landing dropped to 2432 (leg 2 768 px, leg 3 1280), is a save
+    (`p-landing`), keeps no creature (a lampwing kept it from being safe ground), and has a root lip into the
+    chimney so the far face is a jump away. Leg 3: west strip over the landing's lip (1856-2048), east strip under
+    the hollow (1152-1352): up the east face, across above the west strip, up the west face. The ambush's step moved
+    off the chimney's top.
+  - *The Elder* (the optional hardest): three legs, a rest at each end (the floor, the rest in the east wall, the
+    plug's passage), root lips out of both rests. Strips: the west face of leg 1 (jump at either face; from the west
+    one, across at once), the east face above the passage (stay on the west face, cutting the plug). A root carries
+    the east face down at the floor cave's mouth.
+  - *The way out*: a rest carved into the east block under the plug (floor 1024, a root lip), the plug raised to
+    448-512 under the clifftop. Leg 1 is a hop up the east face to the rest; leg 2 jumps at the west face and climbs it
+    cutting the plug. The three r4 strips are gone. (It is fair and short now, not the final exam the review wanted.)
+  - *The Spire's neck* keeps its east strip (shortened to 235-420) and loses the west one: out from under the nook's
+    lip onto the east face, across to the clean west face. A root at the foot passage's mouth carries the east face
+    down to 192 over the base. *The kin*: its strip lowered to 1250-1408, off the limb she jumps from.
+  - *The grip* (10 frames of no slide on a fresh touch) was not needed: the shapes pass at delay 10.
+  - *Sim fix* (src/sim/return.ts): a thorn return walked back along the top's rect into a wall; the well landing's
+    floor rect runs under a rotten wall, and she was squeezed up 1,500 px. The walk stops where her box does not fit.
+- **#2, the way on after the claws.**
+  - The fork's face: `thorn-pit` moved west (2240-2432), the last 384 px before the face clean, `juv-e` onto the
+    knoll, a lamp (`wick-fork`, 3000 x 440) over the face's top.
+  - The Elder's notch: its rotten plug is now a shortcut that opens only from the Elder's side (`elder-door`, opens
+    `w`): at the claws the notch is a shut root door, and the way on is up.
+  - The hub's hoard was already under a cover; the bots saw through covers. `tools/playtest/observe.ts` now hides a
+    pickup under a cover until she is inside it or its bark is broken (as on screen).
+- **#3, the west shut until the claws.** The giant's rot panel (a floor panel where she lands on tier 2) is gone:
+  the rot branch's way in is a rotten wall high in tier 3's east face (`rot-door`, its sill 320 over the floor: out of
+  a jump), the shaft behind it down to the rot hall. The rot hall's roof strip and tier 2's roof strip are cut (the
+  floor strips stay).
+- **#8, the peak and the boss as beats.**
+  - The Grove's wave in two beats: beat 1 the two burrbacks (their death sets `cn-grove-beat2`); beat 2 two juveniles
+    out from under the Grovemother's arch (2120, 2400), the dangler, and a lampwing from `wick-b`'s light (2800 x
+    1120), all four on `cn-grove-clear`, the gate's flag. A root step (a one-way, 2560-2816 x 1376, 224 over the
+    floor, over the thorn bed) is the pit's high point. v4's juveniles spawned inside the bounce caps (sealed in: the
+    gate never opened, a softlock found on the review video); `finish()` now throws on any creature spawned inside a
+    solid, cap, gate or bark.
+  - The den: the shelves 384 wide at 1088 (256 over the floor, 224 clear underneath: v4's 160 stopped every ram, so
+    phase 3 opened only at a wall or the taproot). The sleeping reveal: the balcony steps down onto a root shoulder
+    (576-832 at 704) over the arena, the old burrback in view asleep, a root ledge (a one-way at 1024) halfway down.
+    No claw face under the shelves: a face to the floor walls the arena.
+
 ## Measured (tools/reference/metrics.ts, against the references)
 
-| metric | HK | Ori | Nine Sols | Canopy v2 | Canopy v3 | **Canopy v4** |
-|---|---|---|---|---|---|---|
-| rooms | 48 | 22 | 39 | 24 | 27 | **27** |
-| screens | 329 | 88 | 172 | 60 | 83 | **83** |
-| rooms on the critical path | 25% | 77% | 72% | 58% | 52% | **52%** (14) |
-| solid share of the room boxes | 0.35 | 0.5 | (traced) | 0.43 | 0.51 | **0.51** |
-| enemies per screen | 0.31 | 0.18 | 0.27 | 0.58 | 0.43 | **0.49** (41: the wave, the tunnel's ants) |
-| enemy kinds | 30 | 9 | 11 | 6 | 9 | **9** (the path now meets the dangler too) |
-| majors | 23 | 21 | 15 | 25 | 28 | **31** (three moon shards) |
-| minor pickups | 6 | 10 | 8 | 193 | 82 | **58** |
-| saves | 8 | 2 | 5 | 5 | 4 | **5** (the bower) |
-| hazard runs | 0 | 6 | 5 | 29 | 25 | **37** (the chimneys' strips) |
-| screens with nothing in them | 65% | 63% | 66% | 35% | 57% | **53%** |
-| longest run of empty screens | 15 | 6 | 9 | 5 | 8 | **8** |
+| metric | HK | Ori | Nine Sols | Canopy v2 | Canopy v3 | Canopy v4 | **Canopy v5** |
+|---|---|---|---|---|---|---|---|
+| rooms | 48 | 22 | 39 | 24 | 27 | 27 | **27** |
+| screens | 329 | 88 | 172 | 60 | 83 | 83 | **83** |
+| rooms on the critical path | 25% | 77% | 72% | 58% | 52% | 52% (14) | **52%** (14) |
+| solid share of the room boxes | 0.35 | 0.5 | (traced) | 0.43 | 0.51 | 0.51 | **0.51** |
+| enemies per screen | 0.31 | 0.18 | 0.27 | 0.58 | 0.43 | 0.49 (41: the wave, the tunnel's ants) | **0.48** (40: the wave is 2 + 4, the landing lampwing gone) |
+| enemy kinds | 30 | 9 | 11 | 6 | 9 | 9 (the path now meets the dangler too) | **9** |
+| majors | 23 | 21 | 15 | 25 | 28 | 31 (three moon shards) | **31** |
+| minor pickups | 6 | 10 | 8 | 193 | 82 | 58 | **58** |
+| saves | 8 | 2 | 5 | 5 | 4 | 5 (the bower) | **6** (the well's landing) |
+| hazard runs | 0 | 6 | 5 | 29 | 25 | 37 (the chimneys' strips) | **25** (one strip a leg-half) |
+| screens with nothing in them | 65% | 63% | 66% | 35% | 57% | 53% | **54%** |
+| longest run of empty screens | 15 | 6 | 9 | 5 | 8 | 8 | **8** |
 
 Rooms all at least 2560 x 1440; the world's rects share edges (no holes between rooms; one notch under the burrow
 opens to the outside). Secrets: the hub's bank wall (heart moth-stone), the giant's rot panel (the rot branch), the

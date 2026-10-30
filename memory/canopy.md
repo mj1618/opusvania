@@ -1,7 +1,7 @@
-# The Canopy: the first area built to the reference numbers (v4, 2026-10-30)
+# The Canopy: the first area built to the reference numbers (v5, 2026-10-30)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
-docs/design/levels/reviews/canopy-r1.md, canopy-r2.md; the reference data: docs/design/reference-levels/.
+docs/design/levels/reviews/canopy-r1.md .. canopy-r4.md; the reference data: docs/design/reference-levels/.
 Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
 ## How it is made (tools/levels/canopy.ts)
@@ -31,23 +31,49 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   `zigCandidates` (tools/playtest/lines.ts, offered for any climb with an opposite face 200-700 px across).
 - **Measured**: a kick across a 384 px chimney rises ~222 px (31 frames), a kick up one face ~235. A 512 px chimney
   *loses* ~47 px a crossing, 640 more: chimneys meant for kicks across are 384 wide.
-- **Laying thorns on the real line**: `npx tsx tools/levels/canopy-probe.ts <room> <x,x> <feetY> <macro,macro>
-  [kit]` prints every wall touch (`W2937 E2714 ...`, feet y), thorn hit and the end. A touch uses the face from
-  feet-130 to feet+5 (she rises along it before she is clear). Put each strip on the face she does NOT touch, in the
-  gap between that face's used zones (margins ~20), then check one face alone hits a strip within two kicks and
-  probe a few start x. Done this way: the well (legs 2-3), the Elder (three legs and the plug), the Spire's neck,
-  the way out.
+- **r4's strips were frame-perfect** (review r4 #1): laid in the gaps between one zig's touches with ~20 px margins,
+  they passed only at a kick delay of 0-4 frames from one start x. A late kick slides her 20-40 px lower and the
+  error adds up kick by kick (touches drift ~17-34 px a kick at a 6-10 frame delay), so a strip that picks the phase
+  is a trap for a person.
+- **v5's rule: a strip on one face at a time, a clean stretch on both where she changes wall.** A person reads
+  "thorns on that wall: climb this one, cross above them". Climbing one face is always possible (one wall is
+  enough: movement-controller.md), so the strips decide which face, never when. A change of wall needs ~470 px
+  between the strip she leaves behind and the one ahead (her touch on the old face >= 64 below the strip over it,
+  the touch on the new face, ~222 higher, >= 64 above the strip under it, over a 235 px kick spacing and the drift);
+  shorter legs get one strip. A face that starts a climb reaches within ~190 px of the floor (a late kick at a
+  falling touch slides off a face's foot: root lips, `mass(x, y, 64, 128)`). A rest in a chimney wall gets a root
+  lip into the chimney (`oneWay(face, floor, 128)`): from its end the far face is a jump away (a standing jump from
+  inside the rest misses the far face and falls down the leg below).
+- **The fairness test** (`tools/levels/climbs.ts` CLIMBS + `tests/unit/canopy-climbs.test.ts`): every required climb
+  (and the Elder) from three start x on its rest, a person's plan (`face` legs: kick up this face until a touch at or
+  over `until`, then across; `zig`; `away` out from under a lip; `jumpAt` walk to the lip first; `cut` up cuts), at
+  kick delays 0 / 6 / 10 with every strip grown 64 px at both ends; `fails` plans (one face only) must hit a strip,
+  and the thorn must put her back on the rest she started from. CLI: `npx tsx tools/levels/climbs.ts [id] [--margin
+  64]` prints every touch. Lay a strip from the CLI's touches, then run the test.
+- `canopy-probe.ts` still plays the explorer's macros (frame-perfect zigs) for the proofs.
 - **Plugs** (`plug()`): rotten bark lying across a chimney, a wall panel (every cut takes it, an up cut too),
   checked solid either side by `finish()`. The explorer counts bark cuts left in its node key (`barkHp: true`):
   a wall high on a claw face takes one cut a climb. A plug cut from below must not hide the only way to a side
   passage under it (the Elder's first plug sat under its passage: the well unreachable).
-- **A thorn returns her to her last safe ground**: a climber who goes over leg 1's top straight into the chimney
-  never stood on the mouth's floor, so a chimney thorn sends her 1,700 px down. Give a set piece a rest she must
-  stand on (or a `reform`-like return point) before its first strip.
+- **A thorn returns her to the last ground she stood on** (`groundX/Y`, any length of time, not `safeX`): r4's
+  climber who went over leg 1's top straight into the chimney was sent 1,700 px down. v5: the chimney stands east of
+  leg 1's top under the mouth's roof, so she lands on the mouth's floor first. Ground near a living creature is not
+  ground for this (`safeEnemyPx` 200): no creature keeps a rest (r4's landing lampwing). A rolling limb can fail it
+  too (her centre over a rect 4 px lower than the one she stands on).
+- **The return walk could end inside a wall** (fixed in src/sim/return.ts, r5): `clearOfThorns` steps back along the
+  top's rect, and the well landing's floor rect ran west under the mass and a rotten wall: she was put inside the
+  bark and squeezed up 1,500 px. It now stops at the first spot her box does not fit.
 - `npx tsx tools/levels/canopy-map.ts <room> [cell]`: the generated room in ASCII (`k` faces refusing claws, `e`
   creatures, `*` finds, `L` lamps, `P` patches).
 
 ## Gotchas (v3, still true)
+- **A creature spawned inside a kit solid is sealed in** (v4 video: the Grove wave's juveniles inside the bounce
+  caps: never move, never cut, the wave's gate never opens). `finish()` now throws on a spawn inside a solid, cap,
+  gate or bark (walkers probed at their feet and shoulders).
+- **The den's solid shelves vs phase 3**: a ram pulls up under any roof lower than `strikeHeadroomPx` (200; v4's
+  shelves left 160, so phase 3 opened only on a wall or the taproot, won by waiting by the root: fight.ts `DEN_HOLD`).
+  v5: the shelves are at 1088 (256 over the floor, a full jump), 384 wide, 224 clear underneath. Any roof a boss
+  rams under keeps >= 200.
 - Rests carved into a wall must be **384 px tall** (a jump from the rest at once; a 256 niche bumps her head).
   Thin shelves sticking out of a wall are not rests: the human bot tries to climb their 48 px faces.
 - **A ledge under a corridor's roof**: a step inside a 192 px corridor may be at most ~110 tall (she is 80).

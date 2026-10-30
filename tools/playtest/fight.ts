@@ -215,9 +215,11 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
         // Curled, rearing, waking: keep a ram's length, on its floor.
         if (['curl', 'rear', 'wake', 'alert', 'recover'].includes(mode)) return dist < 240 ? dirBit(-d) : 0;
         // Phase 3: the taproot behind her, so its ram ends in the root.
-        // (If it will not come to her there, out to draw it as in phase 1.)
+        // (If it will not come to her there, out to draw it as in phase 1. `DEN_HOLD`: never out; the v4 den's
+        // solid shelves roof the floor, and a ram pulls up at a roof's mouth, so one drawn in the middle never
+        // reaches the root: wait by it until the creature walks into the strip between the east shelf and it.)
         const root = e0(scene, i)?.taproot;
-        if (e.phase >= 3 && root && k - rootWait < 150) {
+        if (e.phase >= 3 && root && (process.env.DEN_HOLD ? true : k - rootWait < 150)) {
           const side = Math.sign(c.x - (root[0] + root[1]) / 2) || -1;
           const spot = side < 0 ? root[0] - 110 : root[1] + 110;
           if (Math.abs(spot - px) > 30) return dirBit(Math.sign(spot - px));

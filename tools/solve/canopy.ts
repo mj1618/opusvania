@@ -57,9 +57,15 @@ const CLAIMS: Claim[] = [
   // (Back from the upper limbs onto the high block: down to the floor and on.)
   { room: 'cn-hub', from: [600, 576], kit: [C], reach: ['trunk', 'fork', 'limbs', 'cn-hub:p-crossing'] },
   { room: 'cn-hub', from: [2400, 1600], kit: [C, G], flags: ['seeds:3'], reach: ['door'] },
-  // The fallen giant: in from the hub, through the rotten wall, the seed in the roof, down to the well; the rot
-  // panel; no way back up from the low tiers.
-  { room: 'cn-trunk', from: [2900, 384], kit: [], reach: ['hub', 'well', 'rot', 'cn-trunk:seed-giant'] },
+  // The fallen giant: in from the hub, through the rotten wall, the seed in the roof, down to the well; no way back
+  // up from the low tiers; the rot branch shut until the claws (r5: its wall high in tier 3's east face).
+  {
+    room: 'cn-trunk',
+    from: [2900, 384],
+    kit: [],
+    reach: ['hub', 'well', 'cn-trunk:seed-giant'],
+    not: ['rot'],
+  },
   { room: 'cn-trunk', from: [1600, 704], kit: [], reach: ['well'], not: ['hub'] },
   // (The giant's wall is the only way on, and the seed is behind it: no blade, no seed, no way down.)
   {
@@ -72,20 +78,22 @@ const CLAIMS: Claim[] = [
   },
   { room: 'cn-trunk', from: [600, 1664], kit: [], reach: ['well'], not: ['hub', 'rot'] },
   // (Back in from the well with the claws: up the tiers to the hall and out to the Crossing.)
-  { room: 'cn-trunk', from: [600, 1664], kit: [C], reach: ['well', 'place:t2', 'place:t1', 'hub'] },
+  { room: 'cn-trunk', from: [600, 1664], kit: [C], reach: ['well', 'rot', 'place:t2', 'place:t1', 'hub'] },
   // The well: without the claws the bottom is a pit (out only east to the rot hall); with them, everything.
   {
     room: 'cn-well',
     from: [1700, 4928],
     kit: [],
-    reach: ['rot', 'elder', 'cn-well:p-well', 'cn-well:stone-west'],
-    not: ['limbs', 'trunk'],
+    reach: ['rot', 'cn-well:p-well', 'cn-well:stone-west'],
+    not: ['limbs', 'trunk', 'elder'],
   },
   {
     room: 'cn-well',
     from: [1700, 4928],
     kit: [C],
-    reach: ['limbs', 'trunk', 'elder', 'rot', 'cn-well:claw-prize'],
+    reach: ['limbs', 'trunk', 'rot', 'cn-well:claw-prize', 'cn-well:p-landing'],
+    // (The Elder's door opens only from the Elder's side: r5, the claws point up.)
+    not: ['elder'],
     max: 9000,
   },
   { room: 'cn-well', from: [2200, 3200], kit: [], reach: ['trunk', 'rot', 'wallJump'] },
