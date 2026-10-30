@@ -1741,7 +1741,7 @@ export function drawMidBack(
   const T = plan.tone;
   // (r6: in the pale shaft a flat mid-grey read as a cut-out, so it sat near the fog, and its pale arches read as brush
   // marks. Review r6 #9: lobed moss mounds a step darker than the fog, leaning to the frost moss's blue-green.)
-  const v = plan.look === 'shaft' ? INTERIOR.midValue - 0.05 : INTERIOR.midValue;
+  const v = plan.look === 'shaft' ? INTERIOR.midValue - 0.12 : INTERIOR.midValue;
   const col0 = mixC(massBody, T.fog, v);
   const col = plan.look === 'shaft' ? mixC(col0, 0x4a6e70, 0.3) : col0;
   const dark = mixC(massBody, T.fog, v * 0.55);
@@ -1751,7 +1751,7 @@ export function drawMidBack(
     const r = rngFor(seed, b0.x, b0.y, 97);
     const area = b.w * b.h;
     let covered = 0;
-    const want = area * INTERIOR.midCover;
+    const want = area * (plan.look === 'shaft' ? INTERIOR.midCover + 0.08 : INTERIOR.midCover);
     const fill = (pts: number[], c: number, a = 0.92, est = 0): void => {
       g.poly(pts).fill({ color: c, alpha: a });
       covered += est;

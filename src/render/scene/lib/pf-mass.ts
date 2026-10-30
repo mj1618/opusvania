@@ -93,7 +93,7 @@ export const MASS = {
   flare: 22,
   /** Sub-masses (canopy r7, review r6 #5): one per cell of this size (px), their half width range, the share of the
    *  way from the body to the lift of each of the two values. */
-  subCell: [420, 300] as readonly number[],
+  subCell: [380, 270] as readonly number[],
   subR: [180, 420] as readonly number[],
   subLift: [1.0, 1.7] as readonly number[],
   /** Knuckles deep in a big mass (canopy r7): one per this many px² of it, their half width range, px. */

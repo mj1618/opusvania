@@ -23,7 +23,7 @@ export const VEIL: Record<Look | 'night' | 'nightDeep', { top: number; low: numb
   heartwood: { top: 0x2c2216, low: 0x382c1e },
   shaft: { top: 0x06080c, low: 0x0a0e14 },
   nest: { top: 0x28261a, low: 0x343022 },
-  den: { top: 0x121212, low: 0x1a1a18 },
+  den: { top: 0x161616, low: 0x1e1e1c },
 };
 
 /** Open rooms that take another veil than the night's. */
