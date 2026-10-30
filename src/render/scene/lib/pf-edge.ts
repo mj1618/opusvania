@@ -15,6 +15,7 @@
 import { BRANCH, lineLimb, paintLimb, strand } from './pf-branch';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, rngFor, smoothstep, wobble } from './pf-shape';
+import { paintGrowth, topFamily } from './top-growth';
 
 export interface LobeSpec {
   /** Offset of the notch between two lobes, px (+ = out into the air). */
@@ -376,6 +377,9 @@ export function paintTopBand(
   dropE = 0,
   tint: { color: number; k: number } | null = null,
 ): (x: number) => number {
+  // (Canopy r8, review r7 #6: the room's own growth, by look.)
+  const fam = topFamily();
+  if (fam) return paintGrowth(p, x0, x1, () => y, seed, h, dropW, dropE, fam);
   const r = rngFor(seed, x0, y, 421);
   /** Each crest dome: centre x, rise over the walk line, half width. */
   const domes: Array<[number, number, number]> = [];

@@ -45,6 +45,7 @@ import {
   wobble,
 } from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
+import { paintGrowth, setTopFamily, topFamily, topFamilyOf } from './top-growth';
 
 export const BRANCH = {
   /** Out of a tree a limb starts at this share of the trunk's width (clamped); out of a fork each tine
@@ -928,6 +929,12 @@ export function mossBlanket(
   dropR: number,
 ): void {
   const B = BRANCH;
+  // (Canopy r8, review r7 #6: the room's own growth, not one lime band on every top.)
+  const fam = topFamily();
+  if (fam) {
+    paintGrowth(p, x0, x1, topAt, seed, B.walkH, dropL, dropR, fam);
+    return;
+  }
   const r = rngFor(seed, x0, x1);
   const S = 3;
   const Y = (x: number): number => topAt(clamp(x, x0, x1));
@@ -2006,6 +2013,21 @@ export function paintBranchTerrain(
 ): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const B = BRANCH;
   const p = new Paint(room.width, room.height);
+  // What grows on the tops: the room's look's family (top-growth.ts), for every painter below.
+  setTopFamily(topFamilyOf(room));
+  try {
+    return paintBranchBody(room, seed, p, B);
+  } finally {
+    setTopFamily(null);
+  }
+}
+
+function paintBranchBody(
+  room: Room,
+  seed: number,
+  p: Paint,
+  B: typeof BRANCH,
+): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const trees = planTrees(room);
   const stretches = planStretches(room, trees);
   const info = terrainInfo(room, stretches);

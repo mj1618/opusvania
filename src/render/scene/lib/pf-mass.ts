@@ -44,6 +44,7 @@ import {
 } from './pf-edge';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
+import { FACE_FAMILY, topFamily } from './top-growth';
 import { shelfFor } from './wood-claims';
 
 export const MASS = {
@@ -284,6 +285,9 @@ function paintCore(
 function edgeTone(): EdgeTone {
   const night = T === NIGHT_TONE;
   const shaft = T === MASS_TONES.shaft;
+  // (Canopy r8: the faces she clings to grow what the tops grow.)
+  const fam = topFamily();
+  const face = fam ? FACE_FAMILY[fam] : null;
   return {
     body: T.body,
     deep: T.deep,
@@ -293,8 +297,11 @@ function edgeTone(): EdgeTone {
     // (Canopy r7: the walk's moss on the faces too, a step under it; tinted with the place like the walk's band.)
     moss: shaft
       ? 0
-      : lerp3(BRANCH.walkDeep, T.crustA > 0 ? lerp3(BRANCH.walkMoss, T.crust, 0.35) : BRANCH.walkMoss, 0.6),
-    mossLit: shaft ? 0 : T.crustA > 0 ? lerp3(BRANCH.walkLit, T.crust, 0.35) : BRANCH.walkLit,
+      : (face?.moss ??
+        lerp3(BRANCH.walkDeep, T.crustA > 0 ? lerp3(BRANCH.walkMoss, T.crust, 0.35) : BRANCH.walkMoss, 0.6)),
+    mossLit: shaft
+      ? 0
+      : (face?.lit ?? (T.crustA > 0 ? lerp3(BRANCH.walkLit, T.crust, 0.35) : BRANCH.walkLit)),
   };
 }
 
@@ -1178,16 +1185,18 @@ export function paintMasses(
         );
       fadeInto(p, line, (k) => (ws[Math.min(ws.length - 1, k)] as number) * 1.04, 0, 1, T.body);
     }
-    // (Canopy r7: the blanket under the band, so the band's crest domes are the walk's silhouette.)
-    mossBlanket(
-      p,
-      x0 - (wallW ? 6 : 0),
-      x1 + (wallE ? 6 : 0),
-      () => y,
-      seed + i * 17 + x0,
-      freeW ? 22 : 0,
-      freeE ? 22 : 0,
-    );
+    // (Canopy r7: the blanket under the band, so the band's crest domes are the walk's silhouette. With a growth
+    // family the band is the whole growth: canopy r8.)
+    if (!topFamily())
+      mossBlanket(
+        p,
+        x0 - (wallW ? 6 : 0),
+        x1 + (wallE ? 6 : 0),
+        () => y,
+        seed + i * 17 + x0,
+        freeW ? 22 : 0,
+        freeE ? 22 : 0,
+      );
     // (Review r5 #4: a thick lit moss band on every walk, its lower edge draping in lobes.)
     const crest = paintTopBand(
       p,
@@ -2069,7 +2078,7 @@ function burlShape(
     for (const [x0, x1] of sd.top) {
       const full = m === tip;
       if (full) paintTopBand(p, x0, x1, m.y, seed + x0, B.walkH, 18, 18);
-      mossBlanket(p, x0, x1, () => m.y, seed + x0, full ? 22 : 10, full ? 22 : 10);
+      if (!full || !topFamily()) mossBlanket(p, x0, x1, () => m.y, seed + x0, full ? 22 : 10, full ? 22 : 10);
       plan?.stretches.push(topStretch(`taper-${i}-${x0}`, x0, x1, m.y, 60, false, false));
     }
   });
@@ -2892,6 +2901,14 @@ export function massEdgeLines(
     out.push({ kind: 'under', key: f.key, a: f.a, b: f.b, pts });
   }
   return out;
+}
+
+/** The free tops of a room's masses (merged runs: `key` the walk line y, [a, b] its x span), for tests. */
+export function massTops(room: Room, seed = 0): Array<{ key: number; a: number; b: number }> {
+  const masses: MassRect[] = room.solids.filter((s) => s.tag === 'root' || s.tag === 'ground');
+  const sides = masses.map((r) => exposedSides(r, masses, room.width, room.height));
+  const tapers = new Set(findTapers(masses, sides).flatMap((t) => t.idx));
+  return edgeModel(masses, sides, seed, tapers).tops.map((t) => ({ key: t.key, a: t.a, b: t.b }));
 }
 
 /** The tapers of a room (burls standing up, clumps hanging), for the prop families (`propFamilies`) and tests. */
