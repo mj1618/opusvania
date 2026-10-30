@@ -88,6 +88,7 @@ export const cameraTuning = {
       crack: 0.3,
       wallRam: 0.3,
       barkBreak: 0.3,
+      gateShut: 0.22,
       hardLand: 0.2,
       finisher: 0.16,
       hit: 0.07,

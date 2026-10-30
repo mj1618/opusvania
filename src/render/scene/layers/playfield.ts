@@ -39,6 +39,7 @@ import { zoneAt } from '../lib/pf-shape';
 import { paintTerrain, type TerrainInfo } from '../lib/pf-terrain';
 import { Water } from '../lib/pf-water';
 import { isGroveKit, isLantern, LOOK } from '../lib/room-look';
+import { RIM_FAMILY, topFamilyOf } from '../lib/top-growth';
 
 export const PLAYFIELD = {
   /** Terrain is baked at the view scale, clamped to this range (texture px per world px). */
@@ -159,7 +160,7 @@ export class PlayfieldLayer implements EnvModule {
     pf.addChild(baked.layer);
     for (const w of walls) pf.addChild(w);
     if (wood) {
-      this.rim = new Rim(wood.plan);
+      this.rim = new Rim(wood.plan, RIM_FAMILY[topFamilyOf(scene)]);
       pf.addChild(this.rim.container);
     } else if (lantern) {
       this.rim = new LanternRim(lantern.plan);

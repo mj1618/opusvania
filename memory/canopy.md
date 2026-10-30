@@ -1,7 +1,7 @@
-# The Canopy: the first area built to the reference numbers (v7, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v8, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
-docs/design/levels/reviews/canopy-r1.md .. canopy-r6.md; the reference data: docs/design/reference-levels/ (all four
+docs/design/levels/reviews/canopy-r1.md .. canopy-r7.md; the reference data: docs/design/reference-levels/ (all four
 exact since 2026-10-30).
 Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 
@@ -23,6 +23,38 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v8 (review r7): the first ten minutes
+- **A required lesson in a room crossed once**: a fling lamp goes out for good when she lands, so a required fling on a
+  way walked again (the hub) needs a second way (claws, or a `relight` lamp) or it softlocks. And a lamp can be cut
+  down for good with the blade: a required one gets `relight` (the first lamp: 90 frames; never saved). The hatch is crossed
+  once, its fall catch is the soft floor (a catch relights the embers). The gap is past a jump by a margin: the
+  explorer's `offdj` (a walk-off, then jump held in coyote time) reached 51 px further than a running jump.
+- **A fall catch's return gave a free double jump** (`placePlayer` -> `createPlayer` takes the tuning's): a player who
+  did not own it crossed the first fling's gap after a miss. The catch / thorn return caps `dj` at what she owns now
+  (src/sim/index.ts); a plain `placePlayer` (teleport, the harnesses) still carries one: the tools zero it.
+- **Ambushes** (sim): `arrive: [[x, y], ...]` on a `wakes` spawn (the first point 400+ px from her when it shows, else
+  the farthest; it travels from there to its spawn, harmless and out of reach); trigger `rearm: true` (until every
+  creature it wakes is down, a fade or a new entry takes the flag back); a woken creature whose own `sets` is saved
+  stays out (a cleared wave stays clear); `rearmArenas` takes a beat's flag back with its waking flag. Creatures that
+  wait for a flag start hidden (`createLight`), so a flag set on the first step still arrives. Lay a trigger where
+  she comes in (the drop's column, the landing off a block), not over the whole floor, and the spawns (homes) away
+  from it: arrival shows them coming, it does not move where they act from.
+- **Patches mark on a pass** (`tuning.patch.markOnPass`, `patchMark`): no more "stand still to save".
+- **A lampwing with `dives: n`** tells nothing for `retellFrames` once tired or after touching her, and is harmless
+  meanwhile (her climb past its hover was the hits, not its dives).
+- **Climbs at delay 16** (`DELAYS` 0 / 6 / 10 / 16): what fails is a first touch near a face's foot (the slide takes
+  it off). Fixes: carry the face down (a root lip or column), raise the start (a root lip out of the rest), or jump
+  from nearer the face. `drop: true` plans walk off a lip (a slide down onto a reward). The neck's column made the
+  Spire's foot climb run on up to the bower: either ends `spire-1` now.
+- **Lamps near a glide lock**: any lamp west of ~3,200 at 1,550-1,700 in the gap lets a clawed player fling up-left
+  onto the far limb (the lit proofs): a fling carries ~1,000 px from low in the gap. Put chain lamps on each other's
+  lines by moving the first, not the second.
+- **The spread, round 8's bar** (`canopy-furniture.ts --check`): two rooms at >= 4x the median (the Grove, the tunnel
+  at 7.0), a path room before the Grove at <= 0.8 (the fork), no three path rooms in a row within 20%, quiet >= 5
+  (the burrow is the nest now). A peak in an 8.4-screen room needs ~57 things: count before promising one.
+- **The den's escape shelves are one-ways**: a solid shelf over a boss's floor is a roof its ram stops under (the v7
+  video: a free safe spot under and on the west shelf).
 
 ## v7 (review r6): peaks and quiet, not even coverage
 - **Measure the spread, not the totals** (review r6 #1: v6 met every total and got flatter). `canopy-furniture.ts
@@ -169,7 +201,8 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   default); the den only sets `taproot`.
 - **Debug a failing claim**: `CANOPY_MAP=1 npx tsx tools/solve/canopy.ts <room>` prints the room in 64 px cells
   (`#` solid, `^` thorns, `B` bark, `G` gate / shortcut, `o` where the explorer stood).
-- The placed player's free double jump is still zeroed by the harness (`createPlayer` sets `dj` from tuning).
+- The placed player's free double jump is still zeroed by the harness (`createPlayer` sets `dj` from tuning); a fall
+  catch's or thorn's return caps it at what she owns since r8.
 
 ## The human-like bots (npm run humanplay)
 - `--from <room> --abilities wallJump` (with `--world`): a run that starts mid-area (r4: from the fork).
@@ -188,6 +221,11 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - r7 (canopy-r7): all three up leg 3 to the hollow (8:36, 8:55, 23:12; r6 none), two fought the ambush, one left by
   the limbs; still well <-> trunk loops, leg 2's strip 6-15 hits a run. The bots rest at a patch only when they
   happen to stand still in it: the casual one never rested at `p-hollow`, so its ambush fades cost legs 2-3 again.
+- r8: **they fling** (`FlingAim` in lines.ts: a lamp line presses Lamp when `flingTarget` finds a flame, sweeps the
+  aims reading `lureArc`, lets go on the best; the Lamp key is in the motor's `BITS` in human.ts: without it the
+  lookahead flung and the hands never did, "did not go as foreseen"). v7's still played the old catch. Their old
+  lamp-cut lines snuff lamps for good: a required lamp must `relight`. r8 run (canopy-r8): all three out of the
+  hatch in the first minute, two clear the hollow's ambush, none finds the shelf to the limbs.
 - r6: **they read strips** (lines.ts: a climb move whose face has a thorn strip in its span offers the clean far face
   first, `wall climb (the far face: ...)`, and `humanPick` takes it first).
 

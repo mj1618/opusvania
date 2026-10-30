@@ -58,6 +58,12 @@ export const KIT = {
     mat: 0x120a0c,
     /** Dead stems off a bed (no barbs: only the strip hurts). */
     stem: 0x5a4a3c,
+    /** A long run (canopy review r7 #10: a hairline of barbs read as a texture): a bed of tangle this tall over the
+     *  strip (px), from runs this long, canes arching off its ends, one warm glint on its barbs per `glintEvery` px. */
+    bed: [48, 96] as readonly number[],
+    bedMin: 640,
+    glintEvery: 200,
+    glint: 0xffd9a0,
   },
   silk: { strand: 0xd8dce6, sheen: 0xf2f4ff },
   cover: { body: 0x040302, root: 0x120c08, edge: 0x2a1c12 },
@@ -96,6 +102,10 @@ export const KIT = {
   gate: { hole: 0x02050a, root: 0x16222e, rootLit: 0x6a8aa0, post: 0x0c141c, light: 0xb8d0f0 },
   /** Seconds a gate takes to fall away, a cover to thin, a cut's shake. */
   gateFall: 0.8,
+  /** Seconds an arena's root gate takes to grow shut (`gateShut`) and to draw back open in the wood (canopy review
+   *  r7 #8: about 40 frames; it popped). */
+  gateGrow: 40 / 60,
+  gateWithdraw: 40 / 60,
   coverEase: 3,
   shake: 0.25,
 } as const;
@@ -112,6 +122,8 @@ export class Kit {
   private readonly hits = new Map<number, Hit>();
   /** Gates opening while she watches (seconds since, by index). */
   private readonly opening = new Map<number, number>();
+  /** Gates growing shut: seconds since their `gateShut`. */
+  private readonly closing = new Map<number, number>();
   /** Covers: how visible each is now (eased). */
   private readonly coverK: number[] = [];
   /** Moonmoss: how lit each piece is now (eased). */
@@ -130,6 +142,7 @@ export class Kit {
       if (e.type === 'spawn' && events.some((o) => o.type === 'roomEnter')) {
         this.hits.clear();
         this.opening.clear();
+        this.closing.clear();
         this.bellT.clear();
         this.readT.clear();
         continue;
@@ -147,7 +160,21 @@ export class Kit {
         }
         case 'gateOpen': {
           const i = (S.gates ?? []).findIndex((g) => g.id === ev.id);
-          if (i >= 0) this.opening.set(i, 0);
+          if (i >= 0) {
+            // (Opened while still growing shut: it draws back from where it got to.)
+            const c = this.closing.get(i);
+            const done = c === undefined ? 1 : Math.min(1, c / KIT.gateGrow);
+            this.opening.set(i, (1 - done) * KIT.gateWithdraw);
+            this.closing.delete(i);
+          }
+          break;
+        }
+        case 'gateShut': {
+          const i = (S.gates ?? []).findIndex((g) => g.id === ev.id);
+          if (i >= 0) {
+            this.closing.set(i, 0);
+            this.opening.delete(i);
+          }
           break;
         }
         case 'bellHit':
@@ -198,6 +225,7 @@ export class Kit {
       if (h.t > Math.max(KIT.shake + 0.2, KIT.dust)) this.hits.delete(k);
     }
     for (const [k, t] of this.opening) this.opening.set(k, t + dt);
+    for (const [k, t] of this.closing) this.closing.set(k, t + dt);
     for (const [k, b] of this.bellT) {
       b.t += dt;
       if (b.t > 3) this.bellT.delete(k);
@@ -362,12 +390,38 @@ export class Kit {
     (S.gates ?? []).forEach((g, i) => {
       const open = (sim.kit.gates[i] ?? 0) > 0;
       const t = this.opening.get(i);
-      if (open && (t === undefined || t > KIT.gateFall)) return;
+      const wood = LOOK.kit === 'wood';
+      const away = wood ? KIT.gateWithdraw : KIT.gateFall;
+      if (open && (t === undefined || t > away)) return;
       if (!seen(g.x, g.y, g.w, g.h)) return;
-      const fall = open && t !== undefined ? t / KIT.gateFall : 0;
-      if (g.h >= g.w && LOOK.kit === 'wood') this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      // In the wood a gate grows shut over `gateGrow` (an arena's door: canopy review r7 #8) and draws back open over
+      // `gateWithdraw`; `fall` is how far gone it is (0 standing, 1 gone).
+      const c = this.closing.get(i);
+      const fall = open
+        ? t !== undefined
+          ? t / away
+          : 0
+        : wood && c !== undefined
+          ? 1 - Math.min(1, c / KIT.gateGrow)
+          : 0;
+      if (fall >= 1) return;
+      if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      else if (wood) this.rootMat(back, glow, g.x, g.y, g.w, g.h, clock, 1 - fall, g.id);
       else this.seal(back, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      // Dust shaken out of the wood while it moves.
+      if (wood && fall > 0)
+        motes(
+          back,
+          g.x + g.w / 2,
+          g.y + g.h + 90,
+          g.w / 2,
+          140,
+          clock,
+          14,
+          KIT.rot.dust,
+          0.7 * Math.sin(Math.PI * fall),
+        );
       // A door that counts moonseeds (the Downwood): its sockets in a row over it, one lit for each seed held.
       if (g.flag.startsWith('seeds:') && !open) {
         const want = Number(g.flag.slice(6));
@@ -744,6 +798,69 @@ export class Kit {
       const [px, py] = at(u, -4);
       mat.push(px, py);
     }
+    // A long run's bed: a tall tangle with a thorny silhouette over the strip, canes arching off its ends.
+    const long = len >= T.bedMin;
+    if (long) {
+      const [b0, b1] = T.bed as [number, number];
+      const H = (u: number) =>
+        lerpN(
+          b0,
+          b1,
+          0.5 + 0.35 * Math.sin(u * 0.011 + hash01(id, 300) * 6) + 0.15 * Math.sin(u * 0.037 + 1.3),
+        );
+      const bed: number[] = [];
+      let q = 0;
+      for (let u = -spillA * 0.6; u <= len + spillB * 0.6; u += 9, q++) {
+        const edge = Math.min(1, (u + spillA * 0.6) / 70, (len + spillB * 0.6 - u) / 70);
+        // Spiky: every other point a thorn's tip standing off the tangle, of its own length.
+        const spike = q % 2 ? 6 + 16 * hash01(id, 400 + q) : -4 * hash01(id, 700 + q);
+        const [px, py] = at(u, (H(u) + spike) * Math.max(0.15, edge));
+        bed.push(px, py);
+      }
+      for (let u = len + spillB * 0.6; u >= -spillA * 0.6; u -= 24) {
+        const [px, py] = at(u, -4);
+        bed.push(px, py);
+      }
+      g.poly(bed).fill({ color: T.mat, alpha: 0.97 });
+      // Canes looping through it, lit on top now and then.
+      for (let c = 0; c < Math.round(len / 50); c++) {
+        const u0 = hash01(id, 500 + c) * len;
+        const span = 60 + 120 * hash01(id, 520 + c);
+        const [ax, ay] = at(u0, H(u0) * 0.2);
+        const [bx, by] = at(u0 + span * 0.5, H(u0) * (0.75 + 0.35 * hash01(id, 540 + c)));
+        const [ex, ey] = at(u0 + span, H(u0) * 0.3);
+        g.moveTo(ax, ay).quadraticCurveTo(bx, by, ex, ey);
+        g.stroke({
+          color: c % 4 === 0 ? T.caneLit : T.cane,
+          width: 3 + 3 * hash01(id, 560 + c),
+          cap: 'round',
+        });
+      }
+      // Canes arching up off each end and over, thorned.
+      for (const [end, sgn] of [
+        [-spillA * 0.5, -1],
+        [len + spillB * 0.5, 1],
+      ] as const) {
+        for (let c = 0; c < 2; c++) {
+          const reach = 70 + 110 * hash01(id, 600 + c + (sgn > 0 ? 10 : 0));
+          const tall = H(end) * (1.2 + 0.8 * hash01(id, 620 + c + (sgn > 0 ? 10 : 0)));
+          const [ax, ay] = at(end - sgn * 30, H(end) * 0.3);
+          const [mx, my] = at(end + sgn * reach * 0.35, tall);
+          const [ex, ey] = at(end + sgn * reach, H(end) * 0.25);
+          const sw = wind(ax, clock, c) * 2;
+          g.moveTo(ax, ay).quadraticCurveTo(mx + sw, my, ex + sw, ey);
+          g.stroke({ color: T.cane, width: 5 - c * 1.5, cap: 'round' });
+          for (let q2 = 1; q2 < 5; q2++) {
+            const t = q2 / 5;
+            const qx = (1 - t) ** 2 * ax + 2 * (1 - t) * t * (mx + sw) + t * t * (ex + sw);
+            const qy = (1 - t) ** 2 * ay + 2 * (1 - t) * t * my + t * t * ey;
+            g.moveTo(qx, qy)
+              .lineTo(qx + sgn * 7, qy - 8)
+              .stroke({ color: T.barbDark, width: 2, cap: 'round' });
+          }
+        }
+      }
+    }
     g.poly(mat).fill({ color: T.mat, alpha: 0.95 });
     // A few canes through the mat (lit now and then); a coil's loop over and back.
     const nc = Math.max(2, Math.round(len / (matK === 'thicket' ? 40 : 60)));
@@ -854,6 +971,17 @@ export class Kit {
       } else one((r2 - 0.5) * 0.9, 24 + 16 * r1, 5 + 4 * r2, 0);
       u += (barbK === 'pair' ? 26 : 18) + 16 * hash01(id, k * 5 + 102);
       k++;
+    }
+    // A long run's warm glints on its barbs: the danger reads in the dark.
+    if (long) {
+      const ng = Math.max(2, Math.round(len / T.glintEvery));
+      for (let q = 0; q < ng; q++) {
+        const u = ((q + 0.2 + 0.6 * hash01(id, 800 + q)) * len) / ng;
+        const [gx, gy] = at(u, depth * 0.3 + 18 + 14 * hash01(id, 820 + q));
+        const tw = 0.7 + 0.3 * Math.sin(clock * (1.6 + hash01(id, 840 + q)) + q * 1.7);
+        g.circle(gx, gy, 2.4).fill({ color: T.glint, alpha: 0.95 * tw });
+        glow.add(gx, gy, 26, T.rim, 0.4 * tw);
+      }
     }
     // A faint warm glow along the strip, so it reads against any back.
     const nGlow = Math.max(1, Math.round(len / 120));
@@ -970,6 +1098,8 @@ export class Kit {
   ): void {
     const G = KIT.gate;
     const a = 1 - fall * 0.7;
+    // (The arch fades in and out with the tangle: a gate that grows shut or draws back never pops.)
+    const archA = 1 - fall;
     const cx = x + w / 2;
     const R = w / 2 + 18;
     const archTop = y - 26;
@@ -980,7 +1110,7 @@ export class Kit {
       hole.push(cx + Math.cos(t) * (R - 6), archTop + R + Math.sin(t) * R * 0.9);
     }
     hole.push(x + w + 12, y + h + 4);
-    g.poly(hole).fill({ color: G.hole, alpha: 0.95 });
+    g.poly(hole).fill({ color: G.hole, alpha: 0.95 * archA });
     const pulse = 0.85 + 0.15 * Math.sin(clock * 0.8 + hash01(id, 1) * 6);
     glow.add(cx, y + h * 0.55, w * 0.9, G.light, (0.24 + 0.5 * fall) * pulse, h * 0.6);
     glow.add(cx, y + h - 8, w * 1.6, G.light, 0.12 + 0.3 * fall, 24);
@@ -1048,10 +1178,10 @@ export class Kit {
         const wd = q ? 26 : 34;
         g.moveTo(path[0]?.[0] ?? 0, path[0]?.[1] ?? 0);
         for (const [px, py] of path.slice(1)) g.lineTo(px, py);
-        g.stroke({ color: G.post, width: wd, cap: 'round', join: 'round' });
+        g.stroke({ color: G.post, width: wd, cap: 'round', join: 'round', alpha: archA });
         g.moveTo((path[0]?.[0] ?? 0) - side * 6, (path[0]?.[1] ?? 0) - 4);
         for (const [px, py] of path.slice(1)) g.lineTo(px - side * wd * 0.28, py - wd * 0.2);
-        g.stroke({ color: G.rootLit, width: 2.2, alpha: 0.45, cap: 'round', join: 'round' });
+        g.stroke({ color: G.rootLit, width: 2.2, alpha: 0.45 * archA, cap: 'round', join: 'round' });
       }
       // The foot: roots spreading out over the floor.
       for (let q = 0; q < 3; q++) {
@@ -1063,19 +1193,19 @@ export class Kit {
           fx + side * reach,
           y + h + 6,
         );
-        g.stroke({ color: G.post, width: 18 - q * 4, cap: 'round' });
+        g.stroke({ color: G.post, width: 18 - q * 4, cap: 'round', alpha: archA });
       }
     }
     // The knot where they meet, and cyan moss beads along the crown: the gate is a place, found in the dark.
-    g.ellipse(cx, archTop + R * 0.1, 30, 22).fill({ color: G.post });
-    g.ellipse(cx - 4, archTop + R * 0.1 - 6, 14, 6).fill({ color: G.rootLit, alpha: 0.25 });
+    g.ellipse(cx, archTop + R * 0.1, 30, 22).fill({ color: G.post, alpha: archA });
+    g.ellipse(cx - 4, archTop + R * 0.1 - 6, 14, 6).fill({ color: G.rootLit, alpha: 0.25 * archA });
     for (let k = 0; k < 6; k++) {
       const u = (k + 0.5) / 6;
       const t = Math.PI + Math.PI * u;
       const bx = cx + Math.cos(t) * (R + 22);
       const by = archTop + R + Math.sin(t) * R * 0.9 - 14;
-      g.circle(bx, by, 3.5).fill({ color: KIT.cap.spot, alpha: 0.9 });
-      glow.add(bx, by, 18, KIT.cap.glow, 0.3 + 0.08 * Math.sin(clock * 1.7 + k));
+      g.circle(bx, by, 3.5).fill({ color: KIT.cap.spot, alpha: 0.9 * archA });
+      glow.add(bx, by, 18, KIT.cap.glow, (0.3 + 0.08 * Math.sin(clock * 1.7 + k)) * archA);
     }
   }
 
@@ -1109,6 +1239,109 @@ export class Kit {
     const sy = y + ((clock * 60) % h);
     g.rect(x, sy, w, 16).fill({ color: C.sheen, alpha: 0.08 * a });
     glow.add(x + w / 2, y + h / 2, w * 1.4, C.sheen, 0.05 * a, h * 0.55);
+  }
+
+  /**
+   * A flat gate in the wood (the Grove's arena roof, canopy review r7 #8: flat grey planks that popped): a mat of roots
+   * grown across the hole from both sides, `grow` 0 (none) to 1 (shut). Each root reaches out of the wood on its own
+   * side, thinning to its growing tip, at its own delay; rootlets hang under the mat once it has closed. Drawing back
+   * is the same played in reverse.
+   */
+  private rootMat(
+    g: Graphics,
+    glow: GlowPool,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    clock: number,
+    grow: number,
+    id: string,
+  ): void {
+    const G = KIT.gate;
+    if (grow <= 0) return;
+    // (The dark between the roots only once they have knit: a full-width hole under a half-grown mat read as a lens.)
+    const hole = smooth01((grow - 0.55) / 0.45);
+    if (hole > 0)
+      g.ellipse(x + w / 2, y + h * 0.55, w / 2 + 10, h * 0.5).fill({ color: G.hole, alpha: 0.85 * hole });
+    const n = 5 + Math.round(w / 80);
+    const pts: Array<[number, number]> = [];
+    for (let k = 0; k < n; k++) {
+      const fromW = k % 2 === 0;
+      const r = hash01(id, k * 7 + 1);
+      const r2 = hash01(id, k * 7 + 2);
+      const ya = y + h * (0.1 + 0.8 * hash01(id, k * 7 + 3));
+      const yb = y + h * (0.1 + 0.8 * hash01(id, k * 7 + 4));
+      const xa = fromW ? x - 30 - r * 40 : x + w + 30 + r * 40;
+      const xb = fromW ? x + w + 20 + r2 * 30 : x - 20 - r2 * 30;
+      const sag = (hash01(id, k * 7 + 5) - 0.4) * h * 1.1;
+      const th = 8 + 18 * hash01(id, k * 7 + 6) ** 1.5;
+      const amp = 5 + 12 * hash01(id, k * 7 + 9);
+      const freq = 1.2 + 2.2 * hash01(id, k * 7 + 10);
+      const ph = 6.28 * hash01(id, k * 7 + 11);
+      // Its own share of the growth: some start late, all are across by the end.
+      const d = 0.35 * hash01(id, k * 7 + 8);
+      const u = smooth01((grow - d) / (1 - d));
+      if (u <= 0.01) continue;
+      const N = 24;
+      const m = Math.max(2, Math.ceil(N * u));
+      pts.length = 0;
+      for (let i = 0; i <= m; i++) {
+        const t = Math.min(u, i / N);
+        // A sinuous root, sagging, wandering across the hole's depth (straight parallel strokes read as pipes).
+        const px = lerp(xa, xb, t);
+        const py =
+          lerp(ya, yb, t) +
+          sag * Math.sin(Math.PI * t) +
+          amp * Math.sin(t * freq * 6.28 + ph) +
+          Math.sin(clock * 1.3 + k + t * 4) * 1.2 * t;
+        pts.push([px, py]);
+      }
+      // One tapered ribbon: thick where it leaves the wood, thinning to the tip (where it is growing).
+      const L: number[] = [];
+      const Rr: number[] = [];
+      for (let i = 0; i < pts.length; i++) {
+        const [px, py] = pts[i] as [number, number];
+        const [qx, qy] = pts[Math.min(pts.length - 1, i + 1)] as [number, number];
+        const [ox, oy] = pts[Math.max(0, i - 1)] as [number, number];
+        const tx = qx - ox;
+        const ty = qy - oy;
+        const tl = Math.hypot(tx, ty) || 1;
+        const f = (1 - (i / (pts.length - 1)) * (0.85 - 0.45 * u)) * (1 + 0.15 * Math.sin(i * 1.7 + k));
+        const hw = (th * f) / 2;
+        L.push(px - (ty / tl) * hw, py + (tx / tl) * hw);
+        Rr.push(px + (ty / tl) * hw, py - (tx / tl) * hw);
+      }
+      const poly = L.slice();
+      for (let i = Rr.length / 2 - 1; i >= 0; i--) poly.push(Rr[i * 2] as number, Rr[i * 2 + 1] as number);
+      g.poly(poly).fill({ color: 0x070d13 });
+      // The moon on the upper edge, in broken lengths.
+      for (let i = 1; i < pts.length; i++) {
+        if (Math.sin(i * 0.9 + k * 2.1) < 0.1) continue;
+        g.moveTo(Rr[(i - 1) * 2] as number, (Rr[(i - 1) * 2 + 1] as number) + 1.5).lineTo(
+          Rr[i * 2] as number,
+          (Rr[i * 2 + 1] as number) + 1.5,
+        );
+      }
+      g.stroke({ color: G.rootLit, width: 1.4, alpha: 0.32, cap: 'round' });
+    }
+    // Rootlets under the closed mat, longer as it settles; a breath of moonlight through the weave.
+    const hang = smooth01((grow - 0.6) / 0.4);
+    if (hang > 0) {
+      const m = Math.round(w / 26);
+      for (let k = 0; k < m; k++) {
+        const xx = x + (k + hash01(id, 90 + k)) * (w / m);
+        const l = (12 + 50 * hash01(id, 120 + k) ** 2) * hang;
+        g.moveTo(xx, y + h * 0.85).quadraticCurveTo(
+          xx + 4 + wind(xx, clock, 0.4) * 2,
+          y + h + l * 0.5,
+          xx + (hash01(id, 150 + k) - 0.5) * 14 + wind(xx, clock, 0.4) * 4,
+          y + h + l,
+        );
+      }
+      g.stroke({ color: 0x0e1820, width: 2.6, alpha: 0.85, cap: 'round' });
+      glow.add(x + w / 2, y + h * 0.5, w * 0.5, G.light, 0.1 * hang, h * 0.8);
+    }
   }
 
   private seal(
@@ -1587,6 +1820,12 @@ export function phraseLit(rhythm: string, clock: number): number {
     }
   }
   return 0;
+}
+
+/** Smoothstep of t clamped to 0..1. */
+function smooth01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
 }
 
 function lerpN(a: number, b: number, t: number): number {

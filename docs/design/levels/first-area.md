@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v7, 2026-10-31)
+# The Canopy: a first area built to the reference numbers (v8, 2026-10-31)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -225,6 +225,127 @@ the render builder's.
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
 
+## v8: the level side of review round 7 (`reviews/canopy-r7.md`, 6.5/10)
+Round 7's verdict: the shape is in the references' band, but the first ten minutes hold three things a new player
+would not forgive or not find: a point-blank spawn, a runback through a save she crossed, a verb nobody told her
+about. v8 takes the [level] items (#1, #2, #4, #5's level side, #7, #9) and two bugs from the coordinator's v7 video;
+the render items (#3, #6, #8, #10, the moon's draw) are the render builder's. The trade is Matt's call (not built).
+- **#1, the fling taught.**
+  - *A required, safe first fling a minute in* (the hatch, the one room crossed once; the lamp relights 90 frames
+    after it goes out, `relight`, so a cut never leaves her without it): the crown's east limb (S5) is
+    cut back to 3,520 and the droop's limb (S8) starts at 4,272 (still inside its painted trunk): 752 px across and
+    290 down, past any jump (a coyote jump with the hold reached 4,221 before: 51 px short of the new lip). One lamp
+    (`wick-first`, 3,700 x 660) hangs on a running jump's rise off the lip; under the gap the fall catch sets her
+    back on S5 and the lamp burns again. Flung right, down-right or up-right she lands on S8, S9 or the drop. Out for
+    good after (`sets: cn-first-fling`).
+  - *The notice, wordless*: a camera zone on S5's east end (`first-fling`, bounds 3,200-5,248 x 360-1,512, `until:
+    cn-first-fling`) holds the lamp and the far limb in one frame until she has flung. The landmark `first-fling`
+    (kind `teach`) is where render's moths can spill toward the far side.
+  - *The prompt*: render's (prompts.ts already teaches the glide, the kick and the offer, "for good" in
+    localStorage): a fourth lesson, the Lamp key's cap HELD beside the flame, while `flingTarget()` is non-null and
+    she has never flung; gone for good on the first `fling` event. No sim flag needed (`cn-first-fling` exists if
+    render wants one).
+  - *Prizes in frame from their lamps*: the limbs' niche (280 x 230 from `wick-limb-2`), the gap's roost (390 from
+    `wick-gap-1`), the Grove's arc (over the lamps), the hollow's east shelf; all inside one 1920 x 1080 view.
+  - *The gap's chain*: v7's second lamp sat 140 px east of a down-left fling's line off the first. The review's spot
+    (~3,120 x 1,560) opens the glide's lock: from any lamp west of ~3,200 at 1,550-1,700 an up-left fling lands a
+    clawed player on the far limb (the lit proofs, five spots tried). So the first lamp moved instead, down under the
+    shelf's lip (3,400 x 1,420: a walk to the lip finds it), and the second sits on its down-left line (3,250 x 1,460);
+    down off the second, the third. A down-left fling off the first brings the second into reach
+    (`canopy-r8.test.ts`), and every gap claim holds lit.
+  - *The bots fling*: `FlingAim` in tools/playtest/lines.ts (Lamp pressed when a flame is in reach on a lamp
+    line, the stick swept over the ways toward the goal reading `lureArc`, let go on the best), and the Lamp key in
+    the motor's keys (human.ts). v7's bots still played the old lamp catch (`player.lure`, always -1 since
+    2026-10-18), and their hands had no Lamp key: that is why they lit 0 lamps.
+- **#2, ambushes arrive** (sim: `EnemySpawn.arrive`, a list of points; `EnemyState.arrive / arriveX / arriveY`;
+  `enemyArrive`; `tuning.enemies.arriveDelayFrames` 36, `arriveFrames` 48, `arriveClearPx` 400; trigger `rearm`).
+  The flag's step shuts the gates; 36 frames later each creature shows at the first of its arrive points 400+ px from
+  her and travels to its spawn over 48 frames, harmless and out of reach; then it is itself.
+  - *The well's hollow*: the trigger is where she lands off the block (1,000-1,408); the burrbacks crawl out of a
+    burrow mouth in the west wall (x 300) to grounds west of her, the lampwing drops from the roof roots (1,350 x 470).
+    Until all three are down a fade or a new entry takes the flag back (`rearm`): it plays again from its arrival.
+  - *The Grove*: the trigger is the drop's column west of the Grovemother (1,472-2,016 x 1,120-1,600: her trunk walls
+    the pit's east half from the roof to her stilts, so it is the only way in before the wave) and fires as she
+    passes the gates' line. Beat 1 arrives from the pit's east floor (2,800 and 3,240) to 2,380 and 2,950; beat 2's
+    juveniles drop from under the gates, the far side if she stands under the near one.
+  - *The tunnel's new wave* (#7) arrives the same way.
+  - A cleared wave stays clear on a new entry (a woken creature whose own `sets` flag is saved stays out), and a fade
+    in beat 2 replays the wave from beat 1 (`rearmArenas` takes back a beat's flag with its waking flag), never both
+    beats at once (v7 brought beat 1 back over a living beat 2).
+  - `canopy-r8.test.ts`: every trigger entered from each side she can come from (8 entries): gates shut on the flag's
+    step, every arrival 30-45 frames later from 400+ px, 60 frames standing still unhit.
+- **#4, a patch she runs through is her re-form point** (sim: `progress.ts`, `tuning.patch.markOnPass`, event
+  `patchMark`, an autosave event): her feet in its box, on the ground or in the air, set `save.patch`; no heal, no
+  rest (standing still in it still rests). Every patch, so the way out's rests and the Spire's nook too. Tested on
+  `p-hollow`: from the chimney's top over the save at a run, into the ambush, a fade, she re-forms at `p-hollow`.
+- **#5, the hub as a place** (level side; the trade not built):
+  - *Framed*: a camera zone over the clearing (the save +- 1,200) whose bounds end 240 under the floor: the floor
+    sits at 78% of a 1080 frame, 80% at 16:10, the sky over it (the moon is render's: `art.moon` is placed at view
+    1,180 x 200).
+  - *One warm light*: the kin's lamp (`landmarks` `kin-lamp`, kind `light`, 2,700 x 1,600), not a fling lamp.
+  - *The kin in three places* (`marks.tatter`, `when`): the clearing (watches, turns away), the bower's chamber
+    behind the rotten wall (keeping a light: landmark `kin-light`), the way out's cliff top after the den
+    (`when: cn-den-down`). The acting is render's (`marks.notes` say what each beat is).
+- **#7, a second peak, a quiet path room, the burrow a place.**
+  - *The tunnel is the second peak* (59 things, 7.0 a screen, 4.2x the median): the west hall's garden staggered
+    (six knuckles with pods, two higher; the run grew to 1,056-3,072), an arc of seven glints over the run, the carriers' trail out of the hall's
+    crack at the run's east end, a juvenile keeping the pile, a hawker over the pit, eight glints on the glide's line,
+    and the den's warning: a gated wave where the glide lands (two lampwings, a juvenile, arriving; a root lid over
+    the drop to the den's mouth until it is cleared; the cellar's shortcut stays open off the block).
+  - *The fork's approach is the quiet path room* (0.68): its knoll juvenile, the face's pod, the stone pocket (the
+    east's moth-stone moved to the Grove's door, by its save) and the glide shelf with its glints are gone; the face
+    and the lamp over its top remain. The climb into the Grove starts from calm, under the moon.
+  - *The burrow is the nest*: the tunnel's lower floor, a long low gallery under the hall's west end (a shaft from the
+    hall's floor by the pile, `nest` / `hall`), the carriers' trails into their cracks, a juvenile pair, pods hung
+    from root clumps (render's floor-mounted ledge families are spent: no family in more than three rooms), the
+    deep's map at the far end; back up the shaft or the burl (the claws). 2.14 a screen.
+  - *Taken from the middle*: the limbs' lampwing and pod (the trunk, well and limbs ran 3.4-3.7 in a row), the bower's
+    kin-chamber pod and the knuckle over its save's floor, the Spire's foot tray. The fork's cellar cover is two now
+    (the knoll's chamber, the stairs under the floor): v7's ran over the open way in from the Crossing.
+- **#9, climbs fair for a relaxed hand** (`DELAYS` 0 / 6 / 10 / 16, every required climb from every start, 64 px
+  margins):
+  - *Leg 3b's lampwing dives once a pass* (`dives: 1`, sim: a lampwing with its own dive count that tired or touched
+    her tells nothing for `retellFrames` and its body is harmless meanwhile): the plain plan takes at most one hit
+    from every start at every delay (v7: 4 hits and a fade from one start); the up-cut plan still kills it unhurt.
+  - *The Spire's neck*: its first touch slid off the east face's foot (256 over the nook's mouth). A root column
+    hangs off the neck's east face in front of the mouth's top (to 760, the mouth 136 open under it) and a root lip
+    runs out from the mouth's floor (1,088-1,280): from the lip a jump meets the column on the way up. `thorn-s2`
+    moved onto the column's face. A climber from the foot now goes on up past the mouth to the bower (either ends
+    `spire-1`).
+  - *The Elder's leg 1*: its root lip carries the east face to 128 over the floor (was 192).
+  - *The way out's leg 3*: `thorn-o2` 880-984 (was 832-960: a 16-frame slide from the first touch met its grown top).
+  - *Leg 2's strip is 160 tall* (`thorn-w2` 2,580-2,740). The risk glints over it moved to a new risk line from the
+    landing: off its lip (64 longer, to 2,240) down the east face to the glints just over the strip and a kick back
+    (`well-2-risk`, delays 0 / 6, margin 16: the slide onto glints over thorns is the risk). Leg 3a jumps from the
+    lip's middle (2,016-2,048).
+- **The v7 video's bugs** (the coordinator): the den's two escape shelves are root one-ways now (under the solid west
+  shelf the old burrback sat in `recover` 90 s and its ram stopped at the shelf's underside: a free safe spot); the
+  Grove's beat-2 lampwing hangs low over the east floor with a 360 px sight (it hovered out of reach and never dived:
+  with the gates shut the wave stalled), and the beat's juveniles range the pit floor (500 / 300).
+- **A sim bug the first fling found**: a fall catch's return (`placePlayer`) gave a fresh player the tuning's double
+  jump whether she owned it or not; a miss at the gap then crossed it with an air jump. The catch's and the thorns'
+  return cap `dj` at what she owns.
+
+**v8's numbers** (`metrics.ts`, `canopy-furniture.ts --check --rooms`; round 8's bar met):
+
+| measure | HK | Silksong | Ori | Nine Sols | Canopy v7 | **Canopy v8** |
+|---|---|---|---|---|---|---|
+| enemies per box screen | 0.55 | 0.26 | 0.57 | 0.59 | 0.42 | **0.55** (52: the tunnel's warning and hall, the nest) |
+| majors / minors | 17 / 4 | 8 / 41 | 23 / 11 | 16 / 13 | 23 / 39 | **23 / 51** (+15 glints on the tunnel's lines, -3 the fork's shelf) |
+| hidden share | 0.35 | 0.22 | 0.18 | 0.26 | 0.34 | **0.27** |
+| things per box screen | 0.28 | 0.17 | 0.80 | 0.42 | 1.33 | **1.48** |
+| room density mean / median | 1.31 / 0.86 | 0.85 / 0.71 | 2.40 / 2.16 | 2.51 / 1.69 | 2.23 / 1.69 | **2.32 / 1.69** |
+| spread (CV) | 1.10 | 0.96 | 0.59 | 1.08 | 0.84 | **0.89** |
+| rooms at >= 4x the median | 4 | 2 | 0 | 3 | 1 | **2** (the Grove 9.8, the tunnel 7.0) |
+| rooms under 0.5 a screen | 16 / 48 | 9 / 34 | 2 / 17 | 7 / 39 | 6 / 27 | **5 / 27** (the burrow is the nest) |
+| hazard runs >= 640 (share) | 18 (71%) | 8 (55%) | 3 (34%) | 13 (71%) | 7 (76%) | **7 (78%)**, 10,831 px |
+| one-ways | 0 | 0 | 11 | 143 | 32 | **36** |
+
+Along the critical path (things a screen): the hatch 0.39, the hub 1.35, the trunk 3.71, the well 3.57, the limbs
+2.53, the hub, **the fork 0.68**, the Grove 9.84, the Spire 2.53, the bower 2.10, the crown 0.42, the gap 4.34, the
+hub, **the tunnel 7.03**, the den 2.11, the way out 2.44. (The references' "rooms at >= 4x the median" are from their
+area files the same way.)
+
 ## v7: the level side of review round 6 (`reviews/canopy-r6.md`, 6/10)
 Round 6's verdict: v6 met every number and the area got flatter: the furniture was one recipe stamped in every hall
 (room density CV 0.41 against about 1.0 in HK, Silksong and Nine Sols, no quiet room, the thorns 20% in long runs),
@@ -374,6 +495,15 @@ out's ledge wall. Majors: two moonDrops (the two branch ends), five moth-stones,
 eyes, quick wings, three seeds, the two abilities.
 
 ## Proven (tools/solve/canopy.ts: the explorer in the real sim, ~7 min with a room a process, 8 at once)
+v8: 74 claims, 96 runs (every lock claim in a room with a lamp again lit), all hold (~6 min, a room a process, 8 at
+once). New: the first fling (from the crown's east limb no jump reaches the droop's limb, `lampKey`: not re-run
+lit; lit, the drop and the pocket); the gap's chain with the first lamp moved (the far limb shut lit); the tunnel's
+den warning (the lid holds from the glide's landing, the cellar's shortcut open; with `cn-tunnel-clear` the den);
+the nest both ways (down the hall's shaft without the claws, back up with them, never without); the fork without its
+shelf and stone. `canopy-climbs.test.ts`: 15 climbs at delays 0 / 6 / 10 / 16 (`well-2-risk` new), leg 3b with its
+lampwing at most two hits from every start at every delay, `thorn-w2` >= 160. `canopy-r8.test.ts`: the ambushes'
+arrivals, the patch pass and re-form, the first fling, the gap's chain.
+
 v7: 69 claims, 92 runs: every lock claim in a room with a lamp runs a second time with the lamps burning (flings,
 chains, eight aims), and all hold. New: the five fling lines (the trunk's tier 2 back to tier 1 without the claws,
 never out of the hall; the limbs' niche without the claws off the two lamps; the gap's roost and pod garden off the
@@ -406,7 +536,23 @@ seed only through its wall (`cuts: false`), the Grove's gate only once the pit i
 the arena floor and not climbable back (`place:` claims), the giant's tier 3 back up with the claws). r4 counts bark
 cuts in the search's keys (`barkHp`), which made it ~5x slower. The world check passes (claws, then glide).
 
-## Played by the human-like bots (v7: playtest-reports/canopy-r7)
+## Played by the human-like bots (v8: playtest-reports/canopy-r8)
+On 9643301 (25 min, give up after 180 s; for bugs and softlocks only):
+
+| bot | out of the hatch | claws at | furthest | where it went |
+|---|---|---|---|---|
+| casual | 0:57 (3 catches, then the fling) | 2:23 | leg 2 | well <-> trunk loops for 22 min; leg 2's strip 13 hits |
+| average | 0:30 | 1:26 | **the hollow at 4:17**, the ambush cleared (all three), leg 3 | lost in the well at 14:40 (the hollow and the chimney: never found the shelf to the limbs) |
+| skilled | 0:32 | 1:24 | **the hollow at 8:04**, the ambush cleared | lost in the well at 13:27, the same |
+
+What the runs found, fixed on the way: the hands never pressed the Lamp key (`ActionBit.lamp` was missing from the
+motor's keys in human.ts: the lamp lines planned flings the keyboard never sent), and **the first lamp could be cut
+down for good** (the bots' old lamp-cut lines snuffed it: no lamp, no way across, a softlock): it relights 90 frames
+after it goes out. With both, all three fling across in the first minute. The well's ambush arrived and was fought
+and cleared by two bots (4 and 3 hits in it). Not reached: the limbs (v7's skilled bot left by them at 16:39); the
+bots wander the hollow after the ambush. A plain jump from the block to the east shelf is the way (the proofs).
+
+### v7 (playtest-reports/canopy-r7)
 The start command on 9f0d77a (25 min, give up after 180 s; for bugs and softlocks only, never a difficulty bar):
 
 | bot | claws at | furthest | where it went |
@@ -479,7 +625,25 @@ and the giant's tier 3 was a pocket (its shaft started 448 px over the floor). N
 two or three tries and leave (a thorn there returns them to the well's bottom when they never stood on the mouth's
 floor), none climbed the fork's claw face in 20 min, and the rot branch still swallows the no-claws bot.
 
-## What is still weak (for round 8)
+## What is still weak (for round 9)
+- **No person has played it.** The first ten minutes now teach the fling, arrive instead of spawning and keep her save;
+  Matt's run from the hatch to the Grove is still the evidence nothing else gives.
+- **The tunnel's peak is counted, not felt.** 59 things in 8.4 screens, 15 of them glints on lines (the run's arc,
+  the glide's line): they buy nothing until the trade is decided. The den's warning is a small wave on a 384 px floor:
+  untested with a person, and the bots rarely get that far.
+- **The gap's chain is three lamps only from the shelf's lip**: the review's spot for the second lamp opens the glide's
+  lock, so the first moved under the lip; a person who jumps off the shelf (not walks) meets the second lamp first.
+- **The ambushes' arrivals are drawn as a slide** until render draws them (the creature moves in its own mode from its
+  arrive point: dust, roots parting, a drop are render's). The well's ambush has no gates (no lock-in: she can run
+  for the shelf); `rearm` replays it after a fade or a new entry.
+- **Quiet rooms 5** (r7's bar was 6): the burrow is the nest now, a place on the tunnel's loop. The 1.8-screen dead
+  ends (the nook, the ledge) cannot be quiet with one find in them.
+- **Climb fairness at 16 came from three plan changes** (well-3b's far start jumps 18 px nearer the lip, leg 3a from
+  the lip's middle, spire-1 crossing at 900) as well as the faces: a person's habit varies more than the plans do.
+- **The den's camping** was fixed by making the shelves one-ways, not by finding why the old burrback sat in `recover`
+  for 90 s (not reproduced headless: on the shelf it rears and slams within 3 s).
+
+## What was weak after v7 (round 8 answered most)
 - **No person has played it.** Round 7's evidence was to be Matt's run from the hatch to the Grove; the numbers now
   meet the review's shape bar, which is still not fun measured.
 - **The hub is not quiet by the measure** (1.35 a screen): its sockets, shown locks and their finds are things. The

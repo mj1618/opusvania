@@ -326,62 +326,6 @@
       },
       {
         "tag": "branch",
-        "x": 3520,
-        "y": 890,
-        "w": 48,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 3568,
-        "y": 892,
-        "w": 96,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 3664,
-        "y": 900,
-        "w": 96,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 3760,
-        "y": 904,
-        "w": 80,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 3840,
-        "y": 911,
-        "w": 48,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 3888,
-        "y": 914,
-        "w": 64,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 3952,
-        "y": 913,
-        "w": 80,
-        "h": 80
-      },
-      {
-        "tag": "branch",
-        "x": 4224,
-        "y": 1183,
-        "w": 48,
-        "h": 80
-      },
-      {
-        "tag": "branch",
         "x": 4272,
         "y": 1178,
         "w": 96,
@@ -650,7 +594,7 @@
         {
           "id": "S5",
           "x0": 3424,
-          "x1": 4032,
+          "x1": 3520,
           "parent": "crown",
           "from": [3458, 930],
           "grows": "east",
@@ -658,7 +602,7 @@
         },
         {
           "id": "S8",
-          "x0": 4224,
+          "x0": 4272,
           "x1": 4736,
           "parent": "droop",
           "from": [4212, 1220],
@@ -694,6 +638,24 @@
           "id": "pocket",
           "x": 4960,
           "y": 1600
+        },
+        {
+          "id": "first-near",
+          "x": 3460,
+          "y": 892
+        },
+        {
+          "id": "first-far",
+          "x": 4480,
+          "y": 1183
+        }
+      ],
+      "landmarks": [
+        {
+          "id": "first-fling",
+          "kind": "teach",
+          "x": 3700,
+          "y": 660
         }
       ],
       "covers": [
@@ -742,6 +704,11 @@
           "name": "branch-end",
           "x": 5006,
           "y": 1324
+        },
+        {
+          "name": "first-fling",
+          "x": 3460,
+          "y": 892
         }
       ],
       "closeup": {
@@ -771,8 +738,34 @@
       "leadFrames": 36,
       "smoothYFastFall": 6,
       "realFallPx": 250,
-      "targetSmoothY": 10
+      "targetSmoothY": 10,
+      "zones": [
+        {
+          "id": "first-fling",
+          "x": 3296,
+          "y": 560,
+          "w": 224,
+          "h": 420,
+          "bounds": {
+            "x": 3200,
+            "y": 360,
+            "w": 2048,
+            "h": 1152
+          },
+          "until": "cn-first-fling"
+        }
+      ]
     },
+    "lures": [
+      {
+        "id": "wick-first",
+        "kind": "wick",
+        "x": 3700,
+        "y": 660,
+        "sets": "cn-first-fling",
+        "relight": 90
+      }
+    ],
     "pickups": [],
     "pods": [
       {
@@ -1203,6 +1196,12 @@
           "kind": "landmark",
           "x": 2960,
           "y": 1600
+        },
+        {
+          "id": "kin-lamp",
+          "kind": "light",
+          "x": 2700,
+          "y": 1600
         }
       ],
       "places": [
@@ -1261,7 +1260,14 @@
         "y": 1600,
         "facing": 1,
         "want": [5440, 1600]
-      }
+      },
+      "notes": [
+        {
+          "x": 2780,
+          "y": 1500,
+          "text": "the kin (1/3): watches her come into the clearing, turns away as she nears"
+        }
+      ]
     },
     "exits": [
       {
@@ -1342,7 +1348,23 @@
       }
     ],
     "camera": {
-      "anchorY": 0.4
+      "anchorY": 0.4,
+      "zones": [
+        {
+          "id": "clearing",
+          "x": 1760,
+          "y": 960,
+          "w": 2400,
+          "h": 640,
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "w": 8000,
+            "h": 1840
+          },
+          "frames": 45
+        }
+      ]
     },
     "mothStones": [
       {
@@ -2274,7 +2296,7 @@
         "tag": "branch",
         "x": 1920,
         "y": 2432,
-        "w": 256
+        "w": 320
       },
       {
         "tag": "branch",
@@ -2294,19 +2316,19 @@
         "id": "risk-w-1",
         "kind": "glint",
         "x": 2276,
-        "y": 2460
+        "y": 2420
       },
       {
         "id": "risk-w-2",
         "kind": "glint",
         "x": 2276,
-        "y": 2510
+        "y": 2470
       },
       {
         "id": "risk-w-3",
         "kind": "glint",
         "x": 2276,
-        "y": 2560
+        "y": 2520
       }
     ],
     "pods": [
@@ -2341,29 +2363,34 @@
         "facing": -1,
         "senses": "always",
         "radius": 140,
-        "wakes": "wallJump"
+        "wakes": "wallJump",
+        "dives": 1
       },
       {
         "id": "burr-am-1",
         "kind": "burrback",
-        "x": 640,
+        "x": 600,
         "y": 1152,
         "facing": 1,
-        "radius": 300,
+        "radius": 340,
         "senses": "always",
         "wakes": "cn-well-ambush",
-        "fenced": true
+        "sets": "cn-well-clear",
+        "fenced": true,
+        "arrive": [[300, 1152]]
       },
       {
         "id": "burr-am-2",
         "kind": "burrback",
-        "x": 1200,
+        "x": 860,
         "y": 1152,
-        "facing": -1,
-        "radius": 100,
+        "facing": 1,
+        "radius": 400,
         "senses": "always",
         "wakes": "cn-well-ambush",
-        "fenced": true
+        "sets": "cn-well-clear",
+        "fenced": true,
+        "arrive": [[300, 1152]]
       },
       {
         "id": "wing-am",
@@ -2373,7 +2400,9 @@
         "facing": 1,
         "senses": "always",
         "radius": 260,
-        "wakes": "cn-well-ambush"
+        "wakes": "cn-well-ambush",
+        "sets": "cn-well-clear",
+        "arrive": [[1350, 470]]
       }
     ],
     "lures": [
@@ -2546,9 +2575,9 @@
       {
         "id": "thorn-w2",
         "x": 2276,
-        "y": 2656,
+        "y": 2580,
         "w": 28,
-        "h": 84
+        "h": 160
       },
       {
         "id": "thorn-w3b",
@@ -2571,11 +2600,12 @@
     "triggers": [
       {
         "id": "ambush",
-        "x": 704,
+        "x": 1000,
         "y": 960,
-        "w": 704,
+        "w": 408,
         "h": 192,
-        "sets": "cn-well-ambush"
+        "sets": "cn-well-ambush",
+        "rearm": true
       }
     ],
     "shots": {
@@ -2927,7 +2957,7 @@
       {
         "tag": "branch",
         "x": 1632,
-        "y": 574,
+        "y": 575,
         "w": 128,
         "h": 80
       },
@@ -3018,26 +3048,8 @@
         "y": 240
       }
     ],
-    "pods": [
-      {
-        "id": "pod-l2",
-        "x": 1760,
-        "y": 552,
-        "mount": "sit",
-        "regrow": 1200
-      }
-    ],
-    "enemies": [
-      {
-        "id": "wing-g1",
-        "kind": "lampwing",
-        "x": 1280,
-        "y": 520,
-        "facing": -1,
-        "senses": "always",
-        "radius": 220
-      }
-    ],
+    "pods": [],
+    "enemies": [],
     "lures": [
       {
         "id": "wick-limb-1",
@@ -4222,7 +4234,7 @@
         "x": 1152,
         "y": 2240,
         "w": 64,
-        "h": 64
+        "h": 128
       }
     ],
     "oneWays": [
@@ -4459,60 +4471,7 @@
         "x": 0,
         "y": 0,
         "w": 896,
-        "h": 384,
-        "kick": false
-      },
-      {
-        "tag": "root",
-        "x": 0,
-        "y": 384,
-        "w": 224,
-        "h": 64
-      },
-      {
-        "tag": "root",
-        "x": 736,
-        "y": 384,
-        "w": 160,
-        "h": 64,
-        "kick": false
-      },
-      {
-        "tag": "root",
-        "x": 0,
-        "y": 448,
-        "w": 192,
-        "h": 64
-      },
-      {
-        "tag": "root",
-        "x": 768,
-        "y": 448,
-        "w": 128,
-        "h": 64,
-        "kick": false
-      },
-      {
-        "tag": "root",
-        "x": 832,
-        "y": 512,
-        "w": 64,
-        "h": 128,
-        "kick": false
-      },
-      {
-        "tag": "root",
-        "x": 0,
-        "y": 512,
-        "w": 128,
-        "h": 384
-      },
-      {
-        "tag": "root",
-        "x": 0,
-        "y": 896,
-        "w": 896,
-        "h": 128,
+        "h": 1024,
         "kick": false
       },
       {
@@ -4648,72 +4607,12 @@
         "y": 1096,
         "w": 48,
         "h": 80
-      },
-      {
-        "tag": "root",
-        "x": 1792,
-        "y": 768,
-        "w": 256,
-        "h": 192,
-        "kick": false
       }
     ],
-    "oneWays": [
-      {
-        "tag": "branch",
-        "x": 256,
-        "y": 672,
-        "w": 160
-      }
-    ],
-    "pickups": [
-      {
-        "id": "shelf-1",
-        "kind": "glint",
-        "x": 1896,
-        "y": 720
-      },
-      {
-        "id": "shelf-2",
-        "kind": "glint",
-        "x": 1920,
-        "y": 704
-      },
-      {
-        "id": "shelf-3",
-        "kind": "glint",
-        "x": 1944,
-        "y": 720
-      }
-    ],
-    "pods": [
-      {
-        "id": "pod-stone",
-        "x": 336,
-        "y": 650,
-        "mount": "sit",
-        "regrow": 1200,
-        "hp": 2
-      },
-      {
-        "id": "pod-face",
-        "x": 2900,
-        "y": 554,
-        "mount": "sit",
-        "regrow": 1200
-      }
-    ],
-    "enemies": [
-      {
-        "id": "juv-e",
-        "kind": "juvenileBurrback",
-        "x": 1888,
-        "y": 1088,
-        "facing": -1,
-        "radius": 120,
-        "senses": "always"
-      }
-    ],
+    "oneWays": [],
+    "pickups": [],
+    "pods": [],
+    "enemies": [],
     "lures": [
       {
         "id": "wick-fork",
@@ -4739,25 +4638,19 @@
       ],
       "covers": [
         {
-          "id": "shelf-cover",
-          "x": 1728,
-          "y": 576,
-          "w": 384,
-          "h": 256
-        },
-        {
-          "id": "stone-cover",
-          "x": 64,
-          "y": 384,
-          "w": 832,
-          "h": 576
-        },
-        {
           "id": "cellar-cover",
-          "x": 256,
+          "x": 1600,
           "y": 1088,
+          "w": 448,
+          "h": 448,
+          "opens": "cellar-panel"
+        },
+        {
+          "id": "stairs-cover",
+          "x": 256,
+          "y": 1408,
           "w": 1792,
-          "h": 832,
+          "h": 512,
           "opens": "cellar-panel"
         }
       ],
@@ -4772,11 +4665,6 @@
           "id": "top",
           "x": 3000,
           "y": 576
-        },
-        {
-          "id": "shelf",
-          "x": 1920,
-          "y": 768
         },
         {
           "id": "stairs",
@@ -4834,14 +4722,6 @@
         "h": 192
       }
     ],
-    "mothStones": [
-      {
-        "id": "stone-east",
-        "x": 400,
-        "y": 896,
-        "area": "cn-east"
-      }
-    ],
     "shots": {
       "wide": [
         {
@@ -4889,10 +4769,6 @@
       },
       {
         "from": "mid",
-        "to": "stone-east"
-      },
-      {
-        "from": "mid",
         "to": "top",
         "needs": ["wallJump"]
       },
@@ -4904,17 +4780,6 @@
       {
         "from": "top",
         "to": "grove"
-      },
-      {
-        "from": "top",
-        "to": "shelf",
-        "needs": ["glide"],
-        "oneWay": true
-      },
-      {
-        "from": "shelf",
-        "to": "mid",
-        "oneWay": true
       }
     ]
   },
@@ -6349,25 +6214,28 @@
       {
         "id": "burr-pit-w",
         "kind": "burrback",
-        "x": 1800,
+        "x": 2380,
         "y": 1600,
-        "facing": 1,
-        "radius": 220,
+        "facing": -1,
+        "radius": 300,
         "senses": "always",
+        "fenced": true,
         "wakes": "cn-grove-wave",
-        "sets": "cn-grove-beat2"
+        "sets": "cn-grove-beat2",
+        "arrive": [[2800, 1600]]
       },
       {
         "id": "burr-pit-e",
         "kind": "burrback",
-        "x": 2850,
+        "x": 2950,
         "y": 1600,
         "facing": -1,
         "radius": 200,
         "senses": "always",
         "fenced": true,
         "wakes": "cn-grove-wave",
-        "sets": "cn-grove-beat2"
+        "sets": "cn-grove-beat2",
+        "arrive": [[3240, 1600]]
       },
       {
         "id": "juv-wave-w",
@@ -6375,11 +6243,12 @@
         "x": 1760,
         "y": 1600,
         "facing": 1,
-        "radius": 200,
+        "radius": 500,
         "senses": "always",
         "fenced": true,
         "wakes": "cn-grove-beat2",
-        "sets": "cn-grove-clear"
+        "sets": "cn-grove-clear",
+        "arrive": [[1760, 1120], [2920, 1120]]
       },
       {
         "id": "juv-wave-e",
@@ -6387,11 +6256,12 @@
         "x": 2920,
         "y": 1600,
         "facing": -1,
-        "radius": 160,
+        "radius": 300,
         "senses": "always",
         "fenced": true,
         "wakes": "cn-grove-beat2",
-        "sets": "cn-grove-clear"
+        "sets": "cn-grove-clear",
+        "arrive": [[2920, 1120], [1760, 1120]]
       },
       {
         "id": "dang-wave",
@@ -6406,11 +6276,12 @@
       {
         "id": "wing-wave",
         "kind": "lampwing",
-        "x": 3400,
-        "y": 1260,
+        "x": 2960,
+        "y": 1360,
         "facing": -1,
         "senses": "always",
-        "radius": 140,
+        "radius": 120,
+        "sight": 360,
         "wakes": "cn-grove-beat2",
         "sets": "cn-grove-clear"
       },
@@ -6684,10 +6555,10 @@
     "triggers": [
       {
         "id": "pit-wave",
-        "x": 1536,
-        "y": 1472,
-        "w": 1664,
-        "h": 128,
+        "x": 1472,
+        "y": 1120,
+        "w": 544,
+        "h": 480,
         "sets": "cn-grove-wave"
       }
     ],
@@ -6721,39 +6592,19 @@
         "y": 576
       }
     ],
-    "shots": {
-      "wide": [
-        {
-          "name": "entry",
-          "x": 400,
-          "y": 576
-        },
-        {
-          "name": "tiers",
-          "x": 1100,
-          "y": 1024
-        },
-        {
-          "name": "pit",
-          "x": 2200,
-          "y": 1600
-        },
-        {
-          "name": "crown",
-          "x": 2700,
-          "y": 704
-        },
-        {
-          "name": "east",
-          "x": 3500,
-          "y": 1472
-        }
-      ],
-      "closeup": {
-        "ground": [400, 576]
+    "mothStones": [
+      {
+        "id": "stone-east",
+        "x": 180,
+        "y": 576,
+        "area": "cn-east"
       }
-    },
+    ],
     "routes": [
+      {
+        "from": "mid",
+        "to": "stone-east"
+      },
       {
         "from": "fork",
         "to": "mid"
@@ -6807,7 +6658,39 @@
         "from": "pit",
         "to": "shard-grove"
       }
-    ]
+    ],
+    "shots": {
+      "wide": [
+        {
+          "name": "entry",
+          "x": 400,
+          "y": 576
+        },
+        {
+          "name": "tiers",
+          "x": 1100,
+          "y": 1024
+        },
+        {
+          "name": "pit",
+          "x": 2200,
+          "y": 1600
+        },
+        {
+          "name": "crown",
+          "x": 2700,
+          "y": 704
+        },
+        {
+          "name": "east",
+          "x": 3500,
+          "y": 1472
+        }
+      ],
+      "closeup": {
+        "ground": [400, 576]
+      }
+    }
   },
   {
     "id": "cn-spire",
@@ -6964,9 +6847,23 @@
         "y": 1216,
         "w": 64,
         "h": 64
+      },
+      {
+        "tag": "root",
+        "x": 1216,
+        "y": 576,
+        "w": 64,
+        "h": 184
       }
     ],
-    "oneWays": [],
+    "oneWays": [
+      {
+        "tag": "branch",
+        "x": 1088,
+        "y": 896,
+        "w": 192
+      }
+    ],
     "pickups": [],
     "pods": [],
     "enemies": [
@@ -7079,7 +6976,7 @@
     "thorns": [
       {
         "id": "thorn-s2",
-        "x": 1252,
+        "x": 1188,
         "y": 235,
         "w": 28,
         "h": 185
@@ -7090,13 +6987,6 @@
         "y": 800,
         "w": 28,
         "h": 200
-      },
-      {
-        "id": "thorn-s-foot",
-        "x": 1920,
-        "y": 1892,
-        "w": 256,
-        "h": 28
       }
     ],
     "shots": {
@@ -7979,25 +7869,10 @@
         "x": 2880,
         "y": 1248,
         "w": 128
-      },
-      {
-        "tag": "branch",
-        "x": 3584,
-        "y": 1152,
-        "w": 128
       }
     ],
     "pickups": [],
-    "pods": [
-      {
-        "id": "pod-kin",
-        "x": 480,
-        "y": 1110,
-        "mount": "hang",
-        "regrow": 1200,
-        "hp": 2
-      }
-    ],
+    "pods": [],
     "enemies": [
       {
         "id": "hawk-hall",
@@ -8084,7 +7959,14 @@
           "opens": "kin-wall"
         }
       ],
-      "landmarks": [],
+      "landmarks": [
+        {
+          "id": "kin-light",
+          "kind": "light",
+          "x": 220,
+          "y": 1472
+        }
+      ],
       "places": [
         {
           "id": "arrive",
@@ -8118,6 +8000,18 @@
           "y": 0,
           "w": 4736,
           "h": 1664
+        }
+      ],
+      "tatter": {
+        "x": 300,
+        "y": 1472,
+        "facing": 1
+      },
+      "notes": [
+        {
+          "x": 300,
+          "y": 1380,
+          "text": "the kin (2/3): keeps a small light in the chamber; it looks up as she breaks in"
         }
       ]
     },
@@ -9123,14 +9017,14 @@
       {
         "id": "wick-gap-1",
         "kind": "wick",
-        "x": 3380,
-        "y": 1240
+        "x": 3400,
+        "y": 1420
       },
       {
         "id": "wick-gap-2",
         "kind": "wick",
-        "x": 3240,
-        "y": 1600
+        "x": 3250,
+        "y": 1460
       },
       {
         "id": "wick-gap-3",
@@ -9761,16 +9655,16 @@
       },
       {
         "tag": "ground",
-        "x": 0,
+        "x": 768,
         "y": 1856,
-        "w": 1088,
+        "w": 288,
         "h": 64
       },
       {
         "tag": "ground",
-        "x": 2944,
+        "x": 3072,
         "y": 1856,
-        "w": 1344,
+        "w": 1216,
         "h": 64
       },
       {
@@ -9790,8 +9684,15 @@
       {
         "tag": "ground",
         "x": 0,
+        "y": 1856,
+        "w": 576,
+        "h": 320
+      },
+      {
+        "tag": "ground",
+        "x": 768,
         "y": 1920,
-        "w": 4288,
+        "w": 3520,
         "h": 256
       },
       {
@@ -9902,14 +9803,32 @@
       },
       {
         "tag": "branch",
+        "x": 1664,
+        "y": 1504,
+        "w": 128
+      },
+      {
+        "tag": "branch",
         "x": 1920,
         "y": 1632,
         "w": 128
       },
       {
         "tag": "branch",
+        "x": 2176,
+        "y": 1504,
+        "w": 128
+      },
+      {
+        "tag": "branch",
         "x": 2432,
         "y": 1664,
+        "w": 128
+      },
+      {
+        "tag": "branch",
+        "x": 2752,
+        "y": 1696,
         "w": 128
       },
       {
@@ -9997,6 +9916,96 @@
         "kind": "glint",
         "x": 928,
         "y": 1800
+      },
+      {
+        "id": "run-arc-1",
+        "kind": "glint",
+        "x": 1280,
+        "y": 1420
+      },
+      {
+        "id": "run-arc-2",
+        "kind": "glint",
+        "x": 1520,
+        "y": 1381
+      },
+      {
+        "id": "run-arc-3",
+        "kind": "glint",
+        "x": 1760,
+        "y": 1358
+      },
+      {
+        "id": "run-arc-4",
+        "kind": "glint",
+        "x": 2000,
+        "y": 1350
+      },
+      {
+        "id": "run-arc-5",
+        "kind": "glint",
+        "x": 2240,
+        "y": 1358
+      },
+      {
+        "id": "run-arc-6",
+        "kind": "glint",
+        "x": 2480,
+        "y": 1381
+      },
+      {
+        "id": "run-arc-7",
+        "kind": "glint",
+        "x": 2720,
+        "y": 1420
+      },
+      {
+        "id": "pit-arc-1",
+        "kind": "glint",
+        "x": 6336,
+        "y": 1560
+      },
+      {
+        "id": "pit-arc-2",
+        "kind": "glint",
+        "x": 6446,
+        "y": 1511
+      },
+      {
+        "id": "pit-arc-3",
+        "kind": "glint",
+        "x": 6555,
+        "y": 1478
+      },
+      {
+        "id": "pit-arc-4",
+        "kind": "glint",
+        "x": 6665,
+        "y": 1462
+      },
+      {
+        "id": "pit-arc-5",
+        "kind": "glint",
+        "x": 6775,
+        "y": 1462
+      },
+      {
+        "id": "pit-arc-6",
+        "kind": "glint",
+        "x": 6885,
+        "y": 1478
+      },
+      {
+        "id": "pit-arc-7",
+        "kind": "glint",
+        "x": 6994,
+        "y": 1511
+      },
+      {
+        "id": "pit-arc-8",
+        "kind": "glint",
+        "x": 7104,
+        "y": 1560
       }
     ],
     "pods": [
@@ -10008,6 +10017,13 @@
         "regrow": 1200
       },
       {
+        "id": "pod-run-1664",
+        "x": 1728,
+        "y": 1482,
+        "mount": "sit",
+        "regrow": 1200
+      },
+      {
         "id": "pod-run-1920",
         "x": 1984,
         "y": 1610,
@@ -10015,9 +10031,23 @@
         "regrow": 1200
       },
       {
+        "id": "pod-run-2176",
+        "x": 2240,
+        "y": 1482,
+        "mount": "sit",
+        "regrow": 1200
+      },
+      {
         "id": "pod-run-2432",
         "x": 2496,
         "y": 1642,
+        "mount": "sit",
+        "regrow": 1200
+      },
+      {
+        "id": "pod-run-2752",
+        "x": 2816,
+        "y": 1674,
         "mount": "sit",
         "regrow": 1200
       },
@@ -10080,6 +10110,90 @@
         "facing": -1,
         "follow": "ant-tu1",
         "phase": 0.5
+      },
+      {
+        "id": "ant-hall1",
+        "kind": "carrier",
+        "x": 3700,
+        "y": 1856,
+        "facing": -1,
+        "trail": [[3150, 1856]]
+      },
+      {
+        "id": "ant-hall2",
+        "kind": "carrier",
+        "x": 3700,
+        "y": 1856,
+        "facing": -1,
+        "follow": "ant-hall1",
+        "phase": 0.33
+      },
+      {
+        "id": "ant-hall3",
+        "kind": "carrier",
+        "x": 3700,
+        "y": 1856,
+        "facing": -1,
+        "follow": "ant-hall1",
+        "phase": 0.67
+      },
+      {
+        "id": "juv-pile",
+        "kind": "juvenileBurrback",
+        "x": 1000,
+        "y": 1856,
+        "facing": -1,
+        "radius": 120,
+        "senses": "always",
+        "fenced": true
+      },
+      {
+        "id": "hawk-pit",
+        "kind": "hawker",
+        "x": 6720,
+        "y": 1460,
+        "facing": -1,
+        "senses": "always",
+        "radius": 240
+      },
+      {
+        "id": "wing-warn-1",
+        "kind": "lampwing",
+        "x": 7320,
+        "y": 1560,
+        "facing": 1,
+        "senses": "always",
+        "radius": 100,
+        "sight": 360,
+        "wakes": "cn-tunnel-wave",
+        "sets": "cn-tunnel-clear",
+        "arrive": [[6720, 1420]]
+      },
+      {
+        "id": "wing-warn-2",
+        "kind": "lampwing",
+        "x": 7540,
+        "y": 1520,
+        "facing": -1,
+        "senses": "always",
+        "radius": 100,
+        "sight": 360,
+        "wakes": "cn-tunnel-wave",
+        "sets": "cn-tunnel-clear",
+        "arrive": [[7744, 1120]]
+      },
+      {
+        "id": "juv-warn",
+        "kind": "juvenileBurrback",
+        "x": 7552,
+        "y": 1600,
+        "facing": -1,
+        "radius": 48,
+        "senses": "always",
+        "fenced": true,
+        "wakes": "cn-tunnel-wave",
+        "sets": "cn-tunnel-clear",
+        "arrive": [[7744, 1120]]
       }
     ],
     "lures": [],
@@ -10112,6 +10226,11 @@
         }
       ],
       "places": [
+        {
+          "id": "nest-mouth",
+          "x": 672,
+          "y": 1856
+        },
         {
           "id": "land",
           "x": 5440,
@@ -10190,6 +10309,23 @@
         "edge": "s",
         "from": 4288,
         "to": 4480
+      },
+      {
+        "id": "nest",
+        "edge": "s",
+        "from": 576,
+        "to": 768
+      }
+    ],
+    "gates": [
+      {
+        "id": "den-lid",
+        "x": 7616,
+        "y": 1792,
+        "w": 192,
+        "h": 64,
+        "flag": "cn-tunnel-clear",
+        "kick": false
       }
     ],
     "bark": [
@@ -10222,10 +10358,21 @@
       },
       {
         "id": "thorn-run",
-        "x": 1088,
+        "x": 1056,
         "y": 1892,
-        "w": 1856,
+        "w": 2016,
         "h": 28
+      }
+    ],
+    "triggers": [
+      {
+        "id": "den-warn",
+        "x": 7232,
+        "y": 1600,
+        "w": 384,
+        "h": 256,
+        "sets": "cn-tunnel-wave",
+        "rearm": true
       }
     ],
     "shots": {
@@ -10288,6 +10435,17 @@
       {
         "from": "floor",
         "to": "pile"
+      },
+      {
+        "from": "pile",
+        "to": "nest",
+        "oneWay": true
+      },
+      {
+        "from": "nest",
+        "to": "pile",
+        "needs": ["wallJump"],
+        "oneWay": true
       },
       {
         "from": "land",
@@ -10396,16 +10554,16 @@
       },
       {
         "tag": "ground",
-        "x": 0,
+        "x": 768,
         "y": 0,
-        "w": 4288,
+        "w": 3520,
         "h": 416
       },
       {
         "tag": "ground",
-        "x": 0,
+        "x": 768,
         "y": 416,
-        "w": 3936,
+        "w": 3168,
         "h": 32
       },
       {
@@ -10439,9 +10597,51 @@
       {
         "tag": "ground",
         "x": 0,
+        "y": 0,
+        "w": 576,
+        "h": 480
+      },
+      {
+        "tag": "ground",
+        "x": 768,
         "y": 448,
-        "w": 3904,
-        "h": 128
+        "w": 3136,
+        "h": 32
+      },
+      {
+        "tag": "ground",
+        "x": 1024,
+        "y": 480,
+        "w": 1376,
+        "h": 32
+      },
+      {
+        "tag": "ground",
+        "x": 3488,
+        "y": 480,
+        "w": 416,
+        "h": 64
+      },
+      {
+        "tag": "ground",
+        "x": 0,
+        "y": 480,
+        "w": 480,
+        "h": 96
+      },
+      {
+        "tag": "ground",
+        "x": 2112,
+        "y": 512,
+        "w": 288,
+        "h": 64
+      },
+      {
+        "tag": "ground",
+        "x": 3680,
+        "y": 544,
+        "w": 224,
+        "h": 32
       },
       {
         "tag": "ground",
@@ -10452,9 +10652,9 @@
       },
       {
         "tag": "ground",
-        "x": 0,
+        "x": 3712,
         "y": 576,
-        "w": 3776,
+        "w": 64,
         "h": 32
       },
       {
@@ -10462,6 +10662,20 @@
         "x": 6464,
         "y": 576,
         "w": 256,
+        "h": 32
+      },
+      {
+        "tag": "ground",
+        "x": 0,
+        "y": 576,
+        "w": 448,
+        "h": 64
+      },
+      {
+        "tag": "ground",
+        "x": 0,
+        "y": 640,
+        "w": 384,
         "h": 32
       },
       {
@@ -10474,15 +10688,15 @@
       {
         "tag": "ground",
         "x": 0,
-        "y": 608,
-        "w": 3712,
-        "h": 256
+        "y": 672,
+        "w": 320,
+        "h": 192
       },
       {
         "tag": "ground",
         "x": 0,
         "y": 864,
-        "w": 3776,
+        "w": 384,
         "h": 352
       },
       {
@@ -10533,12 +10747,119 @@
         "y": 960,
         "w": 256,
         "h": 128
+      },
+      {
+        "tag": "ground",
+        "x": 1344,
+        "y": 576,
+        "w": 192,
+        "h": 80
+      },
+      {
+        "tag": "ground",
+        "x": 1408,
+        "y": 656,
+        "w": 64,
+        "h": 80
+      },
+      {
+        "tag": "ground",
+        "x": 2560,
+        "y": 576,
+        "w": 192,
+        "h": 80
+      },
+      {
+        "tag": "ground",
+        "x": 2624,
+        "y": 656,
+        "w": 64,
+        "h": 80
       }
     ],
     "oneWays": [],
     "pickups": [],
-    "pods": [],
-    "enemies": [],
+    "pods": [
+      {
+        "id": "pod-nest-1",
+        "x": 1440,
+        "y": 758,
+        "mount": "hang",
+        "regrow": 1200
+      },
+      {
+        "id": "pod-nest-2",
+        "x": 2656,
+        "y": 758,
+        "mount": "hang",
+        "regrow": 1200
+      }
+    ],
+    "enemies": [
+      {
+        "id": "ant-nest-a1",
+        "kind": "carrier",
+        "x": 1100,
+        "y": 1216,
+        "facing": 1,
+        "trail": [[2300, 1216]]
+      },
+      {
+        "id": "ant-nest-a2",
+        "kind": "carrier",
+        "x": 1100,
+        "y": 1216,
+        "facing": 1,
+        "follow": "ant-nest-a1",
+        "phase": 0.33
+      },
+      {
+        "id": "ant-nest-a3",
+        "kind": "carrier",
+        "x": 1100,
+        "y": 1216,
+        "facing": 1,
+        "follow": "ant-nest-a1",
+        "phase": 0.67
+      },
+      {
+        "id": "ant-nest-b1",
+        "kind": "carrier",
+        "x": 3300,
+        "y": 1216,
+        "facing": -1,
+        "trail": [[2500, 1216]]
+      },
+      {
+        "id": "ant-nest-b2",
+        "kind": "carrier",
+        "x": 3300,
+        "y": 1216,
+        "facing": -1,
+        "follow": "ant-nest-b1",
+        "phase": 0.5
+      },
+      {
+        "id": "juv-nest-1",
+        "kind": "juvenileBurrback",
+        "x": 1700,
+        "y": 1216,
+        "facing": 1,
+        "radius": 160,
+        "senses": "always",
+        "fenced": true
+      },
+      {
+        "id": "juv-nest-2",
+        "kind": "juvenileBurrback",
+        "x": 2900,
+        "y": 1216,
+        "facing": -1,
+        "radius": 160,
+        "senses": "always",
+        "fenced": true
+      }
+    ],
     "lures": [],
     "marks": {
       "trees": [],
@@ -10546,6 +10867,11 @@
       "covers": [],
       "landmarks": [],
       "places": [
+        {
+          "id": "nest",
+          "x": 900,
+          "y": 1216
+        },
         {
           "id": "in",
           "x": 4380,
@@ -10571,6 +10897,12 @@
         "edge": "n",
         "from": 4288,
         "to": 4480
+      },
+      {
+        "id": "hall",
+        "edge": "n",
+        "from": 576,
+        "to": 768
       }
     ],
     "mothStones": [
@@ -10589,6 +10921,11 @@
           "y": 1216
         },
         {
+          "name": "nest",
+          "x": 1800,
+          "y": 1216
+        },
+        {
           "name": "stone",
           "x": 5920,
           "y": 1216
@@ -10599,6 +10936,25 @@
       }
     },
     "routes": [
+      {
+        "from": "hall",
+        "to": "nest",
+        "oneWay": true
+      },
+      {
+        "from": "nest",
+        "to": "hall",
+        "needs": ["wallJump"],
+        "oneWay": true
+      },
+      {
+        "from": "nest",
+        "to": "in"
+      },
+      {
+        "from": "in",
+        "to": "nest"
+      },
       {
         "from": "tunnel",
         "to": "in"
@@ -10753,20 +11109,6 @@
       },
       {
         "tag": "ground",
-        "x": 1152,
-        "y": 1088,
-        "w": 384,
-        "h": 32
-      },
-      {
-        "tag": "ground",
-        "x": 2176,
-        "y": 1088,
-        "w": 384,
-        "h": 32
-      },
-      {
-        "tag": "ground",
         "x": 2944,
         "y": 448,
         "w": 96,
@@ -10780,6 +11122,18 @@
         "x": 832,
         "y": 1024,
         "w": 256
+      },
+      {
+        "tag": "branch",
+        "x": 1152,
+        "y": 1088,
+        "w": 384
+      },
+      {
+        "tag": "branch",
+        "x": 2176,
+        "y": 1088,
+        "w": 384
       }
     ],
     "pickups": [],
@@ -11415,6 +11769,19 @@
           "w": 1792,
           "h": 2048
         }
+      ],
+      "tatter": {
+        "x": 1700,
+        "y": 384,
+        "facing": 1,
+        "when": "cn-den-down"
+      },
+      "notes": [
+        {
+          "x": 1700,
+          "y": 284,
+          "text": "the kin (3/3): waits on the cliff after the den; goes on ahead with her"
+        }
       ]
     },
     "exits": [
@@ -11469,9 +11836,9 @@
       {
         "id": "thorn-o2",
         "x": 1252,
-        "y": 832,
+        "y": 880,
         "w": 28,
-        "h": 128
+        "h": 104
       },
       {
         "id": "thorn-o3",

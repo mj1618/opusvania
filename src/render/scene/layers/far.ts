@@ -60,8 +60,11 @@ import {
 } from '../lib/bg-shapes';
 import { buildWoodFar, woodFar, woodStage } from '../lib/bg-wood';
 import { mix, PALETTE, prng } from '../lib/look';
-import { isGroveKit } from '../lib/room-look';
+import { isGroveKit, LOOK } from '../lib/room-look';
 import { SKY_OUTPUT, SKY_RECT } from './sky';
+
+/** The moon's window over the far layers (`initMoonWindow`): clear within `inner` moon radii, gone by `outer`. */
+export const MOON_WINDOW = { inner: 1.25, outer: 3.4 } as const;
 
 const NAMES = ['far0', 'far1', 'far2'] as const;
 
@@ -811,6 +814,8 @@ export class FarLayers implements EnvModule {
   private target!: RenderTexture;
   private readonly toTarget = new Matrix();
   private output!: Sprite;
+  /** The moon's window over the composite (`MOON_WINDOW`), or null in a room without a moon. */
+  private moonWindow: Mesh<MeshGeometry, Shader> | null = null;
 
   /** The off-tree copies (and the tiles their meshes sample) go with the room: render/lifecycle.ts. */
   destroy(): void {
@@ -828,6 +833,7 @@ export class FarLayers implements EnvModule {
     ctx.layers.far[2]?.addChild(this.output);
     if (!isGroveKit()) {
       this.initWood(ctx, rects);
+      this.initMoonWindow(ctx);
       return;
     }
     let far0: { tiles: BakedTile[]; plan: ForestPlan } | null = null;
@@ -984,6 +990,58 @@ export class FarLayers implements EnvModule {
       const sx = host.scale.x || 1;
       this.output.position.set((v.left - 8 - host.position.x) / sx, (v.top - 8 - host.position.y) / sx);
       this.output.setSize((v.w + 16) / sx, (v.h + 16) / sx);
+      // The moon's window is drawn in logical view coordinates, like the composite.
+      if (this.moonWindow) {
+        this.moonWindow.position.set(-host.position.x / sx, -host.position.y / sx);
+        this.moonWindow.scale.set(1 / sx);
+      }
     }
+  }
+
+  /**
+   * The moon is never covered by the far layers (canopy review r7: the hub's backdrop hid it in every frame, its far
+   * crown seas and haze composed for the hatch's camera): a soft window over the far composite shows the sky's own
+   * pixels round the moon (full inside `MOON_WINDOW.inner` radii, gone by `outer`). Mid's giants and the interiors
+   * still stand in front of it.
+   */
+  private initMoonWindow(ctx: SceneContext): void {
+    const moon = LOOK.moon;
+    const sky = SKY_OUTPUT.texture;
+    if (!moon || !sky) return;
+    const R = SKY_RECT;
+    const W = MOON_WINDOW;
+    const half = moon.r * W.outer;
+    const rect = [moon.x - half, moon.y - half, half * 2, half * 2] as const;
+    const shader = Shader.from({
+      gl: {
+        vertex: BG_VERT,
+        fragment: `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 o;
+uniform sampler2D uSky;
+uniform vec4 uRect;
+uniform vec4 uSkyRect;
+uniform vec4 uMoon;
+void main() {
+  vec2 p = uRect.xy + vUV * uRect.zw;
+  vec4 c = texture(uSky, (p - uSkyRect.xy) / uSkyRect.zw);
+  float d = length(p - uMoon.xy);
+  float a = 1.0 - smoothstep(uMoon.z * uMoon.w, uMoon.z * ${W.outer.toFixed(2)}, d);
+  o = vec4(c.rgb, 1.0) * a;
+}`,
+      },
+      resources: {
+        uSky: sky.source,
+        win: new UniformGroup({
+          uRect: { value: new Float32Array(rect), type: 'vec4<f32>' },
+          uSkyRect: { value: new Float32Array([R.x, R.y, R.w, R.h]), type: 'vec4<f32>' },
+          uMoon: { value: new Float32Array([moon.x, moon.y, moon.r, W.inner]), type: 'vec4<f32>' },
+        }),
+      },
+    });
+    this.moonWindow = new Mesh({ geometry: quadGeometry(rect[0], rect[1], rect[2], rect[3]), shader });
+    this.moonWindow.label = 'moon-window';
+    ctx.layers.far[2]?.addChild(this.moonWindow);
   }
 }

@@ -76,6 +76,11 @@ export interface FlagTrigger {
   finale?: boolean;
   /** A flag set when the hold ends (the finale's east gate opens on the cloud's lift). */
   endSets?: string;
+  /**
+   * An ambush (the Canopy r8, review r7 #2): until every creature it wakes (`wakes: sets`) is down, a fade or a
+   * new entry into the room takes `sets` back out of the save, so the ambush plays again from its arrival.
+   */
+  rearm?: boolean;
 }
 
 /**

@@ -421,6 +421,9 @@ export function step(
       fadeIn: Math.max(0, Math.round(t.room.returnFadeIn)),
     });
     placePlayer(state, x, y, t, S, events);
+    // (No free double jump for one who does not own it: the fresh player carries the tuning's, and the Canopy's first
+    // fling (r8) was crossed after a miss by a walk-off and an air jump.)
+    state.player.dj = Math.min(state.player.dj, P.doubleJumps);
     afterCatch(state, t);
     // A fade-in, and what she held waits to be pressed again (no chain back into the hazard).
     freshStart(state.player, t);
@@ -446,7 +449,7 @@ export function step(
   // else at the last light / safe ground, and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
     // (An arena's door shut behind her opens again: the lock-in re-arms, as HK's does on a death.)
-    rearmArenas(scene, state.save);
+    rearmArenas(scene, state.save, state.enemies);
     // (In a glow room all her glow lies where she fell instead: src/sim/light.ts.)
     if (S.glow) dropGlow(state, S, events);
     else dropGlints(state, S, t.health.fadeDrop, events);

@@ -1,13 +1,20 @@
 /**
- * The figure-ground check (canopy review r6 #2 and #5): every wide stop of the rooms at 16:9, 16:10 and 21:9, each
- * frame scaled to 480 px wide and measured in Rec.709 luma (0-255):
- *   - near-black (< 16) at most 50% of the frame (HK's King's Pass 50%, Crossroads 34%, Ori 24%);
+ * The figure-ground check (canopy review r6 #2 and #5, r7 #3): every wide stop of the rooms at 16:9, 16:10 and 21:9,
+ * each frame scaled to 480 px wide and measured in Rec.709 luma (0-255). The frame bars are measured over the air
+ * (outside the solids, the room's box and her box): the ground is meant to be a black cut-out (HK's King's Pass is
+ * 50-56% near-black over the whole frame, its flat black 28-50%; Silksong's Tut_03 75%), so it is judged by its own
+ * bars below, the air by these:
+ *   - near-black (< 16) at most 50% (HK's King's Pass 50%, Crossroads 34%, Ori 24%);
  *   - mid-tones (50-150) at least 20% (HK 23-41%, Ori 22%);
  *   - the largest flat region (4-connected, within one 12-luma bin, bins offset by 0 and 6) at most 35%;
- *   - a few named stops keep a minimum mean (the hub's clearing: 25).
+ *   - a few named stops keep a minimum mean (the hub's clearing: 25);
+ *   - figure-ground by the collision (review r7 #3): the frame is split by the room's solids. The solid interior
+ *     (pixels inside the solids more than `solidDeep` px from their edge) has a mean luma <= `solidMax` (HK and
+ *     Silksong's ground 0-5), and the air (outside every solid and her box) has a median >= `airK` x that mean.
+ *     Frames with under `solidMinShare` of interior skip both.
  *
  *   npm run look:check                                  every Canopy room with wide stops (dev server on 5180)
- *   npm run look:check -- --rooms=cn-hub,cn-well --url=http://localhost:5212 [--out=dir] [--sizes=1920x1080]
+ *   npm run look:check -- --rooms=cn-hub,cn-well --url=http://localhost:5212 [--out=dir] [--sizes=1920x1080] [--masks]
  *
  * Exits 1 if any frame fails. Same code + same flags = same pictures (tools/shots.ts's stepping).
  */
@@ -24,6 +31,8 @@ const { values: args } = parseArgs({
     rooms: { type: 'string' },
     sizes: { type: 'string', default: '1920x1080,1920x1200,2560x1080' },
     out: { type: 'string', default: 'shots/look-check' },
+    /** Also write each frame's split as a grey PGM beside it (black her box, 80 air, 160 solid interior, 240 the rest). */
+    masks: { type: 'boolean', default: false },
   },
 });
 
@@ -35,7 +44,89 @@ export const LOOK_CHECK = {
   flatMax: 0.35,
   bin: 12,
   width: 480,
+  /** World px inside a solid's edge before a pixel counts as its interior (the rim, lobes and moss live outside). */
+  solidDeep: 96,
+  solidMax: 12,
+  airK: 4,
+  solidMinShare: 0.02,
 };
+
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+interface Frame {
+  room: { w: number; h: number };
+  cam: { x: number; y: number; zoom: number };
+  view: { w: number; h: number };
+  solids: Box[];
+  hero: Box;
+}
+
+/**
+ * Per pixel of the 480 px frame: 1 = air, 2 = solid interior, 3 = the rest of the ground (a solid's outer band, the
+ * wood beyond the room's box), 0 = her box.
+ * Screen to world: the view's centre is the camera, `view.w` logical px across the frame, divided by the zoom.
+ */
+export function splitByCollision(f: Frame, w: number, h: number, deep: number): Uint8Array {
+  const out = new Uint8Array(w * h);
+  const inside = (x: number, y: number): boolean => {
+    for (const s of f.solids) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) return true;
+    return false;
+  };
+  const k = f.view.w / w / f.cam.zoom;
+  const ring: [number, number][] = [];
+  for (let a = 0; a < 16; a++) {
+    const t = (a / 16) * Math.PI * 2;
+    ring.push([Math.cos(t) * deep, Math.sin(t) * deep], [Math.cos(t) * deep * 0.5, Math.sin(t) * deep * 0.5]);
+  }
+  const hb = f.hero;
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const x = f.cam.x + (i + 0.5 - w / 2) * k;
+      const y = f.cam.y + (j + 0.5 - h / 2) * k;
+      const pad = 24;
+      if (x > hb.x - pad && x < hb.x + hb.w + pad && y > hb.y - pad && y < hb.y + hb.h + pad) {
+        out[j * w + i] = 0;
+        continue;
+      }
+      if (x < 0 || y < 0 || x > f.room.w || y > f.room.h) {
+        out[j * w + i] = 3;
+        continue;
+      }
+      if (!inside(x, y)) {
+        out[j * w + i] = 1;
+        continue;
+      }
+      out[j * w + i] = ring.every(([dx, dy]) => inside(x + dx, y + dy)) ? 2 : 3;
+    }
+  }
+  return out;
+}
+
+/** The solid interior's mean, the air's median and the interior's share of the frame. */
+export function figureGround(
+  y: Float32Array,
+  split: Uint8Array,
+): { solid: number; air: number; share: number } {
+  let sum = 0;
+  let n = 0;
+  const air: number[] = [];
+  for (let p = 0; p < y.length; p++) {
+    if (split[p] === 2) {
+      sum += y[p] as number;
+      n++;
+    } else if (split[p] === 1) air.push(y[p] as number);
+  }
+  air.sort((a, b) => a - b);
+  return {
+    solid: n ? sum / n : 0,
+    air: air.length ? (air[air.length >> 1] as number) : 0,
+    share: n / y.length,
+  };
+}
 /** Named stops (`room:stop`) that must keep this mean luma. */
 const MIN_MEAN: Record<string, number> = { 'cn-hub:clearing': 25 };
 
@@ -74,13 +165,19 @@ function luma480(file: string): { w: number; h: number; y: Float32Array } {
   return { w: W, h: H, y };
 }
 
-/** The largest 4-connected region whose pixels share a bin of `bin` luma (bins offset by 0 and bin / 2), as a share. */
-export function largestFlat(y: Float32Array, w: number, h: number, bin: number): number {
+/**
+ * The largest 4-connected region whose pixels share a bin of `bin` luma (bins offset by 0 and bin / 2), as a share of
+ * the pixels not skipped (`skip[p]` non-zero: left out, joins nothing).
+ */
+export function largestFlat(y: Float32Array, w: number, h: number, bin: number, skip?: Uint8Array): number {
   let best = 0;
   const seen = new Uint8Array(w * h);
   const stack = new Int32Array(w * h);
+  let total = w * h;
+  if (skip) for (const v of skip) if (v) total--;
   for (const off of [0, bin / 2]) {
-    seen.fill(0);
+    if (skip) seen.set(skip);
+    else seen.fill(0);
     for (let s = 0; s < w * h; s++) {
       if (seen[s]) continue;
       const b = Math.floor(((y[s] as number) + off) / bin);
@@ -103,7 +200,7 @@ export function largestFlat(y: Float32Array, w: number, h: number, bin: number):
       best = Math.max(best, n);
     }
   }
-  return best / (w * h);
+  return best / Math.max(1, total);
 }
 
 async function main(): Promise<void> {
@@ -123,37 +220,72 @@ async function main(): Promise<void> {
         mkdirSync(dir, { recursive: true });
         const page = await openGame(browser, args.url ?? DEFAULT_URL, { width: W, height: H }, 1, true, id);
         for (const [i, stop] of (room.shots?.wide ?? []).entries()) {
-          await page.evaluate(
+          const frame: Frame = await page.evaluate(
             ([x, y]) => {
               const g = window.__game;
               g.cam(null);
               g.teleport(x, y);
               g.step(20);
               g.tick(60);
+              const c = g.cam();
+              const v = g.info().view;
+              const p = g.state().player;
+              const sc = g.scene();
+              return {
+                room: { w: sc.width, h: sc.height },
+                cam: { x: c.x, y: c.y, zoom: c.zoom },
+                view: { w: v.w, h: v.h },
+                solids: sc.solids.map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h })),
+                hero: { x: p.x, y: p.y, w: p.w, h: p.h },
+              };
             },
             [stop.x, stop.y] as const,
           );
           const file = join(dir, `wide-${i + 1}-${stop.name}.png`);
           writeFileSync(file, await page.locator('#game').screenshot({ type: 'png' }));
           const { w, h, y } = luma480(file);
+          const split = splitByCollision(frame, w, h, LOOK_CHECK.solidDeep);
+          const fg = figureGround(y, split);
+          if (args.masks)
+            writeFileSync(
+              file.replace(/\.png$/, '-split.pgm'),
+              Buffer.concat([Buffer.from(`P5 ${w} ${h} 255\n`), Buffer.from(split.map((v) => v * 80))]),
+            );
+          // The frame bars over the air (the header).
+          const ground = split.map((v) => (v === 1 ? 0 : 1));
           let sum = 0;
+          let all = 0;
+          let n = 0;
           let dark = 0;
           let mid = 0;
-          for (const v of y) {
+          for (let p = 0; p < y.length; p++) {
+            const v = y[p] as number;
+            all += v;
+            if (ground[p]) continue;
+            n++;
             sum += v;
             if (v < LOOK_CHECK.dark) dark++;
             if (v >= (LOOK_CHECK.mid[0] as number) && v <= (LOOK_CHECK.mid[1] as number)) mid++;
           }
-          const n = y.length;
-          const flat = largestFlat(y, w, h, LOOK_CHECK.bin);
-          const mean = sum / n;
+          n = Math.max(1, n);
+          const flat = largestFlat(y, w, h, LOOK_CHECK.bin, ground);
+          const mean = all / y.length;
           const bad: string[] = [];
           if (dark / n > LOOK_CHECK.darkMax) bad.push(`near-black ${Math.round((100 * dark) / n)}%`);
           if (mid / n < LOOK_CHECK.midMin) bad.push(`mid ${Math.round((100 * mid) / n)}%`);
           if (flat > LOOK_CHECK.flatMax) bad.push(`flat ${Math.round(100 * flat)}%`);
           const want = MIN_MEAN[`${id}:${stop.name}`];
           if (want !== undefined && mean < want) bad.push(`mean ${mean.toFixed(1)} < ${want}`);
-          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%`;
+          let fgText = 'solid -';
+          if (fg.share >= LOOK_CHECK.solidMinShare) {
+            const ratio = fg.air / Math.max(1, fg.solid);
+            fgText = `solid ${fg.solid.toFixed(1)} (${Math.round(100 * fg.share)}%), air ${fg.air.toFixed(0)}, x${ratio.toFixed(1)}`;
+            if (fg.solid > LOOK_CHECK.solidMax)
+              bad.push(`solid ${fg.solid.toFixed(1)} > ${LOOK_CHECK.solidMax}`);
+            if (fg.air < LOOK_CHECK.airK * Math.max(1, fg.solid))
+              bad.push(`air ${fg.air.toFixed(0)} < ${LOOK_CHECK.airK}x solid`);
+          }
+          const line = `${W}x${H} ${id} ${stop.name}: mean ${mean.toFixed(1)}, air: mean ${(sum / n).toFixed(1)}, near-black ${Math.round((100 * dark) / n)}%, mid ${Math.round((100 * mid) / n)}%, flat ${Math.round(100 * flat)}%, ${fgText}`;
           console.log(bad.length ? `FAIL ${line} (${bad.join(', ')})` : `ok   ${line}`);
           if (bad.length) fails.push(line);
           frames++;

@@ -53,6 +53,8 @@ export interface Plan {
   takes?: string[];
   /** Jumps straight up from where she stands first, cutting up (a plug over a rest's lip), before the climb. */
   hops?: number;
+  /** She walks off the lip at `jumpAt` instead of jumping (down the face first: a reward under the rest). */
+  drop?: boolean;
   /** Kick delays it must pass at (default `DELAYS`): a reward off the line is a risk, held at 0 and 6 only. */
   delays?: number[];
   /** The strips' margin it must pass with (default `MARGIN`): a risk keeps half of it. */
@@ -203,7 +205,7 @@ export function runClimb(
         break;
       }
       m = DIR((air >= 0 && air < (plan.away ?? 0)) || (air < 0 && plan.back) ? -h : h);
-      if (p.grounded) m |= air >= 0 && air < 20 ? J : 0;
+      if (p.grounded) m |= air >= 0 && air < 20 && !plan.drop ? J : 0;
       else if (air >= (plan.away ?? 0) && (p.mode === 'wallSlide' || p.wallDir === h)) {
         if (touchK < 0) touchK = f;
         if (f - touchK >= delay && !(prev & J)) {
@@ -263,7 +265,8 @@ export function runClimb(
   return out;
 }
 
-export const DELAYS = [0, 6, 10];
+/** Kick delays (r8, review r7 #9: 16, a relaxed kick, joined the default). */
+export const DELAYS = [0, 6, 10, 16];
 export const MARGIN = 64;
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -289,17 +292,32 @@ export const CLIMBS: Climb[] = [
     plans: [
       { name: 'W face', first: -1, legs: [{ mode: 'face' }] },
       { name: 'E then W', first: 1, legs: [{ mode: 'face', until: 3200 }, { mode: 'face' }] },
-      // The reward off the line (review r5 #2): glints on the thorned east face over its strip, a kick in and out.
-      {
-        name: 'W, in to the glints, W',
-        first: -1,
-        delays: [0, 6],
-        margin: 32,
-        takes: ['risk-w-1', 'risk-w-2', 'risk-w-3'],
-        legs: [{ mode: 'face', until: 2840 }, { mode: 'face', until: 1e9 }, { mode: 'face' }],
-      },
     ],
     fails: [{ name: 'E face only', first: 1, legs: [{ mode: 'face' }] }],
+  },
+  {
+    // (r8, review r7 #9: the strip grew to 160, and the glints over it are taken from the landing now: off its lip
+    // to the east face, a slide down to the glints just over the strip, a kick back. v7's kick in from the west face
+    // on the way up met the taller strip.)
+    id: 'well-2-risk',
+    room: 'cn-well',
+    note: "leg 2's reward (review r5 #2): from the landing to the glints over the east face's strip and back",
+    xs: [1664, 1728, 1792],
+    y: 2432,
+    goal: { x0: 1536, x1: 2048, y: 2432 },
+    plans: [
+      {
+        name: 'off the lip to the glints, back',
+        first: 1,
+        drop: true,
+        jumpAt: [2214, 2214, 2214],
+        delays: [0, 6],
+        // (A slide down onto glints over thorns is the risk itself: a quarter margin.)
+        margin: 16,
+        takes: ['risk-w-1', 'risk-w-2', 'risk-w-3'],
+        legs: [{ mode: 'face', until: 1e9 }, { mode: 'face' }],
+      },
+    ],
   },
   {
     id: 'well-3a',
@@ -312,7 +330,9 @@ export const CLIMBS: Climb[] = [
       {
         name: 'E, across into the rest',
         first: 1,
-        jumpAt: [1936, 1984, 2032],
+        // (r8: the landing's lip runs 64 further; from its middle on, not its root: at 1,936 a 16-frame kick slid
+        // into leg 2's taller strip.)
+        jumpAt: [2016, 2016, 2048],
         legs: [{ mode: 'face', until: 2000 }, { mode: 'face' }],
       },
     ],
@@ -328,7 +348,9 @@ export const CLIMBS: Climb[] = [
       {
         name: 'E, across over the rest to W',
         first: 1,
-        jumpAt: [1960, 1984, 2008],
+        // (r8: from the far start the jump is 18 px nearer the lip; at 2,008 a 16-frame kick slid off the west face's
+        // foot over the rest's opening.)
+        jumpAt: [1960, 1984, 1990],
         legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
       },
     ],
@@ -384,8 +406,12 @@ export const CLIMBS: Climb[] = [
     note: "the Spire's foot to the nook's mouth, up the east face",
     xs: [1024, 1088, 1152],
     y: 1472,
-    goal: { x0: 1280, x1: 2560, y: 896 },
-    plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
+    // (r8: the mouth's root lip, 1,088-1,280, is the rest too; and the neck's root column now carries a climb from the
+    // foot on up past the mouth to the bower: either ends it.)
+    goal: { x0: 0, x1: 2560, y: 896, exit: 'bower' },
+    plans: [
+      { name: 'E face, then the neck', first: 1, legs: [{ mode: 'face', until: 900 }, { mode: 'face' }] },
+    ],
   },
   {
     id: 'spire-neck',
@@ -395,9 +421,17 @@ export const CLIMBS: Climb[] = [
     y: 896,
     goal: { x0: 0, x1: 2560, y: 128, exit: 'bower' },
     plans: [
-      { name: 'out, E then W', first: 1, away: 12, legs: [{ mode: 'face', until: 760 }, { mode: 'face' }] },
+      {
+        name: 'out on the lip, E then W',
+        first: 1,
+        back: true,
+        jumpAt: [1150, 1150, 1150],
+        legs: [{ mode: 'face', until: 760 }, { mode: 'face' }],
+      },
     ],
-    fails: [{ name: 'E face only', first: 1, away: 12, legs: [{ mode: 'face' }] }],
+    fails: [
+      { name: 'E face only', first: 1, back: true, jumpAt: [1150, 1150, 1150], legs: [{ mode: 'face' }] },
+    ],
   },
   {
     id: 'elder-1',
@@ -481,12 +515,13 @@ export const CREATURE_CLIMBS: Array<{
     plan: {
       name: 'E, across over the rest to W, at once',
       first: 1,
-      jumpAt: [1960, 1984, 2008],
+      jumpAt: [1960, 1984, 1990],
       legs: [{ mode: 'face', until: 1760 }, { mode: 'face' }],
     },
-    delays: [6, 10],
-    maxHits: 1,
-    of: 2,
+    // (r8, review r7 #9: every start, every delay, at most two hits: the lampwing dives once a pass.)
+    delays: [0, 6, 10, 16],
+    maxHits: 2,
+    of: 3,
   },
   {
     climb: 'well-3b',

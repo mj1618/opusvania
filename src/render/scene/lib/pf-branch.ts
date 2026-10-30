@@ -45,6 +45,7 @@ import {
   wobble,
 } from './pf-shape';
 import type { TerrainInfo } from './pf-terrain';
+import { paintGrowth, setTopFamily, topFamily, topFamilyOf } from './top-growth';
 
 export const BRANCH = {
   /** Out of a tree a limb starts at this share of the trunk's width (clamped); out of a fork each tine
@@ -72,6 +73,12 @@ export const BRANCH = {
   decorHazeA: 0.32,
   /** A trunk's collar round a limb's root, px. */
   collar: 46,
+  /** A solid trunk this wide is a great trunk (`greatTrunk`, canopy r8): bark plates this wide / tall (px). */
+  greatTrunkW: 360,
+  /** The lit ridge down a great trunk's moon side (albedo: the bake darkens it a lot). */
+  ridgeLit: 0x9ab4c4,
+  plateW: 110,
+  plateH: [180, 420] as readonly number[],
   /** A trunk that ends in view: how much it narrows toward its broken top, how far it leans (share of its
    *  width), and how many limbs droop from under the break. */
   trunkTaper: 0.3,
@@ -928,6 +935,12 @@ export function mossBlanket(
   dropR: number,
 ): void {
   const B = BRANCH;
+  // (Canopy r8, review r7 #6: the room's own growth, not one lime band on every top.)
+  const fam = topFamily();
+  if (fam) {
+    paintGrowth(p, x0, x1, topAt, seed, B.walkH, dropL, dropR, fam);
+    return;
+  }
   const r = rngFor(seed, x0, x1);
   const S = 3;
   const Y = (x: number): number => topAt(clamp(x, x0, x1));
@@ -1325,6 +1338,7 @@ function paintTrunk(p: Paint, tree: TreeLike, joins: Join[], roomH: number, seed
       h0 + 0.05,
       seed + k,
     );
+  if (!decor && tree.w >= B.greatTrunkW) greatTrunk(p, tree, xl, xr, collar, y0, y1, h0, seed);
   // Deeper down, the trunk sinks into the dark wood (in soft steps, so no edge shows).
   const yd = Math.max(y0, roomH * 0.5);
   for (let k = 0; k < 5; k++) {
@@ -1351,6 +1365,153 @@ function paintTrunk(p: Paint, tree: TreeLike, joins: Join[], roomH: number, seed
   const cap: number[] = [xl(y0 + 60), y0 + 60, ...crown, xr(y0 + 60), y0 + 60];
   p.tint(cap, B.barkDeep, 0.6);
   p.tint(clipAbove(poly, y0 + 26), B.barkDeep, 0.35);
+}
+
+/**
+ * A great trunk (the Grovemother; canopy review r7 #8: "a flat dark slab with an hourglass bulge, the largest object in
+ * the area's best room"): staggered bark plates with dark seams across its whole width, a lit ridge down its moon side,
+ * roots climbing it from the foot, and a hollow with a worn lip. No flat plane wider than a plate.
+ */
+function greatTrunk(
+  p: Paint,
+  tree: TreeLike,
+  xl: (y: number) => number,
+  xr: (y: number) => number,
+  collar: (side: -1 | 1, y: number) => number,
+  y0: number,
+  y1: number,
+  h0: number,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, 31);
+  const inside = (y: number) => [xl(y) + collar(-1, y), xr(y) - collar(1, y)] as const;
+  // 1. Plates: columns across the width, each plate a tall lozenge, staggered, a dark seam round it, its moon side
+  //    (right) a step lighter and its top lip catching the light.
+  const cols = Math.max(3, Math.round(tree.w / (B.plateW as number)));
+  for (let c = 0; c < cols; c++) {
+    let y = y0 + range(r, -200, 60);
+    while (y < y1) {
+      const h = range(r, B.plateH[0] as number, B.plateH[1] as number);
+      const yc = y + h / 2;
+      const [a, b] = inside(yc);
+      const cw = (b - a) / cols;
+      const cx = a + cw * (c + 0.5) + range(r, -cw * 0.12, cw * 0.12);
+      const hw = cw * range(r, 0.4, 0.5);
+      const sd = seed + c * 101 + Math.round(y);
+      // (Smooth ovals read as a pattern of scales: plates are torn, squarish slabs, longer than wide.)
+      const shape = chaikin(plateShape(cx, yc, hw, h / 2, sd), 1);
+      // The seam: a deep furrow round the plate, then the plate over it.
+      p.tint(chaikin(plateShape(cx, yc, hw + 9, h / 2 + 10, sd), 1), B.barkDeep, 0.9);
+      const side = (cx - a) / Math.max(1, b - a);
+      const v = clamp(0.2 + 0.55 * side + range(r, -0.15, 0.15), 0, 1);
+      p.solid(shape, mix(B.barkDark, B.bark, v), h0 + 0.06 + 0.04 * side, { bark: 1 });
+      // Its lit lip along the upper right of its rim.
+      const lip: number[] = [];
+      for (let k = 0; k <= 8; k++) {
+        const t = -Math.PI / 2 + (k / 8) * (Math.PI * 0.55);
+        lip.push(cx + Math.cos(t) * hw * 0.92, yc + Math.sin(t) * (h / 2) * 0.94);
+      }
+      p.tint(strand(lip, range(r, 2.5, 4.5), 0.4), B.barkLit, 0.25 + 0.4 * side);
+      y += h + range(r, 6, 22);
+    }
+  }
+  // 2. The lit ridge down the moon side: a long rounded ridge of bark a little in from the flank, broken where a collar
+  //    swells, the moon full on it.
+  for (let y = y0 + range(r, 0, 80); y < y1 - 120; ) {
+    const len = range(r, 260, 620);
+    const line: number[] = [];
+    for (let yy = y; yy <= Math.min(y1, y + len); yy += 8) {
+      const [, b] = inside(yy);
+      line.push(b - 34 - 10 * wobble(yy, seed + 5, 180), yy);
+    }
+    if (line.length >= 8) {
+      p.solid(strand(line, range(r, 22, 34), 0.25), mix(B.bark, B.barkLit, 0.35), h0 + 0.16, { bark: 1 });
+      p.tint(
+        strand(
+          line.map((v, j) => (j % 2 ? v : v + 5)),
+          range(r, 7, 12),
+          0.3,
+        ),
+        B.ridgeLit,
+        1,
+      );
+    }
+    y += len + range(r, 40, 160);
+  }
+  // 3. Roots climbing it from the foot: 2-4 twisting up across the plates, each lit on its upper side, moss in its
+  //    crooks.
+  const nRoots = 2 + Math.floor(r() * 3);
+  for (let k = 0; k < nRoots; k++) {
+    const ya = y1 - range(r, 0, 80);
+    const yb = ya - range(r, 500, 1100);
+    const u0 = range(r, 0.1, 0.9);
+    const turns = range(r, 0.4, 1.1) * (r() < 0.5 ? -1 : 1);
+    const line: number[] = [];
+    for (let y = ya; y >= Math.max(y0, yb); y -= 10) {
+      const t = (ya - y) / Math.max(1, ya - yb);
+      const [a, b] = inside(y);
+      const u = clamp(u0 + turns * Math.sin(t * Math.PI * 1.3) * 0.4, 0.04, 0.96);
+      line.push(lerp(a, b, u) + 8 * wobble(y, seed + k * 9, 70), y);
+    }
+    if (line.length < 8) continue;
+    const w0 = range(r, 28, 50);
+    p.solid(strand(line, w0 + 8, 0.6), B.barkDeep, h0 + 0.18, { bark: 0.8 });
+    p.solid(strand(line, w0, 0.6), B.bark, h0 + 0.2, { bark: 0.8 });
+    p.tint(
+      strand(
+        line.map((v, j) => (j % 2 ? v - w0 * 0.25 : v + w0 * 0.15)),
+        w0 * 0.25,
+        0.6,
+      ),
+      B.barkLit,
+      0.7,
+    );
+    for (let q = 0; q < 3; q++) {
+      const i = 2 * Math.floor(range(r, 1, line.length / 2 - 1));
+      p.solid(
+        chaikin(
+          blob(line[i] as number, (line[i + 1] as number) - w0 * 0.3, w0 * 0.5, w0 * 0.3, seed + k * 7 + q),
+          1,
+        ),
+        B.mossDark,
+        h0 + 0.24,
+        { moss: 1 },
+      );
+    }
+  }
+  // 4. A hollow: a dark mouth in the trunk at two-thirds of the way up, its lower lip worn and lit, rot round it.
+  const hy = lerp(y0 + 200, y1, range(r, 0.4, 0.6));
+  const [ha, hb] = inside(hy);
+  const hx = lerp(ha, hb, range(r, 0.3, 0.55));
+  const hw = Math.min(70, (hb - ha) * 0.17);
+  const hh = hw * range(r, 1.5, 2.1);
+  p.tint(chaikin(blob(hx, hy, hw + 16, hh + 18, seed + 77, 0.25, 16), 2), B.barkDark, 0.9);
+  p.solid(chaikin(blob(hx, hy, hw, hh, seed + 78, 0.22, 16), 2), B.barkDeep, h0 - 0.1, { bark: 0.2 });
+  const lipLine: number[] = [];
+  for (let k = 0; k <= 10; k++) {
+    const t = Math.PI * 0.15 + (k / 10) * Math.PI * 0.7;
+    lipLine.push(hx + Math.cos(t) * (hw + 6), hy + Math.sin(t) * (hh + 6));
+  }
+  p.solid(strand(lipLine, 9, 0.35), B.bark, h0 + 0.14, { bark: 0.6 });
+  p.tint(strand(lipLine, 3.5, 0.35), B.barkLit, 0.65);
+}
+
+/** A bark plate: a torn slab, squarish shoulders, a ragged outline (never an oval). */
+function plateShape(cx: number, cy: number, hw: number, hh: number, seed: number): number[] {
+  const pts: number[] = [];
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    // A superellipse (squarish) torn by noise.
+    const k = 1 + 0.16 * wobble(i * 13, seed, 3);
+    const px = Math.sign(c) * Math.abs(c) ** 0.55 * hw * k;
+    const py = Math.sign(s) * Math.abs(s) ** 0.7 * hh * (1 + 0.06 * wobble(i * 7, seed + 3, 2));
+    pts.push(cx + px, cy + py);
+  }
+  return pts;
 }
 
 /**
@@ -2006,6 +2167,21 @@ export function paintBranchTerrain(
 ): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const B = BRANCH;
   const p = new Paint(room.width, room.height);
+  // What grows on the tops: the room's look's family (top-growth.ts), for every painter below.
+  setTopFamily(topFamilyOf(room));
+  try {
+    return paintBranchBody(room, seed, p, B);
+  } finally {
+    setTopFamily(null);
+  }
+}
+
+function paintBranchBody(
+  room: Room,
+  seed: number,
+  p: Paint,
+  B: typeof BRANCH,
+): { paint: Paint; info: TerrainInfo; plan: BranchPlan; patches: MassPatch[] } {
   const trees = planTrees(room);
   const stretches = planStretches(room, trees);
   const info = terrainInfo(room, stretches);

@@ -22,7 +22,7 @@ import {
   type InteriorPlan,
   interiorPlan,
 } from '../lib/interior';
-import { massTone } from '../lib/pf-mass';
+import { massCore, massTone } from '../lib/pf-mass';
 import { chaikin, hash1, wobble } from '../lib/pf-shape';
 import { LOOK } from '../lib/room-look';
 
@@ -126,7 +126,8 @@ export class InteriorLayer implements EnvModule {
     const H = room.height;
 
     const g = this.beyond;
-    const body = massTone(room).body;
+    // (Canopy r8: the core, not the body: the wood beyond the edge is the same near-black as deep in its masses.)
+    const body = massCore(massTone(room));
     const exits = (room as { exits?: Array<{ edge: string; from: number; to: number }> }).exits ?? [];
     const gaps = (edge: string): Array<[number, number]> =>
       exits.filter((e) => e.edge === edge).map((e) => [e.from, e.to] as [number, number]);

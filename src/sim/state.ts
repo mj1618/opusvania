@@ -530,6 +530,14 @@ export interface EnemyState {
   /** Dead and its body has been removed: draw nothing. */
   gone: boolean;
   /**
+   * An ambush's arrival (`EnemySpawn.arrive`): frames of it left (0 = here). Meanwhile it travels from its arrive
+   * point to its spawn (the box offset `arriveX`, `arriveY` at the start, shrinking to 0), does nothing else, cannot
+   * hurt her and cannot be hit. Render: draw it coming (dust, roots parting, a drop).
+   */
+  arrive: number;
+  arriveX: number;
+  arriveY: number;
+  /**
    * Lampwing: what it is drawn to, in scene px: its wander point while it hovers, her body centre
    * (where it last saw her) while `curious` / `pursue`, its home on the way back. `lookX, lookY` =
    * the unit vector from its centre toward that (0, 0 before it has one).
@@ -596,6 +604,8 @@ export interface EnemyState {
    * runs from there to `targetX, targetY`; `sight` = how far it notices her from.
    */
   dives: number;
+  /** Lampwing: dives before it tires, from its spawn (0 = its row's `maxDives`). */
+  maxDives: number;
   span: number;
   fromX: number;
   fromY: number;

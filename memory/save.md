@@ -12,7 +12,7 @@
 | `visited` | room ids, first visit first (the map; the hatching plays only in a room not visited) |
 | `seen` | `room:id` of lures / exits / doors / patches / glades she has had in view (the map) |
 | `crossed` | `room:exit` gone through either way (both sides of a link) |
-| `patch` | `{room, id}` last moon patch rested at: re-form point and Continue, or null |
+| `patch` | `{room, id}` last moon patch rested at **or passed through** (Canopy r8, `patch.markOnPass`, `patchMark`: no heal on a pass): re-form point and Continue, or null |
 | `time` | sim frames played, every step |
 Everything else in `GameState` besides `player`, `frame`, `seed`, `rng`, `prevInput`, `room` is the room's own
 (`RoomLocal`: pickups, pods, lures, enemies, goal, exit, caught, hatch, rest), rebuilt by `createLocal(scene, t,
@@ -25,7 +25,7 @@ save's patch (the world start's spawn if none), no hatching once anything was vi
   read; `MIGRATIONS[v]` lifts v -> v+1 (none yet: add one when `SaveState` changes, bump `SAVE_VERSION`). A slot
   that cannot be read moves to `lampfall.save.bad` and the game starts new. A few hundred bytes.
 - **Boot** (main.ts): no `?room=` = the game: Continue from the slot, else a new game at world.json's `start`;
-  autosave on every `patchRest`, `gladeGrant`, `lureSnuff`, `shortcutOpen` and `roomEnter` (not `from: 'load'`).
+  autosave on every `patchRest`, `patchMark`, `gladeGrant`, `lureSnuff`, `shortcutOpen` and `roomEnter` (not `from: 'load'`).
   `?fresh` empties the slot first. **`?room=<id>` = a test boot: new game there, slot never read or written** (so the
   tools and tests, which all pass `?room=`, never touch a player's save).
 - R in a game page = `Game.restartAtPatch()`: back to the moon patch she last rested at **in this run**

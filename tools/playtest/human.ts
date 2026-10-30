@@ -94,6 +94,8 @@ const BITS = [
   ActionBit.dash,
   A,
   ActionBit.offer,
+  // (The Lamp key: the fling, Canopy r8. Without it the hands never pressed what the lamp lines planned.)
+  ActionBit.lamp,
 ];
 
 /** A key change on its way to the keyboard. */

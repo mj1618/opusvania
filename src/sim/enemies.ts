@@ -161,6 +161,9 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     hitFrame: -1,
     teeter: 0,
     gone: false,
+    arrive: 0,
+    arriveX: 0,
+    arriveY: 0,
     targetX: 0,
     targetY: 0,
     lookX: 0,
@@ -189,6 +192,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     stirred: 0,
     broken: false,
     dives: 0,
+    maxDives: 0,
     span: 0,
     fromX: 0,
     fromY: 0,
@@ -396,6 +400,14 @@ export function updateEnemies(
     if (!e) continue;
     spill(e, state, t.pickups.comboFrames, events);
     if (e.gone) continue;
+    // Arriving (an ambush, review r7 #2): it travels in from its arrive point and does nothing else; no touch.
+    if (e.arrive > 0) {
+      e.arrive--;
+      const n = Math.max(1, Math.round(t.enemies.arriveFrames));
+      e.x = Math.round(e.homeX - e.w / 2) + Math.round((e.arriveX * e.arrive) / n);
+      e.y = Math.round(e.homeY - e.h / 2) + Math.round((e.arriveY * e.arrive) / n);
+      continue;
+    }
     if (e.calm > 0) e.calm--;
     // A gift's calm (`gift` counts down: the warmth inside it fades, render and sound follow it)
     // holds at its last frame while she stays on its ground (near its home): it ends only once she has
@@ -668,7 +680,7 @@ export function slashEnemies(
   let hits = 0;
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
-    if (!e || e.mode === 'dead' || e.hitBy === seq) continue;
+    if (!e || e.mode === 'dead' || e.gone || e.arrive > 0 || e.hitBy === seq) continue;
     if (podAimed && e.gift > 0) {
       // (For the whole slash: once the pod bursts it must not land on the creature after all.)
       e.hitBy = seq;

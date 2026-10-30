@@ -343,7 +343,7 @@ function gustMeets(
   const list = state.enemies;
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
-    if (!e || e.gone || e.mode === 'dead' || g.hits.includes(e.id)) continue;
+    if (!e || e.gone || e.arrive > 0 || e.mode === 'dead' || g.hits.includes(e.id)) continue;
     if (!inGust(g.x, g.y, half, e.x, e.y, e.w, e.h)) continue;
     const ex = e.x + e.w / 2;
     const ey = e.y + e.h / 2;
@@ -628,7 +628,11 @@ function respawn(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]):
     if (s.wakes) {
       const w = s.wakes;
       const on = (state.save.abilities as readonly string[]).includes(w) || state.save.flags.includes(w);
-      if (!on) {
+      // (A wave that has been cleared stays clear: a woken creature whose own `sets` flag is saved never comes back
+      // on a new entry, the Canopy r8, HK's arenas. A living one can only have it at a fresh entry: the flag is set
+      // when the last of its wave dies. A body still falling keeps its death.)
+      const cleared = !!s.sets && state.save.flags.includes(s.sets) && e.mode !== 'dead';
+      if (!on || cleared) {
         if (!L.hidden[i] || !e.gone) {
           L.hidden[i] = 1;
           L.respawn[i] = 0;
@@ -637,10 +641,55 @@ function respawn(state: GameState, scene: Scene, t: Tuning, events: SimEvent[]):
         continue;
       }
       if (L.hidden[i]) {
+        // An ambush's creature arrives (review r7 #2): the gates shut on the flag's step, it shows a beat later at
+        // its `arrive` point and travels in, harmless.
+        if (s.arrive) {
+          e.gone = true;
+          if ((L.respawn[i] ?? 0) === 0) {
+            L.respawn[i] = Math.max(1, Math.round(t.enemies.arriveDelayFrames));
+            continue;
+          }
+          L.respawn[i] = (L.respawn[i] as number) - 1;
+          if (L.respawn[i] !== 0) continue;
+        }
         L.hidden[i] = 0;
         const fresh = createEnemy(s, t, scene);
         state.enemies[i] = fresh;
-        events.push({ type: 'enemyRespawn', id: s.id, kind: s.kind, x: fresh.homeX, y: fresh.homeY });
+        if (s.arrive) {
+          const n = Math.max(1, Math.round(t.enemies.arriveFrames));
+          fresh.arrive = n;
+          const pl = state.player;
+          const bx = pl.x + pl.w / 2 - (fresh.homeX - s.x);
+          const by = pl.y + pl.h / 2 - (fresh.homeY - s.y);
+          const clear = t.enemies.arriveClearPx * t.enemies.arriveClearPx;
+          let pick = s.arrive[0] as [number, number];
+          let far = -1;
+          for (const a of s.arrive) {
+            const d = (a[0] - bx) * (a[0] - bx) + (a[1] - by) * (a[1] - by);
+            if (d >= clear) {
+              pick = a;
+              break;
+            }
+            if (d > far) {
+              far = d;
+              pick = a;
+            }
+          }
+          fresh.arriveX = pick[0] - s.x;
+          fresh.arriveY = pick[1] - s.y;
+          fresh.x += fresh.arriveX;
+          fresh.y += fresh.arriveY;
+          events.push({
+            type: 'enemyArrive',
+            id: s.id,
+            kind: s.kind,
+            x: fresh.homeX,
+            y: fresh.homeY,
+            fromX: fresh.homeX + fresh.arriveX,
+            fromY: fresh.homeY + fresh.arriveY,
+            frames: n,
+          });
+        } else events.push({ type: 'enemyRespawn', id: s.id, kind: s.kind, x: fresh.homeX, y: fresh.homeY });
         continue;
       }
     }

@@ -116,6 +116,7 @@ export function pageStore(): SlotStore | null {
 /** The sim events that are progress: each one writes the slot (tech.md §3: nothing earned is lost). */
 export const PROGRESS_EVENTS: ReadonlySet<string> = new Set([
   'patchRest',
+  'patchMark',
   'gladeGrant',
   'lureSnuff',
   'shortcutOpen',

@@ -62,7 +62,7 @@ void main() {
 const c3 = (c: number): string =>
   `vec3(${(((c >> 16) & 255) / 255).toFixed(4)}, ${(((c >> 8) & 255) / 255).toFixed(4)}, ${((c & 255) / 255).toFixed(4)})`;
 
-const FRAG = `#version 300 es
+const frag = (litC: number, shadeC: number): string => `#version 300 es
 precision highp float;
 in vec2 vWorld;
 in vec4 vRim;
@@ -110,7 +110,7 @@ void main() {
   vec2 q = vec2((x + sway - clock * ${RIM.drift.toFixed(2)}) * 0.011, clock * 0.05);
   float leaf = vnoise(q) * 0.65 + vnoise(q * 2.7 + 7.0) * 0.35;
   float lit = smoothstep(${(RIM.shadeShare - 0.1).toFixed(3)}, ${(RIM.shadeShare + 0.12).toFixed(3)}, leaf);
-  vec3 col = mix(${c3(RIM.shade)}, ${c3(RIM.lit)}, lit);
+  vec3 col = mix(${c3(shadeC)}, ${c3(litC)}, lit);
   // Light that remembers her: the moss she touched holds a little more of the moon.
   float mem = 0.0;
   for (int i = 0; i < ${RIM.trail}; i++) {
@@ -119,7 +119,7 @@ void main() {
     mem += t.z * exp(-dx * dx) * step(abs(vRim.x - t.y), 24.0);
   }
   mem = min(1.0, mem);
-  col = mix(col, ${c3(RIM.lit)} * 1.35, mem * ${RIM.trailGain.toFixed(3)});
+  col = mix(col, ${c3(litC)} * 1.35, mem * ${RIM.trailGain.toFixed(3)});
   float alpha = a * bright * vRim.y * vRim.w * (0.75 + 0.25 * lit + 0.3 * mem);
   o = vec4(col * alpha, alpha);
 }`;
@@ -133,7 +133,8 @@ export class Rim {
   private lastT = -1;
   private readonly stamps = new Float32Array(RIM.trail);
 
-  constructor(plan: BranchPlan) {
+  /** `colors`: the lip's lit and shaded colour (the room's growth family, top-growth.ts `RIM_FAMILY`). */
+  constructor(plan: BranchPlan, colors: { lit: number; shade: number } = { lit: RIM.lit, shade: RIM.shade }) {
     const verts: number[] = [];
     const index: number[] = [];
     for (const st of plan.stretches) {
@@ -180,7 +181,7 @@ export class Rim {
       }
     }
     const shader = Shader.from({
-      gl: { vertex: VERT, fragment: FRAG },
+      gl: { vertex: VERT, fragment: frag(colors.lit, colors.shade) },
       resources: {
         u: {
           uTime: { value: this.time, type: 'vec4<f32>' },

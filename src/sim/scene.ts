@@ -131,6 +131,11 @@ export interface EnemySpawn {
   /** Lampwing: how far it notices her from (default `tuning.lampwing.noticePx`): one that watches a long lane. */
   sight?: number;
   /**
+   * Lampwing / hawker: dives before it gives up (default `maxDives`). With it set, a creature that gave up tired
+   * tells again only after `retellFrames` (leg 3b's lampwing, review r7 #9: one pass, one dive).
+   */
+  dives?: number;
+  /**
    * A lamp-guarder (creatures.md §1.2): the id of the lure it guards. When that lure is snuffed it
    * disperses (`enemyDisperse`): a crawler curls up asleep, a flyer leaves the room, a weaver climbs
    * away, a web goes slack.
@@ -190,6 +195,13 @@ export interface EnemySpawn {
    * It comes in like a respawn (`enemyRespawn`) on the step it wakes.
    */
   wakes?: string;
+  /**
+   * With `wakes` (an ambush, the Canopy r8): it arrives instead of appearing. `enemies.arriveDelayFrames` after the
+   * flag it shows at one of these points (same convention as `x`, `y`: the first at least `enemies.arriveClearPx`
+   * from her body centre, else the farthest) and travels to its spawn over `enemies.arriveFrames`, harmless and out
+   * of reach (`enemyArrive`, `EnemyState.arrive`).
+   */
+  arrive?: Array<[number, number]>;
   /**
    * Web: points that hold strands besides solids and the room's edges (the great lamp's heart, which
    * hangs on its own chain: a spoke cut from it falls alone).

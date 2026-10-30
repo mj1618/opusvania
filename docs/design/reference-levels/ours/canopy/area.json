@@ -850,6 +850,14 @@
       8320,
       6048
      ]
+    },
+    {
+     "to": "nest",
+     "side": "s",
+     "at": [
+      8320,
+      6048
+     ]
     }
    ]
   },
@@ -868,6 +876,14 @@
    "exits": [
     {
      "to": "tunnel",
+     "side": "n",
+     "at": [
+      8320,
+      8224
+     ]
+    },
+    {
+     "to": "hall",
      "side": "n",
      "at": [
       8320,
@@ -1870,182 +1886,6 @@
    "kind": "solid",
    "poly": [
     [
-     12800,
-     2970
-    ],
-    [
-     12848,
-     2970
-    ],
-    [
-     12848,
-     3050
-    ],
-    [
-     12800,
-     3050
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     12848,
-     2972
-    ],
-    [
-     12944,
-     2972
-    ],
-    [
-     12944,
-     3052
-    ],
-    [
-     12848,
-     3052
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     12944,
-     2980
-    ],
-    [
-     13040,
-     2980
-    ],
-    [
-     13040,
-     3060
-    ],
-    [
-     12944,
-     3060
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     13040,
-     2984
-    ],
-    [
-     13120,
-     2984
-    ],
-    [
-     13120,
-     3064
-    ],
-    [
-     13040,
-     3064
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     13120,
-     2991
-    ],
-    [
-     13168,
-     2991
-    ],
-    [
-     13168,
-     3071
-    ],
-    [
-     13120,
-     3071
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     13168,
-     2994
-    ],
-    [
-     13232,
-     2994
-    ],
-    [
-     13232,
-     3074
-    ],
-    [
-     13168,
-     3074
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     13232,
-     2993
-    ],
-    [
-     13312,
-     2993
-    ],
-    [
-     13312,
-     3073
-    ],
-    [
-     13232,
-     3073
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
-     13504,
-     3263
-    ],
-    [
-     13552,
-     3263
-    ],
-    [
-     13552,
-     3343
-    ],
-    [
-     13504,
-     3343
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-hatch",
-   "kind": "solid",
-   "poly": [
-    [
      13552,
      3258
     ],
@@ -4646,11 +4486,11 @@
      6176
     ],
     [
-     4736,
+     4800,
      6176
     ],
     [
-     4736,
+     4800,
      6176
     ],
     [
@@ -4687,11 +4527,11 @@
    "poly": [
     [
      4836,
-     6400
+     6324
     ],
     [
      4864,
-     6400
+     6324
     ],
     [
      4864,
@@ -5369,19 +5209,19 @@
    "poly": [
     [
      6752,
-     4318
+     4319
     ],
     [
      6880,
-     4318
+     4319
     ],
     [
      6880,
-     4398
+     4399
     ],
     [
      6752,
-     4398
+     4399
     ]
    ]
   },
@@ -7093,11 +6933,11 @@
     ],
     [
      1216,
-     9824
+     9888
     ],
     [
      1152,
-     9824
+     9888
     ]
    ]
   },
@@ -7269,160 +7109,6 @@
     ],
     [
      17216,
-     4128
-    ],
-    [
-     16320,
-     4128
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     16320,
-     4128
-    ],
-    [
-     16544,
-     4128
-    ],
-    [
-     16544,
-     4192
-    ],
-    [
-     16320,
-     4192
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     17056,
-     4128
-    ],
-    [
-     17216,
-     4128
-    ],
-    [
-     17216,
-     4192
-    ],
-    [
-     17056,
-     4192
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     16320,
-     4192
-    ],
-    [
-     16512,
-     4192
-    ],
-    [
-     16512,
-     4256
-    ],
-    [
-     16320,
-     4256
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     17088,
-     4192
-    ],
-    [
-     17216,
-     4192
-    ],
-    [
-     17216,
-     4256
-    ],
-    [
-     17088,
-     4256
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     17152,
-     4256
-    ],
-    [
-     17216,
-     4256
-    ],
-    [
-     17216,
-     4384
-    ],
-    [
-     17152,
-     4384
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     16320,
-     4256
-    ],
-    [
-     16448,
-     4256
-    ],
-    [
-     16448,
-     4640
-    ],
-    [
-     16320,
-     4640
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     16320,
-     4640
-    ],
-    [
-     17216,
-     4640
-    ],
-    [
-     17216,
      4768
     ],
     [
@@ -7846,50 +7532,6 @@
     [
      17616,
      4920
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "solid",
-   "poly": [
-    [
-     18112,
-     4512
-    ],
-    [
-     18368,
-     4512
-    ],
-    [
-     18368,
-     4704
-    ],
-    [
-     18112,
-     4704
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-fork",
-   "kind": "oneway",
-   "poly": [
-    [
-     16576,
-     4416
-    ],
-    [
-     16736,
-     4416
-    ],
-    [
-     16736,
-     4416
-    ],
-    [
-     16576,
-     4416
     ]
    ]
   },
@@ -10887,22 +10529,66 @@
   },
   {
    "roomId": "cn-spire",
+   "kind": "solid",
+   "poly": [
+    [
+     24576,
+     4320
+    ],
+    [
+     24640,
+     4320
+    ],
+    [
+     24640,
+     4504
+    ],
+    [
+     24576,
+     4504
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-spire",
+   "kind": "oneway",
+   "poly": [
+    [
+     24448,
+     4640
+    ],
+    [
+     24640,
+     4640
+    ],
+    [
+     24640,
+     4640
+    ],
+    [
+     24448,
+     4640
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-spire",
    "kind": "hazard",
    "poly": [
     [
-     24612,
+     24548,
      3979
     ],
     [
-     24640,
+     24576,
      3979
     ],
     [
-     24640,
+     24576,
      4164
     ],
     [
-     24612,
+     24548,
      4164
     ]
    ]
@@ -10926,28 +10612,6 @@
     [
      24000,
      4744
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-spire",
-   "kind": "hazard",
-   "poly": [
-    [
-     25280,
-     5636
-    ],
-    [
-     25536,
-     5636
-    ],
-    [
-     25536,
-     5664
-    ],
-    [
-     25280,
-     5664
     ]
    ]
   },
@@ -12620,28 +12284,6 @@
     [
      22912,
      3328
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-bower",
-   "kind": "oneway",
-   "poly": [
-    [
-     23616,
-     3232
-    ],
-    [
-     23744,
-     3232
-    ],
-    [
-     23744,
-     3232
-    ],
-    [
-     23616,
-     3232
     ]
    ]
   },
@@ -14982,19 +14624,19 @@
    "kind": "solid",
    "poly": [
     [
-     8320,
+     9088,
      7904
     ],
     [
-     9408,
+     9376,
      7904
     ],
     [
-     9408,
+     9376,
      7968
     ],
     [
-     8320,
+     9088,
      7968
     ]
    ]
@@ -15004,7 +14646,7 @@
    "kind": "solid",
    "poly": [
     [
-     11264,
+     11392,
      7904
     ],
     [
@@ -15016,7 +14658,7 @@
      7968
     ],
     [
-     11264,
+     11392,
      7968
     ]
    ]
@@ -15071,6 +14713,28 @@
    "poly": [
     [
      8320,
+     7904
+    ],
+    [
+     8896,
+     7904
+    ],
+    [
+     8896,
+     8224
+    ],
+    [
+     8320,
+     8224
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-tunnel",
+   "kind": "solid",
+   "poly": [
+    [
+     9088,
      7968
     ],
     [
@@ -15082,7 +14746,7 @@
      8224
     ],
     [
-     8320,
+     9088,
      8224
     ]
    ]
@@ -15422,6 +15086,28 @@
    "kind": "oneway",
    "poly": [
     [
+     9984,
+     7552
+    ],
+    [
+     10112,
+     7552
+    ],
+    [
+     10112,
+     7552
+    ],
+    [
+     9984,
+     7552
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-tunnel",
+   "kind": "oneway",
+   "poly": [
+    [
      10240,
      7680
     ],
@@ -15444,6 +15130,28 @@
    "kind": "oneway",
    "poly": [
     [
+     10496,
+     7552
+    ],
+    [
+     10624,
+     7552
+    ],
+    [
+     10624,
+     7552
+    ],
+    [
+     10496,
+     7552
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-tunnel",
+   "kind": "oneway",
+   "poly": [
+    [
      10752,
      7712
     ],
@@ -15458,6 +15166,28 @@
     [
      10752,
      7712
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-tunnel",
+   "kind": "oneway",
+   "poly": [
+    [
+     11072,
+     7744
+    ],
+    [
+     11200,
+     7744
+    ],
+    [
+     11200,
+     7744
+    ],
+    [
+     11072,
+     7744
     ]
    ]
   },
@@ -15554,19 +15284,19 @@
    "kind": "hazard",
    "poly": [
     [
-     9408,
+     9376,
      7940
     ],
     [
-     11264,
+     11392,
      7940
     ],
     [
-     11264,
+     11392,
      7968
     ],
     [
-     9408,
+     9376,
      7968
     ]
    ]
@@ -15598,6 +15328,28 @@
    "kind": "door",
    "poly": [
     [
+     15936,
+     7840
+    ],
+    [
+     16128,
+     7840
+    ],
+    [
+     16128,
+     7904
+    ],
+    [
+     15936,
+     7904
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-tunnel",
+   "kind": "door",
+   "poly": [
+    [
      16256,
      7200
     ],
@@ -15708,7 +15460,7 @@
    "kind": "solid",
    "poly": [
     [
-     8320,
+     9088,
      8224
     ],
     [
@@ -15720,7 +15472,7 @@
      8640
     ],
     [
-     8320,
+     9088,
      8640
     ]
    ]
@@ -15730,7 +15482,7 @@
    "kind": "solid",
    "poly": [
     [
-     8320,
+     9088,
      8640
     ],
     [
@@ -15742,7 +15494,7 @@
      8672
     ],
     [
-     8320,
+     9088,
      8672
     ]
    ]
@@ -15841,18 +15593,150 @@
    "poly": [
     [
      8320,
+     8224
+    ],
+    [
+     8896,
+     8224
+    ],
+    [
+     8896,
+     8704
+    ],
+    [
+     8320,
+     8704
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     9088,
      8672
     ],
     [
      12224,
      8672
+    ],
+    [
+     12224,
+     8704
+    ],
+    [
+     9088,
+     8704
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     9344,
+     8704
+    ],
+    [
+     10720,
+     8704
+    ],
+    [
+     10720,
+     8736
+    ],
+    [
+     9344,
+     8736
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     11808,
+     8704
+    ],
+    [
+     12224,
+     8704
+    ],
+    [
+     12224,
+     8768
+    ],
+    [
+     11808,
+     8768
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     8320,
+     8704
+    ],
+    [
+     8800,
+     8704
+    ],
+    [
+     8800,
+     8800
+    ],
+    [
+     8320,
+     8800
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     10432,
+     8736
+    ],
+    [
+     10720,
+     8736
+    ],
+    [
+     10720,
+     8800
+    ],
+    [
+     10432,
+     8800
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     12000,
+     8768
+    ],
+    [
+     12224,
+     8768
     ],
     [
      12224,
      8800
     ],
     [
-     8320,
+     12000,
      8800
     ]
    ]
@@ -15884,7 +15768,7 @@
    "kind": "solid",
    "poly": [
     [
-     8320,
+     12032,
      8800
     ],
     [
@@ -15896,7 +15780,7 @@
      8832
     ],
     [
-     8320,
+     12032,
      8832
     ]
    ]
@@ -15928,6 +15812,50 @@
    "kind": "solid",
    "poly": [
     [
+     8320,
+     8800
+    ],
+    [
+     8768,
+     8800
+    ],
+    [
+     8768,
+     8864
+    ],
+    [
+     8320,
+     8864
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     8320,
+     8864
+    ],
+    [
+     8704,
+     8864
+    ],
+    [
+     8704,
+     8896
+    ],
+    [
+     8320,
+     8896
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
      14848,
      8832
     ],
@@ -15951,14 +15879,14 @@
    "poly": [
     [
      8320,
-     8832
+     8896
     ],
     [
-     12032,
-     8832
+     8640,
+     8896
     ],
     [
-     12032,
+     8640,
      9088
     ],
     [
@@ -15976,11 +15904,11 @@
      9088
     ],
     [
-     12096,
+     8704,
      9088
     ],
     [
-     12096,
+     8704,
      9440
     ],
     [
@@ -16140,6 +16068,94 @@
     [
      13760,
      9312
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     9664,
+     8800
+    ],
+    [
+     9856,
+     8800
+    ],
+    [
+     9856,
+     8880
+    ],
+    [
+     9664,
+     8880
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     9728,
+     8880
+    ],
+    [
+     9792,
+     8880
+    ],
+    [
+     9792,
+     8960
+    ],
+    [
+     9728,
+     8960
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     10880,
+     8800
+    ],
+    [
+     11072,
+     8800
+    ],
+    [
+     11072,
+     8880
+    ],
+    [
+     10880,
+     8880
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-burrow",
+   "kind": "solid",
+   "poly": [
+    [
+     10944,
+     8880
+    ],
+    [
+     11008,
+     8880
+    ],
+    [
+     11008,
+     8960
+    ],
+    [
+     10944,
+     8960
     ]
    ]
   },
@@ -16448,50 +16464,6 @@
     [
      16896,
      8928
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-den",
-   "kind": "solid",
-   "poly": [
-    [
-     17472,
-     8672
-    ],
-    [
-     17856,
-     8672
-    ],
-    [
-     17856,
-     8704
-    ],
-    [
-     17472,
-     8704
-    ]
-   ]
-  },
-  {
-   "roomId": "cn-den",
-   "kind": "solid",
-   "poly": [
-    [
-     18496,
-     8672
-    ],
-    [
-     18880,
-     8672
-    ],
-    [
-     18880,
-     8704
-    ],
-    [
-     18496,
-     8704
     ]
    ]
   },
@@ -16536,6 +16508,50 @@
     [
      17152,
      8608
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-den",
+   "kind": "oneway",
+   "poly": [
+    [
+     17472,
+     8672
+    ],
+    [
+     17856,
+     8672
+    ],
+    [
+     17856,
+     8672
+    ],
+    [
+     17472,
+     8672
+    ]
+   ]
+  },
+  {
+   "roomId": "cn-den",
+   "kind": "oneway",
+   "poly": [
+    [
+     18496,
+     8672
+    ],
+    [
+     18880,
+     8672
+    ],
+    [
+     18880,
+     8672
+    ],
+    [
+     18496,
+     8672
     ]
    ]
   },
@@ -17381,19 +17397,19 @@
    "poly": [
     [
      21412,
-     8416
+     8464
     ],
     [
      21440,
-     8416
+     8464
     ],
     [
      21440,
-     8544
+     8568
     ],
     [
      21412,
-     8544
+     8568
     ]
    ]
   },
@@ -17876,6 +17892,17 @@
    }
   },
   {
+   "id": "cn-hatch:wick-first",
+   "roomId": "cn-hatch",
+   "kind": "lever",
+   "at": [
+    12980,
+    2740
+   ],
+   "src": "files",
+   "value": "lamp:wick"
+  },
+  {
    "id": "cn-hub:shelf-great",
    "roomId": "cn-hub",
    "kind": "pickup-major",
@@ -18043,7 +18070,7 @@
    "kind": "pickup-minor",
    "at": [
     4836,
-    6204
+    6164
    ],
    "src": "files",
    "value": "glint"
@@ -18054,7 +18081,7 @@
    "kind": "pickup-minor",
    "at": [
     4836,
-    6254
+    6214
    ],
    "src": "files",
    "value": "glint"
@@ -18065,7 +18092,7 @@
    "kind": "pickup-minor",
    "at": [
     4836,
-    6304
+    6264
    ],
    "src": "files",
    "value": "glint"
@@ -18234,17 +18261,6 @@
    }
   },
   {
-   "id": "cn-limbs:pod-l2",
-   "roomId": "cn-limbs",
-   "kind": "breakable",
-   "at": [
-    6880,
-    4296
-   ],
-   "src": "files",
-   "value": "pod 1hp"
-  },
-  {
    "id": "cn-limbs:wick-limb-1",
    "roomId": "cn-limbs",
    "kind": "lever",
@@ -18334,87 +18350,6 @@
    "value": "upgrade:moonShard",
    "hidden": {
     "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-fork:shelf-1",
-   "roomId": "cn-fork",
-   "kind": "pickup-minor",
-   "at": [
-    18216,
-    4464
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-fork:shelf-2",
-   "roomId": "cn-fork",
-   "kind": "pickup-minor",
-   "at": [
-    18240,
-    4448
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-fork:shelf-3",
-   "roomId": "cn-fork",
-   "kind": "pickup-minor",
-   "at": [
-    18264,
-    4464
-   ],
-   "src": "files",
-   "value": "glint",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-fork:pod-stone",
-   "roomId": "cn-fork",
-   "kind": "breakable",
-   "at": [
-    16656,
-    4394
-   ],
-   "src": "files",
-   "value": "pod 2hp",
-   "hidden": {
-    "how": "behind a cover"
-   }
-  },
-  {
-   "id": "cn-fork:pod-face",
-   "roomId": "cn-fork",
-   "kind": "breakable",
-   "at": [
-    19220,
-    4298
-   ],
-   "src": "files",
-   "value": "pod 1hp"
-  },
-  {
-   "id": "cn-fork:stone-east",
-   "roomId": "cn-fork",
-   "kind": "pickup-major",
-   "at": [
-    16720,
-    4640
-   ],
-   "src": "files",
-   "value": "map",
-   "hidden": {
-    "how": "behind a cover"
    }
   },
   {
@@ -18670,6 +18605,17 @@
    "value": "key"
   },
   {
+   "id": "cn-grove:stone-east",
+   "roomId": "cn-grove",
+   "kind": "pickup-major",
+   "at": [
+    19700,
+    4320
+   ],
+   "src": "files",
+   "value": "map"
+  },
+  {
    "id": "cn-grove:p-grove",
    "roomId": "cn-grove",
    "kind": "save",
@@ -18771,20 +18717,6 @@
    "value": "upgrade:quickWings",
    "hidden": {
     "how": "in a hidden room"
-   }
-  },
-  {
-   "id": "cn-bower:pod-kin",
-   "roomId": "cn-bower",
-   "kind": "breakable",
-   "at": [
-    20512,
-    3190
-   ],
-   "src": "files",
-   "value": "pod 2hp",
-   "hidden": {
-    "how": "behind a cover"
    }
   },
   {
@@ -19004,8 +18936,8 @@
    "roomId": "cn-gap",
    "kind": "lever",
    "at": [
-    19060,
-    2680
+    19080,
+    2860
    ],
    "src": "files",
    "value": "lamp:wick"
@@ -19015,8 +18947,8 @@
    "roomId": "cn-gap",
    "kind": "lever",
    "at": [
-    18920,
-    3040
+    18930,
+    2900
    ],
    "src": "files",
    "value": "lamp:wick"
@@ -19197,12 +19129,188 @@
    "value": "glint"
   },
   {
+   "id": "cn-tunnel:run-arc-1",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    9600,
+    7468
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:run-arc-2",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    9840,
+    7429
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:run-arc-3",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    10080,
+    7406
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:run-arc-4",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    10320,
+    7398
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:run-arc-5",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    10560,
+    7406
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:run-arc-6",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    10800,
+    7429
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:run-arc-7",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    11040,
+    7468
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-1",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    14656,
+    7608
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-2",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    14766,
+    7559
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-3",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    14875,
+    7526
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-4",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    14985,
+    7510
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-5",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    15095,
+    7510
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-6",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    15205,
+    7526
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-7",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    15314,
+    7559
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
+   "id": "cn-tunnel:pit-arc-8",
+   "roomId": "cn-tunnel",
+   "kind": "pickup-minor",
+   "at": [
+    15424,
+    7608
+   ],
+   "src": "files",
+   "value": "glint"
+  },
+  {
    "id": "cn-tunnel:pod-run-1408",
    "roomId": "cn-tunnel",
    "kind": "breakable",
    "at": [
     9792,
     7690
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "cn-tunnel:pod-run-1664",
+   "roomId": "cn-tunnel",
+   "kind": "breakable",
+   "at": [
+    10048,
+    7530
    ],
    "src": "files",
    "value": "pod 1hp"
@@ -19219,12 +19327,34 @@
    "value": "pod 1hp"
   },
   {
+   "id": "cn-tunnel:pod-run-2176",
+   "roomId": "cn-tunnel",
+   "kind": "breakable",
+   "at": [
+    10560,
+    7530
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
    "id": "cn-tunnel:pod-run-2432",
    "roomId": "cn-tunnel",
    "kind": "breakable",
    "at": [
     10816,
     7690
+   ],
+   "src": "files",
+   "value": "pod 1hp"
+  },
+  {
+   "id": "cn-tunnel:pod-run-2752",
+   "roomId": "cn-tunnel",
+   "kind": "breakable",
+   "at": [
+    11136,
+    7722
    ],
    "src": "files",
    "value": "pod 1hp"
@@ -19261,6 +19391,34 @@
    ],
    "src": "files",
    "value": "pod 1hp"
+  },
+  {
+   "id": "cn-burrow:pod-nest-1",
+   "roomId": "cn-burrow",
+   "kind": "breakable",
+   "at": [
+    9760,
+    8982
+   ],
+   "src": "files",
+   "value": "pod 1hp",
+   "hidden": {
+    "how": "in a hidden room"
+   }
+  },
+  {
+   "id": "cn-burrow:pod-nest-2",
+   "roomId": "cn-burrow",
+   "kind": "breakable",
+   "at": [
+    10976,
+    8982
+   ],
+   "src": "files",
+   "value": "pod 1hp",
+   "hidden": {
+    "how": "in a hidden room"
+   }
   },
   {
    "id": "cn-burrow:stone-deep",
@@ -19427,7 +19585,7 @@
    "roomId": "cn-well",
    "kind": "burrback",
    "at": [
-    3200,
+    3160,
     4896
    ],
    "hp": 0,
@@ -19435,14 +19593,14 @@
    "behaviour": "ground ram with a tell and a winded beat; 5 hp",
    "difficulty": 2,
    "src": "files",
-   "patrol": 300
+   "patrol": 340
   },
   {
    "id": "cn-well:burr-am-2",
    "roomId": "cn-well",
    "kind": "burrback",
    "at": [
-    3760,
+    3420,
     4896
    ],
    "hp": 0,
@@ -19450,7 +19608,7 @@
    "behaviour": "ground ram with a tell and a winded beat; 5 hp",
    "difficulty": 2,
    "src": "files",
-   "patrol": 100
+   "patrol": 400
   },
   {
    "id": "cn-well:wing-am",
@@ -19466,21 +19624,6 @@
    "difficulty": 2,
    "src": "files",
    "patrol": 260
-  },
-  {
-   "id": "cn-limbs:wing-g1",
-   "roomId": "cn-limbs",
-   "kind": "lampwing",
-   "at": [
-    6400,
-    4264
-   ],
-   "hp": 0,
-   "contactDamage": 1,
-   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
-   "difficulty": 2,
-   "src": "files",
-   "patrol": 220
   },
   {
    "id": "cn-rot:burr-rot",
@@ -19539,21 +19682,6 @@
    "behaviour": "boss: three phases in a web arena",
    "difficulty": 5,
    "src": "files"
-  },
-  {
-   "id": "cn-fork:juv-e",
-   "roomId": "cn-fork",
-   "kind": "juvenileBurrback",
-   "at": [
-    18208,
-    4832
-   ],
-   "hp": 0,
-   "contactDamage": 1,
-   "behaviour": "unknown kind",
-   "difficulty": 3,
-   "src": "files",
-   "patrol": 120
   },
   {
    "id": "cn-cellar:ant-c1",
@@ -19674,7 +19802,7 @@
    "roomId": "cn-grove",
    "kind": "burrback",
    "at": [
-    21320,
+    21900,
     5344
    ],
    "hp": 0,
@@ -19682,14 +19810,14 @@
    "behaviour": "ground ram with a tell and a winded beat; 5 hp",
    "difficulty": 2,
    "src": "files",
-   "patrol": 220
+   "patrol": 300
   },
   {
    "id": "cn-grove:burr-pit-e",
    "roomId": "cn-grove",
    "kind": "burrback",
    "at": [
-    22370,
+    22470,
     5344
    ],
    "hp": 0,
@@ -19712,7 +19840,7 @@
    "behaviour": "unknown kind",
    "difficulty": 3,
    "src": "files",
-   "patrol": 200
+   "patrol": 500
   },
   {
    "id": "cn-grove:juv-wave-e",
@@ -19727,7 +19855,7 @@
    "behaviour": "unknown kind",
    "difficulty": 3,
    "src": "files",
-   "patrol": 160
+   "patrol": 300
   },
   {
    "id": "cn-grove:dang-wave",
@@ -19748,15 +19876,15 @@
    "roomId": "cn-grove",
    "kind": "lampwing",
    "at": [
-    22920,
-    5004
+    22480,
+    5104
    ],
    "hp": 0,
    "contactDamage": 1,
    "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
    "difficulty": 2,
    "src": "files",
-   "patrol": 140
+   "patrol": 120
   },
   {
    "id": "cn-grove:wing-a",
@@ -19918,6 +20046,223 @@
    "behaviour": "walks a line, no attack; harmless unless touched",
    "difficulty": 1,
    "src": "files"
+  },
+  {
+   "id": "cn-tunnel:ant-hall1",
+   "roomId": "cn-tunnel",
+   "kind": "carrier",
+   "at": [
+    12020,
+    7904
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-tunnel:ant-hall2",
+   "roomId": "cn-tunnel",
+   "kind": "carrier",
+   "at": [
+    12020,
+    7904
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-tunnel:ant-hall3",
+   "roomId": "cn-tunnel",
+   "kind": "carrier",
+   "at": [
+    12020,
+    7904
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-tunnel:juv-pile",
+   "roomId": "cn-tunnel",
+   "kind": "juvenileBurrback",
+   "at": [
+    9320,
+    7904
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "unknown kind",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 120
+  },
+  {
+   "id": "cn-tunnel:hawk-pit",
+   "roomId": "cn-tunnel",
+   "kind": "hawker",
+   "at": [
+    15040,
+    7508
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier that hunts her across the room",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 240
+  },
+  {
+   "id": "cn-tunnel:wing-warn-1",
+   "roomId": "cn-tunnel",
+   "kind": "lampwing",
+   "at": [
+    15640,
+    7608
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 100
+  },
+  {
+   "id": "cn-tunnel:wing-warn-2",
+   "roomId": "cn-tunnel",
+   "kind": "lampwing",
+   "at": [
+    15860,
+    7568
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "flier: tell, committed dive at where she stood, climbs; 3 hp",
+   "difficulty": 2,
+   "src": "files",
+   "patrol": 100
+  },
+  {
+   "id": "cn-tunnel:juv-warn",
+   "roomId": "cn-tunnel",
+   "kind": "juvenileBurrback",
+   "at": [
+    15872,
+    7648
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "unknown kind",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 48
+  },
+  {
+   "id": "cn-burrow:ant-nest-a1",
+   "roomId": "cn-burrow",
+   "kind": "carrier",
+   "at": [
+    9420,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-burrow:ant-nest-a2",
+   "roomId": "cn-burrow",
+   "kind": "carrier",
+   "at": [
+    9420,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-burrow:ant-nest-a3",
+   "roomId": "cn-burrow",
+   "kind": "carrier",
+   "at": [
+    9420,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-burrow:ant-nest-b1",
+   "roomId": "cn-burrow",
+   "kind": "carrier",
+   "at": [
+    11620,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-burrow:ant-nest-b2",
+   "roomId": "cn-burrow",
+   "kind": "carrier",
+   "at": [
+    11620,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "walks a line, no attack; harmless unless touched",
+   "difficulty": 1,
+   "src": "files"
+  },
+  {
+   "id": "cn-burrow:juv-nest-1",
+   "roomId": "cn-burrow",
+   "kind": "juvenileBurrback",
+   "at": [
+    10020,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "unknown kind",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 160
+  },
+  {
+   "id": "cn-burrow:juv-nest-2",
+   "roomId": "cn-burrow",
+   "kind": "juvenileBurrback",
+   "at": [
+    11220,
+    9440
+   ],
+   "hp": 0,
+   "contactDamage": 1,
+   "behaviour": "unknown kind",
+   "difficulty": 3,
+   "src": "files",
+   "patrol": 160
   },
   {
    "id": "cn-den:old-burr",

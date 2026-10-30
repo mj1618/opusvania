@@ -54,7 +54,7 @@ describe('the Grove arena', () => {
     const kit = ['wallJump'] as never;
     const s = createState(1, t, scene, [], kit, newSave(kit));
     for (const g of gates) expect(gateShut(g as never, s.save.flags)).toBe(false);
-    placePlayer(s, 2800, 1600, t, withShortcuts(scene, s.save), []);
+    placePlayer(s, 1900, 1600, t, withShortcuts(scene, s.save), []);
     const W = getWorld('canopy');
     const events: SimEvent[] = [];
     for (let k = 0; k < 30; k++) step(s, 0, t, scene, events, W);

@@ -51,6 +51,12 @@ const base = {
   fight: z.boolean().optional(),
   /** Lanternroot: there only once the save has this ability or flag (the pit wakes with Kindle). */
   wakes: z.string().optional(),
+  /** With `wakes`: where it arrives from (it travels to its spawn, harmless: an ambush, the Canopy r8). */
+  arrive: z
+    .array(z.tuple([int, int]))
+    .min(1)
+    .max(4)
+    .optional(),
 };
 
 export const ENEMIES = z
@@ -93,6 +99,7 @@ export const ENEMIES = z
           kind: z.literal('lampwing'),
           radius: int.min(0).max(400).optional(),
           sight: int.min(60).max(900).optional(),
+          dives: int.min(1).max(9).optional(),
         })
         .strict(),
       z

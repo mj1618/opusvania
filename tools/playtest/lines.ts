@@ -16,10 +16,11 @@
 import type { SimEvent } from '../../src/sim/events';
 import { cloneState, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import { flingTarget } from '../../src/sim/lures';
 import { kickableAt, solidAt } from '../../src/sim/physics/aabb';
 import type { Scene } from '../../src/sim/scene';
 import type { GameState } from '../../src/sim/state';
-import type { Tuning } from '../../src/sim/tuning';
+import { defaultTuning, type Tuning } from '../../src/sim/tuning';
 import type { World } from '../../src/sim/world';
 import { type Face, facesOf, type Move, type Surface, topUnder } from './map';
 
@@ -29,6 +30,7 @@ const D = ActionBit.down;
 const J = ActionBit.jump;
 const X = ActionBit.dash;
 const A = ActionBit.attack;
+const B = ActionBit.lamp;
 
 export function dirBit(dir: number): number {
   return dir > 0 ? R : dir < 0 ? L : 0;
@@ -309,6 +311,52 @@ export class Aim {
   }
 }
 
+/**
+ * The fling (memory/lures.md, since 2026-10-18; the Canopy r8: v7's bots still played the old lamp catch and lit 0
+ * lamps): Lamp held from the press, time slowed, the stick swept over the ways toward the goal (each held `per`
+ * frames, its drawn arc read: `player.lureArc`), then Lamp let go holding the best (the launch goes exactly that way).
+ */
+export class FlingAim {
+  private order: number[] = [];
+  private readonly scores = new Map<number, number>();
+  private k0 = -1;
+
+  constructor(
+    private readonly goal: () => ThrowGoal | null,
+    private readonly per = 1,
+  ) {}
+
+  act(s: GameState, scene: Scene, k: number): number {
+    const p = s.player;
+    const g = this.goal();
+    if (!g) return 0;
+    if (this.k0 < 0) {
+      this.k0 = k;
+      const a = Math.atan2(-(g.y - (p.y + p.h / 2)), g.x - (p.x + p.w / 2));
+      const ang = (m: number) =>
+        Math.atan2((m & U ? 1 : 0) - (m & D ? 1 : 0), (m & R ? 1 : 0) - (m & L ? 1 : 0));
+      const off = (m: number) => Math.abs(Math.atan2(Math.sin(ang(m) - a), Math.cos(ang(m) - a)));
+      this.order = AIMS.filter((m) => off(m) <= 1.75).sort((x, y) => off(x) - off(y));
+    }
+    const held = (s.prevInput as number) & (L | R | U | D);
+    if (held) {
+      const sc = arcScore(p.lureArc, scene, g, p.h / 2);
+      this.scores.set(held, Math.min(sc, this.scores.get(held) ?? Number.POSITIVE_INFINITY));
+    }
+    const i = Math.floor((k - this.k0) / this.per);
+    if (i < this.order.length) return (this.order[i] ?? 0) | B;
+    let best = this.order[0] ?? 0;
+    for (const [m, v] of this.scores) if (v < (this.scores.get(best) ?? Number.POSITIVE_INFINITY)) best = m;
+    // (Held once more so its arc is the one seen, then let go.)
+    return held === best ? best : best | B;
+  }
+
+  reset(): void {
+    this.k0 = -1;
+    this.scores.clear();
+  }
+}
+
 /** Steering in the air onto `to`, toward `tx` once over it (no `to`: on toward `tx`). */
 function steer(s: GameState, to: Surface | null, tx: number, rising: { dir: number } | null): number {
   const f = feet(s);
@@ -391,6 +439,14 @@ export function jumpLine(
     }),
     hands.aimPer ?? 1,
   );
+  const flingAim = new FlingAim(
+    () => ({
+      x: to ? Math.max(to.x0 + 40, Math.min(to.x1 - 40, tx)) : tx,
+      y: to ? topUnder(to, Math.max(to.x0 + 40, Math.min(to.x1 - 40, tx))) : y0,
+      surface: to,
+    }),
+    hands.aimPer ?? 1,
+  );
   return {
     name,
     max,
@@ -402,6 +458,14 @@ export function jumpLine(
         return aim.act(s, scene, k, prev);
       }
       aim.reset();
+      // The fling: aiming now (Lamp held), or a flame in reach on the way to the lamp: press it.
+      if (p.fling >= 0) {
+        thrownBy = true;
+        return flingAim.act(s, scene, k);
+      }
+      flingAim.reset();
+      if (q.lure && !q.lureCut && !thrownBy && !p.grounded && !(prev & B) && p.flingCd === 0)
+        if (flingTarget(s, scene, defaultTuning) >= 0) return B | (prev & J);
       if (caughtNow(s)) return caughtMask(k, hands.cut);
       if (k < q.wait) return 0;
       if (q.through) return k % 4 < 2 ? D | J : D;

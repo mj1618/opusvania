@@ -24,6 +24,10 @@ breaks through in a few slanted shafts. Small plants glow.
   behind the play plane is mid-value (mean luma ~45-70 in a wide frame), the solid is near-black (under ~12), and a
   thick, bright, lobed moss rim sits between them (40-80 px deep at our hero's 80 px, domes and drips off it). Dark
   ground on dark air does not read. Bright walk moss belongs only to what she stands on and the faces she clings to.
+- **The ground is a silhouette (2026-10-31, r8):** deeper than ~100 px from its edge a mass is near-black (luma <= 12,
+  `npm run look:check` measures it), shapes only in the outer band. **What grows on a top is the place's own**
+  (frost, amber lichen, fungus on earth, straw, lime moss), in clumps with breaks over 40-85% of the top; a thin lit
+  lip carries the walk on the bare stretches.
 
 ## Layers, back to front
 1. Sky glow: vertical gradient with a soft warm bloom where the light enters.
