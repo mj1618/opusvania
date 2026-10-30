@@ -54,8 +54,8 @@ const CLAIMS: Claim[] = [
     room: 'cn-well',
     from: [1700, 4928],
     kit: [],
-    reach: ['rot', 'cn-well:p-well'],
-    not: ['limbs', 'trunk', 'elder'],
+    reach: ['rot', 'elder', 'cn-well:p-well'],
+    not: ['limbs', 'trunk'],
   },
   {
     room: 'cn-well',
@@ -82,7 +82,6 @@ const CLAIMS: Claim[] = [
   { room: 'cn-webs', from: [2300, 1280], kit: [], reach: ['crawl', 'elder'] },
   { room: 'cn-elder', from: [2300, 2496], kit: [], reach: ['webs'], not: ['well', 'cn-elder:drop-elder'] },
   { room: 'cn-elder', from: [2300, 2496], kit: [C], reach: ['webs', 'well', 'cn-elder:drop-elder'] },
-  { room: 'cn-elder', from: [640, 1216], kit: [C], reach: ['well', 'cn-elder:drop-elder'] },
   // The east fork: the hub, the cellar stairs and the moth-stone open; the Grove only with the claws; the sky's
   // shelf only gliding from the face's top.
   {

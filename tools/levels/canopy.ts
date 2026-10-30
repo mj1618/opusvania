@@ -115,7 +115,7 @@ const LINKS: Link[] = [
   { a: 'cn-rot', b: 'cn-crawl', at: 256, span: 192 },
   { a: 'cn-crawl', b: 'cn-webs', at: 8064 },
   { a: 'cn-webs', b: 'cn-elder', at: 8064 },
-  { a: 'cn-elder', b: 'cn-well', at: 5952 },
+  { a: 'cn-elder', b: 'cn-well', at: 6720 },
   // East, and the cellar branch.
   { a: 'cn-fork', b: 'cn-grove', at: 2368 },
   { a: 'cn-fork', b: 'cn-cellar', at: 7424, span: 192 },
@@ -1064,12 +1064,13 @@ function well(): Json {
   r.hole(1024, 1152, 1536, 4928);
   // The bottom: the claws, far and low; out east to the rot hall.
   r.cave(1536, 4608, 2560, 4928, { ceil: 64, w: 0, e: 0, corner: 0 });
-  // The Elder's notch up the shaft's west face (a first claw climb), its rotten plug in the west wall.
-  r.cave(128, 3904, 1024, 4160, { ceil: 64, w: 0, e: 0, corner: 0 });
-  r.bark('elder-plug', 64, 3904, 64, 256);
-  // The giant's mouth on the east wall (the first leg's rest), the landing in the west wall (the second's).
+  // The Elder's notch off the shaft's foot, its rotten plug in the west wall.
+  r.cave(128, 4672, 1024, 4928, { ceil: 64, w: 0, e: 0, corner: 0 });
+  r.bark('elder-plug', 64, 4672, 64, 256);
+  // The giant's mouth on the east wall, a landing above it: rests for a climber who changes wall; the west face
+  // runs clean from the notch to the hollow (one wall is enough).
   r.cave(1536, 2944, 2560, 3200, { ceil: 64, w: 0, e: 0, corner: 0 });
-  r.hole(768, 1856, 1024, 2240);
+  r.hole(1536, 1856, 1792, 2240);
   // The ambush hollow: two tiers, a shelf under its roof; out east to the limbs.
   r.cave(256, 448, 2304, 1152, { ceil: 128, w: 64, e: 0 });
   r.hole(2304, 512, 2560, 768);
@@ -1078,29 +1079,27 @@ function well(): Json {
   r.mass(1792, 704, 384, 48);
   r.add('glades', { id: 'glade-claws', x: 1360, y: 4704, w: 216, h: 224, ability: C });
   r.patch('p-well', 1900, 4928);
-  r.great('claw-prize', 1280, 3900);
-  // Three legs, each up one clean face to a rest, thorns on the other face: the east face to the giant's mouth,
-  // the west face to the landing, the east face to the hollow (she changes wall at every rest).
-  r.thornsUp('thorn-w1', 1024, 3600, 240);
-  r.thornsUp('thorn-w2', 1508, 2620, 240);
-  r.thornsUp('thorn-w3', 1024, 1400, 250);
+  r.great('claw-prize', 1090, 3900);
+  // Thorns on the east face between its rests: the long west face is the climb, the lampwing works it.
+  r.thornsUp('thorn-w2', 1508, 2600, 240);
+  r.thornsUp('thorn-w3', 1508, 1400, 250);
   r.flyer('lampwing', 'wing-shaft', 1280, 2240, -1, { radius: 200 });
   // The ambush: woken by the claws.
   r.burrback('burr-am-1', 640, 1152, 1, 300, { wakes: C, fenced: true });
   r.burrback('burr-am-2', 1960, 960, -1, 250, { wakes: C, fenced: true });
   r.flyer('lampwing', 'wing-am', 1300, 700, 1, { radius: 260, wakes: C });
-  r.cover('elder-cover', 0, 3840, 128, 384, 'elder-plug');
+  r.cover('elder-cover', 0, 4608, 128, 384, 'elder-plug');
   r.place('bottom', 1700, 4928);
   r.place('mouth', 2200, 3200);
-  r.place('mid', 900, 2240);
-  r.place('notch', 500, 4160);
+  r.place('mid', 1650, 2240);
+  r.place('notch', 500, 4928);
   r.place('hollow', 600, 1152);
   r.place('top', 2400, 768);
   r.shotStops([
     ['bottom', 1600, 4928],
     ['shaft', 1280, 3600],
     ['mouth', 2000, 3200],
-    ['landing', 1000, 2240],
+    ['landing', 1500, 2240],
     ['hollow', 1300, 1152],
   ]);
   r.route('trunk', 'mouth');
@@ -1108,9 +1107,10 @@ function well(): Json {
   r.route('rot', 'bottom');
   r.route('bottom', 'glade-claws');
   r.route('bottom', 'p-well');
-  r.route('bottom', 'notch', { needs: [C] });
+  r.route('bottom', 'notch');
   r.route('notch', 'elder');
   r.route('bottom', 'mouth', { needs: [C], oneWay: true });
+  r.route('bottom', 'hollow', { needs: [C], oneWay: true });
   r.route('mouth', 'mid', { needs: [C] });
   r.route('mid', 'hollow', { needs: [C] });
   r.route('hollow', 'top');
@@ -1283,18 +1283,19 @@ function webs(): Json {
 function elder(): Json {
   const r = new Wood('cn-elder', "The Elder's root room", [2300, 2496], 7207, { back: true, mood: 'deep' });
   r.cave(1152, 2240, 2560, 2496, { ceil: 64, w: 0, e: 0, corner: 0 });
-  // The climb: a 384 px chimney in three legs, each up one face to a rest carved into the other wall.
+  // The climb: a 384 px chimney, its west face clean from the floor to the gallery (a rest carved into the east
+  // wall halfway); the plug's passage across the chimney's top.
   r.hole(768, 128, 1152, 2496);
   r.hole(1152, 1472, 1408, 1856);
-  r.hole(512, 832, 768, 1216);
   r.cave(256, 192, 768, 512, { ceil: 96, w: 64, e: 0 });
-  r.cave(1152, 128, 2560, 384, { ceil: 0, w: 0, e: 0, corner: 0 });
+  r.cave(1408, 896, 2560, 1152, { ceil: 64, w: 0, e: 0, corner: 0 });
+  r.hole(1152, 896, 1408, 1152);
   r.fill();
   r.hollow('drop-elder', 500, 512, 'moonDrop');
   r.hoard('elder-', 300, 400, 160, 60, 4);
   r.place('in', 2300, 2496);
   r.place('top', 700, 512);
-  r.place('plug', 2400, 384);
+  r.place('plug', 2400, 1152);
   r.shotStops([
     ['in', 2200, 2496],
     ['climb', 960, 1500],
@@ -1304,7 +1305,8 @@ function elder(): Json {
   r.route('in', 'top', { needs: [C] });
   r.route('top', 'in', { oneWay: true });
   r.route('top', 'drop-elder');
-  r.route('top', 'plug');
+  r.route('top', 'plug', { oneWay: true });
+  r.route('plug', 'in', { oneWay: true });
   r.route('plug', 'well');
   return r.finish();
 }
