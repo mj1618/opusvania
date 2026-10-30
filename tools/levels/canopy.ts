@@ -1404,7 +1404,7 @@ const GALLERY = { x0: 512, x1: CH0, top: 1344, bough: 1856, boughX: [768, 1536] 
 /** The bramble pit on the gallery's floor (r9: `thorn-w2` off leg 2's slide line, where a jump is the choice). */
 const GALLERY_PIT: [number, number] = [1216, 1472];
 /** The stair's way up through the hollow's floor (a root across it at 1,152). */
-const STAIR: [number, number] = [1600, 1856];
+const STAIR: [number, number] = [1536, 1920];
 /** The gallery's lampwing (r9: v8's leg-3b one, over the bough), and the ambush floor's fling lamp (review r6 #4). */
 const WING_GALLERY: [number, number] = [1150, 1580];
 const WICK_HOLLOW: [number, number] = [1300, 880];
@@ -1464,9 +1464,9 @@ function well(): Json {
   r.mass(GALLERY.x0, LAND - 192, 384, 192);
   r.mass(GALLERY.x0, LAND - 384, 192, 192);
   r.mass(GALLERY.boughX[0], GALLERY.bough, GALLERY.boughX[1] - GALLERY.boughX[0], 128);
-  r.oneWay(STAIR[0], GALLERY.bough - 192, 192, 'branch');
-  r.oneWay(STAIR[0] + 128, GALLERY.bough - 384, 192, 'branch');
-  r.oneWay(STAIR[0], GALLERY.bough - 544, 192, 'branch');
+  r.oneWay(STAIR[0] + 64, GALLERY.bough - 192, 192, 'branch');
+  r.oneWay(STAIR[1] - 192, GALLERY.bough - 384, 192, 'branch');
+  r.oneWay(STAIR[0] + 32, GALLERY.bough - 544, 192, 'branch');
   r.oneWay(STAIR[0], 1152, STAIR[1] - STAIR[0], 'branch');
   r.thorns('thorn-w2', GALLERY_PIT[0], LAND + 64, GALLERY_PIT[1] - GALLERY_PIT[0]);
   // The way out to the limbs (r9, review r8 #1: the door read as a dark overhang): a root step under the door, so the
@@ -2559,6 +2559,8 @@ const TUNNEL_RUN: [number, number] = [1056, 3072];
 /** The pit's east end (r9: 1,024 -> 768 long, the den's warning floor wider) and the glide line's lamp. */
 const PIT_E = 3456 + 3520;
 const PIT_WICK: [number, number] = [3380 + 3520, 1560];
+/** The den's warning's floor. */
+const WARN_FLOOR = 1856;
 /** The knuckles over it (x, top). */
 const TUNNEL_KNUCKLES: Array<[number, number]> = [
   [1408, 1664],
@@ -2586,6 +2588,10 @@ function tunnel(): Json {
   });
   r.cave(2304 + TX, 1088, 3712 + TX, 1856, { ceil: 96, w: 0, e: 0, corner: 0 });
   r.hole(2688 + TX, 1856, PIT_E, 2048);
+  // (r9: the pit 768, not 1,024. A glide from the jump's apex (let go, press again) meets the pit's east face ~60 px
+  // under the lip and a kick puts her on the floor; a running jump, or a jump held through (the carried glide opens 16
+  // px under the hump's top, already falling fast), drops into the pit ~200 short. A lower floor (1,984) let the apex
+  // glide land clean but opened the pit to a jump and a kick: the solver's lock leaked.)
   r.cave(3712 + TX, 1088, 4480 + TX, 1856, { ceil: 96, w: 0, e: 0, corner: 0 });
   r.hole(4096 + TX, 1792, 4480 + TX, 2048);
   r.gate('den-lid', 4096 + TX, 1792, 192, 64, 'cn-tunnel-clear');
@@ -2668,7 +2674,7 @@ function tunnel(): Json {
   r.add('triggers', {
     id: 'den-warn',
     x: PIT_E,
-    y: 1600,
+    y: WARN_FLOOR - 256,
     w: 4096 + TX - PIT_E,
     h: 256,
     sets: 'cn-tunnel-wave',
@@ -2690,13 +2696,13 @@ function tunnel(): Json {
     [4320 + TX, 2048],
     [4224 + TX, 1120],
   ];
-  r.juvenile('juv-warn', 3600 + TX, 1856, 1, 200, { fenced: true, ...warn2, arrive: mouth });
-  r.juvenile('juv-warn-2', 3900 + TX, 1856, -1, 120, { fenced: true, ...warn2, arrive: mouth });
-  r.burrback('burr-warn', 3750 + TX, 1856, -1, 240, { fenced: true, ...warn2, arrive: mouth });
+  r.juvenile('juv-warn', 3600 + TX, WARN_FLOOR, 1, 200, { fenced: true, ...warn2, arrive: mouth });
+  r.juvenile('juv-warn-2', 3900 + TX, WARN_FLOOR, -1, 120, { fenced: true, ...warn2, arrive: mouth });
+  r.burrback('burr-warn', 3750 + TX, WARN_FLOOR, -1, 240, { fenced: true, ...warn2, arrive: mouth });
   // Two root knuckles over the floor (a step out of a ram's line, a perch under the lampwings' dives).
-  r.oneWay(3600 + TX, 1664, 128, 'branch');
-  r.oneWay(3888 + TX, 1600, 128, 'branch');
-  r.lamp('wick-warn-1', 3640 + TX, 1856 - 220);
+  r.oneWay(3600 + TX, WARN_FLOOR - 192, 128, 'branch');
+  r.oneWay(3888 + TX, WARN_FLOOR - 256, 128, 'branch');
+  r.lamp('wick-warn-1', 3640 + TX, WARN_FLOOR - 220);
   r.lamp('wick-warn-2', 4180 + TX, 1792 - 220);
   r.set('camera', {
     ...(r.data.camera as Json),
@@ -2706,7 +2712,7 @@ function tunnel(): Json {
         x: PIT_E,
         y: 1088,
         w: 8000 - PIT_E,
-        h: 768,
+        h: WARN_FLOOR - 1088,
         fit: true,
         bounds: { x: 8000 - 2048, y: 896, w: 2048, h: 1152 },
         until: 'cn-tunnel-clear',
@@ -2719,7 +2725,7 @@ function tunnel(): Json {
   r.place('land', 1920 + TX, 1856);
   r.place('floor', 1000 + TX, 1856);
   r.place('hump', 2496 + TX, 1600);
-  r.place('east', 3900 + TX, 1856);
+  r.place('east', 3900 + TX, WARN_FLOOR);
   r.place('low', 4300 + TX, 2048);
   r.place('ledge', 4350 + TX, 1408);
   r.place('tube', 3200 + TX, 896);
@@ -2730,7 +2736,7 @@ function tunnel(): Json {
     ['run', 2000, 1700],
     ['pile', 900, 1856],
     ['pit', 3100 + TX, 1700],
-    ['east', 4000 + TX, 1856],
+    ['east', 3900 + TX, WARN_FLOOR],
   ]);
   r.route('hub', 'land', { oneWay: true });
   r.route('land', 'hub', { needs: [C], oneWay: true });
