@@ -16,6 +16,7 @@
 
 import { ROOMS } from '../../../scene/index';
 import type { Room } from '../../../scene/room';
+import { shelfFamilies, shelfKey } from './families';
 import { gradeLookOf, type Look } from './looks';
 import {
   BRANCH,
@@ -43,7 +44,6 @@ import {
 } from './pf-edge';
 import type { Paint } from './pf-paint';
 import { blob, chaikin, clamp, hash1, lerp, range, ribbon, rngFor, wander, wobble } from './pf-shape';
-import { shelfFamilies, shelfKey } from './families';
 import { shelfFor } from './wood-claims';
 
 export const MASS = {

@@ -151,11 +151,11 @@ export class Painter {
   /**
    * A re-palette for everything drawn from now on (solids and lights; not the silhouette edge): each
    * colour goes `sat` of the way from its own grey to itself, times `val`, times `tint`. Null = off.
-   * Tatter is Wing's painter through one of these (memory/hatch-and-tatter.md).
+   * Tatter is Wing's painter through one of these (memory/hatch-and-tatter.md). `lift` (solids only) then mixes it
+   * that far toward a pale of the tint: a lighter moth, not only a greyer one (canopy review r6 #10).
    */
-  /** A re-palette (Tatter): saturation and value scale, a tint, and `lift` of the way toward a pale of the tint (a
-   *  lighter moth, not only a greyer one: canopy review r6 #10). */
-  grade: { sat: number; val: number; tint: RGB; lightSat: number; lightVal: number; lift?: number } | null = null;
+  grade: { sat: number; val: number; tint: RGB; lightSat: number; lightVal: number; lift?: number } | null =
+    null;
   ghost: RGB | null = null;
   ghostAlpha = 0;
   /**
