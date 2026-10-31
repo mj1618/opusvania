@@ -390,3 +390,48 @@ Shots: `shots/canopy-r9b-render/before|after/<room>/` (16:9), the before / after
   (Two thick arches crossing read as croquet hoops.)
 - Weak still: see the round's reply (hollows are flat bake, no parallax of their own; the den's mouth sits on the
   `fit` frame's bottom edge so the arrivals come in at the edge of the picture: a camera-zone change, level side).
+
+## Round 10: the premise drawn, the lesson's cap, a drawn map, pockets, the moon at vistas (review r9 #1 #4 #5 #6 #8)
+Shots: `shots/canopy-r10-render/` (`before|after/<room>/`, `map/` three stages + 21:9 + 16:10, `premise/` cage,
+snuff sheet, roosts, firefly sheet, `den/` before / after, `look-check/`); clips `clips/r10-trap-snuff-hub.mp4`,
+`clips/r10-firefly-gap.mp4` (scratch Playwright scripts over `__game`: `input('J3 U+J+A1 U+J20 .18')` under a trap
+three times frees it; a teleport into the gap's floor trigger starts the firefly).
+- **Prompts** (hud/prompt-logic.ts, pure + `tests/unit/prompts.test.ts` drives the real sim off the hatch's lip):
+  every lesson checks `save.abilities` (`LESSON_NEEDS`: glide, wallJump); the fling's cap is full on the first frame
+  of reach (`flingAfter` 0, `fadeStep` with fadeIn 0), lingers `lingerFling` 0.6 s by the flame (the cap and ring
+  track the last flame, not her), and the glide's lesson never takes over while it is up. `paintCap` returns a blank
+  texture with no DOM (node tests).
+- **The map** (render/map/paint.ts bakes a 2D canvas per change of the save; index.ts draws her moth and what moves
+  live): rooms as carved air (room rects less rock grown by their wobble, so touching rects open no sliver), washed by
+  look, the ink line only where air meets rock (open sides fade over 26 px: an open room is not a box), no ids, the
+  region's name (`NAMES` by world file). Unrolls from the top in 0.4 s (a mask and a rod). **It used `WORLD.areas`
+  (the game world's), so a Canopy moth-stone revealed nothing**: now every world file's areas. Trap lamps by
+  `Lure.trap`: warm with circling moths, freed = a cool ring. The station's stones swing on `mapStation` (acts.ts).
+- **Hollows are pockets** (sealed.ts `hollowCavities`, pure, tested: no straight run > 200 px, >= 80 px from the
+  mass over 70%): 1-4 noisy superellipses a rect along its long axis, slanted bridges 60-160 px, long sides wave
+  (`cavityWave`; a long gentle superellipse edge is straight to the eye and to the test), no knobs: a broken lit floor
+  edge, a broken dark ceiling seam, 2-5 roots across the lips at angles. Thin groups (the hub's 320 px under-floor)
+  become slits. Tall faces (`EDGE.plainAfter` 600) break the knob chain into clusters of 1-3 with plain bark runs
+  (`Lobe.plain`: outline swells, no knob drawn). A small block free on all sides (`MASS.floatMax` 560 x 360) gets no
+  face lift / knobs / wrap: the hub's clearing block was a picture frame. Not done: +-40-80 bulges on `kick: false`
+  faces (the drawn wall would stand in front of her when she walks into it).
+- **The moon** (scene/lib/moon-vistas.ts `moonShown(room, camX, camY)`, tested): Canopy rooms show the disc only in
+  their `MOON_VISTAS` boxes (the hatch's opening, the hub's clearing, the crown, the way out over the valley: 6 of 117
+  wide stops); sky.ts scales `uDisc.y` and the halo (`hiddenHalo` 0.35), far.ts the moon window's alpha. A room not in
+  the table outside the Canopy is unchanged. The disc fades over a box's `fade` px: a long fade reads as a ghost moon.
+- **Lime moss** (top-growth.ts): 0.6x chroma, 0.85x value, relief moss 0.7; `tuft()` (3-7 tapered blades) replaces
+  the beads on tops (`limeCushions`: clumps of 2-5 with gaps), faces (`facePieces`) and face lobes (`EdgeTone.fronds`,
+  `FACE_FAMILY.lime` now a dull frond green: the face lobes' cushions used the walk's own green, the fork's neon).
+  Face cover 24-40%.
+- **The premise** (sim: memory/canopy.md "The premise"): lantern/lamps.ts `TRAP`: a trap is a cage of 9 warm bars
+  (`cage`, one breaks per cut, it shudders on `lureHit`, a flash and sparks), a 2.4x cloud, 8 dead moths on the
+  ground under it; springboards in `cn-*` keep 0.3x the cloud. A trap's `lureSnuff` draws 36 moths that orbit her
+  2.2-4.6 s each (`Freed.follow`), then stream off up toward the moon's side (`LOOK.moon.x`). acts.ts `PREMISE`: the
+  firefly (`kit.firefly`, `fireflyAt`: a dark speck with a cold-gold tail light pulsing, a 14-point trail, a thread of
+  light to each `fireflyRelight`), the roosts (`roostsLit`: 22-70 pale moths at rest on the rect opening and closing,
+  8 in the air, a cool glow; they settle in over ~3 s the first time). The HUD's count was already there (hud/moths.ts,
+  `save.moths`).
+- **The den's warning** (#6): interior.ts `denBanks` (two ranks in the den's deep back: far pale in the fog, near dark
+  with burrow mouths and a lit crest), the lid's red-amber breath (acts `drawDenMouth`: gates whose id ends `lid`),
+  beetles in a den look drawn `DEN_READ.scale` 1.22 with a warm backlight glow behind the dome (enemies/index.ts; the
+  sim box unchanged). The mid plane's big translucent bank ovals are still flat (the weakest part).
