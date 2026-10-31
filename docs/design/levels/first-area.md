@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v9, 2026-10-31)
+# The Canopy: a first area built to the reference numbers (v10, 2026-10-31)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -224,6 +224,64 @@ the render builder's.
     hatch now has `art.pieces`).
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
+
+## v10: the premise in play and the first lesson (review `reviews/canopy-r9.md`, 7/10)
+Round 9's verdict: every measured bar is met and the score has plateaued, because nothing in play is about anything.
+v10 spends half its effort on the first lesson and the premise, end to end, and adds no measures. The level / sim
+side (#1, #2, #3, #6 level, #7, #9 and a gate guard); the render builder draws what it reads (memory/canopy.md "The
+premise" has every name).
+- **#1, the first fling.** Near `wick-first`, until she has flung off it once (`lesson:cn-hatch:wick-first`; a cut does
+  not end it), her fall and run ease to a drift (`Lure.lesson`; `lures.lessonPx` 130, just past the 110 reach;
+  `lessonFall` 1.25, `lessonRun` 2.5, eased over 6 frames; `player.lessonK` for render). Every jump toward the lamp
+  from the lip (S5) or off the crown's limb (S4) is in reach **33-85 frames** (8-21 without it; the review saw 8); no
+  jump without the fling crosses. A Lamp key pressed with no flame in reach and held on is taken as a press when a
+  flame comes into reach (`lures.heldPress`; not in glow rooms). Let go with no direction held, the lamp flings her
+  up-right (`Lure.aim`), never out through her (down, once she had drifted under it). Tuned on the human-like bots in
+  the hatch (6 runs): a 200 px zone slowed them outside the reach and the casual one fell 36 times; at 130 they are
+  out in 30-49 s with 1-6 catches (without the lesson 26-56 s, 1-8).
+- **#2, the premise.** Two kinds of lamp. **Traps** (`Lure.trap`): cages of moths, three on the route, `trap-crossing`
+  (the hub, the first thing west of the drop, 30 moths), `trap-grove` (the pit's west lamp, 30), `trap-warn` (by the
+  den's mouth, 40). The verb is the blade, the snuff the game already had: three cuts from a jump off the floor under
+  it (`lures.trapHp`), no fling off a trap. Out for good, saved (`save.snuffed`), its moths counted in `save.moths`
+  (the HUD's number; `lureSnuff {trap, moths, total}`), a light back. **Springboards**: every other lamp she can fling
+  off is one of the firefly's hung lights, holds no moths and relights (240 frames; the gap's 900; never saved), so
+  the two read differently in play: what to use and what to free. That also closed a lost-for-good: a swing at the
+  well hollow's ambush lampwing cut `wick-hollow`, the shard's only way up (the video agent's find). **The firefly
+  once**: landing below the gap's chain the first time, a light leaves the roost's mouth, touches the three lamps
+  (any she flung burns again), crosses to the moon's side and is gone, 4 s, no control lost (`scene.fireflies`,
+  `state.kit.firefly`, `fireflyStart / fireflyRelight / fireflyEnd`). **The hub keeps the count**: each freed trap's
+  moths roost in the hub (`scene.roosts`, `roostsLit`): the hub's on the high block's claw face (the shard chamber's
+  way up, lit), the Grove's over the kin's lamp, the warning's in the lampoak's crown over the drop.
+- **#3, retries in front of the hard part.** A mark patch on the den's warning (`p-warn`, `MoonPatch.mark` + `area`:
+  marked anywhere on the floor, never a rest): faded there she re-forms on the floor, past the pit and the hawker.
+  Thorn returns inside a shut arena go to the end of her floor farthest from the bed, 160+ px from every bed
+  (`room.arenaThornPx`; walked back along the floor only as far as her box fits: the Grove's pit floor runs on under the west wall into the secret pocket. Walking into `thorn-p1` she is back at ~1,690, by the bounce cap, 870 px off).
+- **#6, the den's warning as an arena (level).** The hump and the pit 128 west; the floor **1,024 flat** from the pit
+  (6,912) to the lid, its middle clear (a knuckle at each end, a pod), the lamps at its ends (the springboard by the
+  pit's lip, the trap by the mouth). The den's mouth an arch in the east wall at the floor (lintel 7,808-8,000 x
+  1,408-1,600, the cellar shortcut's ledge on it), its lid a root gate standing in it; the link to the den moved up to
+  it (the den's balcony 192 higher). Zoom 1.0 (was 0.85): the mouth sits in the middle third of the frame at 16:9,
+  16:10 and 21:9, the pit's far lip in the frame's left part. Beat 2 comes out of the mouth. The east root curtain by
+  the hub's shaft is shorter (the moved hump put its first tier under it: the solver's tunnel claims caught it).
+- **#7, the boss as payoff.** Played: my own reactive controller through `window.__game` (bait at ~360 px, jump the
+  ram on its windup, cut it in `recover`; pogo the roll) took phase 1 without a hit and phase 2 for one (the slam's
+  wave); phase 3's rams are a jump and the taproot's opening. The human-like bots alone in the den (`npm run humanplay
+  -- den --room cn-den --at 300`, 4 skills x 3 seeds): **12 of 12 down**, 55-109 s, 0-2 fades, 5-9 hits; casual 0:55-1:48.
+  Beatable, and as hard as a first boss should be (HK's False Knight costs a first-timer 1-3 tries). The rest before
+  its gate is `p-den` on the balcony, one drop from the arena (a fade re-forms there). Foreshadowed: shed shells the
+  boss's size and claw scrapes in the tunnel and the warning (landmarks `shell` / `scrape` for render), and beat 2's
+  start (`flagSet cn-tunnel-beat2`) asks render / audio for a deep slam from the den. Clip:
+  `clips/canopy-r10-den-boss.mp4` (the average bot's win, from the balcony).
+- **#9, a hub that changes.** The roosts (one more each trap freed) and the map station opening on her first pass
+  too (`mapStation` on a mark; then on each rest).
+- **A gate never shuts on her** (sim): a gate shutting with her box in its rect pushes her the shortest way to a clear
+  spot (`gatePush`). Tested on the Grove's arena gate.
+- **Checks.** `canopy-r10.test.ts` (19): the lesson's windows and held press from five take-offs, the let-go aim, no
+  crossing without the fling; each trap cut out in three cuts from its floor, saved, counted, out after a reload;
+  every other flingable lamp a springboard; the hollow lamp relights; the roosts; the map on a pass; the firefly's
+  pass and its relights, once; the gate push; the arena thorn return; the warning's floor and its re-form.
+  `canopy-r9b.test.ts` moved with the pit (the glide lock holds at -128) and frames the new mouth. Proofs: every claim
+  (see below); the route bar met (the warning's window 9.0 a screen, 3.0x).
 
 ## v9b: round 9's weak list, a fix pass before deploy
 - **The tunnel's glide is clear.** The hump steps up from the west to a plumb east face that is the pit's west wall:

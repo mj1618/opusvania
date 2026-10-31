@@ -76,26 +76,32 @@ export function arenaReturn(
   scene: Scene,
   t: Tuning,
 ): { x: number; y: number } | null {
+  // (Her last ground must be the bed's floor: a stale one, far above or below, is not this fight's.)
+  if (Math.abs(sy - bed.y) > 192) return null;
   const step = Math.max(0, Math.round(t.ground.stepUp));
   const run = topRun(sx, sy, scene, step);
   if (!run) return null;
   const inset = Math.min(Math.round(t.room.returnInset), Math.floor((run.x1 - run.x0) / 2));
   const bc = bed.x + bed.w / 2;
-  const far =
-    Math.abs(run.x0 + inset - bc) >= Math.abs(run.x1 - inset - bc) ? run.x0 + inset : run.x1 - inset;
-  const dir = far < bc ? 1 : -1;
-  const keep = Math.round(t.room.arenaThornPx);
+  const dir = sx < bc ? -1 : 1;
   const w = t.body.width;
-  // From the far end toward the bed until no thorns lie within `keep` of her box.
-  for (let x = far; dir > 0 ? x <= run.x1 - inset : x >= run.x0 + inset; x += dir * 16) {
+  const h = t.body.height;
+  const fits = (x: number) => !solidAt(scene, Math.round(x - w / 2), groundY(x, sy, scene, step) - h, w, h);
+  // Walk away from the bed along the top until her box stops fitting (a top runs on under walls and behind rotten
+  // bark: the Grove's pit floor runs under its west wall into the secret pocket), or the top ends.
+  let far = sx;
+  for (let x = sx; dir < 0 ? x >= run.x0 + inset : x <= run.x1 - inset; x += dir * 16) {
+    if (!fits(x)) break;
+    far = x;
+  }
+  const keep = Math.round(t.room.arenaThornPx);
+  // From there back toward the bed until no thorns lie within `keep` of her box.
+  for (let x = far; dir < 0 ? x <= sx : x >= sx; x -= dir * 16) {
     const y = groundY(x, sy, scene, step);
     const near = (scene.thorns ?? []).some(
-      (r) =>
-        x - w / 2 - keep < r.x + r.w && r.x < x + w / 2 + keep && y - 2 * keep < r.y + r.h && r.y < y + keep,
+      (r) => x - w / 2 - keep < r.x + r.w && r.x < x + w / 2 + keep && y - 2 * keep < r.y + r.h && r.y < y + keep,
     );
-    if (near) continue;
-    if (solidAt(scene, Math.round(x - w / 2), y - t.body.height, w, t.body.height)) continue;
-    return { x: Math.round(x), y };
+    if (!near) return { x: Math.round(x), y };
   }
   return null;
 }

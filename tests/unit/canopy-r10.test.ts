@@ -296,6 +296,8 @@ describe('thorn returns inside a shut arena (r10, review r9 #3)', () => {
       expect(gap, r.id).toBeGreaterThanOrEqual(t.room.arenaThornPx);
     }
     expect(back?.x ?? 0).toBeLessThan(bed.x - 400);
+    // ...and inside the arena, never behind its west wall (the floor runs on under it into the secret pocket).
+    expect(back?.x ?? 0).toBeGreaterThan(1472 + 20);
   });
 });
 

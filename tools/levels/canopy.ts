@@ -2777,6 +2777,11 @@ function tunnel(): Json {
   r.juvenile('juv-warn', PIT_E + 300, WARN_FLOOR, 1, 240, { fenced: true, ...warn2, arrive: mouth });
   r.juvenile('juv-warn-2', LID_X - 340, WARN_FLOOR, -1, 200, { fenced: true, ...warn2, arrive: mouth });
   r.burrback('burr-warn', PIT_E + 520, WARN_FLOOR, -1, 300, { fenced: true, ...warn2, arrive: mouth });
+  // Root knuckles at the floor's two ends only (its middle flat: a step out of a ram's line by the pit's lip, a perch
+  // under the lampwings by the mouth), and a pod on the floor between them (out of the lampwings' ground).
+  r.oneWay(PIT_E + 192, WARN_FLOOR - 192, 128, 'branch');
+  r.pod('pod-warn', 7300, WARN_FLOOR, 1200, 'sit');
+  r.oneWay(LID_X - 448, WARN_FLOOR - 224, 128, 'branch');
   r.lamp('wick-warn-1', PIT_E + 140, WARN_FLOOR - 220);
   r.lamp(WARN_TRAP, MOUTH_X - 64, WARN_FLOOR - 206, { trap: true, moths: 40 });
   // A re-form point on the floor (r10, review r9 #3: faded in the warning she came back west of the pit, behind the

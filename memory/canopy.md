@@ -55,7 +55,7 @@ Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render 
   (`lesson:cn-hatch:wick-first` in the save's flags; a cut does not end it), within `lures.lessonPx` 130 of the flame
   in the air her caps ease (over `lessonEase` 6 frames) to `lessonFall` 1.25 px/f down and `lessonRun` 2.5 across: a
   slow drift by the flame. **`player.lessonK`** (0..1) is how far in: render can thicken the air with it. Every jump
-  toward the lamp from S5 or S4 is in reach 37-81 frames (was 8-21); no jump without the fling crosses. A wider zone
+  toward the lamp from S5 or S4 is in reach 33-85 frames (8-21 without it); no jump without the fling crosses. A wider zone
   (200) slowed her outside the reach and the bots stalled there. Let go with no direction held, it flings up-right
   (`Lure.aim`), not out from the flame through her (down, once she had drifted under it).
 - **A held Lamp is a press** (`lures.heldPress`, `player.lampArmed`): pressed with no flame in reach and held on, the
