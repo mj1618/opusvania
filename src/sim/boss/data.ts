@@ -62,6 +62,8 @@ export interface BossSpec {
    * on it: the slope from the floor up to the roof's way out).
    */
   collapse?: string;
+  /** The Keeper: the flag set as its intro's moth is taken (or the fight starts first): a camera zone frames the intro until then. */
+  fed?: string;
   /** A lure the firefly relights after the fight (a husk until the boss is beaten). */
   relight?: string;
   /**

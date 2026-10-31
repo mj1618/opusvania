@@ -3168,6 +3168,7 @@ function den(): Json {
     floor: 1344,
     lowered: { x: DEN_CAGE[0], y: 1344 - 72 },
     collapse: DEN_COLLAPSE,
+    fed: 'cn-den-fed',
   });
   // The firefly's third sighting (r11, review r10 #4: it fled into the den from the warning): as she lands on the
   // balcony the first time it is over the arena, circles the great cage it hung (the old burrback asleep under it),
@@ -3200,7 +3201,21 @@ function den(): Json {
     headroom: 0,
     // (r11: the arena's lock lets go with the great cage's release, so the view follows her up the roof's shaft and
     // along the passage to the clifftop: locked, the passage was out of frame.)
-    zones: [{ id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true, until: 'cn-den-freed' }],
+    zones: [
+      { id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true, until: 'cn-den-freed' },
+      // (r12, the Keeper's intro: on the balcony the view takes in the arena's floor under the cage, where the sleeper
+      // takes the falling moth, until it has (`fed`). It lets go then: the balcony's own frame.)
+      {
+        id: 'intro',
+        x: 0,
+        y: 64,
+        w: 640,
+        h: 256,
+        zoom: 0.72,
+        bounds: { x: 0, y: 160, w: 2688, h: 1376 },
+        until: 'cn-den-fed',
+      },
+    ],
   });
   r.landmark('arena', 'arena', 1900, 1344);
   r.landmark('roof', 'gate', (ROOF_X[0] + ROOF_X[1]) / 2, 448);

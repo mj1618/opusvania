@@ -12857,6 +12857,21 @@
           "h": 1152,
           "lock": true,
           "until": "cn-den-freed"
+        },
+        {
+          "id": "intro",
+          "x": 0,
+          "y": 64,
+          "w": 640,
+          "h": 256,
+          "zoom": 0.72,
+          "bounds": {
+            "x": 0,
+            "y": 160,
+            "w": 2688,
+            "h": 1376
+          },
+          "until": "cn-den-fed"
         }
       ]
     },
@@ -12984,7 +12999,8 @@
         "x": 1856,
         "y": 1272
       },
-      "collapse": "cn-den-collapse"
+      "collapse": "cn-den-collapse",
+      "fed": "cn-den-fed"
     },
     "fireflies": [
       {

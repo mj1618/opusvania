@@ -33,6 +33,7 @@ export const BOSS = z
     relight: id.optional(),
     // The Keeper (src/sim/boss/keeper.ts): the flag its ending's collapse sets.
     collapse: id.optional(),
+    fed: id.optional(),
     // The Gloamweaver (src/sim/boss/gloam.ts): its orb's hub and radius, the arena's moonwicks, the high pair.
     hub: z.object({ x: int, y: int }).strict().optional(),
     orbR: int.min(64).max(1600).optional(),

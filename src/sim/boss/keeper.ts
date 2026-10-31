@@ -29,7 +29,17 @@ import { fireflyFrames } from '../firefly';
 import { lureHpMax } from '../lures';
 import { cycleSine } from '../paths';
 import type { EnemyState } from '../state';
-import { type BossCtx, type BossRules, defeat, enemyIndex, finish, lureIndex, setPhase, shift } from './core';
+import {
+  at,
+  type BossCtx,
+  type BossRules,
+  defeat,
+  enemyIndex,
+  finish,
+  lureIndex,
+  setPhase,
+  shift,
+} from './core';
 
 function creature(c: BossCtx): EnemyState | undefined {
   return c.state.enemies[enemyIndex(c.scene, c.spec.creature)];
@@ -351,6 +361,15 @@ function beaten(c: BossCtx): void {
   defeat(c);
 }
 
+/** The intro is over (its moth taken, or the fight began first): `spec.fed` saved (the intro's camera lets go). */
+function fed(c: BossCtx): void {
+  const f = c.spec.fed;
+  if (!f || c.state.save.flags.includes(f)) return;
+  c.state.save.flags.push(f);
+  const p = at(c);
+  c.events.push({ type: 'flagSet', flag: f, by: c.spec.id, x: p.x, y: p.y });
+}
+
 /** The intro, before the lock: as the firefly leaves, a moth drops and the sleeping shape takes it. */
 function intro(c: BossCtx): void {
   const b = c.boss;
@@ -374,6 +393,7 @@ function intro(c: BossCtx): void {
     b.intro = 2;
     const m = mouth(e);
     c.events.push({ type: 'enemyFeed', id: e.id, x: m.x, y: m.y });
+    fed(c);
   }
 }
 
@@ -454,6 +474,7 @@ export const keeperRules: BossRules = {
       // (The intro's moth, if she came down before it was taken, is gone: the fight starts clean.)
       if (b.moth > 0 && b.intro < 2) b.moth = 0;
       b.intro = 2;
+      fed(c);
       cageStep(c);
       return;
     }

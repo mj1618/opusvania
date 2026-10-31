@@ -363,11 +363,12 @@ export const ROUTE: Leg[] = [
     test: (s) => s.room === 'cn-den' && s.player.grounded && feet(s).y >= 1300,
     max: 9000,
   },
-  { name: 'cn-den: the old burrback', kind: 'fight', ids: ['old-burr'], seconds: 300 },
-  // v8: the great cage it kept, from a running jump off the west shelf's east end; the roof's gate opens over the
-  // arena's east end, and the way out is up through it onto the clifftop (the vista).
-  { name: 'cn-den: onto the west shelf', kind: 'goal', test: near(1440, 1088, 60), max: 12000 },
-  { name: 'cn-den: the great cage cut open', kind: 'cage', lure: 'trap-den', run: [1440, 1520] },
+  // v9 (r12): the Keeper (the old burrback on the boss framework: the falling moths, the swinging light, the fallen
+  // cage); the cage it ripped down lies on the floor, cut open standing; the roof gives (the fallback: groan, dust,
+  // the rubble's slope) and the way out is up the slope through the roof onto the clifftop (the vista).
+  { name: 'cn-den: the Keeper', kind: 'fight', ids: ['old-burr'], seconds: 300 },
+  { name: 'cn-den: the great cage cut open', kind: 'cage', lure: 'trap-den' },
+  { name: 'cn-den: the roof gives', kind: 'script', script: '.420' },
   { name: 'cn-den: up through the roof', kind: 'exit', exit: 'out', max: 16000 },
   { name: 'cn-out: the vista', kind: 'script', script: '.200' },
   // The ledge after the boss: down the chimney, a rotten wall in the way out's foot, a great in the room behind it.
@@ -1258,7 +1259,7 @@ function finish(out: string): void {
           a,
           b: Math.min(end, a + 3),
           style: 'Event',
-          text: what === 'ambush' ? 'Ambush!' : 'Boss: the old burrback',
+          text: what === 'ambush' ? 'Ambush!' : 'Boss: the Keeper',
         });
       if (what === 'ambush')
         lines.push({ a: vt(L.end), b: Math.min(end, vt(L.end) + 3), style: 'Event', text: 'Ambush cleared' });
