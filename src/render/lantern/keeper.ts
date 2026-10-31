@@ -40,6 +40,13 @@ import { moth } from './lamps';
 import { releaseGreat } from './release';
 
 export const KEEPER = {
+  /**
+   * A cut it shrugs off (`keeperGlance`, any reason; r15 fixes: ~15 cuts at its gates read as cuts that vanished): a
+   * white-hot clang star where the blade met the shell (`rays` px long, gone in `star` s), `sparks` thrown back the
+   * way the blade came, a short pale ring. With the rig's pale outline (burrback.ts `shellFlash`) and her hitstop it
+   * reads as a glance: the blade rang off.
+   */
+  glance: { star: 0.13, rays: 74, core: 22, sparks: 12, sparkSpeed: 520, ring: 0.26, haze: 0.2 },
   /** The cage's light on the back: its colour, the pool's reach (px) and strength by phase (hung, swinging, fallen). */
   light: { color: 0xffb06a, reach: 760, pool: [0.1, 0.2, 0.26] as const },
   /**
@@ -183,6 +190,23 @@ export const KEEPER = {
     dust: 70,
     tell: 0xff4a30,
     lip: 34,
+    /**
+     * The seam (r15 fixes: the tell's fissures read as a dashed line at play zoom, and the 12-frame delay as the slam
+     * being over): one continuous glowing split along the floor over the wave's whole reach, from the rear until the
+     * fronts have run it, light travelling out along it (`pulse` px apart, `pulseSpeed` px/s; through the delay and
+     * ahead of the fronts it races), dust kicked up off it (`dust` puffs/s over its length).
+     */
+    seam: {
+      width: 8,
+      halo: 26,
+      glowR: 70,
+      glowA: 0.55,
+      glowStep: 48,
+      pulse: 260,
+      pulseSpeed: 520,
+      raceSpeed: 1500,
+      dust: 120,
+    },
   },
   /** The ending's dust: grains per second along the roof while it groans, their colour. */
   dust: { rate: 60, color: 0x6a5a48 },
@@ -385,7 +409,14 @@ export class KeeperStage {
   private readonly puffs: Mote[] = [];
   private readonly dust: Mote[] = [];
   private groanT = -1;
-  private readonly glances: Array<{ x: number; y: number; t: number; lit: boolean; gate: boolean }> = [];
+  private readonly glances: Array<{
+    x: number;
+    y: number;
+    t: number;
+    lit: boolean;
+    gate: boolean;
+    dir: number;
+  }> = [];
   /** Sparks scraped along the floor at a gate's shrug. */
   private readonly sparks: Mote[] = [];
   private gateK = 0;
@@ -404,7 +435,10 @@ export class KeeperStage {
    * the wave's reach lit ahead of it) and slam (a crack opening at its feet through the fronts' delay).
    */
   private waveTell: { x: number; y: number; x0: number; x1: number; t: number; frames: number } | null = null;
-  private waveSlam: { x: number; y: number; t: number; frames: number } | null = null;
+  private waveSlam: { x: number; y: number; x0: number; x1: number; t: number; frames: number } | null = null;
+  /** The last slam's reach and floor (the seam ahead of its fronts until they have run it). */
+  private waveReach: { x0: number; x1: number; y: number } | null = null;
+  private seamDust = 0;
   private flashT = -1;
   private waveDust = 0;
   private feedX = 0;
@@ -577,6 +611,7 @@ export class KeeperStage {
           else {
             this.waveTell = null;
             this.waveSlam = w;
+            this.waveReach = { x0: w.x0, x1: w.x1, y: w.y };
           }
           break;
         }
@@ -592,8 +627,26 @@ export class KeeperStage {
           const hx = (e.hitX as number) ?? e.x ?? 0;
           const hy = (e.hitY as number) ?? e.y ?? 0;
           const why = e.why as string;
-          this.glances.push({ x: hx, y: hy, t: 0, lit: why === 'lit', gate: why === 'gate' });
+          const dir = hx >= (e.x ?? hx) ? 1 : -1;
+          this.glances.push({ x: hx, y: hy, t: 0, lit: why === 'lit', gate: why === 'gate', dir });
           this.scales(hx, hy, 5, 0.4);
+          // Sparks thrown back off the shell the way the blade came (it rang off: nothing went in).
+          const G = KEEPER.glance;
+          for (let i = 0; i < G.sparks; i++) {
+            const h = hash01(`gl${this.sparks.length}`, i);
+            const a = -0.35 - 1.1 * hash01('gla', i + this.sparks.length);
+            const sp = G.sparkSpeed * (0.45 + 0.55 * h);
+            this.sparks.push({
+              x: hx,
+              y: hy,
+              vx: dir * Math.cos(a) * sp,
+              vy: Math.sin(a) * sp,
+              t: 0,
+              life: 0.22 + 0.22 * h,
+              s: 1.6 + 1.2 * h,
+              seed: h,
+            });
+          }
           // At its gate it shrugs the blow off: its claws scrape the floor (sparks along it), plates flare pale.
           if (why === 'gate') this.scrape(e.x ?? hx, this.floorY);
           break;
@@ -1366,9 +1419,34 @@ export class KeeperStage {
         continue;
       }
       const col = q.gate ? 0xfff2dc : q.lit ? 0xffc070 : 0xffa040;
-      // (The gate's own look, review r13 #7: the plates flare pale over the whole dome, not the block's amber spark.)
-      if (q.gate) this.glowFront.add(q.x, q.y + 20, 170 * (0.7 + 0.5 * u), col, 0.42 * (1 - u), 90);
+      const G = KEEPER.glance;
+      // (The gate's own look, review r13 #7: the plates flare pale over the dome; r15 fixes: softer, it read as smoke.)
+      if (q.gate) this.glowFront.add(q.x, q.y + 20, 150 * (0.7 + 0.5 * u), col, G.haze * (1 - u), 90);
       this.glowFront.add(q.x, q.y, 70 * (0.6 + u), col, 0.55 * (1 - u));
+      // The clang: a white-hot star where the blade met the shell, its long rays along the blade's line.
+      const st = q.t / G.star;
+      if (st < 1) {
+        const k = 1 - st;
+        const L = G.rays * (0.55 + 0.45 * k);
+        const g = this.front;
+        for (let r = 0; r < 6; r++) {
+          const a = (r * Math.PI) / 3 + 0.2 * q.dir;
+          const len = L * (r % 3 === 0 ? 1 : 0.5);
+          const cx = Math.cos(a);
+          const cy = Math.sin(a);
+          g.moveTo(q.x - cx * len, q.y - cy * len)
+            .lineTo(q.x + cx * len, q.y + cy * len)
+            .stroke({ color: r % 3 === 0 ? 0xffffff : col, width: (r % 3 === 0 ? 4.6 : 2.6) * k, alpha: k });
+        }
+        g.circle(q.x, q.y, G.core * 0.35 * (0.6 + 0.4 * k)).fill({ color: 0xffffff, alpha: k });
+        this.glowFront.add(q.x, q.y, G.core * 2.4, 0xfff6e8, 0.8 * k);
+      }
+      // A short ring off the shell, and the arc it rang along.
+      const ru = q.t / G.ring;
+      if (ru < 1)
+        this.front
+          .circle(q.x, q.y, 18 + 46 * ru)
+          .stroke({ color: 0xfff6e8, width: 2.4 * (1 - ru), alpha: 0.8 * (1 - ru) });
       this.front
         .arc(q.x, q.y, 26 + 30 * u, -Math.PI * 0.9, -Math.PI * 0.1)
         .stroke({ color: col, width: 3 * (1 - u), alpha: 0.9 * (1 - u) });
@@ -1537,8 +1615,27 @@ export class KeeperStage {
           });
         }
       }
-    } else if (this.crackT === -1) this.crackT = 0;
-    else if (this.crackT >= 0) this.crackT += dt;
+      // The floor ahead of each front stays lit: it is still coming (r15 fixes).
+      const R = this.waveReach;
+      if (R) {
+        const sk = Math.max(0, 1 - e.wave / Math.max(1, Math.max(e.waveX - R.x0, R.x1 - e.waveX)));
+        this.seam(
+          dt,
+          clock,
+          e.waveX,
+          e.wave,
+          R.x0,
+          R.x1,
+          R.y,
+          V.color,
+          0.38 + 0.22 * sk,
+          KEEPER.wave.seam.raceSpeed,
+        );
+      }
+    } else if (this.crackT === -1) {
+      this.crackT = 0;
+      this.waveReach = null;
+    } else if (this.crackT >= 0) this.crackT += dt;
     // The floor's flash as it lands.
     if (this.flashT >= 0) {
       this.flashT += dt;
@@ -1609,6 +1706,81 @@ export class KeeperStage {
   }
 
   /**
+   * The glowing seam along the floor (r15 fixes) from `x` out both ways to `x0` / `x1`, starting `from` px out (the
+   * fronts' reach: behind them the crack draws itself), continuous, light travelling outward at `speed` px/s, dust kicked
+   * up off it at `dustK` of `seam.dust`.
+   */
+  private seam(
+    dt: number,
+    clock: number,
+    x: number,
+    from: number,
+    x0: number,
+    x1: number,
+    fy: number,
+    color: number,
+    k: number,
+    speed: number,
+    dustK = 0.5,
+  ): void {
+    const Q = KEEPER.wave.seam;
+    const g = this.front;
+    let span = 0;
+    for (const side of [-1, 1]) {
+      const len = side < 0 ? x - x0 : x1 - x;
+      if (len <= from + 8) continue;
+      span += len - from;
+      const n = Math.max(2, Math.ceil((len - from) / 24));
+      let px = x + side * from;
+      let py = fy - 1;
+      for (let q = 1; q <= n; q++) {
+        const d = from + ((len - from) * q) / n;
+        const qx = x + side * d;
+        const qy = fy - 1 + (hash01('sm', Math.round(d / 24) * side + 700) - 0.5) * 4;
+        const wave = 0.5 + 0.5 * Math.cos(((d - clock * speed) / Q.pulse) * Math.PI * 2);
+        const fall = 1 - 0.45 * (d / len);
+        const a = k * fall * (0.5 + 0.5 * wave * wave);
+        // A soft halo band over the floor's lip, then the split itself.
+        g.moveTo(px, py - Q.halo * 0.3)
+          .lineTo(qx, qy - Q.halo * 0.3)
+          .stroke({ color, width: Q.halo * (0.6 + 0.4 * wave), alpha: Math.min(1, 0.22 * a) });
+        g.moveTo(px, py)
+          .lineTo(qx, qy)
+          .stroke({ color, width: Q.width * (0.7 + 0.5 * wave), alpha: Math.min(1, a), cap: 'round' });
+        // A white core where the light is passing.
+        if (wave > 0.7)
+          g.moveTo(px, py)
+            .lineTo(qx, qy)
+            .stroke({ color: 0xfff4dc, width: 3, alpha: Math.min(1, a * (wave - 0.7) * 3) });
+        if (q % Math.max(1, Math.round(Q.glowStep / 24)) === 0)
+          this.glowFront.add(qx, fy - 14, Q.glowR * (0.7 + 0.5 * wave), color, Q.glowA * a, 34);
+        px = qx;
+        py = qy;
+      }
+    }
+    // Dust kicked up off it, where the light is passing.
+    this.seamDust += dt * Q.dust * dustK * Math.min(1, span / 2000);
+    while (this.seamDust >= 1) {
+      this.seamDust -= 1;
+      const h = hash01('sd', this.puffs.length + Math.round(clock * 60));
+      const side = h < 0.5 ? -1 : 1;
+      const len = side < 0 ? x - x0 : x1 - x;
+      if (len <= from + 8) continue;
+      const d = from + (len - from) * hash01('sdx', this.puffs.length + Math.round(clock * 97));
+      this.puffs.push({
+        x: x + side * d,
+        y: fy - 3,
+        vx: side * (20 + 50 * h),
+        vy: -90 - 140 * hash01('sdy', this.puffs.length),
+        t: 0,
+        life: 0.6 + 0.5 * h,
+        s: 2.5 + 3 * h,
+        seed: h,
+      });
+    }
+  }
+
+  /**
    * The wave told on the floor (r15): while it rears, the floor over the wave's whole reach takes a red rim that
    * quickens to the slam and a dark shadow thrown ahead of the rear (a player facing away sees it on the ground in front
    * of her); slammed, a hot crack splits open at its feet through the fronts' delay.
@@ -1622,31 +1794,11 @@ export class KeeperStage {
       const u = Math.min(1, (T.t * 60) / T.frames);
       if (u >= 1.3) this.waveTell = null;
       const fy = T.y;
-      // The rim along the floor's lip, both ways out to the reach, fading toward its ends.
+      // One continuous split glowing along the floor over the wave's whole reach (r15 fixes: short fissures with gaps
+      // read as a dashed line at play zoom), brightening and quickening to the slam, light running out along it.
+      const quick = KEEPER.wave.seam.pulseSpeed * (0.6 + 1.2 * u);
+      this.seam(dt, clock, T.x, 0, T.x0, T.x1, fy, V.tell, 0.45 + 0.55 * u, quick, 0.4 * u);
       for (const side of [-1, 1]) {
-        const end = side < 0 ? T.x0 : T.x1;
-        const len = Math.abs(end - T.x);
-        const n = Math.max(2, Math.ceil(len / 40));
-        for (let q = 0; q < n; q++) {
-          const a0 = q / n;
-          const xa = T.x + side * len * a0;
-          const xb = T.x + side * len * ((q + 1) / n);
-          // (A ruled line read as a laser: the floor's skin splitting in short glowing fissures with gaps, flickering.)
-          const h = hash01('wt', q * side + 300);
-          if (h < 0.25 || h > 0.25 + 0.75 * Math.min(1, 0.45 + u * 1.4)) continue;
-          const a = (0.6 + 0.4 * u) * (0.75 + 0.25 * Math.sin(clock * (8 + 22 * u))) * (1 - 0.45 * a0);
-          const h2 = hash01('wu', q * side + 300);
-          const xs = xa + (xb - xa) * 0.3 * h2;
-          const xe = xb - (xb - xa) * 0.3 * (1 - h2);
-          const xm = xs + (xe - xs) * (0.3 + 0.4 * h);
-          g.poly([xs, fy - 1, xm, fy - 2 - 5 * h2, (xm + xe) / 2, fy - 1.5, xe, fy - 1], false).stroke({
-            color: V.tell,
-            width: 2.5 + 2.5 * u,
-            alpha: a,
-            cap: 'round',
-          });
-          this.glowFront.add(xm, fy - 8, 34, V.tell, 0.3 * a, 22);
-        }
         // Its shadow thrown ahead along the floor as it rises.
         g.ellipse(T.x + side * 160 * u, fy + 2, 120 + 260 * u, 10).fill({ color: 0x000000, alpha: 0.35 * u });
       }
@@ -1665,6 +1817,9 @@ export class KeeperStage {
           alpha: 0.85 * a,
         });
         this.glowFront.add(S.x, S.y - 20, 90 + 60 * Math.min(1, u), V.hot, 0.5 * a, 50);
+        // Through the delay the whole split burns hot, light racing out along it to where the wave will reach, dust
+        // kicked up off it: the floor is not done (r15 fixes: a dash in after the slam met the fronts).
+        if (u < 1) this.seam(dt, clock, S.x, 0, S.x0, S.x1, S.y, V.hot, 1, KEEPER.wave.seam.raceSpeed, 1);
       }
     }
   }

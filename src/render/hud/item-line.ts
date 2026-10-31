@@ -9,7 +9,7 @@ import { Container, Text } from 'pixi.js';
 import type { SimView } from '../contract';
 import { SAFE_H, SAFE_W } from '../contract';
 import { RELEASE, releaseGreat } from '../lantern/release';
-import { fightNear, LineTimer } from './line-logic';
+import { fightNear, LineTimer, quietNow } from './line-logic';
 
 /** What each grant says. Glide: the hold has to last into the fall (a held jump only opens the wings once she drops). */
 export const ITEM_LINES: Record<string, string> = {
@@ -75,7 +75,8 @@ export class ItemLine {
     return this.root.visible ? this.text.text : '';
   }
 
-  update(dt: number, sim: SimView): void {
+  /** `quiet`: a quiet moment on, or the HUD still stepping back in after one (index.ts `quietK`). */
+  update(dt: number, sim: SimView, quiet = quietNow(sim)): void {
     for (const e of sim.events) {
       const key =
         e.type === 'gladeGrant'
@@ -97,9 +98,10 @@ export class ItemLine {
         if (l && releaseGreat(l.moths ?? 0)) this.timer.hold(RELEASE.greatClear);
       }
     }
-    // (The escape is a fight with the roof: no line over it. The Canopy r14, moment 7.)
+    // (The escape is a fight with the roof: no line over it. The Canopy r14, moment 7. Nor over a quiet moment: the
+    // sit, the column, the vista wait out their beats with no words; r15's fixes.)
     const esc = (sim.kit as unknown as { escape?: { on: number } }).escape;
-    const a = this.timer.update(dt, fightNear(sim) || esc?.on === 1);
+    const a = this.timer.update(dt, fightNear(sim) || esc?.on === 1, quiet);
     if (this.text.text !== this.timer.text) this.text.text = this.timer.text;
     this.root.visible = a > 0.003;
     this.root.alpha = ITEM_LINE.alpha * a;

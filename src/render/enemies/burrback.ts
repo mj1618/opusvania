@@ -175,6 +175,9 @@ function ease(t: number): number {
 }
 
 /** Everything about one creature that outlives a frame. */
+/** Seconds a glance's pale outline lasts (`shellFlash`). */
+export const GLANCE_FLASH = 0.22;
+
 export class BurrRig {
   /** 0..1, fixed per creature: de-syncs pulses and idles. */
   readonly seed: number;
@@ -309,6 +312,7 @@ export class BurrRig {
   }
 
   shrug(): void {
+    this.shellFlash = 1;
     this.squash.x = 0.09;
     this.squash.v = 0;
     this.bristle.v += 46;
@@ -353,6 +357,11 @@ export class BurrRig {
   /** A cut glanced off its shell: the shudder (1, dying) and the seconds since. */
   ring = 0;
   ringT = 9;
+  /**
+   * The Keeper shrugged a cut off (`keeperGlance`, r15 fixes: ~15 cuts at its gates read as cuts that vanished): its
+   * whole outline flashes pale for a moment, as a hit's first frames do but shorter (1, dying over `GLANCE_FLASH` s).
+   */
+  shellFlash = 0;
   /** How the ram ended (set by the renderer from `enemyRecover`); `stopped` holds it for one update. */
   private spentCause: '' | 'spent' | 'wall' | 'ledge' | 'lantern' | 'touch' = '';
   private spentNew = false;
@@ -790,6 +799,7 @@ export class BurrRig {
       this.ringT += dt;
       this.ring = Math.exp(-R.ringFade * this.ringT);
     } else this.ring = 0;
+    this.shellFlash = Math.max(0, this.shellFlash - dt / GLANCE_FLASH);
     if (this.ringTop > 0.01) {
       this.ringTopT += dt;
       this.ringTop = Math.exp(-B.clang.fade * this.ringTopT);
@@ -1571,7 +1581,9 @@ export function drawBurrback(
   const rel = rig.rel;
   // The first frame or two of the hold are the flash: the outline goes pale, the fill has not darkened yet.
   const hitFlash = age < 20 ? 1 - smoothstep(B.hit.flash - 0.6, B.hit.flash + 0.6, age) : 0;
-  const holdLine = rig.held ? Math.max(hitFlash, B.hit.holdLine) : hitFlash;
+  // (A glance: the same pale outline, briefly, with no darkening: nothing went in.)
+  const glanceLine = rig.shellFlash * rig.shellFlash;
+  const holdLine = Math.max(rig.held ? Math.max(hitFlash, B.hit.holdLine) : hitFlash, glanceLine);
   toneDark = B.hit.dark * (rig.held ? 1 : 1 - smoothstep(0.2, 1.6, rel)) * (1 - 0.7 * hitFlash);
   toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(0.2, 1.4, rel) * (1 - smoothstep(2, 4.2, rel));
   toneLight = crustOn && dead ? toneLight * 0.3 * (1 - crackK) : Math.max(toneLight, 0.5 * swell);
@@ -2081,7 +2093,7 @@ export function drawBurrback(
     }
     SH_EDGE.alpha = sat(lineK * 1.15);
     const wBase = hitK
-      ? B.hit.flashW * (0.55 + 0.45 * hitFlash)
+      ? B.hit.flashW * (0.55 + 0.45 * hitFlash) + 2.4 * glanceLine
       : (R.rimW + R.rimGrow * beatN) *
           (0.3 + 0.7 * rig.count) *
           (1 - 0.5 * ramK) *

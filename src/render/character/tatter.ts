@@ -166,6 +166,12 @@ export const TATTER = {
     failDrop: -0.55,
     held: 0.85,
     sink: 0.45,
+    /**
+     * With its wings open it stands upright (r15 fixes: crouched it was 0.6 of her height): its perch and strain (both
+     * low, all-fours poses) eased off by `stand` x the wings' open, leaving `standStrain` of the strain's lifted chin.
+     */
+    stand: 1,
+    standStrain: 0.2,
   },
 } as const;
 const T_SIT = TATTER.sit;
@@ -608,8 +614,11 @@ export class Tatter {
     if (sw2 > 0) rig.strain = Math.max(rig.strain, 0.7 * sw2);
     if (this.kb) {
       rig.strain = Math.max(rig.strain * (sitSink > 0 ? 0.3 : 1), sitStrain);
-      // (Up off its heels to its full height for the try: sat hunched it was half hers.)
-      rig.perch = Math.min(rig.perch, 1 - 1.4 * sitStrain);
+      // (Up off its heels to its full height for the try: sat hunched it was half hers. r15 fixes: with its wings open
+      // it stands up straight to the moon, as tall as it can, not crouched at 0.6 of her height.)
+      rig.perch = Math.min(rig.perch, 1 - 1.4 * sitStrain, 1 - S.stand * sw2);
+      // (The strain pose is on all fours, up on its forelegs: open, it stands on its hind legs, as she does.)
+      if (sw2 > 0) rig.strain = rig.strain * (1 - S.stand * sw2) + S.standStrain * sw2;
       if (sitSink > 0) rig.perch = Math.min(1, rig.perch + sitSink);
     }
     this.spreadK = sw2;
