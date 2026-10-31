@@ -58,10 +58,7 @@ export function updateHatch(
   // fresh press breaks it; a press made in the black breaks it `pressedAfter` frames into the close frame.)
   const listening = h.frames > H.listenFrom;
   const asked =
-    listening &&
-    (press ||
-      h.presses >= need ||
-      (h.presses > 0 && h.frames > H.listenFrom + H.pressedAfter));
+    listening && (press || h.presses >= need || (h.presses > 0 && h.frames > H.listenFrom + H.pressedAfter));
   if (asked || h.frames >= auto) {
     h.done = true;
     events.push({ type: 'hatch', x, y, cx: at.x, cy: at.y, auto: !asked, frames: h.frames });
