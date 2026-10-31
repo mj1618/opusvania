@@ -71,6 +71,42 @@ Render and audio build against these; sim / content names only (render never wri
   clifftop's `cn-out-vista` for 240 frames, and while she is in the air over the valley after it: the glide). Render
   fades the HUD and holds the prompts while it is on.
 
+### v15 as built (round 15, the level/sim lane)
+- **The escape.** Way: the fallen cage, east along the floor over the fallen roof's mound (`rubble-mound`), through
+  the breach and the corridor, into the way out's pocket, down its root shaft (no front yet), along the low passage
+  to the chimney's foot, then out-1 / out-2 (the plug shaken down) / out-3 with the earth rising under her, onto the
+  clifftop (the vista; `escapeEnd` there). Rocks: told 40-64 frames where she goes next while she can wait on the
+  ground she has (the floor ahead, over rest E from the foot, over rest W from rest E); 12-16 frame ones fall behind
+  her (drama). Checkpoints: the den's floor and east end, the pocket, the foot, rest E, rest W. `escape-probe.ts`
+  (both rooms; `gapMin/Max` = the front under her where she stands or holds a wall): runner 10.3 s (the den 3.8 s);
+  careful lag 15: 13.9 s, + kick delay 10: 15.8 s, delay 16: 16.9 s; no hits; the front 180-280 px under her ~80% of
+  supported frames (300-440 for a few frames as she lands on a rest, while it catches up at 16 px/f). Live on the GPU
+  page (escape-live.ts, lag 15, careful): release -> roof gives 3.5 s, -> out of the den 7.1 s, -> the clifftop 13.9 s
+  (release -> clifftop 17.4 s), no hits. A bot climbs ~2x a person's speed (ft14den took 41 s where the bots took 11):
+  expect 25-35 s for a careful person. `climbs.ts esc-1..3` (the chimney with the escape live) pass at 0-16.
+  **Gotchas**: an escape's `front` follows a wall slide too (`p.mode === 'wallSlide'`), so a slip down a chimney face
+  meets it; `front.start` keeps it off while she drops down the shaft (her stand at the pocket was already high). The
+  escape-plan is per room (`act(s, scene)`): pass the scene of `s.room` (the crossing happens inside `step`).
+- **The Keeper.** The wave bug (see the contract) was the r14 review's "wave began at her feet". `keeper-react.ts
+  --wave` (it hops a front it sees `lag` frames late): 0 wave hits at lag 12 / 15 / 18 (`--learn` and `--jump=tell`);
+  naive (`--jump=start`) still never leaves P1 (44 hits in 5 min: it jumps fast rams too late, bridge or not). The
+  den plan (`keeper-run.ts`) 68-72 s, 0-1 hits; live (keeper-live, lag 15) won in 44 s, 0 hits.
+- **The chase.** `chase-probe.ts --beat=n` (press n frames after a hook is in reach): 0-20 all reach the nest (r14
+  broke at 10: hook-6; at 12: hook-4); hook-1 to hook-7 takes 2.0 s pressed at once, 3.6 s at 12 frames, 4.5 s at
+  20, plus whatever she hangs at the two rests (a person: a breath at each). From the alarm to the nest ~5.3 s at 12.
+  **Gotchas**: during a fling's launch (`lureThrow`) and a glide, `gravity()` returns early: anything that must act on
+  her flight goes after `pull()` (`catchHook`); her speed across is `vx + pullX` (cap the sum); a springboard she
+  flung off is still burning (`hp > 0`) the next frames, so the catch skips `kit.firefly.hook`.
+- **First-timer ft15den** (from the balcony, the pinned build without render's r15 pass, no claws or glide): read
+  the tells ("red spots, then it slams (floor glows red) or sweeps a red arc"; flipped it with a jump), but ~90 s and
+  ~15 cuts with "no damage shown" felt like a wall (the phase gates' glances need a visible answer: render), faded at
+  ~105 s; two hits it called unfair: **"hit as I dashed in after its slam, the floor still rippling"** (the delayed
+  front reads as the slam being over: render's crack must show the front is still coming) and the guard turn's claw
+  as it "turned its back". It saw the breach on the map before the collapse ("a way out behind black stones my cuts
+  didn't break"), walked out by the balcony instead (nothing says the fight is optional), and **stuck in the
+  tunnel's doorway**: a test boot of the den enters the tunnel inside the shut lid (`den-lid`, open only from
+  `cn-tunnel-clear`); a real game never has the den without it. It never reached the escape.
+
 ## v14 (round 14, review canopy-r13.md): the contract
 Render and audio build against these; sim / content names only (render never writes them).
 - **The kill's payoff** (#1): `keeperRoll {id, x, y, toX, frames}` on the death: the carcass's centre rolls from `x`
