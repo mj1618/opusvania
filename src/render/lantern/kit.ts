@@ -445,8 +445,14 @@ export class Kit {
         heapLit = roof >= 0 && (sim.kit.gates[roof] ?? 0) > 0;
         // (The Canopy r14: a thin rubble gate is a slab of the roof come down, wedged as a ledge on the way out; only
         // the ones on the floor are the heap.)
-        if (g.h <= 96) this.fallenSlab(back, g.x, g.y, g.w, g.h, fall, heapLit, g.id);
-        else heap.push({ x: g.x, y: g.y, w: g.w, h: g.h, fall, id: g.id });
+        if (g.h <= 96) {
+          // (Its torn roots run up to the roof over it: a perch hung there, not a dish in the air.)
+          let over = -1e9;
+          for (const q of S.solids)
+            if (q.x <= g.x + g.w / 2 && q.x + q.w >= g.x + g.w / 2 && q.y + q.h <= g.y && q.y + q.h > over)
+              over = q.y + q.h;
+          this.fallenSlab(back, g.x, g.y, g.w, g.h, fall, heapLit, g.id, over > -1e8 ? over : g.y - 260);
+        } else heap.push({ x: g.x, y: g.y, w: g.w, h: g.h, fall, id: g.id });
       } else if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (wood) this.rootMat(back, glow, g.x + kx, g.y, g.w, g.h, clock, 1 - fall, g.id);
@@ -1144,11 +1150,33 @@ export class Kit {
     fall: number,
     lit: boolean,
     id: string,
+    roof: number,
   ): void {
     const a = 1 - fall;
     if (a <= 0.01) return;
     const h1 = (k: number): number => hash01(id, k);
     const dy = -fall * fall * 320;
+    // The torn roots it hangs in: two or three from the roof down into its ends and middle, wound, ragged.
+    for (let k = 0; k < 3; k++) {
+      const u = k === 0 ? 0.12 : k === 1 ? 0.88 : 0.35 + 0.3 * h1(300);
+      if (k === 2 && h1(301) < 0.4) continue;
+      const rx = x + w * u;
+      const top0 = roof - 10;
+      const bot = y + dy + h * 0.5;
+      const pts: number[] = [];
+      const back: number[] = [];
+      for (let q = 0; q <= 10; q++) {
+        const v = q / 10;
+        const yy = top0 + (bot - top0) * v;
+        const xx =
+          rx + Math.sin(v * 4.2 + h1(310 + k) * 6) * 14 * (1 - v * 0.6) + (k === 0 ? -1 : 1) * 18 * (1 - v);
+        const wd = (16 + 10 * h1(320 + k)) * (1 - 0.45 * v);
+        pts.push(xx - wd / 2, yy);
+        back.unshift(xx + wd / 2, yy);
+      }
+      g.poly([...pts, ...back]).fill({ color: 0x110c08, alpha: a });
+      g.poly(pts, false).stroke({ color: 0x4a3a2c, width: 1.5, alpha: 0.55 * a });
+    }
     const top = y + dy;
     const tilt = (h1(1) - 0.5) * 10;
     // (A deep sag drew bowls on stalks: a chunk only a little deeper than its gate, its underside broken, not round.)
@@ -1340,6 +1368,33 @@ export class Kit {
       g.moveTo(bx0, by0).lineTo(ex, ey).stroke({ color: 0x241a12, width: 8, cap: 'round', alpha: a });
       g.circle(ex, ey, 3).fill({ color: lit ? 0xb8cce6 : 0x8a7458, alpha: 0.8 * a });
     });
+    // The taproot came down with it (the Canopy r14's heap against the east wall): broken trunks of it jutting out of
+    // the heap's top, splintered and pale where they tore.
+    for (const st of S) {
+      if (st.h < 300) continue;
+      const top = st.y - drop(st);
+      for (let k = 0; k < 3; k++) {
+        // (Leaning out over its west slope, short: upright stubs on the walked top read as posts to stand on.)
+        const bx = st.x + st.w * (0.04 + 0.12 * k + 0.06 * h1(700 + k));
+        const by = top + 40 + 70 * k + 30 * h1(710 + k);
+        const ang = -Math.PI * (0.78 + 0.1 * h1(720 + k));
+        const len = 50 + 40 * h1(730 + k);
+        const wd = 34 - 8 * k;
+        const ex = bx + Math.cos(ang) * len;
+        const ey = by + Math.sin(ang) * len;
+        g.moveTo(bx, by).lineTo(ex, ey).stroke({ color: 0x140e09, width: wd, cap: 'butt', alpha: a });
+        g.moveTo(bx + 4, by)
+          .lineTo(ex + 4, ey)
+          .stroke({ color: 0x3e3024, width: 3, alpha: 0.6 * a });
+        for (let q = 0; q < 4; q++) {
+          const sa = ang + (h1(740 + k * 7 + q) - 0.5) * 0.9;
+          const sl = 14 + 18 * h1(750 + k * 7 + q);
+          g.moveTo(ex + (q - 1.5) * wd * 0.22, ey)
+            .lineTo(ex + Math.cos(sa) * sl + (q - 1.5) * wd * 0.22, ey + Math.sin(sa) * sl)
+            .stroke({ color: q % 2 ? 0x8a7458 : 0x241a12, width: 4, cap: 'round', alpha: a });
+        }
+      }
+    }
     // The walked lips: dust along each top (moonlit once the shaft is open).
     S.forEach((st, i) => {
       const top = st.y - drop(st);

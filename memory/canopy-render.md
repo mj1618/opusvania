@@ -646,9 +646,11 @@ worktree at the round's base on 5216 (`scratchpad/r14-before`) gave the before s
   moonbeams, the cloud and the rims are what reads. The shake: `CameraShake.floor(escapeRumble(...))` (camera/shake.ts, budget
   `rumble` 0.16 -> 0.34 over 18 s) under `escapeStart` / `rockfall` / `escapeHit` blows. Rubble (kit.ts): a thin
   `rubble-*` gate (h <= 96) is a fallen roof slab (`fallenSlab`: a ragged chunk only a little deeper than its gate,
-  strata, short torn rootlets, a walked lip; a deep sag with one long root under it drew bowls on stalks);
-  `rubble-root` the taproot's broken top half (`brokenRoot`); only the tall ones make the heap, whose east side now
-  slumps (a vertical edge read as a box). The level kept changing the den through the round: check `cn-den`'s gates.
+  strata, short torn rootlets, a walked lip; a deep sag with one long root under it drew bowls on stalks), hung on two
+  or three torn roots from the roof over it (bb63744's six perches `rubble-1..6`);
+  `rubble-root` the taproot's broken top half (`brokenRoot`, if a level brings it back); only the tall ones make the
+  heap (`rubble-heap` against the east wall), whose east side slumps (a vertical edge read as a box), with the
+  taproot's broken trunks leaning out over its west slope (upright stubs on its walked top would read as posts). The level kept changing the den through the round: check `cn-den`'s gates.
 - **Camera zones** (camera/zones.ts): `after` was never read by the render camera (the crown's zone was always on, so
   `kinSit` changed nothing); now it is, `lean {x, y, k}` shifts the view's centre `k` of the way to the point (then the
   bounds), and a zone's `frames` also slows its zoom (`zoneZoomFrames`: the crown's 2 s push-in to 1.3).
