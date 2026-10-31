@@ -686,6 +686,9 @@ export function updateKit(
       h: g.h,
     });
   }
+  // (Nor is she ever left inside one standing, however she came there: a room entered through a door still shut, a
+  // restart, a test boot. The Canopy r15: a test boot of the den walked back west into the tunnel inside its shut lid.)
+  for (const g of gates) if (g && gateShut(g, save.flags)) pushClear(state, scene, g, gates, events);
   // Thorns.
   if (p.faded > 0 || p.hp <= 0 || state.exit || state.caught || state.goal.gathered) return false;
   if (kit.pogoFrame === state.frame + 1) return false;
@@ -711,7 +714,7 @@ export function updateKit(
 }
 
 /**
- * Gate `g` is shutting with her box in its rect: she is moved out the shortest way to a spot clear of every solid
+ * Gate `g` is standing (or shutting) with her box in its rect: she is moved out the shortest way to a spot clear of every solid
  * and of every gate standing on this step's flags (`gatePush`). Her speed into the gate is dropped.
  */
 function pushClear(
@@ -725,6 +728,8 @@ function pushClear(
   if (!(p.x < g.x + g.w && g.x < p.x + p.w && p.y < g.y + g.h && g.y < p.y + p.h)) return;
   const flags = state.save.flags;
   const free = (x: number, y: number) => {
+    // (Inside the room: an open exit beside the gate would take her back out the way she came.)
+    if (x < 0 || x + p.w > scene.width || y + p.h > scene.height) return false;
     if (solidAt(scene, x, y, p.w, p.h)) return false;
     for (const o of gates)
       if (gateShut(o, flags) && x < o.x + o.w && o.x < x + p.w && y < o.y + o.h && o.y < y + p.h)
