@@ -24,9 +24,10 @@ export interface EscapeState {
   t: number;
   /** The last checkpoint she stood on (index in `scene.escape.checkpoints`). */
   cp: number;
-  /** The collapse front: running (`frontOn` 1), its top y. */
+  /** The collapse front: running (`frontOn` 1), its top y. `stand`: the feet y she last stood at (it follows that). */
   frontOn: number;
   front: number;
+  stand: number;
   /** Per rock: 0 armed, 1 the tell, 2 falling, 3 down; frames in that stage; its bottom y while it falls. */
   rock: number[];
   rockT: number[];
@@ -41,6 +42,7 @@ export function createEscape(scene: Scene): EscapeState {
     cp: 0,
     frontOn: 0,
     front: 0,
+    stand: 0,
     rock: new Array<number>(n).fill(0),
     rockT: new Array<number>(n).fill(0),
     rockY: new Array<number>(n).fill(0),
@@ -135,6 +137,7 @@ export function updateEscape(state: GameState, scene: Scene, t: Tuning, events: 
     s.on = 1;
     s.t = 0;
     s.cp = 0;
+    s.stand = fy;
     rearm(s, E, 0);
     events.push({ type: 'escapeStart', id: E.id, x: Math.round(cx), y: Math.round(fy) });
   }
@@ -160,14 +163,13 @@ export function updateEscape(state: GameState, scene: Scene, t: Tuning, events: 
     events.push({ type: 'escapeEnd', id: E.id, x: Math.round(cx), y: Math.round(fy) });
     return;
   }
-  // Checkpoints: the furthest she has stood on.
-  if (p.grounded)
-    for (let i = s.cp + 1; i < E.checkpoints.length; i++) {
-      const c = E.checkpoints[i];
-      if (!c || !inBox(c.at, cx, cy)) continue;
-      s.cp = i;
-      events.push({ type: 'escapeCheckpoint', id: E.id, cp: i, x: c.x, y: c.y });
-    }
+  // Checkpoints: the furthest she has reached (in its rect, landed or passing).
+  for (let i = s.cp + 1; i < E.checkpoints.length; i++) {
+    const c = E.checkpoints[i];
+    if (!c || !inBox(c.at, cx, cy)) continue;
+    s.cp = i;
+    events.push({ type: 'escapeCheckpoint', id: E.id, cp: i, x: c.x, y: c.y });
+  }
   const T = t.kit.escape;
   const safe = p.invuln > 0 || p.hp <= 0;
   // The rocks.
@@ -213,16 +215,19 @@ export function updateEscape(state: GameState, scene: Scene, t: Tuning, events: 
   // The front.
   const F = E.front;
   if (!F) return;
+  // (It follows where she stands, not her jumps: a jump that falls back to her perch never meets it.)
+  if (p.grounded || s.stand === 0) s.stand = fy;
+  const sy = s.stand;
   if (s.frontOn === 0) {
-    if (fy > F.y0 - F.lag) return;
+    if (sy > F.y0 - F.lag) return;
     s.frontOn = 1;
     s.front = F.y0;
     events.push({ type: 'collapseFront', id: E.id, phase: 'start', y: F.y0, x0: F.x0, x1: F.x1 });
   }
   // (It rises toward `lag` under her feet at most `speed`; within that it creeps closer, never nearer than `near`; it
   // never goes back down: a fall meets it.)
-  const target = fy + F.lag;
-  const f = s.front > target ? Math.max(target, s.front - F.speed) : Math.max(fy + F.near, s.front - F.creep);
+  const target = sy + F.lag;
+  const f = s.front > target ? Math.max(target, s.front - F.speed) : Math.max(sy + F.near, s.front - F.creep);
   s.front = Math.max(F.top, Math.min(s.front, f));
   if (!safe && cx >= F.x0 && cx < F.x1 && fy > s.front + T.frontGrace) hit(state, E, 'front', t, events);
 }
@@ -243,6 +248,7 @@ export function escapeBack(
   if (!c) return null;
   rearm(s, E, s.cp);
   frontAt(s, E, s.cp, events);
+  s.stand = c.y;
   s.t = 0;
   events.push({ type: 'escapeStart', id: E.id, x: c.x, y: c.y });
   return { x: c.x, y: c.y };

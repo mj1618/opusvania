@@ -300,8 +300,9 @@ describe("the ending's fallback (r12, moment 7)", () => {
     expect(s.save.flags).toContain('cn-den-collapse');
     expect(s.boss?.stage).toBe('down');
     const rubble = (den.gates ?? []).filter((g) => g.id.startsWith('rubble-'));
-    // (r14: the escape's slab and the hanging root, not r12's staircase.)
-    expect(rubble.map((g) => g.id).sort()).toEqual(['rubble-root', 'rubble-slab']);
+    // (r14: the escape's heap and torn roots, not r12's staircase.)
+    expect(rubble.map((g) => g.id)).toContain('rubble-heap');
+    expect(rubble.length).toBeGreaterThanOrEqual(6);
     for (const g of rubble) expect(gateShut(g, s.save.flags)).toBe(true);
     const root = (den.gates ?? []).find((g) => g.id === 'taproot');
     expect(root && gateShut(root, s.save.flags)).toBe(false);

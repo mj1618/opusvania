@@ -565,6 +565,8 @@ export const defaultTuning = withVariants({
       // fling's aim): a fall past the line never sends it on to the nest.
       backHold: 150,
       fallVy: 2,
+      // (A landing within `nestPx` of the path's end is the nest, not a fall.)
+      nestPx: 160,
     },
     /**
      * The Canopy r14, moment 7: the full escape (src/sim/escape.ts). A hit holds her `hitFrames`, then back to the last

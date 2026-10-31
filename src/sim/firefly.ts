@@ -16,7 +16,7 @@
  */
 import type { SimEvent } from './events';
 import type { FireflyPass, Roost } from './kit-data';
-import { flameAt, lureHpMax } from './lures';
+import { flameAt, lureHpMax, relightEmbers } from './lures';
 import type { Scene } from './scene';
 import type { GameState, SaveState } from './state';
 import type { Tuning } from './tuning';
@@ -49,10 +49,26 @@ export interface FireflyState {
    */
   hook: number;
   hold: number;
+  /** 1 once she has flung off `hook` since she was last put back there (a landing then is a fall). */
+  used: number;
 }
 
 export function createFirefly(): FireflyState {
-  return { pass: -1, frame: 0, x: 0, y: 0, beat: -1, t: 0, d: 0, her: 0, px: 0, py: 0, hook: -1, hold: 0 };
+  return {
+    pass: -1,
+    frame: 0,
+    x: 0,
+    y: 0,
+    beat: -1,
+    t: 0,
+    d: 0,
+    her: 0,
+    px: 0,
+    py: 0,
+    hook: -1,
+    hold: 0,
+    used: 0,
+  };
 }
 
 /** The point `d` px along `path` (into `out`). */
@@ -249,14 +265,35 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
   // floor keeps the last).
   project(path, p.x + p.w / 2, p.y + p.h / 2, PJ, ff.her - K.nearPx, ff.d + 1);
   // (r14, review r13 #5: not while she falls (out of a fling's aim, sinking): a fall past the line is no progress.)
-  const falling = !p.grounded && p.fling < 0 && p.vy > K.fallVy;
-  if (PJ.dist <= K.nearPx && p.faded === 0 && !falling) ff.her = PJ.d;
+  // (Her progress is made on the line, in the air: standing on the shelf under the S is none.)
+  const falling = (!p.grounded && p.fling < 0 && p.vy > K.fallVy) || !!state.caught;
+  if (PJ.dist <= K.nearPx && p.faded === 0 && !falling && !p.grounded) ff.her = PJ.d;
   if (ff.hold > 0) ff.hold--;
   // (The last hook she flung off: a fall puts her back there.)
   const lures = scene.lures ?? [];
-  for (const id of [...c.kindles, ...(f.relights ?? [])]) {
-    const i = lures.findIndex((q) => q.id === id);
-    if (i >= 0 && state.lures.ember[i]) ff.hook = i;
+  const line = [...c.kindles, ...(f.relights ?? [])];
+  for (const q of events) {
+    if (q.type !== 'fling' || !line.includes(q.id)) continue;
+    ff.hook = lures.findIndex((l) => l.id === q.id);
+    ff.used = 1;
+  }
+  // (r14: a landing mid-chase, off a hook past the first and short of the nest, is a fall: held a beat, then back at
+  // that hook (src/sim/index.ts's catch calls `chaseBack`). Once only: landed again without a fling, she stays.)
+  const first = lures.findIndex((q) => q.id === c.kindles[0]);
+  if (
+    (ff.beat === 2 || ff.beat === 3) &&
+    p.grounded &&
+    !state.caught &&
+    p.faded === 0 &&
+    ff.used === 1 &&
+    ff.hook >= 0 &&
+    ff.hook !== first &&
+    ff.her < total - K.nestPx
+  ) {
+    const frames = Math.max(1, Math.round(t.room.catchFrames));
+    const id = `chase:${lures[ff.hook]?.id ?? ''}`;
+    state.caught = { id, frames: 0 };
+    events.push({ type: 'fallCatch', id, x: Math.round(p.x + p.w / 2), y: Math.round(p.y + p.h), frames });
   }
   if (ff.beat === 2 || ff.beat === 3) {
     // Its goal: its lead ahead of her, but never past a stop she is not yet near.
@@ -370,13 +407,15 @@ export function chaseBack(
   const l = scene.lures?.[ff.hook];
   if (!l) return null;
   const s = state.lures;
-  s.ember[ff.hook] = 0;
+  // (Every hook of the chain she left smoulders no more: they burn again, springboards as before.)
+  relightEmbers(state, scene, t, events);
   if ((s.hp[ff.hook] ?? 0) <= 0) {
     s.hp[ff.hook] = lureHpMax(l, t);
     s.out[ff.hook] = 0;
     events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
   }
   ff.hold = Math.max(1, Math.round(t.kit.firefly.backHold));
+  ff.used = 0;
   events.push({
     type: 'fireflyChase',
     id: f.id,

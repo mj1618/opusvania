@@ -2621,6 +2621,10 @@ const GAP_HOOKS: Array<[string, number, number]> = [
   ['hook-4', 3780, 470],
   ['hook-5', 3460, 680],
   ['hook-6', 3810, 880],
+  // (r14, review r13 #5: off hook-6, pressed the moment the chain's lamp came into reach, the up-left fling met the
+  // roost's shelf from below and fell: a seventh hook on hook-6's down-left line, off the shelf's lip, whose left fling goes
+  // in under the roost's east side.)
+  ['hook-7', 3440, 1160],
 ];
 /** The firefly's line: the perch, its hooks, the chain's first lamp, the roost's mouth (the path's end: the nest). */
 const GAP_CHASE: Array<[number, number]> = [
@@ -2630,7 +2634,7 @@ const GAP_CHASE: Array<[number, number]> = [
   [3780, 450],
   [3460, 660],
   [3810, 860],
-  [3400, 1400],
+  [3440, 1140],
   [3210, 1140],
 ];
 
@@ -3175,14 +3179,22 @@ const ROOF_PASS = 384;
 /** The ending's collapse (r12): the Keeper's flag once the roof gives; the rubble shuts, the taproot falls. */
 const DEN_COLLAPSE = 'cn-den-collapse';
 /**
- * The full escape (r14, moment 7; review r13 #9: the rubble's clean staircase replaced). When the roof gives the
- * taproot snaps: its foot falls and its top half hangs from the roof (`rubble-root`, a claw face on its east side),
- * a slab of the roof lands short of the east end (`rubble-slab`, a jump up from the floor), and between the hanging
- * root and the den's east wall is a chimney up to the roof's gate. Rocks fall on her line as she comes (dust
- * first), and the den fills with earth under her as she climbs (src/sim/escape.ts).
+ * The full escape (r14, moment 7; review r13 #9: the rubble's clean staircase replaced). When the roof gives, the
+ * taproot comes down with the den's east end: a heap of earth and root piled against the east wall to 704
+ * (`rubble-heap`, no claws on its face), so the floor no longer reaches the way out. Roots torn from the roof hang as
+ * perches (`rubble-1..6`, [x0, x1, top]): up the west side off the shelf, then east under the falling roof to the
+ * heap's top, and up through the roof's gate. Rocks fall on her line as she comes (grit first), and the den fills with
+ * earth under her as she climbs (src/sim/escape.ts).
  */
-const DEN_SLAB: [number, number, number] = [2688, 2880, 1152];
-const DEN_ROOT: [number, number, number, number] = [2944, 3040, 448, 944];
+const DEN_PERCHES: Array<[number, number, number]> = [
+  [896, 1088, 896],
+  [1216, 1408, 704],
+  [1600, 1760, 672],
+  [1984, 2144, 608],
+  [2368, 2528, 608],
+  [2752, 2880, 672],
+];
+const DEN_HEAP: [number, number, number] = [2944, 3264, 704];
 /** The escape's flag (saved at the passage's end: over for good). */
 const DEN_ESCAPED = 'cn-den-escaped';
 
@@ -3233,29 +3245,28 @@ function den(): Json {
   // (`cn-den-collapse`): standing until then, as the mass it was.
   // (In the arena's air already: added as is, no carve after the fill.)
   r.add('gates', { id: 'taproot', x: 2944, y: 448, w: 96, h: 808, flag: DEN_COLLAPSE, kick: false });
-  // The escape's rubble (r14, moment 7): solid from the collapse. The roof's slab, a jump up off the floor, and the
-  // taproot's top half hanging from the roof, its east face a claw face: the chimney's west wall (the den's east wall
-  // is its east wall).
+  // The escape's rubble (r14, moment 7): solid from the collapse (`shut`), never before (the fight's den is as it was).
   r.add('gates', {
-    id: 'rubble-slab',
-    x: DEN_SLAB[0],
-    y: DEN_SLAB[2],
-    w: DEN_SLAB[1] - DEN_SLAB[0],
-    h: 1344 - DEN_SLAB[2],
+    id: 'rubble-heap',
+    x: DEN_HEAP[0],
+    y: DEN_HEAP[2],
+    w: DEN_HEAP[1] - DEN_HEAP[0],
+    h: 1344 - DEN_HEAP[2],
     flag: 'cn-den-rubble-gone',
     shut: DEN_COLLAPSE,
     kick: false,
   });
-  r.add('gates', {
-    id: 'rubble-root',
-    x: DEN_ROOT[0],
-    y: DEN_ROOT[2],
-    w: DEN_ROOT[1] - DEN_ROOT[0],
-    h: DEN_ROOT[3] - DEN_ROOT[2],
-    flag: 'cn-den-rubble-gone',
-    shut: DEN_COLLAPSE,
-    kick: 'east',
-  });
+  for (const [i, [x0, x1, top]] of DEN_PERCHES.entries())
+    r.add('gates', {
+      id: `rubble-${i + 1}`,
+      x: x0,
+      y: top,
+      w: x1 - x0,
+      h: 48,
+      flag: 'cn-den-rubble-gone',
+      shut: DEN_COLLAPSE,
+      kick: false,
+    });
   // (r11: the arena's east wall is the climb to the roof's gate; its foot refuses the claws as v10's root gate there
   // did, so the fight's floor is unchanged: the face starts 192 over the floor.)
   r.mass(ROOF_X[1], 1152, 64, 192, false);
@@ -3339,7 +3350,9 @@ function den(): Json {
   // checkpoints (the floor by the cage, the slab, the passage's start); rocks keyed to her progress, each told by
   // grit first; the den filling with earth under her up the chimney. A hit holds her and puts her back at the last
   // checkpoint, no light lost (src/sim/escape.ts). `path`: the freed cloud's line out, ahead of her (render).
-  const slabX = (DEN_SLAB[0] + DEN_SLAB[1]) / 2;
+  const perch = (i: number) => DEN_PERCHES[i] as [number, number, number];
+  const mid = (i: number) => (perch(i)[0] + perch(i)[1]) / 2;
+  const on = (i: number) => ({ x: perch(i)[0], y: perch(i)[2] - 128, w: perch(i)[1] - perch(i)[0], h: 128 });
   r.set('escape', {
     id: 'den-escape',
     after: DEN_COLLAPSE,
@@ -3348,76 +3361,68 @@ function den(): Json {
     end: { x: 3648, y: 128, w: 192, h: ROOF_PASS - 128 },
     path: [
       [DEN_CAGE[0], 1200],
-      [2400, 1060],
-      [DEN_SLAB[1], 1040],
-      [3160, 980],
-      [3160, 420],
-      [3400, 280],
-      [3840, 280],
+      [1300, 1000],
+      [mid(0), 820],
+      [mid(1), 620],
+      [mid(3), 520],
+      [mid(5), 560],
+      [3168, 600],
+      [3168, 300],
+      [3500, 260],
+      [3840, 260],
     ],
     checkpoints: [
-      { id: 'cp-floor', x: 2100, y: 1344, at: { x: 576, y: 1088, w: 1600, h: 256 } },
-      {
-        id: 'cp-slab',
-        x: slabX,
-        y: DEN_SLAB[2],
-        at: { x: DEN_SLAB[0], y: DEN_SLAB[2] - 128, w: 192, h: 128 },
-      },
+      { id: 'cp-floor', x: 1600, y: 1344, at: { x: 576, y: 1088, w: 2368, h: 256 } },
+      { id: 'cp-west', x: mid(1), y: perch(1)[2], at: on(1) },
+      { id: 'cp-high', x: mid(4), y: perch(4)[2], at: on(4) },
       { id: 'cp-pass', x: 3392, y: ROOF_PASS, at: { x: 3264, y: 128, w: 256, h: ROOF_PASS - 128 } },
     ],
     rocks: [
-      // On the floor east of the cage: a runner passes under before it drops; one who stops sees it land ahead.
+      // Behind her as she turns west: the roof over the floor east of the cage gives.
       {
         id: 'rock-1',
-        x: 2272,
+        x: 2080,
+        w: 112,
+        y0: 352,
+        y1: 1344,
+        when: { x: 1088, y: 960, w: 448, h: 384 },
+        tell: 24,
+        cp: 0,
+      },
+      // Ahead, on the next perch: grit over it first (a beat on this one, or through before it drops).
+      { id: 'rock-2', x: mid(2), w: 96, y0: 416, y1: perch(2)[2], when: on(1), tell: 64, cp: 1 },
+      { id: 'rock-3', x: mid(4), w: 96, y0: 352, y1: perch(4)[2], when: on(3), tell: 64, cp: 1 },
+      // Behind her: the perch she left, the last perch as she is on the heap, the shaft as she is in the passage.
+      { id: 'rock-4', x: mid(3), w: 96, y0: 352, y1: 1344, when: on(4), tell: 16, cp: 2 },
+      {
+        id: 'rock-5',
+        x: mid(5),
         w: 96,
         y0: 448,
         y1: 1344,
-        when: { x: 1984, y: 1088, w: 128, h: 256 },
-        tell: 36,
-        cp: 0,
-      },
-      {
-        id: 'rock-2',
-        x: 2592,
-        w: 96,
-        y0: 448,
-        y1: 1344,
-        when: { x: 2368, y: 1088, w: 128, h: 256 },
-        tell: 36,
-        cp: 0,
-      },
-      // Down the chimney's west side as she starts up the east wall: stay on the east face (the grit says where).
-      {
-        id: 'rock-3',
-        x: 3096,
-        w: 80,
-        y0: 448,
-        y1: 1344,
-        when: { x: 3136, y: 832, w: 128, h: 192 },
-        tell: 40,
-        cp: 1,
-      },
-      // The roof falls in behind her: into the chimney as she is in the passage, and the passage's roof.
-      {
-        id: 'rock-4',
-        x: 3168,
-        w: 128,
-        y0: 128,
-        y1: 1344,
-        when: { x: 3264, y: 128, w: 128, h: 256 },
-        tell: 20,
+        when: { x: DEN_HEAP[0], y: 448, w: 320, h: 256 },
+        tell: 16,
         cp: 2,
       },
       {
-        id: 'rock-5',
+        id: 'rock-6',
+        x: 3168,
+        w: 128,
+        y0: 128,
+        y1: DEN_HEAP[2],
+        when: { x: 3328, y: 128, w: 128, h: 256 },
+        tell: 12,
+        cp: 3,
+      },
+      {
+        id: 'rock-7',
         x: 3456,
         w: 128,
         y0: 128,
         y1: ROOF_PASS,
-        when: { x: 3584, y: 128, w: 128, h: 256 },
-        tell: 20,
-        cp: 2,
+        when: { x: 3584, y: 128, w: 64, h: 256 },
+        tell: 12,
+        cp: 3,
       },
     ],
     front: { x0: 576, x1: ROOF_X[1], y0: 1408, top: 448, lag: 320, near: 200, speed: 7, creep: 0.6 },
@@ -3444,12 +3449,13 @@ function den(): Json {
       },
       {
         id: 'escape',
-        x: 2560,
+        x: 448,
         y: 0,
-        w: 3840 - 2560,
-        h: 1344,
-        zoom: 0.85,
-        bounds: { x: 2176, y: 0, w: 3840 - 2176, h: 1472 },
+        w: 3840 - 448,
+        h: 1472,
+        zoom: 0.8,
+        bounds: { x: 448, y: 0, w: 3840 - 448, h: 1472 },
+        after: DEN_COLLAPSE,
         until: DEN_ESCAPED,
       },
       // (r12, the Keeper's intro: on the balcony the view takes in the arena's floor under the cage, where the sleeper

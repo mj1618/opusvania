@@ -738,6 +738,8 @@ export const keeperRules: BossRules = {
     }
     const e = creature(c);
     if (e) e.keep = 1;
+    // (r14: beaten on an earlier visit, it is not there: a re-entry (or a Continue mid-escape) found it awake again.)
+    if (e && down) e.gone = true;
     // (A retry finds the den's lamp burning again: phase 3 plants it out.)
     const snuffs = scene.enemies?.find((q) => q.id === spec.creature)?.snuffs;
     const si = lureIndex(scene, snuffs);
