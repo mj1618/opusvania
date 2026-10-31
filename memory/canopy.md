@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v17, 2026-11-01)
+# The Canopy: the first area built to the reference numbers (v18, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,52 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v18 (round 18, 2026-11-01): what first-timers still could not read (ft17a-d)
+- **The fling's way before the press** (render, lamps.ts `READY.peek*`): in a flame's reach a tongue of its light
+  leans out the way a fling would throw her now (the held 8-way direction, else the lamp's `aim`, else out from the
+  flame through her: `flingAim`'s rule), sparks running along it, swinging as the stick turns. Render reads the held
+  keys from the new `SimView.input` (the sim's `prevInput`). ft18a: "a ring and a short yellow line pointing up-right
+  ... flung me along that line"; still, bots that tap the Lamp say "the line only shows once I'm caught" and "steering
+  while caught let go" (a tap launches at once).
+- **The opening**: 1 s of black (`open.black` 60), the hatch listens from 90 (`tuning.hatch`), and her light breathes
+  in the black where her cocoon hangs (room-fade.ts `glimmer`, `OPEN_GLIMMER`; a press stirs it). All three r18 bots
+  read it as "a cocoon or egg" and pressed.
+- **A shut root door run into answers at once** (`KitState.shutPush`): the r16 rule fired on a fresh press or every
+  45th frame, so running into it with the key held often said nothing (ft17a: no `shortcutShut` at all). Render: the
+  seams always leak a thread of light (a way plugged, not a post); a knock blazes them, spills the far side's light on
+  the floor at her feet, pulls the silk taut toward its knots and rings them three times (`KIT.doorKnock` 2.6 s);
+  audio a creak from beyond. All three r18 bots knocked (2-4 `shortcutShut`) and still did not read "opens from the
+  other side" (they saw "two round lights behind bars", "maybe the glows need lighting"). Not solved.
+- **A rotten wall answers a cut into the face under it** (render kit.ts `KIT.sill`, audio route-canopy): within 24
+  px of its sides and 520 under its foot, it shakes, leaks and drops chips of rot from its sill to her floor (ft17d cut
+  the column under the giant's `rot-door` 15+ times, "no response at all").
+- **The giant's juvenile sleeps** (spawn `asleep`, burrback kinds): curled and harmless at 2,836 until she is down on
+  its ground within `wakePx` 200, wakes over 50 frames, harmless through the wake and `wakeSafeFrames` 45 after (cut or
+  not), shouldering her out (`risePush` 5); awake it walks 2,616-3,056; she off its top (2 x `wakePx` along it, 260
+  over, `strikeAbovePx` under) for `sleepAgainFrames` 90 and it sleeps where it stands, so a return up the lip never
+  meets it awake (`e.lost` counts, `e.wander` is the grace: both unused by burrbacks before). ft18a still took a hit
+  on 83c97b7 (walked in, stood over it 0.5 s, cut: it woke under her blade); the grace fixed that (c23ff58), and ft18b /
+  ft18c met it with no hit. tests/unit/canopy-r18.test.ts has both arrivals, the sleep again and ft18a's sequence.
+- **Creatures' reads**: a spent beetle's open belly glows pale gold, with a flash as it lays open (render
+  `BURR.ram.open`), and a winded breath is heard (`enemyRecover` not by a touch); a lampwing's first tell is 1.6 x (spawn
+  `firstTell`, the generator's `flyer` sets it; the grove's lampwings keep 36 frames) and counted in three rising
+  buzzes. ft18b: "the red glow before it dives was a clear, fair warning". The well's burrback still "shoves into me
+  mid-swing": players cut a braced front.
+- **First-timers** (from the hatch, fresh save; first in a flame's reach -> first fling, both from the trace's path
+  (the aim's airborne freeze); first cage; the Grove; harness's lost / the agent's own worst stretch). Same measure on
+  r17's: 13.1 -> 13.4, 10.5 -> 10.7, 11.8 -> 12.8, 11.4 -> 12.3 s.
+  | run | build | reach -> fling | cage | Grove | lost (harness / own) |
+  |---|---|---|---|---|---|
+  | ft18a | 83c97b7 | 11.8 -> 21.8 s | 0:40 | 3:14 | 0 / ~15 s (the first fling's gap: 8 falls, tapping the Lamp) |
+  | ft18b | c23ff58 | 8.6 -> 11.6 s | 0:20 | 2:50 | 0 / ~25 s (the upper limbs' fling over thorns: 5 hits, a death) |
+  | ft18c | c23ff58 | 8.7 -> 15.4 s | 0:29 | 3:49 | 0 / ~15 s (the east fork's cliff before the claws) |
+  Still confusing: the Crossing's seed door (all three: "three dark dots", a moon shard's "one of three" read as its
+  count), the well's root doors, a tapped Lamp's aim, the upper limbs' thorn floor (near black on black, ft18c) and its
+  gap, the giant's teach wall at first ("a background post"), the star counter dropping to 0, the well's glassy pod at
+  the thorn pit (solid, read as scenery: ft18a's death). Journals: playtest-reports/2026-10-31T21-44-38-firsttimer-ft18a,
+  *22-13-26-*ft18b, *22-32-58-*ft18c. Checks: solver all claims hold (2,428 s), climbs, world check, furniture's bar,
+  look:check 357/357, `npm run typecheck`, `lint`, `test`, e2e `--workers=2`.
 
 ## v17 (round 17, 2026-11-01): the first fling and what still gave no answer (first-timers ft16a-c)
 - **The harness hid the Lamp's prompt**: `openGame` adds `?manual`, which turns `Prompts` off, so no first-timer
@@ -52,7 +98,7 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   (pale from both sides: ft16c / ft17d dropped in from the limbs' vent and read a closed pocket).
 - **The giant's juvenile**: both ends of its top are arrivals (the door, the climb's lip) and `ENEMY_SPAWN_CLEAR`
   wants 300 px from the spawn (3,136): at the west end ft17d topped out onto it, so it is back near r16's spot
-  (2,836, walk 2,796-2,876, back to the door). Not solved; a fix is an `arrive` from the far end, or another floor.
+  (2,836, walk 2,796-2,876, back to the door). Solved in v18 by its sleep.
 - **First-timers** (from the hatch, fresh save; flame seen -> first fling / first cage / Grove; harness's longest
   no-progress stretch, then the agent's own "stuck"):
   | run | build | fling | cage | Grove | lost (harness / own) |
@@ -391,9 +437,9 @@ Names are the contract with render and audio (section 6 of the director's plan);
   `roostsLit` drops a roost whose moths have gone on; `roostsLeft(scene, save)` lists them (render: empty roosts, a
   few wing scales).
 - **The opening's hooks** (moment 1, render's to draw): `cn-hatch.hatch.sets` = `cn-hatched` (`flagSet` on the
-  break; `marks.tatter.tryOn` = it: the kin's jump after the swarm and fall back); `marks.stage.open {black 180, zooms
-  [1.5, 1.25, 1], title 'LAMPFALL', titleAfter 150, hatchTail 480}` (frames; zooms before the first `hatchStir` press
-  and after each); `tuning.hatch.listenFrom` 210 (was 150: the break never comes in the black); camera zone
+  break; `marks.tatter.tryOn` = it: the kin's jump after the swarm and fall back); `marks.stage.open {black 60 (r18; was 180),
+  zooms [1.5, 1.25, 1], title 'LAMPFALL', titleAfter 150, hatchTail 480}` (frames; zooms before the first `hatchStir`
+  press and after each); `tuning.hatch.listenFrom` 90 (r18; was 210); camera zone
   `promise` (x 2,816-3,296 on the crown's limb before the lip, zoom 0.85, no lock); `marks.stage.lights` (the valley's
   false lights, x 4,200-6,200, y 1,250-1,610, 9).
 - **The intro's camera**: zone `intro` on the balcony (zoom 0.72, bounds over the arena's west two thirds) until

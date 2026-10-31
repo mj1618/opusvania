@@ -743,3 +743,19 @@ logs the item line against `kit.quiet`, `recall.sh`).
   all-fours poses: STRAIN is "up on its forelegs", not upright) ease off, so it stands on its hind legs nearly her
   height. Lowering perch alone changed nothing visible.
 - Seen, not touched: a white line from off-screen to her in probe frames is the teleport's streak (probes teleport).
+
+## Round 18: reads for first-timers (memory/canopy.md v18)
+- **The fling's way in reach** (lamps.ts `peekAt`, `READY.peek*`): a tongue of the flame's light and three sparks
+  along the direction a fling would take now; reads `SimView.input` (held keys). Only for springboards in reach, not
+  while aiming (the aim's wedge and arc take over).
+- **The opening's glimmer** (camera/room-fade.ts `glimmer`, `OPEN_GLIMMER`): `RoomFade.layer` is a Container now (the
+  black sheet + an additive Graphics of 18 nested ellipses, no texture); drawn at the hatch point through
+  `worldToView`, faded with the black; a manual `hatchStir` flares it. Capture: `g.load(); g.step(40)` in a `?manual`
+  page.
+- **Root doors** (kit.ts `rootDoor`): seams always lit (`fg`, so the room's tint does not eat them); a knock's spill
+  fan on the floor, the silk tug toward the knot, knot rings. **Rot sills** (`KIT.sill`, `sillDrops`): chips falling
+  from a rotten wall's foot when the face under it is cut.
+- **A beetle's open window** (enemies/burrback.ts, `BURR.ram.open`, palette `C.openLight`): a pale gold glow on its
+  belly by `spentK * (1 - braceK)` breathing with the pant, a flash for 0.45 s as it lays open (`rig.openT`, not on a
+  touch). Staging a miss for a shot: walk at it, clear input in its windup, jump on `charge` (goto another room first:
+  a same-room goto keeps creatures where they were).
