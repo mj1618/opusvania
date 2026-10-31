@@ -424,13 +424,23 @@ export function slashLures(
     const f = flameAt(s, i, l, state.frame, t, F);
     const lx = f.x;
     const ly = f.y;
-    if (lx + r <= box.x || lx - r >= box.x + box.w || ly + r <= box.y || ly - r >= box.y + box.h) continue;
+    // (A trap's cage is a wide target, the Canopy r11, review r10 #3: drawn ~90 px wide, three cuts from 47 px off
+    // all missed a 20 px flame. An upgrade's reach adds to it as it does to a flame's.)
+    const rr = l.trap ? r - T.flameRadius + T.trapRadius : r;
+    if (lx + rr <= box.x || lx - rr >= box.x + box.w || ly + rr <= box.y || ly - rr >= box.y + box.h)
+      continue;
     s.hitBy[i] = seq;
+    // (Guarded by its keeper, the Canopy r11's great cage: the blade glances off the bars until the flag is saved.)
+    if (l.guard && !state.save.flags.includes(l.guard)) {
+      events.push({ type: 'lureGuarded', id: l.id, x: lx, y: ly, dir });
+      continue;
+    }
     const hpMax = lureHpMax(l, t);
     const hpLeft = Math.max(0, hp - Math.max(1, Math.round(power)));
     s.hp[i] = hpLeft;
     res.hits++;
-    const stop = hpLeft > 0 ? Math.round(T.hitstopFrames) : Math.round(T.snuffHitstop);
+    const stop =
+      hpLeft > 0 ? Math.round(T.hitstopFrames) : Math.round(l.trap ? T.trapSnuffHitstop : T.snuffHitstop);
     events.push({
       type: 'slashHit',
       x: lx,
@@ -447,7 +457,9 @@ export function slashLures(
       knockback,
     });
     if (hpLeft > 0) {
-      events.push({ type: 'lureHit', id: l.id, kind: l.kind, x: lx, y: ly, dir, hpLeft, hpMax });
+      // (A trap's first cut breaks a bar and one moth gets out: the cut teaches itself, review r10 #3.)
+      const trap = l.trap ? { trap: true, ...(hp === hpMax ? { escape: 1 } : {}) } : {};
+      events.push({ type: 'lureHit', id: l.id, kind: l.kind, x: lx, y: ly, dir, hpLeft, hpMax, ...trap });
       continue;
     }
     res.snuffs++;
@@ -508,5 +520,14 @@ export function snuffLure(
   if (l.sets && !state.save.flags.includes(l.sets)) {
     state.save.flags.push(l.sets);
     events.push({ type: 'flagSet', flag: l.sets, by: l.id, x: f.x, y: f.y });
+  }
+  // A held beat on its snuff (the Canopy r11's great cage): she stands while the cloud bursts out and the roof
+  // opens; nothing hurts her meanwhile (as a trigger's `hold`, src/sim/kit.ts).
+  const hold = Math.min(Math.round(l.hold ?? 0), Math.round(t.kit.storyHoldMax));
+  if (hold > 0 && by !== 'fling') {
+    state.kit.story = Math.max(state.kit.story, hold);
+    state.kit.storyBy = l.id;
+    p.invuln = Math.max(p.invuln, hold);
+    events.push({ type: 'storyHold', id: l.id, frames: hold, x: p.x + p.w / 2, y: p.y + p.h });
   }
 }

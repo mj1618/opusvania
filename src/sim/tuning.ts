@@ -505,9 +505,16 @@ export const defaultTuning = withVariants({
     arcFrames: 60,
     /** Half the size of the flame's box the blade has to touch. */
     flameRadius: 20,
+    /**
+     * ...and a trap's cage (the Canopy r11, review r10 #3: the cage is drawn ~90 px wide; three cuts from 47 px off
+     * all missed a 20 px flame). A standing up cut reaches a cage 228 px over her feet.
+     */
+    trapRadius: 64,
     /** Hitstop when a cut lands on a flame and it holds, and when it goes out (the loudest beat). */
     hitstopFrames: 3,
     snuffHitstop: 9,
+    /** ...and when a trap's cage breaks (review r10 #2: the release is the game's verb, it stops for a beat). */
+    trapSnuffHitstop: 14,
     /** Health back for each lure put out (core.md §5). */
     healOnSnuff: 1,
     /**
@@ -855,6 +862,11 @@ export const defaultTuning = withVariants({
     asleep: false,
     wakePx: 0,
     wakeFrames: 60,
+    /**
+     * The wake's last `wakeTurnFrames` it turns to her (the Canopy r11, review r10 #10: it rises first, facing the way
+     * it slept, then turns, then hunts); 0 = it faces her as it wakes.
+     */
+    wakeTurnFrames: 0,
     hunt: false,
     /**
      * The old burrback as a first mini-boss (memory/creatures.md, first-timer review r1): it feints only
@@ -1917,7 +1929,10 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       pogoShell: true,
       asleep: true,
       wakePx: 1400,
-      wakeFrames: 60,
+      // (The Canopy r11, review r10 #10: a 1.5 s wake on her drop into the arena: it rises for a second, facing the
+      // way it slept, then turns to her for half a second, then hunts. Harmless all the while.)
+      wakeFrames: 90,
+      wakeTurnFrames: 30,
       hunt: true,
       contactDamage: 1,
       value: 0,

@@ -31,6 +31,7 @@ import { updateFinds } from './finds';
 import { createFirefly, type FireflyState, updateFireflies } from './firefly';
 import type { Bark, BounceCap } from './kit-data';
 import { strikeBell } from './light';
+import { lureHpMax } from './lures';
 import { solidAt } from './physics/aabb';
 import type { Box } from './player/attack';
 import type { Scene, SolidRect } from './scene';
@@ -595,7 +596,8 @@ export function updateKit(
       state.lures.hp[i] = 0;
       state.lures.out[i] = 1;
     } else if (want && hp <= 0) {
-      state.lures.hp[i] = t.lures.kinds[l.kind]?.hp ?? 1;
+      // (A trap hung on a flag takes its cage's cuts, the Canopy r11: the warning's, hung by the firefly.)
+      state.lures.hp[i] = lureHpMax(l, t);
       state.lures.out[i] = 0;
     }
   }

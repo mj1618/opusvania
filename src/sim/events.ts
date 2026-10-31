@@ -68,7 +68,18 @@ export type SimEvent =
       dir: SlashDir;
       hpLeft: number;
       hpMax: number;
+      /**
+       * A trap lamp's cut (the Canopy r11, review r10 #3): `trap` true; on the first cut `escape` 1 = one bar breaks
+       * and one moth gets out and circles her (render's; nothing is counted until the snuff).
+       */
+      trap?: boolean;
+      escape?: number;
     }
+  /**
+   * The blade met a guarded lure (`Lure.guard`, the Canopy r11's great cage while the old burrback lives): it glances
+   * off, no cut taken (render: a clang, sparks off the bars).
+   */
+  | { type: 'lureGuarded'; id: string; x: number; y: number; dir: SlashDir }
   | {
       type: 'lureSnuff';
       id: string;
@@ -455,7 +466,8 @@ export type SimEvent =
    * ahead (it turns well short of a drop); `wall`; `lantern`: a lit lantern's sanctuary is ahead;
    * `wary`: she is below the edge ahead of it; `hit`: it comes round to her in a fight (`frames` 0);
    * `drop` (burrback, `frames` 0): she is dropping onto it from high above and it hurries out from
-   * under her (`vx` up to `burrback.dropSpeed`).
+   * under her (`vx` up to `burrback.dropSpeed`). `wake` (the old burrback, the Canopy r11): risen, it turns to her
+   * for the wake's last `frames`.
    */
   | {
       type: 'enemyTurn';
@@ -464,7 +476,7 @@ export type SimEvent =
       x: number;
       y: number;
       dir: number;
-      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit' | 'drop' | 'hunt';
+      cause: 'ledge' | 'wall' | 'lantern' | 'wary' | 'hit' | 'drop' | 'hunt' | 'wake';
       frames: number;
     }
   /**

@@ -128,21 +128,24 @@ describe('the first fling (r10, review r9 #1)', () => {
   });
 });
 
-const TRAPS: Array<[string, string, number]> = [
+// (r11: the warning's cage is hung by the firefly once the warning is cleared, over the den's mouth: cut from the ledge
+// on the lintel, 1,408.)
+const WARN_FLAGS = ['cn-tunnel-clear', 'cn-firefly-warn', 'cn-warn-hung'];
+const TRAPS: Array<[string, string, number, string[]?]> = [
   ['cn-hub', 'trap-crossing', 1600],
   ['cn-grove', 'trap-grove', 1600],
-  ['cn-tunnel', 'trap-warn', 1856],
+  ['cn-tunnel', 'trap-warn', 1408, WARN_FLAGS],
 ];
 
 describe('the premise: trap lamps (r10, review r9 #2)', () => {
-  for (const [room, id, floor] of TRAPS)
+  for (const [room, id, floor, flags] of TRAPS)
     it(`${room}:${id} is a trap, no springboard, cut out for good from the floor in three cuts`, () => {
       const scene = getRoom(room);
       const k = (scene.lures ?? []).findIndex((l) => l.id === id);
       const l = scene.lures?.[k];
       expect(l?.trap).toBe(true);
       expect(l?.relight).toBeUndefined();
-      const s = at(room, l?.x ?? 0, floor);
+      const s = at(room, l?.x ?? 0, floor, CG, flags ?? []);
       // (A creature or a wave nearby is not the point here.)
       s.enemies.length = 0;
       run(s, 0, 30);

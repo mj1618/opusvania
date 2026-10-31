@@ -88,6 +88,10 @@ const CLAIMS: Claim[] = [
     not: ['door', 'cn-hub:shelf-great'],
     max: 12000,
   },
+  // (r11, review r10 #6: the clump under the gap's drop is a root mass with a lit claw face down to the bank's floor:
+  // its crown in one climb from the floor east of the landing.)
+  { room: 'cn-hub', from: [7600, 1344], kit: [C], reach: ['place:clump-top'], max: 9000 },
+  { room: 'cn-hub', from: [7600, 1344], kit: [], reach: ['fork'], not: ['place:clump-top'], max: 9000 },
   // (Back from the upper limbs onto the high block: down to the floor and on; with wings, the glide shelf.)
   {
     room: 'cn-hub',
@@ -374,7 +378,8 @@ const CLAIMS: Claim[] = [
     from: [7420, 1856],
     kit: [C, G],
     // (r10: the den's mouth an arch at the floor's east end, its lid a root gate standing in it.)
-    reach: ['place:east', 'place:mouth', 'cellar', 'place:ledge'],
+    // (r11: the warning's cage, hung by the firefly once it is cleared, is cut from the ledge on the lintel.)
+    reach: ['place:east', 'place:mouth', 'cellar', 'place:ledge', 'place:cage'],
     not: ['den'],
     max: 9000,
   },
@@ -410,12 +415,22 @@ const CLAIMS: Claim[] = [
     not: ['out'],
   },
   { room: 'cn-den', from: [1700, 1344], kit: [C, G], reach: ['place:floor'], not: ['tunnel', 'out'] },
+  // (r11, review r10 #1: the way out needs the great cage freed, not only its keeper down: the roof's gate opens on
+  // the cage's release; up the arena's east wall, through it, along the passage onto the way out's clifftop.)
   {
     room: 'cn-den',
     from: [1700, 1344],
     kit: [C, G],
     flags: ['cn-den-down'],
-    reach: ['out'],
+    reach: ['place:shelf-w'],
+    not: ['tunnel', 'out', 'place:roof'],
+  },
+  {
+    room: 'cn-den',
+    from: [1700, 1344],
+    kit: [C, G],
+    flags: ['cn-den-down', 'cn-den-freed'],
+    reach: ['out', 'place:roof'],
     not: ['tunnel'],
   },
   {
@@ -455,6 +470,16 @@ const CLAIMS: Claim[] = [
     kit: [C, G],
     opened: ['cn-out:out-plug'],
     reach: ['cn-out:p-out', 'den'],
+  },
+  // (r11: in from the den's roof, the vista's trigger on the clifftop, the glide to the door; down the chimney to the
+  // ledge's way and back.)
+  {
+    room: 'cn-out',
+    from: [200, 384],
+    kit: [C, G],
+    reach: ['den', 'cn-out-vista', 'cn-out:p-out', 'cn-area-end', 'ledge', 'place:foot'],
+    not: ['cn-next'],
+    max: 9000,
   },
   { room: 'cn-ledge', from: [2400, 768], kit: [C], reach: ['out', 'cn-ledge:ledge-great'] },
 ];
