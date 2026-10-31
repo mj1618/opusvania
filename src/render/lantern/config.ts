@@ -69,3 +69,26 @@ export function hash01(s: string, i: number): number {
 export const ROOM_LAMPS: Record<string, { size: number; light: number; moths: number }> = {
   'cn-grove': { size: 1.9, light: 1.9, moths: 2.2 },
 };
+
+/**
+ * Trap lamps (the Canopy r10, review r9 #2: `Lure.trap`, cut out for good, their moths freed and counted) against the
+ * firefly's springboards (relight, no moths): told apart at a glance.
+ */
+export const TRAP = {
+  /** Its moth cloud against a plain lamp's (ROOM_LAMPS x this), and a springboard's few stragglers. */
+  cloud: 2.4,
+  springCloud: 0.3,
+  /** The cage: bars round it, its half-width and half-height in lamp sizes, colours. */
+  bars: 9,
+  cageW: 1.25,
+  cageH: 1.45,
+  bar: 0xffc878,
+  glow: 0xffa850,
+  /** Dead moths on the ground under it, and their pale-brown wings. */
+  fallen: 8,
+  dead: 0xa89880,
+  /** A snuff: moths drawn bursting out, seconds each flies with her (a range) before it streams to the moon. */
+  freedDrawn: 36,
+  follow: [2.2, 4.6] as readonly [number, number],
+  freedGlow: 0xcfe0ff,
+};

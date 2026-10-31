@@ -26,12 +26,26 @@
  * Render only: reads the sim view and the room, never writes. Deterministic: hashes and the render clock.
  */
 import type { Graphics } from 'pixi.js';
+import { fireflyAt, roostsLit } from '../../sim/firefly';
 import type { Lure } from '../../sim/scene';
 import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import type { LightRegistry } from '../lights';
 import { hash01 } from './config';
 import type { GlowPool } from './glow';
+
+/**
+ * The premise's pictures (the Canopy r10, review r9 #2; the sim's side in memory/canopy.md "The premise"):
+ *  - the firefly's pass at the gap (`state.kit.firefly`, `fireflyAt`): a small cold-gold light that flees, blinking
+ *    in a firefly's rhythm, a short trail; where it relights a lamp a thread of its light runs to the flame;
+ *  - the hub's roosts (`roostsLit`): where a freed trap's moths settled, pale moths at rest on the bark, opening and
+ *    closing their wings, a few always in the air, a cool breath of moonlight over them.
+ */
+export const PREMISE = {
+  firefly: { core: 0xf4ffb0, glow: 0xd8ff7a, trail: 14, blink: 1.7, size: 4 },
+  /** Moths at rest per roost (one per this many px² of its rect, clamped), and how many fly round it. */
+  roost: { per: 1100, min: 22, max: 70, flying: 8, moth: 0xeef0e2, glow: 0xbcd4ff, size: [9, 14] as const },
+};
 
 export const ACTS = {
   spill: {
@@ -251,6 +265,11 @@ export class Acts {
   private readonly lights: string[] = [];
   /** Moth-stones just hung (their flag) and seconds since. */
   private readonly hung = new Map<string, number>();
+  /** The firefly's recent places (its trail) and its relights (lamp, seconds since). */
+  private readonly ffTrail: Array<[number, number]> = [];
+  private readonly ffLit: Array<{ x: number; y: number; fx: number; fy: number; t: number }> = [];
+  /** Roosts that just filled (their id, seconds since): the moths settle in. */
+  private readonly roostNew = new Map<string, number>();
 
   constructor(
     sim: { scene: SimView['scene'] },
@@ -334,6 +353,10 @@ export class Acts {
         });
       } else if (e.type === 'patchMark') this.flares.push({ x: e.x, y: e.y, t: 0 });
       else if (e.type === 'stoneHung') this.hung.set(e.flag, 0);
+      else if (e.type === 'fireflyRelight') {
+        const ff = (sim as { kit?: { firefly?: { x: number; y: number } } }).kit?.firefly;
+        this.ffLit.push({ x: e.x, y: e.y, fx: ff?.x ?? e.x, fy: ff?.y ?? e.y, t: 0 });
+      } else if (e.type === 'fireflyStart') this.ffTrail.length = 0;
       // The map station opens: every stone on the crook swings (the map unrolls from it: render/map).
       else if (e.type === 'mapStation')
         for (const f of sim.save.flags) if ((this.hung.get(f) ?? 1e9) > 0.8) this.hung.set(f, 0.8);
@@ -362,6 +385,126 @@ export class Acts {
     for (const [f, t] of this.hung) this.hung.set(f, t + dt);
     this.drawStones(clock, sim, back, glowFront, seen);
     this.drawDoors(clock, sim, back, glowBack, glowFront, seen);
+    this.drawFirefly(dt, clock, sim, front, glowFront);
+    this.drawRoosts(dt, clock, sim, back, glowBack, seen);
+  }
+
+  // --- The firefly's pass (the gap): small, bright, fleeing; it relights what she put out behind her.
+  private drawFirefly(dt: number, clock: number, sim: SimView, front: Graphics, glow: GlowPool): void {
+    const F = PREMISE.firefly;
+    const kit = sim.kit as unknown as { firefly?: { pass: number; frame: number; x: number; y: number } };
+    const ff = kit.firefly;
+    const passes = (sim.scene as { fireflies?: Array<{ path: Array<[number, number]>; frames: number }> })
+      .fireflies;
+    for (let k = this.ffLit.length - 1; k >= 0; k--) {
+      const r = this.ffLit[k] as (typeof this.ffLit)[number];
+      r.t += dt;
+      if (r.t > 0.9) {
+        this.ffLit.splice(k, 1);
+        continue;
+      }
+      // A thread of its light runs from it to the flame, then the flame flares.
+      const u = Math.min(1, r.t / 0.25);
+      const a = 1 - Math.max(0, (r.t - 0.25) / 0.65);
+      front
+        .moveTo(r.fx, r.fy)
+        .lineTo(r.fx + (r.x - r.fx) * u, r.fy + (r.y - r.fy) * u)
+        .stroke({ color: F.glow, width: 1.5, alpha: 0.6 * a });
+      glow.add(r.x, r.y, 30 + 60 * u, F.glow, 0.45 * a);
+    }
+    if (!ff || ff.pass < 0 || !passes) {
+      if (this.ffTrail.length) this.ffTrail.length = 0;
+      return;
+    }
+    const pass = passes[ff.pass];
+    if (!pass) return;
+    const at = fireflyAt(pass as never, ff.frame - 1 + sim.alpha);
+    this.ffTrail.push([at.x, at.y]);
+    if (this.ffTrail.length > F.trail) this.ffTrail.shift();
+    // A firefly's signal: a glow that swells and dies in pulses, never quite out (it is looking for another).
+    const ph = (clock * F.blink) % 1;
+    const pulse = 0.35 + 0.65 * Math.max(0, Math.sin(ph * Math.PI * 2)) ** 2;
+    const n = this.ffTrail.length;
+    for (let k = 0; k < n - 1; k++) {
+      const [x0, y0] = this.ffTrail[k] as [number, number];
+      const [x1, y1] = this.ffTrail[k + 1] as [number, number];
+      const t = (k + 1) / n;
+      front
+        .moveTo(x0, y0)
+        .lineTo(x1, y1)
+        .stroke({ color: F.glow, width: 1 + 2 * t, alpha: 0.35 * t * pulse });
+    }
+    // Its body: a dark speck with a lit tail, wings a blur.
+    const dir = n > 1 ? Math.sign(at.x - (this.ffTrail[n - 2]?.[0] ?? at.x)) || 1 : 1;
+    front.ellipse(at.x + dir * 3, at.y - 1, 3, 1.8).fill({ color: 0x1a1810, alpha: 0.9 });
+    const flap = Math.abs(Math.sin(clock * 38));
+    front.ellipse(at.x + dir * 2, at.y - 3 - flap * 2, 4, 1.4 + flap).fill({ color: 0xe8eadc, alpha: 0.35 });
+    front.circle(at.x - dir * 2, at.y, F.size * (0.8 + 0.3 * pulse)).fill({ color: F.core, alpha: 0.95 });
+    glow.add(at.x - dir * 2, at.y, 34 + 40 * pulse, F.glow, 0.55 * pulse + 0.2);
+    glow.add(at.x - dir * 2, at.y, 160, F.glow, 0.1 * pulse);
+  }
+
+  // --- The hub's roosts: freed moths settled, more each trap she frees.
+  private drawRoosts(
+    dt: number,
+    clock: number,
+    sim: SimView,
+    back: Graphics,
+    glow: GlowPool,
+    seen: (x: number, y: number, pad?: number) => boolean,
+  ): void {
+    const R = PREMISE.roost;
+    const lit = roostsLit(sim.scene as never, sim.save as never);
+    for (const [id, t] of this.roostNew) this.roostNew.set(id, t + dt);
+    for (const r of lit) {
+      if (!seen(r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w, r.h))) continue;
+      if (!this.roostNew.has(r.id)) this.roostNew.set(r.id, sim.frame < 5 ? 99 : 0);
+      const since = this.roostNew.get(r.id) ?? 99;
+      const n = Math.max(R.min, Math.min(R.max, Math.round((r.w * r.h) / R.per)));
+      for (let k = 0; k < n; k++) {
+        const hx = hash01(r.id, k);
+        const hy = hash01(r.id, k + 300);
+        const x = r.x + r.w * (0.05 + 0.9 * hx);
+        const y = r.y + r.h * (0.05 + 0.9 * hy);
+        // Settling in: each lands at its own time over the first 3 s.
+        const land = Math.min(1, Math.max(0, (since - hash01(r.id, k + 600) * 2.2) / 0.8));
+        if (land <= 0) continue;
+        const ox = (1 - land) * (hash01(r.id, k + 700) - 0.5) * 260;
+        const oy = (1 - land) * -180;
+        // At rest the wings open and close slowly, each in its own time.
+        const open = 0.5 + 0.5 * Math.sin(clock * (0.6 + hash01(r.id, k + 900)) + k * 1.9);
+        const w = R.size[0] + (R.size[1] - R.size[0]) * hash01(r.id, k + 800);
+        const wx = w * (0.55 + 0.6 * open) * (land < 1 ? 1.2 : 1);
+        const cx = x + ox;
+        const cy = y + oy;
+        back
+          .poly([cx, cy, cx - wx, cy - w * 0.5, cx - wx * 0.8, cy + w * 0.45])
+          .fill({ color: R.moth, alpha: 0.9 });
+        back
+          .poly([cx, cy, cx + wx, cy - w * 0.5, cx + wx * 0.8, cy + w * 0.45])
+          .fill({ color: R.moth, alpha: 0.9 });
+        back.ellipse(cx, cy, w * 0.18, w * 0.5).fill({ color: 0x3a3428, alpha: 0.8 });
+      }
+      // A few always in the air round it.
+      for (let k = 0; k < R.flying; k++) {
+        const a = clock * (0.7 + 0.3 * hash01(r.id, k + 50)) + k * 2.1;
+        const x = r.x + r.w / 2 + Math.cos(a) * (r.w * 0.6 + 30);
+        const y = r.y + r.h / 2 + Math.sin(a * 1.4) * (r.h * 0.6 + 20);
+        const flap = Math.abs(Math.sin(clock * 24 + k));
+        const w = 8;
+        back.poly([x, y, x - w * 1.1, y - w * (0.2 + flap), x + w * 1.1, y - w * (0.2 + flap)]).fill({
+          color: R.moth,
+          alpha: 0.6,
+        });
+      }
+      glow.add(
+        r.x + r.w / 2,
+        r.y + r.h / 2,
+        Math.max(r.w, r.h) * 0.7,
+        R.glow,
+        0.07 + 0.02 * Math.sin(clock + r.x),
+      );
+    }
   }
 
   // --- A map station's hung moth-stones, on a crook over the kin's lamp (or over the patch, with no lamp near).
