@@ -63,7 +63,9 @@ export class AudioEngine {
     // Held moments duck the bed; her hurt closes the mix quickly and opens it slower.
     aim(this.graph.duck.gain, L.duck, when, 0.12);
     aim(this.graph.muffle.frequency, L.muffleHz, when, L.muffleHz < this.muffled ? 0.02 : 0.15);
-    aim(this.graph.hush.gain, L.hush, when, L.hush < 0.5 ? 0.04 : 0.6);
+    // (The last hit's silence is shaped by the score frame by frame: a tail into it, a slow return.)
+    aim(this.graph.hush.gain, L.hush, when, 0.05);
+    aim(this.graph.scoreTone.frequency, L.scoreHz, when, 0.12);
     this.muffled = L.muffleHz;
     for (const v of this.voices) v.apply(L, when, AUDIO.layerTau);
     LAZY.forEach((z, i) => {

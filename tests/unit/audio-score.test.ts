@@ -161,8 +161,15 @@ describe('the score', () => {
         layers(snap(f, { room: 'cn-den', lit }), { x: 0, y: 0, zoom: 1 }, 0, ctx),
         snap(f, { ...fight(f), lit, ...(phase ? {} : {}) }),
       );
-    expect(L(3000 + AUDIO.score.lastRingFrames + 10, 1).hush).toBe(0);
-    expect(L(3000 + AUDIO.score.lastRingFrames + AUDIO.score.silenceFrames + 5, 1).hush).toBe(1);
+    // (Round 13: it tails into the silence over `tailFrames`, not a hard cut, and comes back over `returnFrames`.)
+    const S = AUDIO.score;
+    const hit = 3000 + S.lastRingFrames;
+    expect(L(hit - 1, 1).hush).toBe(1);
+    expect(L(hit + S.tailFrames / 4, 1).hush).toBeGreaterThan(0.2);
+    expect(L(hit + S.tailFrames / 4, 1).hush).toBeLessThan(1);
+    expect(L(hit + S.tailFrames + 5, 1).hush).toBe(0);
+    expect(L(hit + S.silenceFrames + S.returnFrames / 2, 1).hush).toBeLessThan(1);
+    expect(L(hit + S.silenceFrames + S.returnFrames + 5, 1).hush).toBe(1);
   });
 
   it("in the swing (P2) the mix is bright in the cage's light and muffled in its shadow", () => {
@@ -171,16 +178,103 @@ describe('the score', () => {
       [{ type: 'cageSwing', lure: 'g', x: 0, y: 0, period: 240, reach: 700 } as unknown as PlayEvent],
       snap(0),
     );
-    const at = (lit: number) => {
+    const at = (lit: number, seen = 0) => {
       const sn = snap(1, {
         room: 'cn-den',
         lit,
+        seen,
         fight: { kind: 'keeper', stage: 'fight', phase: 2, x: 0, y: 0 },
       });
-      return s.shape(layers(sn, { x: 0, y: 0, zoom: 1 }, 0, ctx), sn).muffleHz;
+      return s.shape(layers(sn, { x: 0, y: 0, zoom: 1 }, 0, ctx), sn);
     };
-    expect(at(1)).toBeGreaterThan(15000);
-    expect(at(0)).toBeLessThan(1500);
+    // Seen: bright and present, the score open; in the dark: the world and the score closed in.
+    expect(at(1, 1).muffleHz).toBeGreaterThan(15000);
+    expect(at(1, 1).scoreHz).toBeGreaterThan(15000);
+    expect(at(0).muffleHz).toBeLessThan(1500);
+    expect(at(0).scoreHz).toBeLessThan(2500);
+    // In its light but not yet seen: between.
+    expect(at(1).muffleHz).toBeGreaterThan(at(0).muffleHz);
+    expect(at(1).muffleHz).toBeLessThan(at(1, 1).muffleHz);
+  });
+
+  it("the Keeper's P2 is a three-swing phrase: her motif sinking A D E F | E Eb | D C#", () => {
+    const s = new Score({ ...ctx, scene: { ...scene, id: 'cn-den' } });
+    const fight = () => ({
+      room: 'cn-den',
+      fight: { kind: 'keeper', stage: 'fight' as const, phase: 2, x: 0, y: 0 },
+    });
+    const swing = {
+      type: 'cageSwing',
+      lure: 'g',
+      x: 0,
+      y: 0,
+      period: 252,
+      reach: 560,
+    } as unknown as PlayEvent;
+    const r = run(s, 0, 252 * 3 + 10, fight, { 0: [swing] });
+    const mel = notes(r.cues, 'strings')
+      .filter((c) => c.db > AUDIO.score.db.strings - 2)
+      .map((c) => Math.round(midi(c)));
+    expect(mel).toEqual([69, 74, 76, 77, 76, 75, 74, 73]);
+  });
+
+  it("the Keeper's sight: a stab on the score when its light finds her", () => {
+    const s = new Score({ ...ctx, scene: { ...scene, id: 'cn-den' } });
+    const fight = () => ({
+      room: 'cn-den',
+      fight: { kind: 'keeper', stage: 'fight' as const, phase: 2, x: 0, y: 0 },
+    });
+    const sight = (lit: boolean) =>
+      ({ type: 'keeperSight', id: 'k', x: 0, y: 0, lit }) as unknown as PlayEvent;
+    const r = run(s, 0, 400, fight, { 200: [sight(true)], 300: [sight(false)] });
+    expect(r.cues.some((c) => c.frame === 200 && c.sound === 'drum')).toBe(true);
+    expect(r.cues.some((c) => c.frame === 300)).toBe(false);
+  });
+
+  it('an ability found always gets its moment, even right after a glade', () => {
+    const s = new Score(ctx);
+    const rest = { type: 'patchRest', x: 0, y: 0 } as unknown as PlayEvent;
+    const grant = { type: 'gladeGrant', id: 'g', ability: 'glide', x: 0, y: 0 } as unknown as PlayEvent;
+    const r = run(s, 0, 60 * 30, () => ({}), { 10: [rest], [60 * 19]: [grant] });
+    expect(r.pieces[200]).toBe('glade');
+    expect(r.pieces[60 * 19 + 40]).toBe('grant');
+  });
+
+  it("the chase: the call's ostinato, each kindle a note up its sharp chord, and at the nest it stops dead", () => {
+    const s = new Score({ ...ctx, scene: { ...scene, id: 'cn-gap' } });
+    const ev = (phase: string) =>
+      ({ type: 'fireflyChase', id: 'f', phase, x: 0, y: 0 }) as unknown as PlayEvent;
+    const kindle = { type: 'fireflyKindle', id: 'f', lure: 'h', x: 0, y: 0 } as unknown as PlayEvent;
+    const r = run(s, 0, 900, () => ({ room: 'cn-gap', chase: { beat: 2, lead: 400 } }), {
+      10: [ev('start')],
+      200: [kindle],
+      300: [kindle],
+      600: [ev('nest')],
+    });
+    expect(r.pieces[100]).toBe('chase');
+    expect(r.pieces[700]).toBe('silence');
+    expect(r.cuts).toContain(600);
+    const k = r.cues.filter((c) => c.sound === 'celesta' && (c.frame === 200 || c.frame === 300));
+    // Out of tune: the lamps' 38 cents sharp of D5 and A5.
+    expect(k.map((c) => midi(c))).toEqual([expect.closeTo(74.38, 5), expect.closeTo(81.38, 5)]);
+    expect(r.cues.filter((c) => c.bus === 'score' && c.frame > 600)).toEqual([]);
+  });
+
+  it("the duet on the kin's sit: her motif and its answer, ending on her E over its D", () => {
+    const s = new Score({ ...ctx, scene: { ...scene, id: 'cn-crown' } });
+    const sit = { type: 'kinSit', id: 'kin', x: 0, y: 0 } as unknown as PlayEvent;
+    const r = run(s, 0, 60 * 30, () => ({ room: 'cn-crown' }), { 10: [sit] });
+    expect(r.pieces[100]).toBe('duet');
+    const harp = notes(r.cues, 'harp').map((c) => Math.round(midi(c)));
+    expect(harp.slice(0, 5)).toEqual(MOTIF);
+    expect(harp.at(-1)).toBe(nm('E5'));
+    const felt = notes(r.cues, 'felt').filter((c) => c.db > AUDIO.score.db.felt - 10);
+    expect(Math.round(midi(felt.at(-1) as Cue))).toBe(nm('D5'));
+    // The bed drops under it.
+    const s2 = new Score({ ...ctx, scene: { ...scene, id: 'cn-crown' } });
+    run(s2, 0, 400, () => ({ room: 'cn-crown' }), { 10: [sit] });
+    const sn = snap(400, { room: 'cn-crown' });
+    expect(s2.shape(layers(sn, { x: 0, y: 0, zoom: 1 }, 0, ctx), sn).duck).toBeLessThan(0.2);
   });
 
   it('the vista: the theme whole, the motif going home to D at last, then A over D, open', () => {

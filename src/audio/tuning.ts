@@ -116,8 +116,11 @@ export const BEDS: Record<string, RoomBed> = {
 export const bedOf = (room: string): RoomBed => BEDS[room] ?? (BEDS.default as RoomBed);
 
 export const AUDIO = {
-  /** Master gain (dB): play near -23 LUFS integrated, true peaks under -3 dBTP (the Canopy's clips, 2026-10-31). */
-  master: 8.5,
+  /**
+   * Master gain (dB) into the glue compressor and limiter (graph.ts). Round 13: a whole playthrough at -16 LUFS
+   * integrated (it was -24.4 at 8.5 with no glue: too quiet on a phone), true peaks under -1 dBTP.
+   */
+  master: 20,
   /** Bus volumes (dB): Tweakpane and `__game.audio.volume(bus, v)`. */
   bus: { world: 0, hero: 0, combat: 0, lantern: 0, creatures: 0, score: 0 },
   /** Seconds the scheduler works ahead of the context clock. */
@@ -397,9 +400,26 @@ export const AUDIO = {
     hall: 0.55,
     /** A glade's piece of the theme at most this often (s). */
     gladeGapS: 45,
-    /** After the boss's last hit: the ring held this many frames, then this many of total silence, then its breath. */
+    /**
+     * After the boss's last hit: the ring held this many frames, then this many of silence (the first `tailFrames`
+     * of it the den tailing away into it), then its breath, and the world back over `returnFrames`.
+     */
     lastRingFrames: 22,
     silenceFrames: 150,
+    tailFrames: 48,
+    returnFrames: 50,
+    /** The Keeper's P2 in its shadow: the world's low-pass and the score's (Hz); open (20 kHz) when it sees her. */
+    darkHz: 950,
+    darkScoreHz: 1700,
+    /** Its light finding her stabs the score at most once in this many frames. */
+    stabGap: 90,
+    /** The chase (moment 4): frames per beat; her harp joins when the firefly leads her by less than this (px). */
+    chaseBeat: 24,
+    chaseClosePx: 520,
+    /** The duet (moment 3): frames per beat (3/4), and how far the bed drops under it (dB). */
+    duetBeat: 42,
+    duetDuckDb: -22,
+    duetDb: -5,
   },
   /** The Canopy's world (route-canopy.ts): levels (dB peaks; layers RMS). */
   canopy: {
@@ -433,6 +453,13 @@ export const AUDIO = {
     /** Freed moths roosting: a soft flutter now and then within this many px. */
     roostDb: -40,
     roostPx: 700,
+    /** The trap being set (moment 5): each moth caught a flutter and a tick (peaks at the start; +4 / +5 dB by the
+     * end), and the far stream's wings while it fills (RMS dB). */
+    fillWingDb: -40,
+    fillTickDb: -36,
+    streamDb: -48,
+    /** The kin's wings opening as it sits by her (moment 3). */
+    kinWingDb: -30,
   },
   /** Held moments (the fling's aim, a story hold, a fade): the world bed ducks by up to this (dB). */
   duckDb: -10,

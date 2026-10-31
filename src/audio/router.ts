@@ -106,6 +106,14 @@ export interface AudioSnap {
   hatch?: { presses: number; done: boolean; frames: number };
   firefly?: { x: number; y: number };
   roosts?: Array<{ x: number; y: number }>;
+  /**
+   * Round 13. `seen`: the Keeper's P2 light has her (`boss.lit`: it sees her and comes). `chase`: the firefly's chase
+   * (`kit.firefly.beat` 1 alarm .. 5 call, how far it leads her along its path, px). `fill`: a cage taking its moths
+   * from the stream (`state.lures.fill`): where, how many of how many, its lamp kind.
+   */
+  seen?: number;
+  chase?: { beat: number; lead: number };
+  fill?: { x: number; y: number; n: number; of: number; kind: string };
 }
 
 /** The save flags the score and the Canopy's sounds read (snap.flags). */
@@ -117,6 +125,22 @@ export const SCORE_FLAGS = new Set([
   'cn-tunnel-beat2',
   'cn-warn-hung',
 ]);
+
+/** A cage filling from the stream (the Canopy r13, moment 5), if any. */
+function fillOf(state: GameState, scene: Scene): AudioSnap['fill'] {
+  const fill = state.lures.fill;
+  if (!fill) return undefined;
+  const lures = scene.lures ?? [];
+  for (let i = 0; i < lures.length; i++) {
+    const l = lures[i];
+    const n = fill[i] ?? -1;
+    if (!l?.fills || n < 0) continue;
+    const of = Math.max(1, Math.round(l.moths ?? 0));
+    if (n >= of) continue;
+    return { x: l.x, y: l.y, n, of, kind: l.kind };
+  }
+  return undefined;
+}
 
 /** The den's boss as the score reads it: the framework's stages, or an old burrback's own phases. */
 function fightSnap(state: GameState): AudioSnap['fight'] {
@@ -259,6 +283,12 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
         ? { x: state.kit.firefly.x, y: state.kit.firefly.y }
         : undefined,
     roosts: roostsLit(scene, state.save).map((r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })),
+    seen: state.boss?.lit ?? 0,
+    chase:
+      state.kit?.firefly && state.kit.firefly.pass >= 0 && state.kit.firefly.beat > 0
+        ? { beat: state.kit.firefly.beat, lead: Math.round(state.kit.firefly.d - state.kit.firefly.her) }
+        : undefined,
+    fill: fillOf(state, scene),
     creatures: state.enemies
       .filter((e) => !e.gone)
       .map((e) => ({
@@ -744,6 +774,8 @@ export interface Layers {
   muffleHz: number;
   /** Everything (1; 0 = the boss's last hit's total silence: score.ts). */
   hush: number;
+  /** The score's low-pass (Hz; 20000 open): the Keeper's P2 closes it while she is in the dark (score.ts). */
+  scoreHz: number;
   /** The Canopy's own layers (voices/canopy.ts): the earth's rumble, the swarm passing over the hatch (gain, pan,
    * band Hz), the valley's false lights far below, the nearest lampwing's and hawker's wings (gain, pan). */
   earth: number;
@@ -907,6 +939,7 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     duck: dbToGain(AUDIO.duckDb * clamp01(held)),
     muffleHz,
     hush: 1,
+    scoreHz: 20000,
     ...canopyLayers(snap, cam, clock, ctx),
   };
 }
