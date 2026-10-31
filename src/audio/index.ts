@@ -64,7 +64,9 @@ export class AudioDirector {
     params: URLSearchParams = new URLSearchParams(),
   ) {
     const url = params.get('audio');
-    this.muted = url !== null ? url === '0' : !(stored() ?? false);
+    // Sound on by default (Matt approved its taste, 2026-10-31); a remembered M wins, and the manual mode the tests and
+    // capture tools drive stays quiet unless the URL asks (?audio).
+    this.muted = url !== null ? url === '0' : !(stored() ?? !params.has('manual'));
     this.conductor = new Conductor({ scene: game.scene, seed: game.seed });
     game.afterStep.add((events) => this.onStep(events));
     // Unmuted (a remembered choice, or a review URL), the context still waits for the first gesture.

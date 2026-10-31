@@ -50,7 +50,7 @@ function abilitiesParam(v: string | null): string[] | null {
  * for the look tools), ?audio (sound on for review; ?audio=0 off).
  * Keys: arrows/WASD move, Z/Space/K jump, X/L dash, C/J/Ctrl attack, V/I/Shift Lamp, Down+Jump drops through branches,
  * Tab map, F2 collision overlay, G greybox labels, ` tuning panel, R restart (the game: back to the last
- * save), M sound on / off (muted by default: src/audio),
+ * save), M sound on / off (on by default, off in ?manual: src/audio),
  * Enter (or a double-click on the picture) full screen on / off.
  */
 async function boot(): Promise<void> {

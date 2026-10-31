@@ -204,7 +204,7 @@ test('?room and ?abilities choose the room and the kit; the panel lists the room
   expect(errors).toEqual([]);
 });
 
-test('sound is muted by default: no AudioContext until M, and the game plays the same either way', async ({
+test('sound is muted in manual mode: no AudioContext until M, and the game plays the same either way', async ({
   page,
 }) => {
   const errors = await boot(page);
@@ -233,5 +233,24 @@ test('sound is muted by default: no AudioContext until M, and the game plays the
   await page.keyboard.press('KeyM');
   expect(await page.evaluate(() => window.__game.audio?.state().muted)).toBe(true);
   expect(await page.locator('#sound-key').textContent()).toBe('M sound');
+  expect(errors).toEqual([]);
+});
+
+test('sound is on by default in play: the first key wakes it, M mutes and is remembered', async ({
+  page,
+}) => {
+  const errors = await boot(page, '?room=test-grove');
+  expect(await page.evaluate(() => window.__game.audio?.state())).toMatchObject({
+    muted: false,
+    context: 'none',
+  });
+  await page.keyboard.press('ArrowRight');
+  expect(await page.evaluate(() => window.__game.audio?.state().context)).not.toBe('none');
+  expect(await page.locator('#sound-key').textContent()).toBe('M mute');
+  await page.keyboard.press('KeyM');
+  expect(await page.evaluate(() => window.__game.audio?.state().muted)).toBe(true);
+  await page.reload();
+  await page.waitForFunction(() => document.body.dataset.ready === 'true');
+  expect(await page.evaluate(() => window.__game.audio?.state().muted)).toBe(true);
   expect(errors).toEqual([]);
 });
