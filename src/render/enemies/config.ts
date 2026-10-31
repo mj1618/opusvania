@@ -780,7 +780,15 @@ export const BOSS = {
    * It rolls over by `roll` (heavy, no hop), its legs kick and curl by `curl`, the split opens over `crack`, the breath
    * swells to `breath` and sags out over `out`; then it lies there (the carcass stays: no burst).
    */
-  death: { roll: 34, hop: 6, lift: 0.16, curl: [20, 70] as const, crack: [30, 60] as const, breath: 90, out: 150 },
+  death: {
+    roll: 34,
+    hop: 6,
+    lift: 0.16,
+    curl: [20, 70] as const,
+    crack: [30, 60] as const,
+    breath: 90,
+    out: 150,
+  },
 } as const;
 
 /**

@@ -974,11 +974,7 @@ export class BurrRig {
       bristleT += (1.2 - bristleT) * up;
     }
     const sharp =
-      sn >= 0 ||
-      (mode === 'alert' && !sliding) ||
-      (shying && react > 0.5) ||
-      wind ||
-      (curledNow && ck < 0.9);
+      sn >= 0 || (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind || (curledNow && ck < 0.9);
     this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
     this.crouch.zeta = sharp ? 0.55 : 0.8;
     this.crouch.step(crouchT, dt);

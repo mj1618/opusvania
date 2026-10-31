@@ -587,7 +587,8 @@ export class EnemyRenderer {
           rig.peekT = 0;
           rig.bristle.v += 40;
         }
-        if (rig) for (let k = 0; k < 6; k++) this.dust(rig.x + (k - 2.5) * 40, rig.y, (k - 2.5) * 50, 1.8, 1.5);
+        if (rig)
+          for (let k = 0; k < 6; k++) this.dust(rig.x + (k - 2.5) * 40, rig.y, (k - 2.5) * 50, 1.8, 1.5);
       } else if (ev.type === 'enemyTurn' && (ev.cause as string) === 'drop') {
         // It turns to hurry out from under her: a start and a look up.
         const i = this.byId.get(ev.id);
