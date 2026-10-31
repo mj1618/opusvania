@@ -99,7 +99,8 @@ export function arenaReturn(
   for (let x = far; dir < 0 ? x <= sx : x >= sx; x -= dir * 16) {
     const y = groundY(x, sy, scene, step);
     const near = (scene.thorns ?? []).some(
-      (r) => x - w / 2 - keep < r.x + r.w && r.x < x + w / 2 + keep && y - 2 * keep < r.y + r.h && r.y < y + keep,
+      (r) =>
+        x - w / 2 - keep < r.x + r.w && r.x < x + w / 2 + keep && y - 2 * keep < r.y + r.h && r.y < y + keep,
     );
     if (!near) return { x: Math.round(x), y };
   }
