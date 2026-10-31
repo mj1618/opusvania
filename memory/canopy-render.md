@@ -473,7 +473,7 @@ were the fastest way to judge the small things (the clip tool's 1280 frames hide
   a fungus-lit sill, dark roots hanging in front; near = `denColumns`, braided root columns roof to floor (3-4 strands
   winding round a bowing line, flared at both ends, roots splaying on the floor, one dim lit edge, no lit top). The
   earth lenses (alpha 0.24) and the mid plane's shell crescents and arching roots are gone (`den-planes.test.ts`).
-  Air mean 54-62 (look:check). **Free ledges in a den look hang from braided roots** (pf-mass.ts `paintBackMount`;
+  Air mean (look:check, 3 aspects): the den 60-65 (over the review's 45-60: the far rank is still bright), the tunnel 28-55. **Free ledges in a den look hang from braided roots** (pf-mass.ts `paintBackMount`;
   stands on the floor read as croquet hoops and trestles): three thick roots out of the roof's dark into the ledge, a
   ragged tail under it. **Shed shells** (`denShell`): an opaque dark dome of overlapping plates, half buried, a split,
   a dull warm rim (the pale violet domes read as glass).
