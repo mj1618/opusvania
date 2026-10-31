@@ -2084,6 +2084,13 @@ function larder(): Json {
   r.sealDeep();
   r.fill();
   r.burl(1280, 1536, 384, 192, 2);
+  // (r12, first-timer ft12: "trapped at the bottom of the larder": the way back up was a claw climb round the corner's
+  // overhang that only the explorer found. Three root ledges now, a jump each (~210-230 up), the last under the hole:
+  // from it a jump carries over the hole's lip onto the way in's floor.)
+  // (Root masses, not one-ways: the room spread counts one-ways and the larder is a quiet room.)
+  r.mass(640, 1328, 192, 48);
+  r.mass(832, 1112, 160, 48);
+  r.mass(768, 880, 160, 48);
   r.burrback('burr-larder', 1880, 1536, -1, 300, { fenced: true });
   r.ants('ant-l', 900, 1800, 1536, 2);
   r.hollow('drop-larder', 2150, 1536, 'moonShard');

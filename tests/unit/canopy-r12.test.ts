@@ -19,7 +19,7 @@ import { resetBoss } from '../../src/sim/boss/index';
 import { resetEnemies } from '../../src/sim/enemies';
 import type { SimEvent } from '../../src/sim/events';
 import { roostsLeft, roostsLit } from '../../src/sim/firefly';
-import { createState, newSave, placePlayer, step } from '../../src/sim/index';
+import { continueState, createState, newSave, placePlayer, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { gateShut, rearmArenas } from '../../src/sim/kit';
 import { flameAt } from '../../src/sim/lures';
@@ -389,6 +389,17 @@ describe("the first-timer's r11 findings (r12)", () => {
     const ev = run(s, L | J, 22);
     run(s, L, 30, ev);
     expect(s.player.x).toBeLessThan(1344);
+  });
+
+  it("a Continue at the Grove's save with its wave's lock saved finds the door open (ft12 was locked out)", () => {
+    const save = newSave(['wallJump'] as never);
+    save.patch = { room: 'cn-grove', id: 'p-grove' };
+    save.flags.push('cn-grove-wave');
+    save.visited.push('cn-grove');
+    const s = continueState(1, t, W, save, []);
+    const door = getRoom('cn-grove').gates?.find((g) => g.id === 'pit-door');
+    expect(s.room).toBe('cn-grove');
+    expect(door && gateShut(door, s.save.flags)).toBe(false);
   });
 
   it("the trunk's juvenile walks the top, away from both landings in the hall", () => {

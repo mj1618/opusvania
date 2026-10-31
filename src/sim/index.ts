@@ -88,6 +88,9 @@ export function continueState(
   if (!room) throw new Error(`continueState: no room "${at ? at.room : world.start}"`);
   const patch = at ? room.scene.patches?.find((p) => p.id === at.id) : undefined;
   const scratch: SimEvent[] = [];
+  // (An arena's lock-in saved while it stood opens again, as on any fresh entry: the Canopy r12 first-timer restarted
+  // to the Grove's save outside its shut door and was locked out.)
+  rearmArenas(room.scene, save);
   const state = createState(seed, t, room.scene, scratch, undefined, save);
   // Visited before this boot means no hatching: a Continue never starts in the cocoon.
   if (save.visited.length > 0) state.hatch = null;
