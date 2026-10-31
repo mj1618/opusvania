@@ -496,7 +496,8 @@ export interface GameDebugApi {
    * Sound (src/audio, memory/audio.md). Muted by default; `mute(false)` unmutes (in a real page the
    * context starts on the next gesture). `cues(n)`: the last cues routed, muted or not.
    * `record()` starts a tape of every step from now; `render(opts)` plays it offline into a WAV
-   * (base64) with level numbers (`npm run clip -- --audio`).
+   * (base64) with level numbers (`npm run clip -- --audio`); `from` / `to` render a window of a long tape
+   * (steps since `record()`; tools/playtest/route-video.ts --audio).
    */
   audio: {
     state(): ReturnType<AudioDirector['state']>;
@@ -620,7 +621,11 @@ export function installDebugApi(deps: {
       volume: (bus, db) => au.volume(bus, db),
       cues: (n) => au.cues(n),
       record: (on = true) => au.record(on),
-      render: (opts) => renderTape(au.recording(), game.scene, game.seed, opts),
+      render: (opts) =>
+        renderTape(au.recording(), game.scene, game.seed, {
+          sceneOf: (id) => game.world?.rooms[id]?.scene ?? (id === game.scene.id ? game.scene : undefined),
+          ...opts,
+        }),
     },
     step(n = 1) {
       game.mode = 'manual';
