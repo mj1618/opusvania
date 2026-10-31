@@ -181,6 +181,11 @@ export class SwarmRenderer {
       releaseX,
       { x: cross.x, y: cross.y },
       crossFromPolyline(marks.swarm, cross),
+      // (The Canopy r12: the river's tail leaves `hatchTail` frames after the hatch, with her or not.)
+      (() => {
+        const t = (room.marks?.stage as { open?: { hatchTail?: number } } | undefined)?.open?.hatchTail;
+        return t ? t / 60 : Number.POSITIVE_INFINITY;
+      })(),
     );
     const seed = (room.art?.seed ?? 1) * 7919;
     SWARM.layers.forEach((cfg, i) => {

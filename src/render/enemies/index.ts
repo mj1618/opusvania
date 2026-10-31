@@ -578,7 +578,17 @@ export class EnemyRenderer {
     for (let k = 0; k < evs.length; k++) {
       const ev = evs[k];
       if (!ev) continue;
-      if (ev.type === 'enemyTurn' && (ev.cause as string) === 'drop') {
+      if ((ev.type as string) === 'enemyFeed') {
+        // The Keeper's snap out of the dark (the Canopy r12 intro): it heaves up for the falling moth.
+        const id = (ev as unknown as { id: string }).id;
+        const i = this.byId.get(id);
+        const rig = i === undefined ? undefined : this.rigs[i];
+        if (rig) {
+          rig.peekT = 0;
+          rig.bristle.v += 40;
+        }
+        if (rig) for (let k = 0; k < 6; k++) this.dust(rig.x + (k - 2.5) * 40, rig.y, (k - 2.5) * 50, 1.8, 1.5);
+      } else if (ev.type === 'enemyTurn' && (ev.cause as string) === 'drop') {
         // It turns to hurry out from under her: a start and a look up.
         const i = this.byId.get(ev.id);
         if (i !== undefined && isBeetle(ev.kind)) this.rigs[i]?.startle();

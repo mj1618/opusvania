@@ -223,6 +223,11 @@ export class RiverBehaviour {
     private readonly crossAt: { x: number; y: number },
     /** The crossing's shape (room-built: `crossFromPolyline`); absent = the default. */
     private readonly crossShape?: Formation,
+    /**
+     * Seconds after the hatch the river's tail leaves whatever she does (the Canopy r12, `stage.open.hatchTail`:
+     * standing still, the sky empties; she was left behind). Absent = it waits for her at the promise.
+     */
+    private readonly tailAt = Number.POSITIVE_INFINITY,
   ) {}
 
   /** Seconds since the `hatch` event (the swarm starts `SWARM.delay` s later). */
@@ -275,8 +280,8 @@ export class RiverBehaviour {
       !released &&
       !this.hold &&
       // Never before the pass over the moon is over: a player who runs at once still sees it.
-      this.sinceHatch >= SWARM.pass.out &&
-      (i.heroX > this.releaseX || this.tx > this.releaseX + 400)
+      ((this.sinceHatch >= SWARM.pass.out && (i.heroX > this.releaseX || this.tx > this.releaseX + 400)) ||
+        this.sinceHatch >= this.tailAt)
     ) {
       this.releaseTau = this.tau;
       this.releaseFx = this.fx;

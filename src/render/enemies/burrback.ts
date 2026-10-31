@@ -280,6 +280,11 @@ export class BurrRig {
    * sim drops a dead body after 30 frames; the renderer keeps the carcass on its back (enemies/index.ts).
    */
   deathF = -1;
+  /**
+   * The intro's snap (`enemyFeed`, the Canopy r12): render seconds since it heaved up out of its sleep to take the
+   * falling moth (-1 = none). Its red eyes open for the snap and close again; it settles.
+   */
+  peekT = -1;
   /** Dust accumulator (render seconds). */
   dustT = 0;
   /** Sim frames into the current mode, fractional. */
@@ -569,8 +574,16 @@ export class BurrRig {
       // The sim's rule (`e.dozing`: an unseen burrback near her stops and sleeps where it stands).
       // (The old burrback's wake keeps its lids down for its first frames: it stirs before it looks.)
       const stirring = this.big && e.mode === 'wake' && this.mf < BOSS.wake.eyes;
-      const doze =
-        calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep' || stirring)
+      if (this.peekT >= 0) {
+        this.peekT += dt;
+        if (this.peekT > BOSS.snap.len) this.peekT = -1;
+      }
+      const snapping = this.peekT >= 0 && this.peekT < BOSS.snap.eyes;
+      // (Snapped awake: the lids fly open at once, and come down slowly after.)
+      if (snapping && this.peekT < 0.05) this.dozeK = 0;
+      const doze = snapping
+        ? 0
+        : calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep' || stirring)
           ? 1
           : 0;
       this.dozeK += (doze - this.dozeK) * approach(doze ? Z.in : Z.out, dt);
@@ -846,6 +859,21 @@ export class BurrRig {
       leanT = this.d * BOSS.slamLean;
       squashT = 0.12;
       bristleT = -0.4;
+    } else if ((mode as string) === 'eat' && this.big) {
+      // The Keeper eats (the Canopy r12): head right down over its food, front low, the jaws working (a fast nod),
+      // burrs flat: open to every cut.
+      crouchT = 0.85;
+      tuckT = 0;
+      reachT = 1;
+      leanT = this.d * (0.16 + 0.05 * Math.sin(clock * 17 + this.seed));
+      bristleT = -0.3;
+    } else if ((mode as string) === 'feed' && this.big) {
+      // Going for a fallen moth: low and fast, head out, leaning into it.
+      crouchT = 0.35;
+      tuckT = 0.1;
+      reachT = 0.7;
+      leanT = this.d * 0.1;
+      bristleT = 0.4;
     } else if (mode === 'wake' && this.big) {
       // The old burrback's wake (1.5 s on her drop, the Canopy r11): it stirs with its eyes shut, opens them (red), heaves
       // itself up off the floor shaking, its burrs rising, and turns to her (the sim turns it for the last half second).
@@ -934,8 +962,23 @@ export class BurrRig {
       reachT *= 1 - ck;
       bristleT += (Cu.burrs - bristleT) * ck;
     }
+    // The Keeper's snap (the intro's `enemyFeed`): out of the lie it heaves up and lunges its head out over the moth,
+    // burrs up, then sinks back down into the dark.
+    const sn = this.peekT >= 0 ? this.peekT : -1;
+    if (sn >= 0) {
+      const up = smoothstep(0, BOSS.snap.rise, sn) * (1 - smoothstep(BOSS.snap.eyes, BOSS.snap.len, sn));
+      crouchT += (0.05 - crouchT) * up;
+      tuckT += (0 - tuckT) * up;
+      reachT += (1 - reachT) * up;
+      leanT += (this.d * 0.18 - leanT) * up;
+      bristleT += (1.2 - bristleT) * up;
+    }
     const sharp =
-      (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind || (curledNow && ck < 0.9);
+      sn >= 0 ||
+      (mode === 'alert' && !sliding) ||
+      (shying && react > 0.5) ||
+      wind ||
+      (curledNow && ck < 0.9);
     this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
     this.crouch.zeta = sharp ? 0.55 : 0.8;
     this.crouch.step(crouchT, dt);
@@ -1428,7 +1471,8 @@ export function drawBurrback(
     const tk = Math.max(0, rig.deathF);
     const r = sat(tk / D.roll);
     roll = dir * Math.PI * (r * r * (3 - 2 * r));
-    hop = D.hop * Math.sin(Math.PI * r);
+    // (On its back the dome is its foot: lifted so the shell rests on the floor, not half in it.)
+    hop = D.hop * Math.sin(Math.PI * r) + D.lift * (B.dome + B.rim) * (r * r * (3 - 2 * r));
     curl = smoothstep(D.curl[0], D.curl[1], tk);
     // One breath out: it swells a little, then sags flatter than it lay, and is still.
     const br = smoothstep(D.crack[1], D.breath, tk) * (1 - smoothstep(D.breath, D.out, tk));
@@ -1456,7 +1500,7 @@ export function drawBurrback(
   const holdLine = rig.held ? Math.max(hitFlash, B.hit.holdLine) : hitFlash;
   toneDark = B.hit.dark * (rig.held ? 1 : 1 - smoothstep(0.2, 1.6, rel)) * (1 - 0.7 * hitFlash);
   toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(0.2, 1.4, rel) * (1 - smoothstep(2, 4.2, rel));
-  toneLight = crustOn && dead ? toneLight * (1 - crackK) : Math.max(toneLight, 0.5 * swell);
+  toneLight = crustOn && dead ? toneLight * 0.3 * (1 - crackK) : Math.max(toneLight, 0.5 * swell);
   nearDim = 1 - nearK * B.nearHero.dark * (1 - toneLight);
   tone(W.shellTop, C.shellTop);
   tone(W.shellLow, C.shellLow);

@@ -42,6 +42,16 @@ export class RoomFade {
     this.roomFadeIn = seconds;
   }
 
+  /**
+   * Seconds of plain black before the room's fade up (the Canopy r12 opening, `marks.stage.open.black`: the wings are
+   * heard before anything is seen). Only the boot / restart fade holds it.
+   */
+  setBlack(seconds: number): void {
+    this.black = seconds;
+  }
+  private black = 0;
+  private holdT = 0;
+
   /** From black, up over `seconds` (boot, a restart). Wins over the frame's placement events. */
   fadeIn(seconds = this.roomFadeIn): void {
     if (seconds > 0) this.queued = seconds;
@@ -92,8 +102,12 @@ export class RoomFade {
       this.k = 1;
       this.go(0, this.queued);
       this.queued = null;
+      this.holdT = this.black;
     }
-    if (this.dur > 0 && dt > 0) {
+    if (this.holdT > 0) {
+      this.holdT -= dt;
+      this.k = 1;
+    } else if (this.dur > 0 && dt > 0) {
       this.t += dt;
       this.k = this.from + (this.to - this.from) * ease(this.t / this.dur);
       if (this.t >= this.dur) this.dur = 0;

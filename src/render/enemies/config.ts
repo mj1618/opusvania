@@ -772,13 +772,15 @@ export const BOSS = {
     alpha: 0.82,
     shed: 14,
   },
+  /** The intro's snap (`enemyFeed`): seconds to heave up, eyes open until, and back down by `len`. */
+  snap: { rise: 0.18, eyes: 0.9, len: 1.8 },
   /**
    * The death roll (moment 6's ending beat: "rolls onto its back and doesn't get up; its shell cracks along the split;
    * a few moth wings drift off its plates; it breathes out once, long, and is still"): frames after the killing hold.
    * It rolls over by `roll` (heavy, no hop), its legs kick and curl by `curl`, the split opens over `crack`, the breath
    * swells to `breath` and sags out over `out`; then it lies there (the carcass stays: no burst).
    */
-  death: { roll: 34, hop: 6, curl: [20, 70] as const, crack: [30, 60] as const, breath: 90, out: 150 },
+  death: { roll: 34, hop: 6, lift: 0.16, curl: [20, 70] as const, crack: [30, 60] as const, breath: 90, out: 150 },
 } as const;
 
 /**

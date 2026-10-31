@@ -19,7 +19,7 @@
  *   wait      (the way out, 3/3) waits on the cliff facing the way she comes; when she reaches it, it goes on ahead
  *             of her along the top it stands on, walking, and stops at its end to wait again.
  */
-import type { Container } from 'pixi.js';
+import { type Container, Graphics } from 'pixi.js';
 import type { Room } from '../../scene/room';
 import { createPlayer } from '../../sim/player/player';
 import { tuning } from '../../sim/tuning';
@@ -54,7 +54,7 @@ export const TATTER = {
   splay: 0.9,
   droop: 25,
   /** Its try at the air: a hop off the branch (px) at the wings' peak, and how hard it lands back (it crumples). */
-  hop: 16,
+  hop: 44,
   /**
    * Its moth wings (tatter-wing.ts), angles of the span on screen for a moth facing west (rad, y down:
    * negative = raised): the good wing at rest and at the top of its try, the torn one drooping and how
@@ -101,6 +101,25 @@ export const TATTER = {
   keep: { px: 620, look: 0.9, jolt: 0.45 },
   /** The way out's beat: she joins it inside `join`; it walks `lead` px ahead of her at up to `speed` px/s. */
   wait: { join: 320, lead: 240, speed: 150, edge: 40 },
+  /**
+   * Its answer when the cage it wants is cut open (the Canopy r12, canopy-moments.md moment 2): it watches the cloud
+   * rise (`watch` s), takes three steps after it (`steps`, `stepPx` each, over `stepT` s from `stepAt`), opens its
+   * wings once (`wingsAt` .. +`wingsT`: the torn one shows), and one freed moth comes down and sits on its head
+   * (`mothAt` .. +`mothT`), opens its wings and goes; then it turns to her (`turnAt`).
+   */
+  answer: {
+    watch: 1.4,
+    stepAt: 1.5,
+    steps: 3,
+    stepPx: 30,
+    stepT: 1.5,
+    wingsAt: 3.1,
+    wingsT: 1.5,
+    mothAt: 3.4,
+    mothT: 2.2,
+    turnAt: 5.6,
+    moth: 0xf2ead6,
+  },
 } as const;
 
 type Beat = 'away' | 'keep' | 'wait' | null;
@@ -159,6 +178,14 @@ export class Tatter {
    * beat, a hop, it lands and looks at her): seconds since the beat (-1 = none). Set by `Cast`.
    */
   tryT = -1;
+  /** Its answer to the cage it wants going out (`TATTER.answer`): seconds since (-1 = none). Set by `Cast`. */
+  answerT = -1;
+  /** The cage (or anything) it wants, world px (null without a want). */
+  get wants(): readonly [number, number] | null {
+    return this.want;
+  }
+  /** The moth on its head (`answer`): drawn over it. */
+  readonly answerG = new Graphics({ label: 'tatter-answer' });
   /** Where it has climbed to (world px from its mark; `Cast` moves it along a `climb` path). */
   ox = 0;
   oy = 0;
@@ -388,6 +415,13 @@ export class Tatter {
       ly = lerp(ly, bl.y, bl.w);
       lw = lerp(lw, bl.firm, bl.w);
     }
+    // Its answer to the freed cage: up after the cloud, then at the moth on its head, then at her.
+    const al = this.answerLook(dt, her, headY);
+    if (al) {
+      lx = lerp(lx, al.x, al.w);
+      ly = lerp(ly, al.y, al.w);
+      lw = lerp(lw, al.firm, al.w);
+    }
     // Looking down, the antennae droop with the head (a lowered chin alone lifts them into rods).
     rig.antExtra = 34 * sink;
     rig.antCurlExtra = 0.12 * sink;
@@ -423,10 +457,23 @@ export class Tatter {
         : 0;
     // The try: two beats of the wings (the torn one barely lifts), a hop off the branch, and it fails.
     const beats = Math.sin(Math.PI * 2.4 * Math.max(0, t - P.full - T.tryWings[0])) ** 2;
+    const A = T.answer;
+    const aw =
+      this.answerT >= A.wingsAt && this.answerT < A.wingsAt + A.wingsT
+        ? Math.sin((Math.PI * (this.answerT - A.wingsAt)) / A.wingsT) ** 2
+        : 0;
     rig.tryWings = Math.max(
       tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171)),
       T.rest.wings * rk * Math.sin(Math.PI * Math.min(1, this.restT / 1.2)) ** 2,
+      aw,
     );
+    // (Up off its heels as it watches the cloud and opens its wings.)
+    if (this.answerT >= 0 && this.answerT < A.turnAt)
+      rig.strain = Math.max(
+        rig.strain,
+        0.6 * Math.min(1, this.answerT / 0.4) * (1 - 0.5 * sat((this.answerT - A.watch) / 1)),
+        0.8 * aw,
+      );
     const hu = (t - (P.full + T.tryWings[1] - 0.15)) / 0.5;
     this.hopY = hu > 0 && hu < 1 ? -T.hop * Math.sin(Math.PI * hu) ** 1.5 : 0;
     // ... and lands back hard: a crumple (lower, head down) that lets go slowly.
@@ -437,7 +484,8 @@ export class Tatter {
     // The torn wing hangs splayed and limp, twitching now and then; in the try it lifts only a little.
     this.sec.hold[this.torn] = TATTER.hold;
     this.sec.splay[this.torn] = TATTER.splay;
-    this.sec.droop[this.torn] = TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * tw);
+    this.sec.droop[this.torn] =
+      TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * Math.max(tw, aw));
     rig.update(dt, clock, this.me, []);
     const fresh = !this.started;
     if (fresh) this.sec.reset();
@@ -455,6 +503,7 @@ export class Tatter {
     v.eyeLit = rig.eyeLit * T.eyes * (1 + 0.25 * sw);
     this.started = true;
     this.draw(clock);
+    this.drawAnswerMoth(clock);
   }
 
   private stirK = 0;
@@ -499,6 +548,93 @@ export class Tatter {
       } else this.facing = her.cx < me.cx ? -1 : 1;
     }
     me.facing = this.facing as -1 | 1;
+  }
+
+  /**
+   * Its answer (`TATTER.answer`): steps its `me` after the cloud (three steps, a walk's bob from the rig), and says
+   * where it looks: up after the rising cloud, at the moth on its head (up and close), then at her.
+   */
+  private answerLook(
+    dt: number,
+    her: PlayerView | null,
+    headY: number,
+  ): { x: number; y: number; firm: number; w: number } | null {
+    if (this.answerT < 0) return null;
+    this.answerT += dt;
+    const A = TATTER.answer;
+    const t = this.answerT;
+    const want = this.want ?? [this.me.cx + this.facing * 200, this.me.feetY - 200];
+    const me = this.me as { -readonly [K in keyof PlayerView]: PlayerView[K] };
+    const dir = want[0] >= me.cx ? 1 : -1;
+    // Three steps after it: a walk at the step's pace, a stop between.
+    if (t >= A.stepAt && t < A.stepAt + A.stepT) {
+      const u = (t - A.stepAt) / A.stepT;
+      const ph = (u * A.steps) % 1;
+      const v = Math.sin(Math.PI * ph) ** 2;
+      const step = dir * ((A.steps * A.stepPx) / A.stepT) * dt * v * 2;
+      me.grounded = true;
+      me.cx += step;
+      me.x += step;
+      me.vx = step / Math.max(1e-3, dt * 60);
+      this.facing = dir;
+      me.facing = dir as -1 | 1;
+    }
+    if (t >= A.turnAt && her) {
+      this.facing = her.cx < me.cx ? -1 : 1;
+      me.facing = this.facing as -1 | 1;
+    }
+    // Where it looks: up after the cloud as it rises (to the moon's side), at the moth on it, then at her.
+    if (t < A.mothAt + 0.3) {
+      const u = Math.min(1, t / A.watch);
+      return { x: want[0] + dir * 120 * u, y: want[1] - 120 - 520 * u, firm: 1, w: Math.min(1, t / 0.3) };
+    }
+    if (t < A.mothAt + A.mothT) return { x: me.cx + this.facing * 30, y: headY - 80, firm: 0.9, w: 1 };
+    if (her && t < A.turnAt + 3)
+      return { x: her.cx, y: her.feetY - 50, firm: 1, w: 1 - sat((t - A.turnAt - 2) / 1) };
+    if (t > A.turnAt + 4) this.answerT = -2;
+    return null;
+  }
+
+  /** The freed moth that comes down onto its head, sits opening and closing its wings, and goes. */
+  private drawAnswerMoth(clock: number): void {
+    const g = this.answerG.clear();
+    const A = TATTER.answer;
+    const t = this.answerT - A.mothAt;
+    if (this.answerT < 0 || t < 0 || t > A.mothT) return;
+    const hx = this.me.cx + this.ox + this.facing * 3;
+    const hy = this.me.feetY + this.oy + this.hopY * TATTER.scale - 64 * TATTER.scale + 6;
+    // Down onto it (0.5 s), on it, then off up and away (0.6 s).
+    const inU = Math.min(1, t / 0.5);
+    const outU = Math.max(0, (t - (A.mothT - 0.6)) / 0.6);
+    const x =
+      hx +
+      (1 - inU) * -this.facing * 60 +
+      outU * this.facing * 90 +
+      Math.sin(clock * 9) * 3 * (1 - inU + outU);
+    const y = hy - (1 - inU * inU) * 90 - outU * outU * 140;
+    const sitting = inU >= 1 && outU <= 0;
+    // Sitting, its wings open slowly once and fold (one breath); flying, they beat.
+    const flap = sitting
+      ? 0.15 + 0.85 * Math.sin(Math.PI * Math.min(1, (t - 0.5) / 1.1)) ** 2
+      : Math.abs(Math.sin(clock * 20));
+    const w = 7;
+    const up = -w * (0.2 + 0.9 * flap);
+    for (const side of [-1, 1]) {
+      g.poly([
+        x,
+        y,
+        x + side * w * 1.1,
+        y + up,
+        x + side * w * 1.25,
+        y + up * 0.3 + 2,
+        x + side * w * 0.4,
+        y + 2,
+      ]).fill({
+        color: A.moth,
+        alpha: 0.95,
+      });
+    }
+    g.ellipse(x, y + 1, 1.6, 3.2).fill({ color: 0x5a5046, alpha: 0.95 });
   }
 
   /** Where the beat wants it to look (and how firmly, how much of the old look it takes over), or null. */
@@ -612,5 +748,6 @@ export class Tatter {
 
   destroy(): void {
     this.painter.mesh.destroy();
+    this.answerG.destroy();
   }
 }
