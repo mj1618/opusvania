@@ -573,7 +573,7 @@ export const defaultTuning = withVariants({
      * checkpoint (no light lost). A rock falls from rest at `rockSpeed` + `rockAccel` a frame, at most `rockMax` px/f;
      * its box is inset `rockInset` px for the touch. Her feet must be `frontGrace` px into the front to be caught.
      */
-    escape: { hitFrames: 40, rockSpeed: 4, rockAccel: 0.9, rockMax: 20, rockInset: 10, frontGrace: 8 },
+    escape: { hitFrames: 30, rockSpeed: 4, rockAccel: 0.9, rockMax: 20, rockInset: 10, frontGrace: 8 },
     /** The longest held story beat a trigger may ask for (`hold`), frames: journey.md's 3 s; the `finale` one, ~10 s. */
     storyHoldMax: 180,
     finaleHoldMax: 600,
@@ -1544,7 +1544,8 @@ export const defaultTuning = withVariants({
     // then `sweepEat` moths eaten, open the whole `sweepTell + sweepOpen` for `p3` open hits. `cageCuts` cuts on the
     // fallen cage free a third each (`cutShare`) of what is in it; then the bars hold until it is beaten.
     cageFallFrames: 24,
-    sweepFirst: 150,
+    // (r14, first-timer ft14den: "it came straight back with a sweep, no breather": 210 (was 150).)
+    sweepFirst: 210,
     sweepEvery: 330,
     sweepReachPx: 150,
     // (r13: 36 (was 30): its claws now hurt, so the tell is one a person sees coming while at the cage. r14, review r13

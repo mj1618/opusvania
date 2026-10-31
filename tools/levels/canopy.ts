@@ -3186,15 +3186,17 @@ const DEN_COLLAPSE = 'cn-den-collapse';
  * heap's top, and up through the roof's gate. Rocks fall on her line as she comes (grit first), and the den fills with
  * earth under her as she climbs (src/sim/escape.ts).
  */
+// (r14, first-timer ft14den: 160-192 px perches with 192-224 px gaps under a roof 256 over them (a full jump bonks it
+// and falls short) cost ~8 falls: 256 wide, 128 apart, 300+ under the roof.)
 const DEN_PERCHES: Array<[number, number, number]> = [
-  [896, 1088, 896],
-  [1216, 1408, 704],
-  [1600, 1760, 672],
-  [1984, 2144, 608],
-  [2368, 2528, 608],
-  [2752, 2880, 672],
+  [832, 1088, 896],
+  [1216, 1472, 768],
+  [1600, 1856, 752],
+  [1984, 2240, 736],
+  [2368, 2624, 736],
+  [2752, 2912, 736],
 ];
-const DEN_HEAP: [number, number, number] = [2944, 3264, 704];
+const DEN_HEAP: [number, number, number] = [2944, 3264, 768];
 /** The escape's flag (saved at the passage's end: over for good). */
 const DEN_ESCAPED = 'cn-den-escaped';
 

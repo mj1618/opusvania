@@ -341,8 +341,9 @@ export const CLIMBS: Climb[] = [
     room: 'cn-den',
     note: "the escape's last climb (r14): off the heap up the den's east wall, through the roof's gate, the earth rising",
     xs: [3008, 3072, 3136],
-    y: 704,
-    goal: { x0: 3264, x1: 3840, y: 384 },
+    y: 768,
+    // (On the passage's floor: her centre may stand on its lip, over the gate's hole.)
+    goal: { x0: 3220, x1: 3840, y: 384 },
     flags: ['cn-den-met', 'cn-den-fed', 'cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
     plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
   },
