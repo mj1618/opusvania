@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v14, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v15, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,89 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v15 (round 15, review canopy-r14.md): the contract
+Render and audio build against these; sim / content names only (render never writes them).
+- **The escape felt** (#1): the den's way out is **low and east, then the clifftop's chimney** (no more roof gate,
+  shaft or passage: the den <-> out link is at the arena's floor, world y 6,976). The collapse opens gate
+  **`den-breach`** (the arena's east wall at the floor, 3,264-3,392 x 1,088-1,344, `flag: cn-den-collapse`: solid
+  before, torn open after) onto a root corridor east to the way out's pocket; down its root shaft, along the low
+  passage, and up the chimney (out-1..3) under the front to the clifftop. Two escape blocks, one `sets`
+  (`cn-den-escaped`): the den's **`den-escape`** has no `end` and **`next: 'cn-out'`** (rocks on the floor run, no front);
+  the way out's **`out-escape`** (`after: cn-den-collapse`) ends on the clifftop (`escapeEnd` there: the vista with
+  it), its front waits for her at the chimney's foot (**`front.start`** box) and **follows her up the walls** (a wall
+  slide counts as standing), 240 under her (`lag`), creeping to 200 (`near`). **`Escape.breaks`**: bark that comes down
+  as it begins (`out-plug`: `barkBreak by: 'escape'`). The r14 perches `rubble-3..6` and `rubble-heap` are gone;
+  `rubble-1`, `rubble-2` stay (the caved den's way back up to the balcony). Camera zones **`escape`** in both rooms:
+  zoom 1.0, and the new CameraZone field **`below`** (px: the view's centre that far under her; the chimney: the front
+  in the frame's lower part). The vista trigger `out-vista` now covers the chimney's mouth (she bursts out there).
+- **The fair wave** (#2): event **`keeperWave {id, phase: tell | slam, x, y, x0, x1, frames, speed}`**: `tell` as it
+  rears for a slam with a wave (`frames` to the slam, `x0..x1` the wave's reach); `slam` when it lands: the two fronts
+  start out from `x` along the floor at `y` **`frames` later** (`keeper.waveDelay` 12: a crack opens at its feet
+  first), at `speed` px/f. Through the rear **`boss.tell` = 'slam'** with `tellFrames`, `tellX0..tellX1` (as the
+  sweep's). `EnemyState.waveWait` (frames to the fronts). In P3 it never rears for its rotation's slam within
+  `cageSlamPx` 300 of her while she is within `cageNearPx` 140 of the fallen cage (it rams). **Fixed**: the wave ran
+  only in the creature's phase step, so through the Keeper's `feed` / `eat` / `sweep` its fronts stood still on the
+  floor and ran on after from wherever they stopped (review r14's "the wave began at her feet"); it runs every step
+  now (`burrback.ts waveStep`).
+- **The rage beat's bridge** (#6): **`boss.bridge`** 1 from the beat until its first fast ram has run (2 while it
+  runs): that ram is told `keeper.bridgeTell` 1.3x and runs at `bridgeSpeed` 0.8x (`enemyWindup.frames` / `speed` say so).
+- **The chase breathes** (#5): the gap's hooks are **`Lure.hook: true`**: while a chase runs, within
+  `kit.firefly.catchPx` 140 of the next burning hook her flight eases (speed across to `catchRun` 6, fall `catchFall`
+  3.5, rise `catchRise` 7, gravity thinned): **`player.catchK`** 0..1 (render: thicken the air as with `lessonK`).
+  A press on a hook pulls her onto its flame while she aims (`hookPull` 0.4 a frame) and she is flung from the flame:
+  a press 0-20 frames after the hook comes into reach flies the same line (hook-4 left reach at 12 before). The chase's
+  **`chase.rests`** (`hook-3`, `hook-5`): there she drifts onto the hook and hangs until she presses (a breath; the
+  firefly flashes on ahead). Put back at a hook after a fall she **hangs** there too (`backFall` 0.12 px/f) until she
+  presses or `backHold` (180) runs out (`lures.ts chaseHoldNear`).
+- **The sit acted** (#3): `kinSit` as before (the start), then **`kinBeat {id, phase, frames, x, y, her}`** as each
+  beat begins, and **`state.kit.kinSit {phase, t, frames, x, y, her}`** (src/sim/quiet.ts `KIN_PHASES`): `come` 90
+  (it shuffles over), `look` 60 (both look at the moon), `open` 50 (its wings open to the moon), `try` 64 (the torn
+  wing lifts, trembling), `fail` 36 (it falls back half open), `turn` 120 (it turns its face to her and holds), `answer`
+  72 (Wing opens her wings once, mirrored: `her` 1 if she stood by it as the beat began), `fold` 48, `lean` 180, then
+  `stay` (open-ended; also if she walks `leavePx` 200 past the sit's `r` before the lean). Tuning `t.kit.kinSit`. On a
+  later visit (`cn-kin-sat` saved) it starts at `stay`.
+- **Quiet moments** (#10): **`state.kit.quiet {why: '' | column | sit | vista, t, vista}`** and **`quietMoment {why,
+  on, x, y}`** on each change: `column` (the great release until the roof gives: the boss's `collapse` under
+  `collapseRubble`), `sit` (`kinSit` until `stay`), `vista` (scene field **`quiet: [{id, flag, frames, air?}]`**: the
+  clifftop's `cn-out-vista` for 240 frames, and while she is in the air over the valley after it: the glide). Render
+  fades the HUD and holds the prompts while it is on.
+
+### v15 as built (round 15, the level/sim lane)
+- **The escape.** Way: the fallen cage, east along the floor over the fallen roof's mound (`rubble-mound`), through
+  the breach and the corridor, into the way out's pocket, down its root shaft (no front yet), along the low passage
+  to the chimney's foot, then out-1 / out-2 (the plug shaken down) / out-3 with the earth rising under her, onto the
+  clifftop (the vista; `escapeEnd` there). Rocks: told 40-64 frames where she goes next while she can wait on the
+  ground she has (the floor ahead, over rest E from the foot, over rest W from rest E); 12-16 frame ones fall behind
+  her (drama). Checkpoints: the den's floor and east end, the pocket, the foot, rest E, rest W. `escape-probe.ts`
+  (both rooms; `gapMin/Max` = the front under her where she stands or holds a wall): runner 10.3 s (the den 3.8 s);
+  careful lag 15: 13.9 s, + kick delay 10: 15.8 s, delay 16: 16.9 s; no hits; the front 180-280 px under her ~80% of
+  supported frames (300-440 for a few frames as she lands on a rest, while it catches up at 16 px/f). Live on the GPU
+  page (escape-live.ts, lag 15, careful): release -> roof gives 3.5 s, -> out of the den 7.1 s, -> the clifftop 13.9 s
+  (release -> clifftop 17.4 s), no hits. A bot climbs ~2x a person's speed (ft14den took 41 s where the bots took 11):
+  expect 25-35 s for a careful person. `climbs.ts esc-1..3` (the chimney with the escape live) pass at 0-16.
+  **Gotchas**: an escape's `front` follows a wall slide too (`p.mode === 'wallSlide'`), so a slip down a chimney face
+  meets it; `front.start` keeps it off while she drops down the shaft (her stand at the pocket was already high). The
+  escape-plan is per room (`act(s, scene)`): pass the scene of `s.room` (the crossing happens inside `step`).
+- **The Keeper.** The wave bug (see the contract) was the r14 review's "wave began at her feet". `keeper-react.ts
+  --wave` (it hops a front it sees `lag` frames late): 0 wave hits at lag 12 / 15 / 18 (`--learn` and `--jump=tell`);
+  naive (`--jump=start`) still never leaves P1 (44 hits in 5 min: it jumps fast rams too late, bridge or not). The
+  den plan (`keeper-run.ts`) 68-72 s, 0-1 hits; live (keeper-live, lag 15) won in 44 s, 0 hits.
+- **The chase.** `chase-probe.ts --beat=n` (press n frames after a hook is in reach): 0-20 all reach the nest (r14
+  broke at 10: hook-6; at 12: hook-4); hook-1 to hook-7 takes 2.0 s pressed at once, 3.6 s at 12 frames, 4.5 s at
+  20, plus whatever she hangs at the two rests (a person: a breath at each). From the alarm to the nest ~5.3 s at 12.
+  **Gotchas**: during a fling's launch (`lureThrow`) and a glide, `gravity()` returns early: anything that must act on
+  her flight goes after `pull()` (`catchHook`); her speed across is `vx + pullX` (cap the sum); a springboard she
+  flung off is still burning (`hp > 0`) the next frames, so the catch skips `kit.firefly.hook`.
+- **First-timer ft15den** (from the balcony, the pinned build without render's r15 pass, no claws or glide): read
+  the tells ("red spots, then it slams (floor glows red) or sweeps a red arc"; flipped it with a jump), but ~90 s and
+  ~15 cuts with "no damage shown" felt like a wall (the phase gates' glances need a visible answer: render), faded at
+  ~105 s; two hits it called unfair: **"hit as I dashed in after its slam, the floor still rippling"** (the delayed
+  front reads as the slam being over: render's crack must show the front is still coming) and the guard turn's claw
+  as it "turned its back". It saw the breach on the map before the collapse ("a way out behind black stones my cuts
+  didn't break"), walked out by the balcony instead (nothing says the fight is optional), and **stuck in the
+  tunnel's doorway**: a test boot of the den enters the tunnel inside the shut lid (`den-lid`, open only from
+  `cn-tunnel-clear`); a real game never has the den without it. It never reached the escape.
 
 ## v14 (round 14, review canopy-r13.md): the contract
 Render and audio build against these; sim / content names only (render never writes them).

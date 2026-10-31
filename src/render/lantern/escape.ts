@@ -27,9 +27,12 @@ import { moth } from './lamps';
 
 export const ESCAPE = {
   /** The tell: the crack's reach (px), grit per second at its end, the shadow's alpha at its end. */
-  tell: { crack: 90, grit: 0x9a8468, shadow: 0.6, shake: 4 },
-  /** A falling clod: its colours (body, lit rim), the trail's length (px). */
-  rock: { body: 0x120d09, mid: 0x2c2119, lit: 0x7a6248, trail: 120, roots: 3 },
+  tell: { crack: 110, grit: 0xc4b092, shadow: 0.6, shake: 5 },
+  /**
+   * A falling clod: its colours (body, mid, the moonlit rim: r15, near-black clods were lost on the darkened den), the
+   * trail's length (px), its size (x the rock's width, at least `min` px).
+   */
+  rock: { body: 0x1e1610, mid: 0x46372a, lit: 0xaab6c6, trail: 170, roots: 4, size: 1.1, min: 72 },
   /** The heap a landed rock leaves (x its width), the burst's grains. */
   land: { heap: 1.3, grains: 40 },
   /**
@@ -37,13 +40,25 @@ export const ESCAPE = {
    * bank's height over it (px) and alpha.
    */
   front: {
-    body: 0x080605,
-    edge: 0x2a2018,
-    lit: 0x6a5644,
-    churn: 34,
-    clods: 70,
-    bank: 260,
-    bankA: 0.34,
+    body: 0x070504,
+    edge: 0x231a13,
+    mid: 0x3a2d22,
+    /** Its rim, lit by the moonlit column over the den (cool, so it reads against the warm earth). */
+    lit: 0x9aa6b6,
+    /** How far a crown heaves (px), the lumps' spacing (px), torn roots' length (px). */
+    churn: 40,
+    /** The churning clods: one a slot `lump` px apart, radius (px). Torn roots on every fifth slot: length, width. */
+    lump: 30,
+    clodR: [10, 34] as const,
+    root: [90, 200] as const,
+    rootW: 18,
+    clods: 26,
+    /** Dust boiling off it: puffs a second per 1000 px, their radius (px, start / end), rise (px), alpha, colours. */
+    puffs: 10,
+    puffR: [24, 90] as const,
+    puffRise: 170,
+    puffA: 0.42,
+    dust: 0x221a13,
     /** Curtains of earth pouring off the roof into it (behind her): how many across the view, their width (px). */
     curtains: 7,
     curtainW: [40, 110] as const,
@@ -71,6 +86,8 @@ interface Grain {
   life: number;
   s: number;
   floor: number;
+  /** A chunk of earth (drawn as a clod), not a grain of grit. */
+  clod?: boolean;
 }
 
 interface EscapeView {
@@ -113,6 +130,9 @@ export class EscapeStage {
   private readonly heaps: Array<{ x: number; y: number; w: number; seed: number }> = [];
   private dustAcc = 0;
   private clodAcc = 0;
+  private puffAcc = 0;
+  private puffN = 0;
+  private readonly puffs: Array<{ x: number; y: number; t: number; life: number; s: number }> = [];
   private cloudT = 0;
   private readonly pathLen: number[] = [];
   private readonly light: PointLight = { x: 0, y: 0, radius: 0, color: ESCAPE.goal.color, intensity: 0 };
@@ -120,7 +140,9 @@ export class EscapeStage {
   static for(ctx: SceneContext, lights: LightRegistry): EscapeStage | null {
     if (LOOK.kit !== 'wood') return null;
     const E = (ctx.scene as { escape?: EscapeSpec }).escape;
-    return E?.path && E.path.length >= 2 ? new EscapeStage(ctx, lights, E) : null;
+    // (r15: the escape runs on into the clifftop's chimney, `next`: a block there may have no cloud's path.)
+    if (!E || !(E.path?.length >= 2 || E.front || E.rocks?.length)) return null;
+    return new EscapeStage(ctx, lights, { ...E, path: E.path ?? [], rocks: E.rocks ?? [] });
   }
 
   private constructor(
@@ -259,15 +281,18 @@ export class EscapeStage {
     for (const h of this.heaps) this.heap(b, h.x, h.y, h.w * ESCAPE.land.heap, h.seed);
     if (s && running) {
       this.drawRocks(b, f, clock, s);
-      this.drawFront(f, dt, clock, s, view);
+      this.drawFront(f, dt, clock, s, view, sim.scene.solids);
       this.roofDust(dt, s, view, sim);
-      this.drawCloud(f, dt, clock, sim);
+      if (this.E.path.length >= 2) this.drawCloud(f, dt, clock, sim);
     }
     this.drawGrains(f, dt);
     // The goal: moonlight where the path comes out, stronger as she nears it.
-    const end = this.E.path[this.E.path.length - 1] as [number, number];
+    const end = (this.E.path[this.E.path.length - 1] ?? [0, 0]) as [number, number];
     const p = sim.player;
-    const near = running ? Math.max(0, 1 - Math.hypot(p.cx - end[0], p.cy - end[1]) / 2600) : 0;
+    const near =
+      running && this.E.path.length >= 2
+        ? Math.max(0, 1 - Math.hypot(p.cx - end[0], p.cy - end[1]) / 2600)
+        : 0;
     this.light.x = end[0] - 200;
     this.light.y = end[1];
     this.light.radius = 900;
@@ -298,19 +323,28 @@ export class EscapeStage {
             y += Math.abs(Math.sin(a)) * (len / 16) + 2;
             pts.push(x, y);
           }
-          f.poly(pts, false).stroke({ color: 0x050302, width: 4, alpha: 0.9 });
-          f.poly(pts, false).stroke({ color: R.lit, width: 1.5, alpha: 0.7 * u });
+          f.poly(pts, false).stroke({ color: 0x050302, width: 5, alpha: 0.9 });
+          f.poly(pts, false).stroke({ color: T.grit, width: 2.2, alpha: 0.85 * u });
         }
         // The clod shaking loose out of the roof.
         const sh = T.shake * u * Math.sin(clock * 50 + i);
-        this.clod(f, r.x + sh, r.y0 + r.w * (0.35 * u), r.w, hash01(r.id, 40) * 1000, 0, u * 0.5);
+        const rw = Math.max(R.min, r.w * R.size);
+        this.clod(f, r.x + sh, r.y0 + rw * (0.35 * u), rw, hash01(r.id, 40) * 1000, 0, 0.35 + u * 0.65);
         // Grit trickling off it: more as it goes.
         const n = Math.floor(8 + 26 * u);
         for (let k = 0; k < n; k++) {
           const ph = (clock * (1.4 + hash01(r.id, k + 50)) + hash01(r.id, k + 60)) % 1;
           const gy = r.y0 + 10 + (r.y1 - r.y0) * ph * ph;
           const gx = r.x + (hash01(r.id, k + 70) - 0.5) * r.w * 0.7;
-          f.rect(gx, gy, 2.6, 8 + 16 * ph).fill({ color: T.grit, alpha: 0.85 * (1 - ph * 0.7) });
+          f.rect(gx, gy, 3.4, 10 + 18 * ph).fill({ color: T.grit, alpha: 0.9 * (1 - ph * 0.6) });
+        }
+        // Where it will hit: grit bouncing off the perch, a pale splash that marks the spot in the dark.
+        for (let k = 0; k < 10; k++) {
+          const ph = (clock * (2.2 + hash01(r.id, k + 80)) + hash01(r.id, k + 90)) % 1;
+          const gx =
+            r.x + (hash01(r.id, k + 100) - 0.5) * r.w * 0.8 + (hash01(r.id, k + 110) - 0.5) * 40 * ph;
+          const gy = r.y1 - 4 - Math.sin(Math.PI * ph) * (10 + 16 * hash01(r.id, k + 120));
+          f.rect(gx, gy, 2.6, 2.6).fill({ color: T.grit, alpha: 0.8 * u * (1 - ph * 0.5) });
         }
         // A puff of dust breathing out of the crack, and the line of the trickle lit faintly all the way down.
         this.glow.add(r.x, r.y0 + 16, r.w * 0.9, T.grit, 0.22 * u, 30);
@@ -324,12 +358,33 @@ export class EscapeStage {
       } else if (st === 2) {
         const y = s.rockY[i] ?? r.y0;
         // The trail of dust it drags down, then the clod.
-        for (let k = 1; k <= 5; k++)
-          f.ellipse(r.x, y - r.w - (k * R.trail) / 5, r.w * (0.4 - k * 0.05), R.trail / 6).fill({
-            color: ESCAPE.dust.color,
-            alpha: 0.28 * (1 - k / 6),
+        const rw = Math.max(R.min, r.w * R.size);
+        // The dust it drags: a tapering streak (a stack of puffs read as pancakes), and grit lines in it.
+        const ty = y - rw * 0.7;
+        f.poly([
+          r.x - rw * 0.42,
+          ty,
+          r.x + rw * 0.42,
+          ty,
+          r.x + rw * 0.12,
+          ty - R.trail,
+          r.x - rw * 0.12,
+          ty - R.trail,
+        ]).fill({ color: 0x8a7a66, alpha: 0.16 });
+        for (let k = 0; k < 7; k++) {
+          const gx = r.x + (hash01(r.id, k + 170) - 0.5) * rw * 0.7;
+          const l = R.trail * (0.4 + 0.6 * hash01(r.id, k + 180));
+          f.rect(gx, ty - l, 2.2, l).fill({ color: 0xa89880, alpha: 0.35 });
+        }
+        // (Grit and smaller clods falling with it.)
+        for (let k = 0; k < 6; k++) {
+          const gx = r.x + (hash01(r.id, k + 140) - 0.5) * rw * 1.2;
+          const gy = y - rw * (0.6 + 1.6 * hash01(r.id, k + 150));
+          f.ellipse(gx, gy, 4 + 5 * hash01(r.id, k + 160), 3 + 3 * hash01(r.id, k + 160)).fill({
+            color: R.mid,
           });
-        this.clod(f, r.x, y - r.w / 2, r.w, hash01(r.id, 40) * 1000, clock * 3, 1);
+        }
+        this.clod(f, r.x, y - rw / 2, rw, hash01(r.id, 40) * 1000, clock * 3, 1);
         b.ellipse(r.x, r.y1 - 2, r.w * 0.9, 14).fill({ color: 0x000000, alpha: T.shadow });
       }
     });
@@ -347,8 +402,15 @@ export class EscapeStage {
       pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.85);
     }
     g.poly(pts).fill({ color: R.body, alpha: k });
-    g.ellipse(x - w * 0.12, y - w * 0.18, w * 0.3, w * 0.12).fill({ color: R.mid, alpha: k });
-    g.ellipse(x - w * 0.18, y - w * 0.3, w * 0.18, w * 0.05).fill({ color: R.lit, alpha: 0.6 * k });
+    g.ellipse(x - w * 0.08, y - w * 0.12, w * 0.32, w * 0.16).fill({ color: R.mid, alpha: k });
+    // (Its top lit by the moonlight above: the rim that makes it read on the dark den.)
+    const rim: number[] = [];
+    for (let q = 0; q <= 6; q++) {
+      const a = -Math.PI * (0.92 - 0.75 * (q / 6));
+      rim.push(x + Math.cos(a) * w * 0.42, y + Math.sin(a) * w * 0.36);
+    }
+    g.poly(rim, false).stroke({ color: R.lit, width: 3, alpha: 0.75 * k, cap: 'round' });
+    g.ellipse(x - w * 0.16, y - w * 0.26, w * 0.16, w * 0.05).fill({ color: R.lit, alpha: 0.6 * k });
     // Broken roots out of it.
     for (let q = 0; q < R.roots; q++) {
       const a = rot + hash01('clr', seed + q) * Math.PI * 2;
@@ -379,48 +441,57 @@ export class EscapeStage {
     }
   }
 
-  /** The collapse front: a wall of falling earth and roots rising under her. */
+  /**
+   * The collapse front (r15, review r14 #1: "a brown fog band"): the earth itself coming up under her. A row of heaving
+   * lumps on fixed world slots (no band, no straight top), each a clod-studded crown with a cool rim lit from the
+   * moonlit column above; torn roots thrashing up out of it; chunks thrown off its top; dust boiling up in puffs that
+   * rise and spread (opaque earth-brown, never an additive glow). Near-black below its outer band (the silhouette rule).
+   */
   private drawFront(
     f: Graphics,
     dt: number,
     clock: number,
     s: EscapeView,
     view: { x0: number; x1: number; y0: number; y1: number },
+    solids: ReadonlyArray<{ x: number; y: number; w: number; h: number }>,
   ): void {
     const F = this.E.front;
     if (!F || s.frontOn !== 1) return;
     const C = ESCAPE.front;
     const top = s.front;
-    if (top > view.y1) return;
+    if (top - C.churn * 3 > view.y1) return;
     const x0 = Math.max(F.x0, view.x0);
     const x1 = Math.min(F.x1, view.x1);
     if (x1 <= x0) return;
-    const bottom = Math.max(view.y1, top + 200);
-    // The churning top: a noisy line moving with time.
-    const n = Math.max(8, Math.ceil((x1 - x0) / 28));
+    const bottom = Math.max(view.y1, top + 400);
+    // Its top heaves in long slow rolls (no straight line), and clods of earth churn up through it and sink back: world
+    // slots `lump` apart, each rising and tumbling on its own beat, so its silhouette is rubble, never a band of domes.
+    const base = (x: number): number =>
+      top +
+      C.churn *
+        (0.5 * Math.sin(x * 0.0071 + clock * 1.6) +
+          0.3 * Math.sin(x * 0.019 - clock * 2.7) +
+          0.2 * Math.sin(x * 0.047 + clock * 4.1));
+    const sp = C.lump;
+    const clods: Array<{ cx: number; cy: number; r: number; h: number; i: number; rot: number }> = [];
+    for (let i = Math.floor(x0 / sp) - 2; i <= Math.ceil(x1 / sp) + 2; i++) {
+      const h = hash01('fl', i);
+      const r = C.clodR[0] + (C.clodR[1] - C.clodR[0]) * hash01('flr', i) ** 1.6;
+      const ph = (clock * (0.32 + 0.45 * hash01('flp', i)) + h) % 1;
+      const cx = i * sp + (h - 0.5) * sp * 0.8 + Math.sin(clock * 0.9 + i) * 6;
+      const cy = base(cx) + r * 0.5 - r * 1.5 * Math.sin(Math.PI * ph);
+      clods.push({ cx, cy, r, h, i, rot: clock * (hash01('flt', i) - 0.5) * 2.4 + h * 6 });
+    }
+    const yAt = (x: number): number => {
+      let y = base(x);
+      for (const l of clods) {
+        const u = (x - l.cx) / l.r;
+        if (u > -1 && u < 1) y = Math.min(y, l.cy - l.r * 0.75 * Math.sqrt(1 - u * u));
+      }
+      return y;
+    };
     const edge: number[] = [];
-    for (let q = 0; q <= n; q++) {
-      const x = x0 + ((x1 - x0) * q) / n;
-      const y =
-        top +
-        Math.sin(x * 0.013 + clock * 5.3) * C.churn * 0.5 +
-        Math.sin(x * 0.031 - clock * 7.9) * C.churn * 0.35 +
-        (hash01('fe', Math.floor(x / 28) + Math.floor(clock * 12)) - 0.5) * C.churn * 0.5;
-      edge.push(x, y);
-    }
-    // The dust bank over it (behind the clods), then the body.
-    for (let q = 0; q <= n; q += 2) {
-      const x = edge[q * 2] as number;
-      const y = edge[q * 2 + 1] as number;
-      this.glow.add(
-        x,
-        y - C.bank * 0.35,
-        90,
-        0x6a5848,
-        C.bankA * (0.7 + 0.3 * Math.sin(clock * 3 + q)),
-        C.bank * 0.5,
-      );
-    }
+    for (let x = x0; x <= x1 + 12; x += 12) edge.push(Math.min(x, x1), base(Math.min(x, x1)));
     // Curtains of earth pouring off the roof down into it (behind her: she must stay readable in front of them).
     const b = this.back;
     for (let c = 0; c < C.curtains; c++) {
@@ -428,19 +499,21 @@ export class EscapeStage {
       const cx = view.x0 + (view.x1 - view.x0) * ((c + 0.2 + 0.6 * h) / C.curtains);
       if (cx < F.x0 || cx > F.x1) continue;
       const w = C.curtainW[0] + (C.curtainW[1] - C.curtainW[0]) * hash01('cuw', c);
-      const yTop = view.y0;
+      // (Only under a roof: from the underside over it in view. Open to the sky, a curtain read as a pale beam.)
+      let yTop = Number.NEGATIVE_INFINITY;
+      for (const q of solids)
+        if (cx >= q.x && cx <= q.x + q.w && q.y + q.h <= top && q.y + q.h > yTop) yTop = q.y + q.h;
+      if (yTop < view.y0 - 200 || top - yTop < 120) continue;
       const sway = Math.sin(clock * 1.3 + c) * 8;
       b.poly([cx - w / 2, yTop, cx + w / 2, yTop, cx + w * 0.62 + sway, top, cx - w * 0.62 + sway, top]).fill(
         {
           color: C.edge,
-          alpha: 0.55,
+          alpha: 0.5,
         },
       );
-      // Its edge catches the moonlight from above.
       b.moveTo(cx - w / 2, yTop)
         .lineTo(cx - w * 0.62 + sway, top)
-        .stroke({ color: C.lit, width: 2, alpha: 0.35 });
-      // Streaks falling in it.
+        .stroke({ color: C.lit, width: 2, alpha: 0.3 });
       for (let k = 0; k < 10; k++) {
         const ph = (clock * (0.9 + 0.5 * hash01('cs', c * 17 + k)) + hash01('cso', c * 13 + k)) % 1;
         const y = yTop + (top - yTop) * ph;
@@ -448,38 +521,140 @@ export class EscapeStage {
         b.rect(x, y, 3, 30 + 40 * ph).fill({ color: 0x3a2e24, alpha: 0.6 });
       }
     }
-    f.poly([...edge, x1, bottom, x0, bottom]).fill({ color: C.body, alpha: 0.98 });
-    // The lit lip: falling earth catching the moonlight from above.
-    f.poly(edge, false).stroke({ color: C.lit, width: 4, alpha: 0.7 });
-    // Inside, near its top: lumps of earth and roots tumbling down with it.
-    for (let q = 0; q < n; q += 1) {
-      const x = edge[q * 2] as number;
-      const y = edge[q * 2 + 1] as number;
-      const h = hash01('fl', q);
-      const yy = y + 20 + ((clock * (60 + 50 * h) + h * 200) % 160);
-      f.ellipse(x + 8, yy, 10 + 10 * h, 7 + 5 * h).fill({ color: C.edge, alpha: 0.7 * (1 - (yy - y) / 200) });
-      if (q % 4 === 0) {
-        const a = -Math.PI / 2 + (h - 0.5) * 1.6;
-        f.moveTo(x, y + 6)
-          .lineTo(x + Math.cos(a) * (30 + 40 * h), y + 6 + Math.sin(a) * (30 + 40 * h))
-          .stroke({ color: 0x1c140e, width: 5, cap: 'round' });
+    // Dust boiling up off it: puffs that rise, swell and thin (behind the body's crown, over the air).
+    this.puffAcc += dt * C.puffs * ((x1 - x0) / 1000);
+    while (this.puffAcc >= 1) {
+      this.puffAcc -= 1;
+      const x = x0 + (x1 - x0) * hash01('fp', this.puffN++);
+      this.puffs.push({
+        x,
+        y: yAt(x) + 10,
+        t: 0,
+        life: 1.3 + 0.9 * hash01('fpl', this.puffN),
+        s: hash01('fps', this.puffN),
+      });
+    }
+    for (let i = this.puffs.length - 1; i >= 0; i--) {
+      const p = this.puffs[i] as { x: number; y: number; t: number; life: number; s: number };
+      p.t += dt;
+      if (p.t > p.life) {
+        this.puffs.splice(i, 1);
+        continue;
+      }
+      const u = p.t / p.life;
+      const r = C.puffR[0] + (C.puffR[1] - C.puffR[0]) * Math.sqrt(u) * (0.6 + 0.6 * p.s);
+      const y = p.y - C.puffRise * u * (0.7 + 0.6 * p.s);
+      const a = C.puffA * Math.sin(Math.PI * Math.min(1, u * 1.4)) * (1 - u * 0.5);
+      for (let k = 0; k < 5; k++) {
+        const ang = p.s * 7 + k * 1.26 + Math.sin(clock * 1.5 + k) * 0.2;
+        const ox = Math.cos(ang) * r * 0.5;
+        const oy = Math.sin(ang) * r * 0.32 - (k % 2) * r * 0.2;
+        // (Concentric, so each lobe's edge is soft: one flat disc each read as bubbles.)
+        const lr = r * (0.42 + 0.22 * hash01('fpk', k + p.s * 50));
+        for (const kk of [1, 0.72, 0.45])
+          f.circle(p.x + ox, y + oy, lr * kk).fill({ color: C.dust, alpha: a * 0.36 });
+      }
+      // (Its crown catches the moonlight a little: dust, not fog.)
+    }
+    // The body: near-black under its crowns.
+    // (Ragged sides where the front ends in view: a straight side drew its box.)
+    const side = (x: number, dir: number): Array<[number, number]> => {
+      const pts: Array<[number, number]> = [];
+      const y0 = base(x);
+      for (let q = 1; q <= 8; q++) {
+        const y = y0 + ((bottom - y0) * q) / 8;
+        const out = (hash01('fsd', q + dir * 20) * 50 + Math.sin(clock * 2 + q) * 6) * (q < 3 ? q / 3 : 1);
+        pts.push([x + dir * out, y]);
+      }
+      return pts;
+    };
+    const right = F.x1 <= view.x1 ? side(x1, 1) : [[x1, bottom] as [number, number]];
+    const left = F.x0 >= view.x0 ? side(x0, -1).reverse() : [[x0, bottom] as [number, number]];
+    f.poly([...edge, ...right.flat(), ...left.flat()]).fill({ color: C.body, alpha: 0.99 });
+    // The churning clods: irregular lumps of earth, darker into the mass, a broken cool rim on the upper side of some.
+    for (const l of clods) {
+      if (l.cx + l.r < x0 - 20 || l.cx - l.r > x1 + 20) continue;
+      const pts: number[] = [];
+      for (let q = 0; q < 8; q++) {
+        const a = l.rot + (q / 8) * Math.PI * 2;
+        const rr = l.r * (0.72 + 0.4 * hash01('flq', l.i * 9 + q));
+        pts.push(l.cx + Math.cos(a) * rr, l.cy + Math.sin(a) * rr * 0.78);
+      }
+      const above = Math.max(0, Math.min(1, (base(l.cx) - l.cy) / (l.r * 1.2)));
+      f.poly(pts).fill({ color: mix(C.body, C.edge, 0.35 + 0.65 * above) });
+      f.ellipse(l.cx - l.r * 0.15, l.cy - l.r * 0.25, l.r * 0.45, l.r * 0.22).fill({
+        color: C.mid,
+        alpha: 0.55 * above,
+      });
+      if (above > 0.25 && hash01('flm', l.i) < 0.6) {
+        const rim: number[] = [];
+        const a0 = Math.PI * (1.1 + 0.25 * hash01('fla', l.i));
+        for (let q = 0; q <= 5; q++) {
+          const a = a0 + (q / 5) * Math.PI * (0.35 + 0.3 * hash01('flb', l.i));
+          rim.push(l.cx + Math.cos(a) * l.r * 0.85, l.cy + Math.sin(a) * l.r * 0.68);
+        }
+        f.poly(rim, false).stroke({ color: C.lit, width: 2.4, alpha: 0.7 * above, cap: 'round' });
       }
     }
-    // Clods thrown up off its top, falling back into it.
+    // Torn roots thrashing up out of it, every few slots: thick, forked, frayed at the tip.
+    for (const l of clods) {
+      if (((l.i % 5) + 5) % 5 !== 0 || l.cx < x0 - 40 || l.cx > x1 + 40) continue;
+      const len = C.root[0] + (C.root[1] - C.root[0]) * hash01('frl', l.i);
+      const lean = (hash01('fra', l.i) - 0.5) * 1.6 + Math.sin(clock * (2.6 + 2 * l.h) + l.i) * 0.28;
+      const bx = l.cx + l.r * 0.6;
+      const by = base(bx) + 18;
+      const L: number[] = [];
+      const R: number[] = [];
+      let fx = 0;
+      let fy = 0;
+      for (let q = 0; q <= 8; q++) {
+        const v = q / 8;
+        const a = -Math.PI / 2 + lean * v + Math.sin(v * 3.4 + l.i) * 0.3;
+        const x = bx + Math.cos(a) * len * v + Math.sin(clock * 4 + v * 3 + l.i) * 7 * v;
+        const y = by + Math.sin(a) * len * v;
+        const w = C.rootW * (1 - v * 0.82);
+        L.push(x - w / 2, y);
+        R.unshift(x + w / 2, y);
+        if (q === 5) {
+          fx = x;
+          fy = y;
+        }
+      }
+      f.poly([...L, ...R]).fill({ color: 0x170f0a });
+      f.poly(L, false).stroke({ color: C.lit, width: 2.2, alpha: 0.28 });
+      // (A fork off it.)
+      const fa = -Math.PI / 2 + lean + (hash01('frf', l.i) < 0.5 ? -0.8 : 0.8);
+      f.moveTo(fx, fy)
+        .quadraticCurveTo(
+          fx + Math.cos(fa) * len * 0.2,
+          fy + Math.sin(fa) * len * 0.25,
+          fx + Math.cos(fa) * len * 0.38,
+          fy + Math.sin(fa) * len * 0.3,
+        )
+        .stroke({ color: 0x170f0a, width: 4, cap: 'round' });
+      const tx = L[L.length - 2] as number;
+      const ty = L[L.length - 1] as number;
+      for (let k = 0; k < 4; k++)
+        f.moveTo(tx + 2, ty)
+          .lineTo(tx + 2 + (k - 1.5) * 8 + Math.sin(clock * 6 + k) * 3, ty - 8 - 5 * k)
+          .stroke({ color: 0x2a1e14, width: 1.6, cap: 'round' });
+    }
+    // Chunks breaking off its top: thrown up, falling back into it.
     this.clodAcc += dt * C.clods * ((x1 - x0) / 1000);
     while (this.clodAcc >= 1) {
       this.clodAcc -= 1;
-      const h = hash01('fc', this.grains.length + Math.floor(clock * 61));
-      const x = x0 + (x1 - x0) * h;
+      const n = this.grains.length + Math.floor(clock * 61);
+      const x = x0 + (x1 - x0) * hash01('fc', n);
       this.grains.push({
         x,
-        y: top - 4,
-        vx: (hash01('fcx', Math.floor(clock * 97)) - 0.5) * 120,
-        vy: -160 - 220 * hash01('fcy', Math.floor(clock * 53) + this.grains.length),
+        y: yAt(x) - 4,
+        vx: (hash01('fcx', n) - 0.5) * 160,
+        vy: -200 - 260 * hash01('fcy', n),
         t: 0,
-        life: 1.4,
-        s: 3 + 6 * hash01('fcs', this.grains.length),
-        floor: top + 10,
+        life: 1.6,
+        s: 5 + 11 * hash01('fcs', n),
+        floor: top + 40,
+        clod: true,
       });
     }
   }
@@ -565,6 +740,20 @@ export class EscapeStage {
         continue;
       }
       const a = 0.8 * (1 - q.t / q.life);
+      if (q.clod) {
+        const pts: number[] = [];
+        for (let k = 0; k < 6; k++) {
+          const ang = q.t * 5 * (q.vx > 0 ? 1 : -1) + (k / 6) * Math.PI * 2;
+          const rr = q.s * (0.65 + 0.45 * hash01('gcl', k + Math.floor(q.s * 10)));
+          pts.push(q.x + Math.cos(ang) * rr, q.y + Math.sin(ang) * rr * 0.8);
+        }
+        f.poly(pts).fill({ color: ESCAPE.front.edge, alpha: Math.min(1, a * 1.3) });
+        f.ellipse(q.x - q.s * 0.25, q.y - q.s * 0.35, q.s * 0.45, q.s * 0.2).fill({
+          color: ESCAPE.front.lit,
+          alpha: 0.6 * a,
+        });
+        continue;
+      }
       f.rect(q.x - q.s / 2, q.y - q.s / 2, q.s, q.s * (1 + Math.min(3, q.vy / 300))).fill({
         color: ESCAPE.dust.color,
         alpha: a,

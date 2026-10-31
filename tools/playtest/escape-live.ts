@@ -2,7 +2,7 @@
  * The Keeper's end and the den's escape played live (the Canopy r14): in a realtime page (GPU), after the Keeper is
  * down (keeper-live.ts plays the fight), she walks to the fallen cage and cuts it open, watches the column, and when
  * the roof gives runs the escape with real keys (tools/playtest/escape-plan.ts, careful: she waits on a rock's grit,
- * seen `lag` frames late) to the clifftop. Reports the frames from the release to the escape's end and to the
+ * seen `lag` frames late) out through the breach and up the way out's chimney to the clifftop (r15). Reports the frames from the release to the escape's end and to the
  * clifftop, and the hits.
  * Node driver (dev server up): `npx tsx tools/playtest/escape-live.ts --url http://localhost:5212 [--lag 15] [--out dir]`.
  */
@@ -83,7 +83,8 @@ export function playEscapeLive(lag = 15, seconds = 90): Promise<LiveEscape> {
         last = st.frame;
       }
       if (st.room === 'cn-out' && r.out < 0) r.out = st.frame;
-      if (r.out >= 0 || st.frame - start > seconds * 60) {
+      // (r15: the escape runs on in the way out, up its chimney, to its end on the clifftop.)
+      if (r.escaped >= 0 || st.frame - start > seconds * 60) {
         press(0);
         resolve(r);
         return;
@@ -98,8 +99,8 @@ export function playEscapeLive(lag = 15, seconds = 90): Promise<LiveEscape> {
         m = Math.abs(dx) > 40 ? (dx < 0 ? 1 : 2) : prev & 64 ? 0 : 64 | 4;
       } else if (!st.save.flags.includes('cn-den-collapse')) m = 0;
       else {
-        plan ??= new EscapePlan(g.scene() as Scene, { careful: true, lag });
-        m = plan.act(st);
+        plan ??= new EscapePlan({ careful: true, lag });
+        m = plan.act(st, g.scene() as Scene);
       }
       prev = m;
       press(m);
@@ -172,7 +173,7 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('escape-live.t
     )) as LiveEscape;
     const d = (a: number, b: number) => (a >= 0 && b >= 0 ? `${sec(b - a)} s` : '-');
     console.log(
-      `Escape live (lag ${lag}): release -> roof gives ${d(e.released, e.collapse)}, roof -> out of the den ${d(e.collapse, e.escaped)}, release -> clifftop ${d(e.released, e.out)}; checkpoints ${e.checkpoints}; hits ${e.hits.join(', ') || 'none'}`,
+      `Escape live (lag ${lag}): release -> roof gives ${d(e.released, e.collapse)}, roof -> out of the den ${d(e.collapse, e.out)}, roof -> the clifftop ${d(e.collapse, e.escaped)}, release -> clifftop ${d(e.released, e.escaped)}; checkpoints ${e.checkpoints}; hits ${e.hits.join(', ') || 'none'}`,
     );
   }
   if (timer) clearInterval(timer);

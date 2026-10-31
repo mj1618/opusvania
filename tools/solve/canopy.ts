@@ -437,41 +437,42 @@ const CLAIMS: Claim[] = [
     kit: [C, G],
     flags: ['cn-den-down'],
     reach: ['place:shelf-w'],
-    not: ['tunnel', 'out', 'place:roof'],
+    not: ['tunnel', 'out', 'place:breach'],
   },
+  // (r15: the way out is the breach the collapse tears in the east wall's foot, not the cage's release alone.)
   {
     room: 'cn-den',
     from: [1700, 1344],
     kit: [C, G],
     flags: ['cn-den-down', 'cn-den-freed'],
-    reach: ['out', 'place:roof'],
-    not: ['tunnel'],
+    reach: ['place:shelf-w'],
+    not: ['tunnel', 'out', 'place:breach'],
   },
-  // (r14, the full escape: the roof gave; the heap shuts the floor off the east wall, and the torn roots are the way:
-  // up the west side, east under the roof, the claws up the wall over the heap, out. Live (the rocks and the front
-  // on) from the fallen cage, and as the caved den's way from the balcony once the escape is over; not without claws.)
+  // (r14, the full escape; r15, review r14 #1: the roof gave, the breach is open: east along the floor over the mound,
+  // through it and along the corridor into the way out (its chimney is the escape's second leg). Live (the rocks on)
+  // from the fallen cage; the two torn roots up the west side reach the balcony's shoulder: the caved den is a way both
+  // ways.)
   {
     room: 'cn-den',
     from: [1856, 1344],
     kit: [C, G],
     flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
-    // (The torn roots reach the balcony's shoulder too: the caved den is a way both ways.)
-    reach: ['out', 'place:roof', 'tunnel'],
+    reach: ['out', 'place:breach', 'tunnel'],
   },
   {
     room: 'cn-den',
     from: [300, 320],
     kit: [C],
     flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse', 'cn-den-escaped'],
-    reach: ['out', 'place:roof'],
+    reach: ['out', 'place:breach'],
   },
+  // (r15: the breach is a walk from the floor; with no claws the way out's chimney is the lock, not the den.)
   {
     room: 'cn-den',
     from: [300, 320],
     kit: [],
     flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse', 'cn-den-escaped'],
-    reach: ['place:floor'],
-    not: ['out', 'place:roof'],
+    reach: ['place:floor', 'out', 'tunnel'],
   },
   {
     room: 'cn-out',
@@ -511,8 +512,17 @@ const CLAIMS: Claim[] = [
     opened: ['cn-out:out-plug'],
     reach: ['cn-out:p-out', 'den'],
   },
-  // (r11: in from the den's roof, the vista's trigger on the clifftop, the glide to the door; down the chimney to the
-  // ledge's way and back.)
+  // (r15, review r14 #1: the escape's second leg, live (the rocks and the front on, the plug shaken down): in from the
+  // den's corridor, down the shaft, up the chimney under the rising earth, out onto the clifftop: the vista.)
+  {
+    room: 'cn-out',
+    from: [300, 1344],
+    kit: [C, G],
+    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
+    reach: ['cn-out-vista', 'cn-den-escaped', 'cn-out:p-out', 'place:top'],
+    max: 9000,
+  },
+  // (r11: the vista's trigger on the clifftop, the glide to the door; down the chimney to the ledge's way and back.)
   {
     room: 'cn-out',
     from: [200, 384],

@@ -563,12 +563,49 @@ export const defaultTuning = withVariants({
       // --- The Canopy r14 (review r13 #5): a fall in the chase puts her back at the last hook she flung off, drifting in
       // its reach for `backHold` frames. Her progress counts only while she is not falling (vy over `fallVy`, out of a
       // fling's aim): a fall past the line never sends it on to the nest.
-      backHold: 150,
+      backHold: 180,
       fallVy: 2,
       // (A landing within `nestPx` of the path's end is the nest, not a fall.)
       nestPx: 160,
       // (Her nearest point at the firefly's own counts only within `edgePx` of the path there.)
       edgePx: 240,
+      // (r15, review r14 #5: put back at a hook she hangs there, falling at most `backFall` px/f, until she presses or
+      // `backHold` runs out: at 1.25 she drifted out of its reach in ~1 s.)
+      backFall: 0.12,
+      // (r15, review r14 #5: a chase's hooks (`Lure.hook`): within `catchPx` of the next one burning, her flight eases
+      // over `catchEase` frames to at most `catchRun` across, `catchFall` down and `catchRise` up, gravity thinned by `catchFloat` (a beat to press: at a
+      // fling's 15 px/f a hook was in reach ~12 frames, and a 12-frame-late press missed hook-4); a press on one pulls
+      // her `hookPull` of the way to its flame a frame while she aims, and she is flung from the flame.)
+      catchPx: 140,
+      catchEase: 5,
+      catchRun: 6,
+      catchFall: 3.5,
+      catchRise: 7,
+      catchFloat: 0.6,
+      hookPull: 0.4,
+      // (r15: the chase's `rests` (two hooks): there her flight eases to `restRun` / `restFall` / `restRise`, gravity
+      // gone: she hangs at the hook, a breath before the next stretch, until she presses.)
+      restRun: 1.5,
+      restFall: 0.15,
+      restRise: 3,
+    },
+    /**
+     * The Canopy r15 (review r14 #3, src/sim/quiet.ts): the kin's sit, beat by beat after `kinSit` (frames each). She
+     * walked off more than `leavePx` past the sit's `r` before the lean: it stays. Its answer is hers if she stands
+     * within `answerPx` of the sit's spot as the beat begins.
+     */
+    kinSit: {
+      come: 90,
+      look: 60,
+      open: 50,
+      try: 64,
+      fail: 36,
+      turn: 120,
+      answer: 72,
+      fold: 48,
+      lean: 180,
+      leavePx: 200,
+      answerPx: 260,
     },
     /**
      * The Canopy r14, moment 7: the full escape (src/sim/escape.ts). A hit holds her `hitFrames`, then back to the last
@@ -1512,7 +1549,7 @@ export const defaultTuning = withVariants({
     /** P2: a moth leaves the swinging cage thrown on along its swing: it lands this share of the swing's offset further out. */
     dropFling: 0.5,
     /** She catches it with her box grown by this (it clings to her). */
-    catchPx: 36,
+    catchPx: 140,
     /** It goes for a moth at this (px/f), stops this close (its centre to the moth's x), and eats it once it is down this low (px over its top). */
     feedSpeed: 4.2,
     feedStopPx: 40,
@@ -1592,6 +1629,15 @@ export const defaultTuning = withVariants({
     // `rollFrames` (eased out), so the cage is in sight and free to cut.
     rollClearPx: 450,
     rollFrames: 70,
+    // --- r15, review r14 #2: the slam's floor wave starts `waveDelay` frames after the slam (`keeperWave`), and in P3
+    // it rears only `cageSlamPx` or more from her while she is within `cageNearPx` of the fallen cage (else it rams).
+    waveDelay: 12,
+    cageSlamPx: 300,
+    cageNearPx: 140,
+    // --- r15, review r14 #6: the first fast ram after the rage beat is a bridge: told `bridgeTell` x as long, run at
+    // `bridgeSpeed` x (`boss.bridge` 1 until it has rammed).
+    bridgeTell: 1.3,
+    bridgeSpeed: 0.8,
   },
   bossRush: {
     /** The final blow: she and the boss hold this many frames before the defeat plays on. */

@@ -576,8 +576,9 @@ function rage(c: BossCtx, e: EnemyState): void {
     return;
   }
   if (e.mode !== 'rear') {
-    // (Struck out of it: angry all the same.)
+    // (Struck out of it: angry all the same, and its first fast ram the bridge.)
     angry(c, e);
+    if (b.phase <= 1) b.bridge = 1;
     return;
   }
   e.vx = 0;
@@ -585,6 +586,8 @@ function rage(c: BossCtx, e: EnemyState): void {
   const n = frames(K.rageAfter, 1);
   setMode(e, 'pause', n);
   e.strikeCd = Math.max(e.strikeCd, n);
+  // (r15, review r14 #6: its first fast ram is a bridge, told longer and slower.)
+  b.bridge = 1;
   c.events.push({
     type: 'keeperRage',
     id: e.id,
@@ -605,6 +608,42 @@ function angry(c: BossCtx, e: EnemyState): void {
   b.tellFrames = 0;
   e.rams = Math.max(e.rams, Math.round(B.firstTellRams));
   e.slams = e.rams;
+}
+
+/**
+ * r15 (review r14 #2, #6): the rear before a slam with a wave is told as such (`tell` 'slam', `tellX0..X1` the wave's
+ * reach, `keeperWave tell`), and the bridge ends once its ram has run.
+ */
+function slamTell(c: BossCtx, e: EnemyState): void {
+  const b = c.boss;
+  if (b.bridge === 1 && e.mode === 'charge') b.bridge = 2;
+  else if (b.bridge === 2 && e.mode !== 'charge') b.bridge = 0;
+  if (b.phase >= 2) b.bridge = 0;
+  if (b.tell === 'rage' || b.tell === 'sweep') return;
+  if (e.mode === 'rear') {
+    const reach = c.t.oldBurrback.slamReachPx;
+    const cx = Math.round(e.x + e.w / 2);
+    if (b.tell !== 'slam') {
+      b.tell = 'slam';
+      b.tellX0 = cx - reach;
+      b.tellX1 = cx + reach;
+      c.events.push({
+        type: 'keeperWave',
+        id: e.id,
+        phase: 'tell',
+        x: cx,
+        y: Math.round(e.fromY),
+        x0: b.tellX0,
+        x1: b.tellX1,
+        frames: Math.max(1, e.timer),
+        speed: c.t.oldBurrback.slamWaveSpeed,
+      });
+    }
+    b.tellFrames = Math.max(0, e.timer);
+  } else if (b.tell === 'slam') {
+    b.tell = '';
+    b.tellFrames = 0;
+  }
 }
 
 /** The death roll (r14, review r13 #1): the carcass rolls clear of the fallen cage, so the cage is in sight. */
@@ -801,6 +840,7 @@ export const keeperRules: BossRules = {
     if (b.phase <= 2) moths(c, e);
     if (b.stage !== 'fight') return;
     rage(c, e);
+    slamTell(c, e);
     if (b.phase === 2) sight(c, e);
     if (b.phase === 3) {
       sweep(c, e);

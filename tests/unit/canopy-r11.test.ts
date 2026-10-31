@@ -223,17 +223,18 @@ describe('the great cage over the old burrback (r11, review r10 #1)', () => {
     }
   }
 
-  it('is a 120-moth trap guarded by its keeper; its release opens the roof', () => {
+  it('is a 120-moth trap guarded by its keeper; the way out is the breach the collapse opens (r15)', () => {
     expect(l?.trap).toBe(true);
     expect(l?.moths).toBe(120);
     expect(l?.guard).toBe('cn-den-down');
     expect(l?.sets).toBe('cn-den-freed');
-    const roof = (scene.gates ?? []).find((g) => g.id === 'den-roof');
-    expect(roof?.flag).toBe('cn-den-freed');
-    // (The way out is up through the roof, not the east wall: no exit at the arena's floor.)
+    // (r15, review r14 #1: the roof's gate is gone; the way out is low and east, torn open by the collapse.)
+    expect((scene.gates ?? []).some((g) => g.id === 'den-roof')).toBe(false);
+    const breach = (scene.gates ?? []).find((g) => g.id === 'den-breach');
+    expect(breach?.flag).toBe('cn-den-collapse');
     const out = (scene.exits ?? []).find((e) => e.id === 'out');
     expect(out?.edge).toBe('e');
-    expect(out?.to ?? 9999).toBeLessThanOrEqual(448);
+    expect(out?.to).toBe(1344);
   });
 
   it('while it lives the blade glances off the cage: no cut taken', () => {
@@ -246,7 +247,7 @@ describe('the great cage over the old burrback (r11, review r10 #1)', () => {
     expect(s.lures.hp[k]).toBe(t.lures.trapHp);
   });
 
-  it('down, it lies fallen on the floor (r12, the Keeper): a cut frees it, a held beat, 120 moths, the roof opens', () => {
+  it('down, it lies fallen on the floor (r12, the Keeper): a cut frees it, a held beat, 120 moths', () => {
     const s = at('cn-den', 1500, 1344, CG, ['cn-den-down']);
     s.enemies.length = 0;
     const ev: SimEvent[] = [];
@@ -260,15 +261,13 @@ describe('the great cage over the old burrback (r11, review r10 #1)', () => {
     expect(s.save.moths).toBe(120);
     const hold = ev.find((e) => e.type === 'storyHold' && e.id === 'trap-den') as Of<'storyHold'>;
     expect(hold?.frames).toBe(90);
-    expect(ev.some((e) => e.type === 'gateOpen' && e.id === 'den-roof')).toBe(true);
-    const roof = (scene.gates ?? []).find((g) => g.id === 'den-roof');
-    expect(roof && gateShut(roof, s.save.flags)).toBe(false);
+    expect(s.save.flags).toContain('cn-den-freed');
     // (Control back within 3 s of the last cut.)
     const end = ev.findIndex((e) => e.type === 'storyHoldEnd' && e.id === 'trap-den');
     expect(end).toBeGreaterThan(0);
   });
 
-  it("the firefly is over the cage as she lands on the balcony, once, and goes up through the roof's gate", () => {
+  it('the firefly is over the cage as she lands on the balcony, once, and goes into the east wall', () => {
     const s = at('cn-den', 300, 320);
     s.enemies.length = 0;
     const ev = run(s, 0, 400);

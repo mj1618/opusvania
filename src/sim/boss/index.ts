@@ -116,6 +116,7 @@ function freshBoss(spec: BossSpec): BossState {
     angry: 0,
     gated: 0,
     sweep: 0,
+    bridge: 0,
     rollX: 0,
     rollFrom: 0,
     rollT: 0,

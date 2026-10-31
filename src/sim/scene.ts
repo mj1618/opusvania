@@ -263,6 +263,12 @@ export interface Lure {
    */
   relight?: number;
   /**
+   * The Canopy r15 (review r14 #5): a chase's hook. While a chase runs, her flight eases as she comes into its reach
+   * (`kit.firefly.catch*`: a held beat, room to press), and a press on it pulls her onto its flame: she is flung from
+   * the flame, so a late press flies the same line as an early one.
+   */
+  hook?: boolean;
+  /**
    * A trap lamp (the Canopy r10, review r9 #2: the story's verb): a cage of moths, not a springboard. No fling off
    * it (`flingTarget` skips it); the blade puts it out in `lures.trapHp` cuts, for good (saved), and its `moths`
    * are freed (`lureSnuff` with `trap: true`; `save.moths` counts them). Render draws it unlike a springboard.
@@ -541,6 +547,16 @@ export interface Scene {
   sits?: Sit[];
   /** The Canopy r14, moment 7: the full escape (src/sim/escape.ts). */
   escape?: Escape;
+  /**
+   * The Canopy r15 (review r14 #10, src/sim/quiet.ts): a quiet moment on a story flag: `frames` after `flag` is saved
+   * on this visit, and while she is in the air inside `air` once it is (the clifftop's vista and the glide after).
+   */
+  quiet?: Array<{
+    id: string;
+    flag: string;
+    frames: number;
+    air?: { x: number; y: number; w: number; h: number };
+  }>;
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).

@@ -111,14 +111,17 @@ export const cameraTuning = {
       /**
        * The escape (moment 7, the Canopy r14): it begins (`escapeStart`), a rock lets go and lands (`rockfall`
        * fall / land), a hazard catches her (`escapeHit`). Under them a rumble that builds (`rumble`: a floor on the
-       * trauma, from `rumble[0]` at its start to `rumble[1]` by `rumbleSecs`, while the collapse runs).
+       * trauma, from `rumble[0]` at its start to `rumble[1]` by `rumbleSecs`, while the collapse runs; r15: it builds
+       * over the escape's real length, ~12 s, and `near` more as the front comes within `nearPx` of her feet).
        */
       escapeStart: 0.45,
       rockFall: 0.08,
       rockLand: 0.28,
       escapeHit: 0.4,
-      rumble: [0.16, 0.34] as const,
-      rumbleSecs: 18,
+      rumble: [0.18, 0.4] as const,
+      rumbleSecs: 11,
+      near: 0.14,
+      nearPx: 380,
     },
   },
   /**

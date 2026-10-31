@@ -35,13 +35,17 @@ import { Secondary } from './vesper/wings';
 
 /** Knobs (seconds of render time, world px). */
 export const TATTER = {
-  /** Its size next to hers (canopy review r6 #10: at 0.82 and her value it read as a second Wing). */
-  scale: 0.7,
+  /**
+   * Its size next to hers (canopy review r6 #10: at 0.82 and her value it read as a second Wing; review r14 #3: at 0.7
+   * and ash-pale it was a grey sketch half her height). Now near her size, as solid as she is, told apart by its hue
+   * (dusty ash-brown, not her plum), the torn wing and the snapped antenna.
+   */
+  scale: 0.92,
   /**
    * The re-palette: saturation and value of its solids and of its lights, a tint, and `lift` toward a pale of it: an
    * old dusty ash-pale moth against her dark one (review r6 #10: a different value, not only a greyer one).
    */
-  grade: { sat: 0.3, val: 0.95, tint: rgb(0xe6ddd0), lightSat: 0.4, lightVal: 0.55, lift: 0.42 },
+  grade: { sat: 0.34, val: 0.8, tint: rgb(0xd8c8b4), lightSat: 0.4, lightVal: 0.55, lift: 0.14 },
   /** Its lantern tips are nearly out; its eyes are dim. */
   glow: 0.28,
   eyes: 0.62,
@@ -150,8 +154,18 @@ export const TATTER = {
     lean: 0.16,
     leave: 360,
     openSpan: 2.3,
-    tornSpan: 1.45,
+    tornSpan: 2,
     rim: 1,
+    /**
+     * The Canopy r15 (review r14 #3, the sim's `kinBeat` phases, src/sim/quiet.ts): how far the torn wing lifts in its
+     * try (of the way to `wings.tornOpen`), how hard it trembles there (rad), how low it falls after (negative: below
+     * its rest droop), how far the good wing stays open after the fail, how low the body sinks as it fails (perch).
+     */
+    tryLift: 1.6,
+    tremble: 0.14,
+    failDrop: -0.55,
+    held: 0.85,
+    sink: 0.45,
   },
 } as const;
 const T_SIT = TATTER.sit;
@@ -166,6 +180,9 @@ const WING_GRADE: {
 } = {
   ...TATTER.grade,
 };
+
+/** The torn wing's grade through the sit's beats: the old ash-pale membrane (it reads over the dark good wing). */
+const TORN_GRADE = { ...TATTER.grade, val: 1, lift: 0.5 };
 
 type Beat = 'away' | 'keep' | 'wait' | null;
 
@@ -232,6 +249,22 @@ export class Tatter {
   sitT = -1;
   sitAt: { x: number; y: number } | null = null;
   private sitFrom = 0;
+  /** The sit's beat from the sim (`kinBeat`, the Canopy r15): its phase, seconds into it, its length (s). */
+  private kb: { phase: string; t: number; dur: number } | null = null;
+  /** The torn wing in the sit: 0 rest, 1 at `wings.tornOpen`, negative fallen below its rest. */
+  private tornK = 0;
+  /** A beat of the sit began (`kinBeat`): the sim keys the acting, render plays it. Set by `Cast`. */
+  kinBeat(phase: string, frames: number, x: number, y: number): void {
+    this.kb = { phase, t: 0, dur: Math.max(1, frames) / 60 };
+    if (phase === 'come' || this.sitT < 0) {
+      if (this.sitT < 0) this.sitT = 0;
+      this.sitAt = { x, y };
+    }
+  }
+  /** 0..1 into the sit's beat, and whether it is `phase`. */
+  private kbU(): number {
+    return this.kb ? Math.min(1, this.kb.t / this.kb.dur) : 0;
+  }
   /** 0..1: its wings held open to the moon (the sit): spread out flat, not beating; the torn one only half. */
   private spreadK = 0;
   private leanK = 0;
@@ -527,7 +560,45 @@ export class Tatter {
     // Its wings to the moon (the sit): open, held a breath, folded.
     const S = T.sit;
     const su = this.sitT >= 0 ? (this.sitT - S.openAt) / S.open : -1;
-    const sw2 = su > 0 && su < 1 ? smoothstep(0, 0.14, su) * (1 - smoothstep(0.86, 1, su)) : 0;
+    let sw2 = su > 0 && su < 1 ? smoothstep(0, 0.14, su) * (1 - smoothstep(0.86, 1, su)) : 0;
+    // (The Canopy r15: with the sim's beats, the sit plays them: the good wing opens, the torn one lifts, trembles and
+    // fails, it turns to her and holds, she answers, it folds and leans.)
+    let tornT = sw2;
+    let sitStrain = 0;
+    let sitSink = 0;
+    if (this.kb) {
+      this.kb.t += dt;
+      const u = this.kbU();
+      const ph = this.kb.phase;
+      const tr = S.tremble * Math.sin(clock * 23) * (0.4 + 0.6 * noise1(clock * 3, 211));
+      if (ph === 'come' || ph === 'stay' || ph === 'lean') sw2 = tornT = 0;
+      else if (ph === 'look') {
+        sw2 = tornT = 0;
+        sitStrain = 0.35 * smoothstep(0, 1, u);
+      } else if (ph === 'open') {
+        sw2 = smoothstep(0, 0.8, u);
+        tornT = 0.12 * sw2;
+        sitStrain = 0.45;
+      } else if (ph === 'try') {
+        sw2 = 1;
+        tornT = S.tryLift * smoothstep(0, 0.75, u) + tr * smoothstep(0.2, 0.8, u) * 6;
+        sitStrain = 0.4 + 0.2 * u;
+      } else if (ph === 'fail') {
+        sw2 = 1 - (1 - S.held) * smoothstep(0, 0.5, u);
+        tornT = lerp(S.tryLift, S.failDrop, smoothstep(0, 0.22, u)) + tr * (1 - smoothstep(0, 0.3, u)) * 4;
+        sitStrain = 0.9 * (1 - smoothstep(0, 0.25, u));
+        sitSink = S.sink * Math.sin(Math.PI * Math.min(1, u * 1.4)) ** 0.6;
+      } else if (ph === 'turn' || ph === 'answer') {
+        sw2 = S.held;
+        tornT = S.failDrop * (1 - 0.6 * smoothstep(0, 1, ph === 'answer' ? 1 : u));
+        sitSink = ph === 'turn' ? S.sink * 0.5 * (1 - u) : 0;
+        sitStrain = 0.3;
+      } else if (ph === 'fold') {
+        sw2 = S.held * (1 - smoothstep(0, 1, u));
+        tornT = S.failDrop * 0.4 * (1 - u);
+      }
+    }
+    this.tornK += (tornT - this.tornK) * Math.min(1, dt * (this.kb?.phase === 'fail' ? 14 : 7));
     rig.tryWings = Math.max(
       tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171)),
       T.rest.wings * rk * Math.sin(Math.PI * Math.min(1, this.restT / 1.2)) ** 2,
@@ -535,6 +606,12 @@ export class Tatter {
       sw2 * (0.92 + 0.08 * Math.sin(clock * 1.3)),
     );
     if (sw2 > 0) rig.strain = Math.max(rig.strain, 0.7 * sw2);
+    if (this.kb) {
+      rig.strain = Math.max(rig.strain * (sitSink > 0 ? 0.3 : 1), sitStrain);
+      // (Up off its heels to its full height for the try: sat hunched it was half hers.)
+      rig.perch = Math.min(rig.perch, 1 - 1.4 * sitStrain);
+      if (sitSink > 0) rig.perch = Math.min(1, rig.perch + sitSink);
+    }
     this.spreadK = sw2;
     // (Leaning against her, it sits low.)
     if (this.leanK > 0) rig.perch = Math.min(1, rig.perch + 0.25 * this.leanK);
@@ -556,7 +633,9 @@ export class Tatter {
     this.sec.hold[this.torn] = TATTER.hold;
     this.sec.splay[this.torn] = TATTER.splay;
     this.sec.droop[this.torn] =
-      TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * Math.max(tw, aw, sw2));
+      TATTER.droop *
+      (1 + 0.06 * noise1(clock * 0.7, 181)) *
+      (1 - 0.45 * Math.max(tw, aw, this.kb ? Math.max(0, this.tornK) : sw2));
     rig.update(dt, clock, this.me, []);
     const fresh = !this.started;
     if (fresh) this.sec.reset();
@@ -687,9 +766,10 @@ export class Tatter {
     // Its side of her: the side it came from.
     const side = this.sitFrom >= this.sitAt.x ? 1 : -1;
     const tx = this.sitAt.x + side * S.side;
-    // The shuffle: small steps, a stop between, there by `walk`.
-    if (t < S.walk) {
-      const u = t / S.walk;
+    // The shuffle: small steps, a stop between, there by `walk` (r15: by the end of the sim's `come`).
+    const kb = this.kb;
+    if (kb ? kb.phase === 'come' : t < S.walk) {
+      const u = kb ? this.kbU() : t / S.walk;
       const target = lerp(this.sitFrom, tx, smoothstep(0, 1, u));
       const ph = (u * 5) % 1;
       const step = (target - me.cx) * Math.min(1, dt * 14) * (0.3 + 0.7 * Math.sin(Math.PI * ph) ** 2);
@@ -702,16 +782,21 @@ export class Tatter {
     }
     const moonDir = (LOOK_MOON_X() ?? 960) < 960 ? -1 : 1;
     const gone = !her || Math.hypot(her.cx - me.cx, her.feetY - me.feetY) > S.leave;
-    if (t >= S.lookAt) {
-      this.facing = moonDir;
-      me.facing = moonDir as -1 | 1;
+    const toHerDir = her ? (her.cx >= me.cx ? 1 : -1) : moonDir;
+    // (r15: it turns to her and holds a look; she answers.)
+    const atHer = !!kb && (kb.phase === 'turn' || kb.phase === 'answer') && !gone;
+    if (kb ? kb.phase !== 'come' : t >= S.lookAt) {
+      this.facing = atHer ? toHerDir : moonDir;
+      me.facing = this.facing as -1 | 1;
     }
     // The lean: against her once its wings are folded, while she stays.
-    const leanOn = t >= S.leanAt && !gone ? 1 : 0;
+    const leanOn = (kb ? kb.phase === 'lean' || kb.phase === 'stay' : t >= S.leanAt) && !gone ? 1 : 0;
     this.leanK += (leanOn - this.leanK) * Math.min(1, dt * (leanOn ? 1.2 : 2));
     const toHer = her ? (her.cx >= me.cx ? 1 : -1) : 0;
     this.mesh.rotation = toHer * S.lean * this.leanK;
-    if (t < S.lookAt && her) return { x: her.cx, y: her.feetY - 50, firm: 1, w: Math.min(1, t / 0.3) };
+    if ((kb ? kb.phase === 'come' : t < S.lookAt) && her)
+      return { x: her.cx, y: her.feetY - 50, firm: 1, w: Math.min(1, t / 0.3) };
+    if (atHer && her) return { x: her.cx, y: her.feetY - 62, firm: 1, w: 1 };
     // Up at the moon (a little down at her as it leans).
     const mx = me.cx + moonDir * 600;
     const my = headY - 520;
@@ -827,7 +912,8 @@ export class Tatter {
     p.lx = 0.42;
     p.ly = -0.91;
     p.coolK = 0;
-    p.keyK = 0.3;
+    // (r15: the moon rim, as hers, so it reads as solid as she does.)
+    p.keyK = 0.55;
     p.l2k = 0;
     p.grade = TATTER.grade;
     p.outline = 1.5;
@@ -864,8 +950,11 @@ export class Tatter {
         (W.tornTry - W.torn) * tryK * (0.5 + 0.5 * beat),
       back,
     );
-    torn.ang = torn.ang + (this.angFor(W.tornOpen, back) - torn.ang) * sp;
-    torn.span = W.tornSpan * (1 + (T_SIT.tornSpan - 1) * sp);
+    // (r15: in the sit's beats the torn wing has its own try: up to `tornOpen`, or fallen below its rest.)
+    const tk = this.kb ? this.tornK : sp;
+    const tornTo = tk >= 0 ? W.tornOpen : W.torn + (W.torn - W.tornOpen) * 0.5;
+    torn.ang = torn.ang + (this.angFor(tornTo, back) - torn.ang) * Math.abs(tk);
+    torn.span = W.tornSpan * (1 + (T_SIT.tornSpan - 1) * Math.max(0, tk));
     torn.lead = back > 0 ? -1 : 1;
     const fw = flapWind(this.x, clock);
     p.outline = 1.2;
@@ -879,8 +968,17 @@ export class Tatter {
     p.outline = 1.5;
     drawVesper(p, this.rig.frame, this.view, clock);
     p.outline = 1.2;
-    p.grade = WING_GRADE;
-    drawMothWing(p, torn, TORN, clock, tremble, fw, sp * T_SIT.rim);
+    // (r15: in the sit the torn wing is old pale membrane, so its try reads against the dark good wing behind it.)
+    p.grade = this.kb && this.kb.phase !== 'stay' ? TORN_GRADE : WING_GRADE;
+    drawMothWing(
+      p,
+      torn,
+      TORN,
+      clock,
+      tremble,
+      fw,
+      Math.max(sp, Math.abs(this.kb ? this.tornK : 0)) * T_SIT.rim,
+    );
     p.grade = TATTER.grade;
     p.outline = 0;
     p.end(this.me.cx, this.me.feetY - 40);

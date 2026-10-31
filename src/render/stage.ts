@@ -320,8 +320,12 @@ export class RenderStage {
     this.pending = [];
     this.kick.update(dt, events);
     // (The escape's collapse rumbles under every blow while it runs, building: the Canopy r14, moment 7.)
-    const esc = (this.game.state.kit as { escape?: { on: number; t: number } }).escape;
-    this.shake.floor(escapeRumble(esc?.on === 1 && !this.game.state.caught, esc?.t ?? 0, this.ct));
+    const esc = (
+      this.game.state.kit as { escape?: { on: number; t: number; frontOn?: number; front?: number } }
+    ).escape;
+    const pl = this.game.state.player;
+    const gap = esc?.frontOn === 1 ? (esc.front ?? 1e9) - (pl.y + pl.h) : Number.POSITIVE_INFINITY;
+    this.shake.floor(escapeRumble(esc?.on === 1 && !this.game.state.caught, esc?.t ?? 0, this.ct, gap));
     this.shake.update(dt, events);
     this.hurtVignette.update(dt, events, vs);
     const st = this.game.state;

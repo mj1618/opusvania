@@ -28,6 +28,8 @@ export interface EscapeState {
   frontOn: number;
   front: number;
   stand: number;
+  /** The Canopy r15: 1 once her centre has been in the front's `start` box (it waits for that; 1 with no box). */
+  go: number;
   /** Per rock: 0 armed, 1 the tell, 2 falling, 3 down; frames in that stage; its bottom y while it falls. */
   rock: number[];
   rockT: number[];
@@ -43,6 +45,7 @@ export function createEscape(scene: Scene): EscapeState {
     frontOn: 0,
     front: 0,
     stand: 0,
+    go: 0,
     rock: new Array<number>(n).fill(0),
     rockT: new Array<number>(n).fill(0),
     rockY: new Array<number>(n).fill(0),
@@ -97,6 +100,28 @@ function frontAt(s: EscapeState, E: Escape, cp: number, events: SimEvent[]): voi
   s.frontOn = on ? 1 : 0;
 }
 
+/** Rotten bark `id` comes down for good (`barkBreak` by the escape). */
+function shake(state: GameState, scene: Scene, id: string, events: SimEvent[]): void {
+  const bark = scene.bark ?? [];
+  const i = bark.findIndex((b) => b.id === id);
+  const b = bark[i];
+  if (!b || (state.kit.bark[i] ?? 0) <= 0) return;
+  state.kit.bark[i] = 0;
+  const k = `${scene.id}:${b.id}`;
+  if (!state.save.opened.includes(k)) state.save.opened.push(k);
+  events.push({
+    type: 'barkBreak',
+    id: b.id,
+    x: b.x + b.w / 2,
+    y: b.y + b.h / 2,
+    w: b.w,
+    h: b.h,
+    dir: 'down',
+    floor: !!b.floor,
+    by: 'escape',
+  });
+}
+
 /** A hazard caught her (`what`: a rock's id, or 'front'): held, then back to the last checkpoint. */
 function hit(state: GameState, E: Escape, what: string, t: Tuning, events: SimEvent[]): void {
   const p = state.player;
@@ -140,11 +165,13 @@ export function updateEscape(state: GameState, scene: Scene, t: Tuning, events: 
     s.stand = fy;
     rearm(s, E, 0);
     events.push({ type: 'escapeStart', id: E.id, x: Math.round(cx), y: Math.round(fy) });
+    // (The Canopy r15: the collapse shakes rotten bark on the way down (the clifftop chimney's plug).)
+    for (const id of E.breaks ?? []) shake(state, scene, id, events);
   }
   // (Held after a hit, or crossing out: nothing moves.)
   if (state.caught || state.exit || p.faded > 0) return;
   s.t++;
-  if (inBox(E.end, cx, cy)) {
+  if (E.end && inBox(E.end, cx, cy)) {
     s.on = 2;
     if (!flags.includes(E.sets)) {
       flags.push(E.sets);
@@ -215,8 +242,15 @@ export function updateEscape(state: GameState, scene: Scene, t: Tuning, events: 
   // The front.
   const F = E.front;
   if (!F) return;
-  // (It follows where she stands, not her jumps: a jump that falls back to her perch never meets it.)
-  if (p.grounded || s.stand === 0) s.stand = fy;
+  // (It waits for her at its start box: the chimney's foot, the Canopy r15.)
+  if (s.go === 0) {
+    if (F.start && !inBox(F.start, cx, cy)) return;
+    s.go = 1;
+    s.stand = fy;
+  }
+  // (It follows where she stands, not her jumps: a jump that falls back to her perch never meets it. The Canopy r15:
+  // and where she holds a wall, so it climbs a chimney with her.)
+  if (p.grounded || p.mode === 'wallSlide' || s.stand === 0) s.stand = fy;
   const sy = s.stand;
   if (s.frontOn === 0) {
     if (sy > F.y0 - F.lag) return;

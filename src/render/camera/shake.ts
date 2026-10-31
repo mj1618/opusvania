@@ -200,11 +200,19 @@ export class CameraShake {
 
 /**
  * The escape's rumble (the Canopy r14): the trauma floor while the collapse runs, building from its start over
- * `rumbleSecs` (`t` = the escape's frames since it began or since her last return). 0 when it is not running.
+ * `rumbleSecs` (`t` = the escape's frames since it began or since her last return), more with the front near (`gap`).
+ * 0 when it is not running.
  */
-export function escapeRumble(on: boolean, t: number, ct: CameraTuning = cameraTuning): number {
+export function escapeRumble(
+  on: boolean,
+  t: number,
+  ct: CameraTuning = cameraTuning,
+  gap = Infinity,
+): number {
   if (!on) return 0;
   const B = ct.shake.budget;
   const u = Math.min(1, Math.max(0, t / 60 / B.rumbleSecs));
-  return B.rumble[0] + (B.rumble[1] - B.rumble[0]) * u;
+  // (r15: the front close under her shakes harder: `gap` = its top less her feet, px.)
+  const near = gap < B.nearPx ? B.near * (1 - Math.max(0, gap) / B.nearPx) : 0;
+  return B.rumble[0] + (B.rumble[1] - B.rumble[0]) * u + near;
 }

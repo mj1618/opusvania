@@ -95,14 +95,18 @@ export const KEEPER = {
    * in the beam. A partial release (P3's `cageRelease`) rises the same way, thinner, to the roof.
    */
   column: {
-    n: 220,
-    max: 300,
+    n: 170,
+    max: 240,
     launch: 2.8,
     speed: [230, 320] as const,
     w: 250,
     funnel: 110,
     helix: 22,
-    size: [8, 13] as const,
+    /** Near moths (`near` of them): wings `size` px, beating `beat` rad/s; the rest are `speck` px, deep in it. */
+    size: [13, 19] as const,
+    speck: [5, 8] as const,
+    near: 0.62,
+    beat: [10, 15] as const,
     color: 0xffe9c4,
     cool: 0xe6ecff,
   },
@@ -121,13 +125,17 @@ export const KEEPER = {
   anchor: {
     at: 0.5,
     in: 1.6,
-    hole: 190,
+    hole: 300,
+    /** How far up into the roof the torn hole reaches (px), its sky, the moonlit cloud and how fast it drifts (px/s). */
+    deep: 150,
     w0: 220,
     w1: 480,
-    sky: 0x2c3c60,
-    skyMid: 0x6f88b4,
+    sky: 0x17243f,
+    skyMid: 0x5f78a4,
     skyCore: 0xdce6ff,
-    roots: 7,
+    cloud: 0x8696b4,
+    cloudDrift: 9,
+    roots: 8,
     /** The beam's three nested bands (additive alpha), how much they fade down its length, its glow, the floor's pool. */
     bands: [0.06, 0.07, 0.09] as const,
     fade: 0.6,
@@ -165,7 +173,17 @@ export const KEEPER = {
    * at the wave's speed (`color`, brightest at the front, fading `fade` s after), dust kicked up off the front, and the
    * floor's rim flashes across the arena for `flash` s as it lands.
    */
-  wave: { color: 0xffb060, hot: 0xffe0a0, fade: 1.1, flash: 0.2, flashA: 0.3, dust: 70 },
+  /** The floor wave: its colours, fade (s), the landing's flash; r15: the tell's red rim, the front's lip height (px). */
+  wave: {
+    color: 0xffb060,
+    hot: 0xffe0a0,
+    fade: 1.1,
+    flash: 0.2,
+    flashA: 0.3,
+    dust: 70,
+    tell: 0xff4a30,
+    lip: 34,
+  },
   /** The ending's dust: grains per second along the roof while it groans, their colour. */
   dust: { rate: 60, color: 0x6a5a48 },
 };
@@ -206,6 +224,48 @@ interface Mote {
   life: number;
   s: number;
   seed: number;
+}
+
+/**
+ * A moth seen from behind as it climbs (the column, r15): a dark body, fore and hind wings either side whose span
+ * opens and closes with the beat (never to nothing: a wing edge-on still shows), tilted `tilt` rad. Reads as a
+ * wingbeat at play size where the side-view triangle flickered as a sparkle.
+ */
+function flutter(
+  g: Graphics,
+  x: number,
+  y: number,
+  w: number,
+  beat: number,
+  color: number,
+  alpha: number,
+  tilt: number,
+): void {
+  const open = 0.22 + 0.78 * (0.5 + 0.5 * Math.cos(beat));
+  const lift = Math.sin(beat) * w * 0.18;
+  const c = Math.cos(tilt);
+  const sn = Math.sin(tilt);
+  const P = (px: number, py: number): [number, number] => [x + px * c - py * sn, y + px * sn + py * c];
+  const dark = mix(color, 0x1a1420, 0.5);
+  for (const side of [-1, 1]) {
+    const fw = w * 0.62 * open;
+    const fore = [
+      P(side * w * 0.06, -w * 0.12),
+      P(side * fw, -w * 0.42 + lift),
+      P(side * fw * 1.05, -w * 0.05 + lift * 0.5),
+      P(side * w * 0.08, w * 0.06),
+    ];
+    const hind = [
+      P(side * w * 0.05, w * 0.02),
+      P(side * fw * 0.8, w * 0.12 + lift * 0.4),
+      P(side * fw * 0.55, w * 0.38),
+      P(side * w * 0.04, w * 0.22),
+    ];
+    g.poly(hind.flat()).fill({ color: mix(color, dark, 0.45), alpha: alpha * 0.9 });
+    g.poly(fore.flat()).fill({ color, alpha });
+  }
+  const [bx, by] = P(0, w * 0.04);
+  g.ellipse(bx, by, w * 0.07, w * 0.24).fill({ color: dark, alpha });
 }
 
 interface Riser {
@@ -339,6 +399,12 @@ export class KeeperStage {
   private crackL = 0;
   private crackR = 0;
   private crackT = -2;
+  /**
+   * The Canopy r15 (review r14 #2, the wave the one unfair hit): the sim's `keeperWave` tell (it rears: the floor over
+   * the wave's reach lit ahead of it) and slam (a crack opening at its feet through the fronts' delay).
+   */
+  private waveTell: { x: number; y: number; x0: number; x1: number; t: number; frames: number } | null = null;
+  private waveSlam: { x: number; y: number; t: number; frames: number } | null = null;
   private flashT = -1;
   private waveDust = 0;
   private feedX = 0;
@@ -498,6 +564,22 @@ export class KeeperStage {
     for (const e0 of sim.events) {
       const e = e0 as unknown as Record<string, unknown> & { type: string; x?: number; y?: number };
       switch (e.type) {
+        case 'keeperWave': {
+          const w = {
+            x: e.x ?? 0,
+            y: e.y ?? this.floorY,
+            x0: (e.x0 as number) ?? (e.x ?? 0) - 900,
+            x1: (e.x1 as number) ?? (e.x ?? 0) + 900,
+            t: 0,
+            frames: Math.max(1, (e.frames as number) ?? 30),
+          };
+          if (e.phase === 'tell') this.waveTell = w;
+          else {
+            this.waveTell = null;
+            this.waveSlam = w;
+          }
+          break;
+        }
         case 'enemyFeed':
           this.feedT = 0;
           this.feedX = e.x ?? 0;
@@ -585,7 +667,12 @@ export class KeeperStage {
         speed: C.speed[0] + (C.speed[1] - C.speed[0]) * hash01('rv', j),
         lane,
         seed,
-        s: C.size[0] + (C.size[1] - C.size[0]) * hash01('rs', j),
+        // (r15, review r14 #8 "a glitter stream": most are near moths with wings big enough to beat; the rest specks
+        // deep in it.)
+        s:
+          hash01('rn', j) < C.near
+            ? C.size[0] + (C.size[1] - C.size[0]) * hash01('rs', j)
+            : C.speck[0] + (C.speck[1] - C.speck[0]) * hash01('rs', j),
         out: great,
       });
     }
@@ -959,19 +1046,13 @@ export class KeeperStage {
       const lit = ak * (Math.abs(x - this.anchorX) < beamHalf ? 1 : 0);
       if (lit > 0) {
         col = mix(col, KEEPER.moon.core, A.silver * lit);
-        if (i % 3 === 0) this.glowFront.add(x, y, 20, 0xffffff, 0.16 * fade * lit);
+        if (i % 7 === 0) this.glowFront.add(x, y, 30, 0xffffff, 0.08 * fade * lit);
       }
-      moth(
-        g,
-        x,
-        y,
-        r.s,
-        Math.abs(Math.sin(clock * (13 + r.seed * 7) + r.seed * 9)),
-        r.seed > 0.5 ? 1 : -1,
-        col,
-        0.95 * fade,
-      );
-      if (i % 5 === 0) this.glowFront.add(x, y, 34, col, 0.12 * fade);
+      const near = r.s >= C.size[0];
+      const beat = clock * (C.beat[0] + (C.beat[1] - C.beat[0]) * r.seed) + r.seed * 9;
+      if (near) flutter(g, x, y, r.s, beat, col, 0.95 * fade, Math.sin(r.t * 1.7 + r.seed * 20) * 0.35);
+      else moth(g, x, y, r.s, Math.abs(Math.sin(beat)), r.seed > 0.5 ? 1 : -1, col, 0.6 * fade);
+      if (!near && i % 6 === 0) this.glowFront.add(x, y, 26, col, 0.1 * fade);
     }
     void dt;
   }
@@ -1012,40 +1093,119 @@ export class KeeperStage {
     const y0 = this.roofY;
     const y1 = this.floorY;
     const breathe = 0.9 + 0.1 * Math.sin(clock * 0.6 + 1.3);
-    // The hole: a ragged opening up into the roof, the night's sky in it, a pale core where the moon is.
-    const hw = (A.hole / 2) * (0.4 + 0.6 * k);
-    const pts: number[] = [];
-    const N = 26;
+    // The hole (r15, review r14 #4: "a blue star glyph"): the roof torn open through its depth, the night beyond it
+    // (dark blue, moonlit cloud drifting, a few stars), its lips raw earth with strata, torn roots hanging across it
+    // as silhouettes on the sky, clods still dropping off its edges.
+    const hw = (A.hole / 2) * (0.45 + 0.55 * k);
+    const H = A.deep * (0.35 + 0.65 * k);
+    const out: number[] = [];
+    const N = 14;
+    // Asymmetric, leaning east, each lip torn in its own steps (a symmetric taper read as a jar).
+    const lean = hw * 0.35;
+    // (Smooth bites with a little grit: per-point jitter drew lightning bolts.)
+    const lipW = (side: number, v: number, q: number): number =>
+      hw *
+      (1 - (side < 0 ? 0.5 : 0.32) * v) *
+      (1 +
+        0.16 * Math.sin(v * (side < 0 ? 7.3 : 5.9) + (side < 0 ? 1 : 4)) +
+        0.05 * (hash01(side < 0 ? 'ahl' : 'ahr', q) - 0.5));
     for (let q = 0; q <= N; q++) {
-      const t = q / N;
-      const a = Math.PI * t;
-      const rag = 0.5 + 0.6 * hash01('ah', q) * (q % 3 === 0 ? 1.3 : 1);
-      pts.push(x0 - Math.cos(a) * hw * rag, y0 + 8 - Math.sin(a) * 70 * k * rag);
+      const v = q / N;
+      out.push(x0 + lean * v - lipW(-1, v, q), y0 + 6 - H * v);
+    }
+    for (let q = 1; q < 5; q++) {
+      const u = q / 5;
+      const xa = x0 + lean - lipW(-1, 1, N);
+      const xb = x0 + lean + lipW(1, 1, N);
+      out.push(xa + (xb - xa) * u, y0 - H - 8 - 22 * Math.sin(u * Math.PI) * (0.6 + 0.4 * hash01('aht', q)));
     }
     for (let q = N; q >= 0; q--) {
-      const t = q / N;
-      pts.push(x0 - Math.cos(Math.PI * t) * hw * 0.92, y0 + 10 + 6 * hash01('ab', q));
+      const v = q / N;
+      out.push(x0 + lean * v + lipW(1, v, q), y0 + 6 - H * v * 0.92);
     }
-    // (A pale scalloped disc read as a lamp or a cloud: the night is dark blue in it, paler where the moon is.)
-    g.poly(pts).fill({ color: A.sky, alpha: 0.95 * k });
-    g.ellipse(x0 + 14, y0 - 22 * k, hw * 0.55, 30 * k).fill({ color: A.skyMid, alpha: 0.4 * k });
-    g.ellipse(x0 + 22, y0 - 30 * k, hw * 0.22, 14 * k).fill({ color: A.skyCore, alpha: 0.35 * k });
-    for (let q = 0; q < 5; q++)
-      g.circle(x0 + (hash01('as', q) - 0.5) * hw * 1.2, y0 - 10 - 40 * hash01('asy', q) * k, 1.4).fill({
-        color: 0xffffff,
-        alpha: 0.7 * k,
+    g.poly(out).fill({ color: A.sky, alpha: k });
+    // The night in it: brighter toward its top (the moon is up there), cloud lit along its edges, stars.
+    const drift = clock * A.cloudDrift;
+    g.ellipse(x0 + lean, y0 - H * 0.85, hw * 0.5, H * 0.3).fill({ color: A.skyMid, alpha: 0.28 * k });
+    for (let q = 0; q < 5; q++) {
+      const cx = x0 + lean * 0.6 + (((((hash01('acx', q) + drift / (hw * 2)) % 1) + 1) % 1) - 0.5) * hw * 1.3;
+      const cy = y0 - H * (0.3 + 0.55 * hash01('acy', q));
+      const cw = hw * (0.3 + 0.35 * hash01('acw', q));
+      for (let k2 = 0; k2 < 3; k2++)
+        g.ellipse(
+          cx + (k2 - 1) * cw * 0.3,
+          cy + (k2 - 1) * 4,
+          cw * (0.7 - 0.15 * Math.abs(k2 - 1)),
+          3 + 2 * k2,
+        ).fill({
+          color: k2 === 0 ? A.skyCore : A.cloud,
+          alpha: (k2 === 0 ? 0.22 : 0.18) * k,
+        });
+    }
+    for (let q = 0; q < 9; q++) {
+      const tw = 0.6 + 0.4 * Math.sin(clock * (1.5 + hash01('ast', q) * 2) + q);
+      g.circle(
+        x0 + (hash01('as', q) - 0.5) * hw * 0.9,
+        y0 - H * (0.25 + 0.65 * hash01('asy', q)),
+        1 + 0.9 * hash01('asr', q),
+      ).fill({ color: 0xffffff, alpha: 0.8 * k * tw });
+    }
+    // Its lips: raw earth, backlit by the sky on the inner edge; strata across them.
+    // (Open polylines: a stroke closed along the underside drew a lit line across the hole's mouth.)
+    g.poly(out, false).stroke({ color: 0x0c0806, width: 64, alpha: 0.35 * k, join: 'round' });
+    g.poly(out, false).stroke({ color: 0x0c0806, width: 26, alpha: k, join: 'round' });
+    g.poly(out, false).stroke({ color: 0x241a12, width: 8, alpha: 0.9 * k, join: 'round' });
+    // (Backlit by the sky in bits only: a lit outline the whole way round read as a drawn glyph.)
+    for (let q = 0; q < out.length / 2 - 3; q += 4) {
+      if (hash01('abl', q) < 0.6) continue;
+      g.poly(out.slice(q * 2, q * 2 + 6), false).stroke({
+        color: A.skyMid,
+        width: 2,
+        alpha: 0.45 * k,
+        cap: 'round',
       });
-    // The parted roots: hanging from the hole's lips, settling after their give.
+    }
+    for (let q = 0; q < 6; q++) {
+      const side = q % 2 === 0 ? -1 : 1;
+      const v = 0.15 + 0.7 * hash01('asl', q);
+      const lx = x0 + side * hw * (1 - 0.42 * v);
+      const ly = y0 + 8 - H * v;
+      g.moveTo(lx + side * 2, ly)
+        .lineTo(lx + side * (30 + 26 * hash01('asw', q)), ly + (hash01('asd', q) - 0.5) * 8)
+        .stroke({ color: 0x1e1610, width: 3, alpha: 0.9 * k });
+    }
+    // Torn roots: some hanging from the lips into the den, some spanning the hole, black on the sky.
     const sway = Math.max(0, 1 - (this.anchorT - A.at) / 3);
     for (let q = 0; q < A.roots; q++) {
       const h = hash01('ar', q);
       const side = q % 2 === 0 ? -1 : 1;
       const rx = x0 + side * hw * (0.55 + 0.45 * h);
-      const len = (40 + 110 * hash01('al', q)) * k;
-      const sw = Math.sin(clock * 3 + q * 1.7) * 14 * sway + side * 10;
+      const len = (50 + 130 * hash01('al', q)) * k;
+      const sw = Math.sin(clock * 3 + q * 1.7) * 14 * sway + side * 10 + Math.sin(clock * 0.9 + q) * 3;
       g.moveTo(rx, y0 + 4)
         .quadraticCurveTo(rx + sw * 0.4 + side * 6, y0 + len * 0.5, rx + sw, y0 + len)
-        .stroke({ color: 0x0b0806, width: 5 - 3 * h, alpha: 0.95, cap: 'round' });
+        .stroke({ color: 0x0b0806, width: 6 - 3 * h, alpha: 0.95, cap: 'round' });
+    }
+    for (let q = 0; q < 1; q++) {
+      const v = 0.3 + 0.5 * hash01('arc', q);
+      const ya = y0 + 8 - H * v;
+      const wa = hw * (1 - 0.42 * v);
+      const sag = 20 + 40 * hash01('ars', q) + Math.sin(clock * 1.1 + q) * 3;
+      g.moveTo(x0 + lean * v - wa, ya)
+        .quadraticCurveTo(x0 + lean * v, ya + sag, x0 + lean * v + wa * 0.7, ya - H * 0.25)
+        .stroke({ color: 0x0b0806, width: 4 + 3 * hash01('arw', q), alpha: k, cap: 'round' });
+    }
+    // Clods still dropping off its lips (many as it tears, then now and then).
+    const since = this.anchorT - A.at;
+    for (let q = 0; q < 8; q++) {
+      const rate = 0.5 + hash01('acr', q);
+      const ph = (since * rate + hash01('acp', q)) % 1;
+      const busy = since < 4 || hash01('acb', q + Math.floor(since * rate)) < 0.25;
+      if (!busy) continue;
+      const cx = x0 + (q % 2 ? -1 : 1) * hw * (0.6 + 0.4 * hash01('acq', q));
+      const cy = y0 + ph * ph * 520;
+      const r = 3 + 5 * hash01('acs', q);
+      g.ellipse(cx, cy, r, r * 0.8).fill({ color: 0x1a120c, alpha: k * (1 - ph) });
     }
     // The beam: straight down, a hard core in a wider soft band (moonlight, not a lamp: it starts at the roof, long).
     const sh = this.anchorShaft.clear();
@@ -1346,6 +1506,7 @@ export class KeeperStage {
   /** The slam's wave along the floor: a crack lit behind each front, dust off the fronts, the floor's flash. */
   private drawWaveCrack(dt: number, clock: number, sim: SimView): void {
     const V = KEEPER.wave;
+    this.drawWaveTell(dt, clock);
     const e = sim.enemies.find((q) => q.kind === 'oldBurrback' && !q.gone);
     const fy = this.floorY;
     if (e && e.wave > 0) {
@@ -1421,10 +1582,90 @@ export class KeeperStage {
       }
       const fx = this.crackX + side * reach;
       if (this.crackT < 0) {
+        // (r15: a bright lip at the front, taller than she can ignore: a tongue of light and grit thrown up off it.)
+        const lip = V.lip * (0.85 + 0.15 * Math.sin(clock * 37 + side));
+        g.poly([
+          fx - side * 46,
+          fy,
+          fx - side * 12,
+          fy - lip * 0.7,
+          fx + side * 2,
+          fy - lip,
+          fx + side * 10,
+          fy,
+        ]).fill({
+          color: V.hot,
+          alpha: 0.85 * fade,
+        });
+        g.poly([fx - side * 80, fy, fx - side * 30, fy - lip * 0.4, fx - side * 10, fy]).fill({
+          color: V.color,
+          alpha: 0.6 * fade,
+        });
         this.glowFront.add(fx, fy - 24, 110, V.hot, 0.55 + 0.1 * Math.sin(clock * 40), 70);
         this.glowFront.add(fx - side * reach * 0.3, fy - 4, reach * 0.4, V.color, 0.2, 16);
       } else
         this.glowFront.add(this.crackX + side * reach * 0.5, fy - 2, reach * 0.5, V.color, 0.1 * fade, 8);
+    }
+  }
+
+  /**
+   * The wave told on the floor (r15): while it rears, the floor over the wave's whole reach takes a red rim that
+   * quickens to the slam and a dark shadow thrown ahead of the rear (a player facing away sees it on the ground in front
+   * of her); slammed, a hot crack splits open at its feet through the fronts' delay.
+   */
+  private drawWaveTell(dt: number, clock: number): void {
+    const V = KEEPER.wave;
+    const g = this.front;
+    const T = this.waveTell;
+    if (T) {
+      T.t += dt;
+      const u = Math.min(1, (T.t * 60) / T.frames);
+      if (u >= 1.3) this.waveTell = null;
+      const fy = T.y;
+      // The rim along the floor's lip, both ways out to the reach, fading toward its ends.
+      for (const side of [-1, 1]) {
+        const end = side < 0 ? T.x0 : T.x1;
+        const len = Math.abs(end - T.x);
+        const n = Math.max(2, Math.ceil(len / 40));
+        for (let q = 0; q < n; q++) {
+          const a0 = q / n;
+          const xa = T.x + side * len * a0;
+          const xb = T.x + side * len * ((q + 1) / n);
+          // (A ruled line read as a laser: the floor's skin splitting in short glowing fissures with gaps, flickering.)
+          const h = hash01('wt', q * side + 300);
+          if (h < 0.25 || h > 0.25 + 0.75 * Math.min(1, 0.45 + u * 1.4)) continue;
+          const a = (0.6 + 0.4 * u) * (0.75 + 0.25 * Math.sin(clock * (8 + 22 * u))) * (1 - 0.45 * a0);
+          const h2 = hash01('wu', q * side + 300);
+          const xs = xa + (xb - xa) * 0.3 * h2;
+          const xe = xb - (xb - xa) * 0.3 * (1 - h2);
+          const xm = xs + (xe - xs) * (0.3 + 0.4 * h);
+          g.poly([xs, fy - 1, xm, fy - 2 - 5 * h2, (xm + xe) / 2, fy - 1.5, xe, fy - 1], false).stroke({
+            color: V.tell,
+            width: 2.5 + 2.5 * u,
+            alpha: a,
+            cap: 'round',
+          });
+          this.glowFront.add(xm, fy - 8, 34, V.tell, 0.3 * a, 22);
+        }
+        // Its shadow thrown ahead along the floor as it rises.
+        g.ellipse(T.x + side * 160 * u, fy + 2, 120 + 260 * u, 10).fill({ color: 0x000000, alpha: 0.35 * u });
+      }
+    }
+    const S = this.waveSlam;
+    if (S) {
+      S.t += dt;
+      const u = (S.t * 60) / S.frames;
+      if (u >= 1.4) this.waveSlam = null;
+      else {
+        // The crack opening at its feet, hot, until the fronts run.
+        const w = 30 + 90 * Math.min(1, u);
+        const a = u < 1 ? 1 : 1 - (u - 1) / 0.4;
+        g.poly([S.x - w, S.y, S.x, S.y - 10 - 18 * Math.min(1, u), S.x + w, S.y, S.x, S.y + 6]).fill({
+          color: V.hot,
+          alpha: 0.85 * a,
+        });
+        this.glowFront.add(S.x, S.y - 20, 90 + 60 * Math.min(1, u), V.hot, 0.5 * a, 50);
+      }
     }
   }
 

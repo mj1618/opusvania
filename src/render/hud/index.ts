@@ -41,6 +41,9 @@ export const HUD = {
   fadeIn: 0.16,
   hold: 3.6,
   fadeOut: 0.9,
+  /** A quiet moment (the column, the sit, the vista): the HUD steps out over `quietIn` s, back over `quietOut`. */
+  quietIn: 0.8,
+  quietOut: 1.4,
   tick: 0.045,
   /** How far a digit swells when it changes. */
   pop: 0.3,
@@ -185,6 +188,8 @@ export class Hud {
   private slot = 1;
   /** 0..1: she is under the cluster (eased). */
   private clear = 0;
+  /** A quiet moment (the Canopy r15: the sim's `kit.quiet`, the column / the sit / the vista): 0..1 eased in. */
+  private quietK = 0;
   /** Seconds between two glints leaving the count after a fade (0 = a loss shows at once). */
   private spillStep = 0;
   private spillIn = 0;
@@ -508,7 +513,11 @@ export class Hud {
         : 0;
     this.clear += (under - this.clear) * Math.min(1, dt * U.rate);
     // A held beat is a scene: the HUD steps out of it (plan r5 item 9) and comes back as it ends.
-    const held = 1 - STAGE_HOLD.held;
+    // A quiet moment is a scene too (review r14 #10: the count over the column, the glide's line over the sit): the HUD
+    // and the prompts step out of it, slowly, and come back after.
+    const qw = ((sim.kit as unknown as { quiet?: { why?: string } }).quiet?.why ?? '') !== '' ? 1 : 0;
+    this.quietK += (qw - this.quietK) * Math.min(1, dt / (qw ? HUD.quietIn : HUD.quietOut));
+    const held = (1 - STAGE_HOLD.held) * (1 - this.quietK);
     this.shake.alpha =
       this.live *
       this.live *
@@ -550,6 +559,11 @@ export class Hud {
     // The moth count sits under the lights (and under the glint count when that is up).
     const camView = cam ?? { x: sim.player.cx, y: sim.player.cy, zoom: 1, w: view.w, h: view.h };
     this.moths.update(dt, clock, sim, view, camView, this.group.visible ? 56 : 0);
+    if (this.quietK > 0.003) {
+      const q = 1 - this.quietK;
+      this.moths.root.alpha = q * q;
+      this.itemLine.root.alpha *= q * q;
+    } else this.moths.root.alpha = 1;
 
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha) * this.shake.alpha;
     this.group.visible = a > 0.003;

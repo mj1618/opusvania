@@ -5,6 +5,9 @@ import { ActionBit, axisX, type InputFrame } from '../input';
 import { floorBarkAt, slashKit, thornAt } from '../kit';
 import { kindle, kindleTarget, spendGlow, startGust } from '../light';
 import {
+  chaseCatchAt,
+  chaseHoldNear,
+  chaseRest,
   flameAt,
   flingAim,
   flingLaunch,
@@ -131,6 +134,7 @@ export function createPlayer(feetX: number, feetY: number, t: Tuning, scene: Sce
     flingBuf: 0,
     lampArmed: false,
     lessonK: 0,
+    catchK: 0,
     chainX: Math.round(feetX),
     chainY: y + h,
     lureBack: -1,
@@ -1043,7 +1047,12 @@ function gravity(c: Ctx): void {
   p.lessonK = near ? Math.min(1, p.lessonK + ease) : Math.max(0, p.lessonK - ease);
   if (p.lessonK > 0) {
     const capX = P.maxRun + (L.lessonRun - P.maxRun) * p.lessonK;
-    const capY = P.maxFall + (L.lessonFall - P.maxFall) * p.lessonK;
+    let capY = P.maxFall + (L.lessonFall - P.maxFall) * p.lessonK;
+    // (The Canopy r15, review r14 #5: put back at a chase's hook she hangs on it, not drifts off it.)
+    if (near && chaseHoldNear(c.state, c.scene, P.tuning)) {
+      const hang = P.tuning.kit.firefly.backFall;
+      capY = P.maxFall + (hang - P.maxFall) * p.lessonK;
+    }
     if (Math.abs(p.vx) > capX) p.vx = p.vx > 0 ? capX : -capX;
     if (p.vy > capY) p.vy = capY;
   }
@@ -1207,6 +1216,7 @@ function controller(c: Ctx): void {
 
   // The lures' pull bends what the mode made of her velocity (memory/lures.md).
   pull(c);
+  catchHook(c);
 
   // 4. Move X then Y, with corner corrections.
   let impactVy = 0;
@@ -1268,6 +1278,40 @@ function pull(c: Ctx): void {
   const m = p.gliding ? L.glidePullMult : 1;
   p.pullX = Math.max(-L.pullXMax, Math.min(L.pullXMax, p.pullX * L.pullXKeep + a.ax * m));
   p.vy += a.ay * m;
+}
+
+/**
+ * The Canopy r15 (review r14 #5): a chase's next hook (`Lure.hook`): her flight eases as she comes into its reach, a
+ * beat to press, her fling's launch included (after the pull: the mode's velocity, the throw's too).
+ */
+function catchHook(c: Ctx): void {
+  const p = c.p;
+  const K = c.P.tuning.kit.firefly;
+  const ce = 1 / Math.max(1, K.catchEase);
+  const i =
+    p.mode === 'normal' && !p.grounded && p.fling < 0 ? chaseCatchAt(c.state, c.scene, c.P.tuning) : -1;
+  p.catchK = i >= 0 ? Math.min(1, p.catchK + ce) : Math.max(0, p.catchK - ce);
+  if (p.catchK <= 0) return;
+  const k = p.catchK * 0.35;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const across = p.vx + p.pullX;
+  const l = i >= 0 ? c.scene.lures?.[i] : undefined;
+  if (l && chaseRest(c.state, c.scene, i)) {
+    // (A rest of the chase: she drifts onto the hook and hangs there, a breath, until she presses.)
+    const f = flameAt(c.state.lures, i, l, c.state.frame, c.P.tuning, FLAME);
+    const tx = clamp((f.x - (p.x + p.w / 2)) * 0.08, -K.restRun, K.restRun);
+    const ty = clamp((f.y - (p.y + p.h / 2)) * 0.08, -K.restRise, K.restRun) + K.restFall;
+    p.vy -= c.P.gravity * p.catchK;
+    p.pullX += (tx - across) * k;
+    p.vy += (ty - p.vy) * k;
+    return;
+  }
+  // (Her speed across is her run plus the fling's pull: the two together eased to `catchRun`.)
+  p.pullX += (clamp(across, -K.catchRun, K.catchRun) - across) * k;
+  // (Gravity thinned so she floats into its reach; her rise eased to `catchRise`, her fall to `catchFall`.)
+  p.vy -= c.P.gravity * K.catchFloat * p.catchK;
+  if (p.vy > K.catchFall) p.vy += (K.catchFall - p.vy) * k;
+  else if (p.vy < -K.catchRise) p.vy += (-K.catchRise - p.vy) * k;
 }
 
 /** Scratch for the orbit step and the throw's aim. */
@@ -1396,7 +1440,21 @@ function fling(c: Ctx): boolean {
     p.flingFrames = 0;
     return false;
   }
-  if (!c.held(ActionBit.lamp) || p.flingFrames >= Math.max(1, Math.round(L.flingFrames))) {
+  // (The Canopy r15, review r14 #5: a chase's hook pulls her onto its flame while she aims, and she is flung from it:
+  // a late press flies the line an early one does.)
+  const hl = c.scene.lures?.[p.fling];
+  const launch = !c.held(ActionBit.lamp) || p.flingFrames >= Math.max(1, Math.round(L.flingFrames));
+  if (hl?.hook) {
+    const f = flameAt(c.state.lures, p.fling, hl, c.state.frame, t, FLAME);
+    const k = launch ? 1 : t.kit.firefly.hookPull;
+    const nx = Math.round(p.x + (f.x - (p.x + p.w / 2)) * k);
+    const ny = Math.round(p.y + (f.y - (p.y + p.h / 2)) * k);
+    if (!solidAt(c.scene, nx, ny, p.w, p.h)) {
+      p.x = nx;
+      p.y = ny;
+    }
+  }
+  if (launch) {
     flingLaunch(c.state, c.scene, t, c.events, c.inX, aimY);
     p.airDash = P.airDashes;
     p.dj = P.doubleJumps;
