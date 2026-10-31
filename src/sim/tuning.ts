@@ -435,12 +435,15 @@ export const defaultTuning = withVariants({
      * across at `lessonRun` (eased in over `lessonEase` frames): a slow drift past the flame, until she has flung
      * once (a running jump carried her through the reach in 8 frames).
      */
-    lessonFall: 2,
+    lessonFall: 1.25,
     lessonRun: 2.5,
     /** Frames the lesson's caps take to ease in (and out). */
-    lessonEase: 8,
-    /** ...within this many px of the flame (more than the fling's reach: she slows on the way into it). */
-    lessonPx: 200,
+    lessonEase: 6,
+    /**
+     * ...within this many px of the flame: just past the fling's reach (110), so she slows as she comes into it, never
+     * short of it (at 200 a jump slowed 150 px out and bots stalled outside the reach).
+     */
+    lessonPx: 130,
     /**
      * A trap lamp's cuts (`Lure.trap`, review r9 #2): three, so freeing one is a choice made on purpose (each cut a
      * `lureHit`, the cage cracking), not a graze.

@@ -1039,7 +1039,7 @@ function gravity(c: Ctx): void {
   // the usual to `lessonRun` / `lessonFall` with it, so the slowing reads as time thickening, not a wall.)
   const L = P.tuning.lures;
   const ease = 1 / Math.max(1, L.lessonEase);
-  const near = !p.grounded && lessonInReach(c.state, c.scene, P.tuning);
+  const near = !p.grounded && !p.thrown && lessonInReach(c.state, c.scene, P.tuning);
   p.lessonK = near ? Math.min(1, p.lessonK + ease) : Math.max(0, p.lessonK - ease);
   if (p.lessonK > 0) {
     const capX = P.maxRun + (L.lessonRun - P.maxRun) * p.lessonK;
@@ -1377,6 +1377,8 @@ function fling(c: Ctx): boolean {
     if (!l) return false;
     p.flingBuf = 0;
     p.lampArmed = false;
+    // (The lesson's drift ends with the press: the flight she aims is the flight she gets, as the arc shows it.)
+    p.lessonK = 0;
     p.fling = i;
     p.flingFrames = 0;
     endGlide(c, 'lure');

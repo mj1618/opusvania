@@ -83,6 +83,33 @@ describe('the first fling (r10, review r9 #1)', () => {
       }
     });
 
+  it("Lamp pressed in reach and let go with no direction held flings her up-right (the lamp's aim), across with a steer", () => {
+    for (const [, x, y, runTo] of jumps)
+      for (const wait of [0, 20, 40]) {
+        const s = at('cn-hatch', x, y, []);
+        run(s, 0, 20);
+        let f = 0;
+        while (runTo > 0 && s.player.x + s.player.w / 2 < runTo && f++ < 200) run(s, R);
+        let k = 0;
+        while (flingTarget(s, withShortcuts(scene, s.save), t) !== i && k++ < 200) run(s, J | R);
+        for (let w = 0; w < wait && flingTarget(s, withShortcuts(scene, s.save), t) === i; w++) run(s, 0);
+        // (Let go with the stick at rest, then steered on toward the far limb.)
+        const from = `${Math.round(s.player.x + 20)},${Math.round(s.player.y + 40)}`;
+        run(s, B, 6);
+        let landed = false;
+        for (let n = 0; n < 300 && !landed && !s.caught; n++) {
+          run(s, n === 0 ? 0 : R);
+          landed = s.player.grounded;
+        }
+        expect(
+          landed && s.player.x > 4200,
+          `from ${x} after ${wait} (flung at ${from}): ${s.player.x}, ${s.player.y}`,
+        ).toBe(true);
+        // ...and the lesson is over: it flung once.
+        expect(s.save.flags).toContain('lesson:cn-hatch:wick-first');
+      }
+  });
+
   it('no jump without the fling reaches the far limb (the lesson only slows her)', () => {
     for (const [, x, y, runTo] of jumps) {
       const s = at('cn-hatch', x, y, []);

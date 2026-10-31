@@ -267,10 +267,17 @@ export interface Lure {
    */
   trap?: boolean;
   /**
-   * The first fling's lesson (the Canopy r10, review r9 #1): until its `sets` flag is in the save, her fall slows
-   * while she is in its fling reach (`lures.lessonFall`, `lessonKeep`): the window to press Lamp is wide.
+   * The first fling's lesson (the Canopy r10, review r9 #1): until she has flung off it once (`lesson:room:id` in the
+   * save's flags), her fall and run ease to a drift near it (`lures.lessonPx`, `lessonFall`, `lessonRun`): the window
+   * to press Lamp is wide.
    */
   lesson?: boolean;
+  /**
+   * Where a fling off it goes with no direction held (x, y; y down), instead of straight out from the flame through
+   * her: the first fling's up-right across its gap (the Canopy r10: a first-timer who lets go with the stick at rest
+   * drifted under the flame and was flung down into the gap).
+   */
+  aim?: [number, number];
   /**
    * A moonwick (`kind: 'moonwick'`, Lanternroot): once kindled it burns for good (the save keeps `room:id` in
    * `opened`): a route light.

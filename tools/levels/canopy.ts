@@ -1073,6 +1073,8 @@ function hatch(): Json {
         relight: 90,
         // (r10, review r9 #1: in its reach her fall slows to a drift until she has flung once.)
         lesson: true,
+        // (Let go with no direction held, up-right: across, never down into the gap.)
+        aim: [1, -1],
         moths: 0,
       },
     ],
@@ -2671,8 +2673,9 @@ function tunnel(): Json {
   r.fill();
   // Root curtains either side of the door's shaft, down to 224 over the floor (plumb on the shaft's side).
   r.hang(1536 + TX, 1280, 256, 352, 3, 'r');
-  // (r10: narrower, the hump moved under its old east half.)
-  r.hang(2048 + TX, 1280, 96, 352, 2, 'l');
+  // (r10: narrower and shorter: the hump moved under its old east half, and a jump onto its first tier from under the
+  // curtain bumped it. The shaft's west curtain still reaches the floor's jump: one face is enough to climb.)
+  r.hang(2048 + TX, 1280, 96, 224, 2, 'l');
   // The hump, the pit (thorns all along its floor), the block under the shortcut.
   // (r9b: the hump steps up from the west to a take-off 384 over the far floor, its east face plumb at the pit's lip:
   // the highest ground is where she jumps. Over the old 256 drop a jump held through landed 25 px past the lip. Now a

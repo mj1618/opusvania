@@ -98,8 +98,13 @@ export function lureHpMax(l: Lure, t: Tuning): number {
   return Math.max(1, Math.round(lureRow(t, l.kind).hp));
 }
 
+/** The save flag a lesson lamp's first fling sets (a cut does not end the lesson: the bots cut it and never learned). */
+export function lessonFlag(scene: Scene, l: Lure): string {
+  return `lesson:${scene.id}:${l.id}`;
+}
+
 /**
- * Is she within `lures.lessonPx` of a burning lesson lamp (`Lure.lesson`) whose `sets` flag the save lacks? (The first fling,
+ * Is she within `lures.lessonPx` of a burning lesson lamp (`Lure.lesson`) she has not flung off yet (`lessonFlag`)? (The first fling,
  * the Canopy r10: her fall slows there, src/sim/player/player.ts `gravity`.)
  */
 export function lessonInReach(state: GameState, scene: Scene, t: Tuning): boolean {
@@ -111,7 +116,7 @@ export function lessonInReach(state: GameState, scene: Scene, t: Tuning): boolea
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
     if (!l?.lesson || (state.lures.hp[i] ?? 0) <= 0) continue;
-    if (l.sets && state.save.flags.includes(l.sets)) continue;
+    if (state.save.flags.includes(lessonFlag(scene, l))) continue;
     const r = t.lures.lessonPx;
     const f = flameAt(state.lures, i, l, state.frame, t, F);
     if ((f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy) <= r * r) return true;
@@ -252,6 +257,15 @@ export function flingAim(
   const p = state.player;
   const l = scene.lures?.[p.fling];
   if (!l) return out;
+  // (A lamp's own aim with nothing held: the first fling's, up-right across its gap, the Canopy r10.)
+  if (l.aim) {
+    const m = Math.sqrt(l.aim[0] * l.aim[0] + l.aim[1] * l.aim[1]);
+    if (m > 0) {
+      out.x = l.aim[0] / m;
+      out.y = l.aim[1] / m;
+      return out;
+    }
+  }
   const f = flameAt(state.lures, p.fling, l, state.frame, t, F);
   const rx = centreX(p) - f.x;
   const ry = centreY(p) - f.y;
@@ -302,6 +316,10 @@ export function flingLaunch(
     p.chainY = p.groundY;
   }
   p.flingCd = Math.max(0, Math.round(T.flingCooldown));
+  if (l.lesson) {
+    const k = lessonFlag(scene, l);
+    if (!state.save.flags.includes(k)) state.save.flags.push(k);
+  }
   events.push({ type: 'fling', id: l.id, x: f.x, y: f.y, vx, vy, aimX: AIM.x, aimY: AIM.y });
   // (A burning moonwick is the reusable anchor: it never embers, it burns on behind her.)
   if (l.kind === 'moonwick') return;

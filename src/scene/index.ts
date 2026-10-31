@@ -164,6 +164,7 @@ const SceneSchema = z
             // The Canopy r10: a trap lamp (cut out for good, frees its moths) and the first fling's lesson.
             trap: z.boolean().optional(),
             lesson: z.boolean().optional(),
+            aim: z.tuple([int, int]).optional(),
           })
           .strict(),
       )

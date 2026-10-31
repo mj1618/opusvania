@@ -51,10 +51,13 @@ Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render 
   lit), `roost-grove` (over the kin's lamp, 2,560 x 1,344, 320 x 192: the kin turns to them), `roost-warn` (the
   lampoak's crown over the drop, 6,144 x 640, 512 x 320). **`roostsLit(scene, save)`** (src/sim/firefly.ts) = the lit
   ones (`save.snuffed` has the lure). The hub changes with each trap freed.
-- **The first fling's lesson** (`Lure.lesson` on `wick-first`; review r9 #1): until `cn-first-fling` is set, within
-  `lures.lessonPx` 200 of the flame in the air her caps ease (over `lessonEase` 8 frames) to `lessonFall` 2 px/f down
-  and `lessonRun` 2.5 across: a slow drift by the flame. **`player.lessonK`** (0..1) is how far in: render can thicken
-  the air with it. Every jump toward the lamp is in reach 37-81 frames (was 8-21); no jump without the fling crosses.
+- **The first fling's lesson** (`Lure.lesson` on `wick-first`; review r9 #1): until she has flung off it once
+  (`lesson:cn-hatch:wick-first` in the save's flags; a cut does not end it), within `lures.lessonPx` 130 of the flame
+  in the air her caps ease (over `lessonEase` 6 frames) to `lessonFall` 1.25 px/f down and `lessonRun` 2.5 across: a
+  slow drift by the flame. **`player.lessonK`** (0..1) is how far in: render can thicken the air with it. Every jump
+  toward the lamp from S5 or S4 is in reach 37-81 frames (was 8-21); no jump without the fling crosses. A wider zone
+  (200) slowed her outside the reach and the bots stalled there. Let go with no direction held, it flings up-right
+  (`Lure.aim`), not out from the flame through her (down, once she had drifted under it).
 - **A held Lamp is a press** (`lures.heldPress`, `player.lampArmed`): pressed with no flame in reach and held on, the
   first flame to come into reach flings (not in glow rooms, where Lamp is held to mend).
 - **Gates never shut on her** (`gatePush {id, dx, dy, x, y}`): a gate shutting with her box in it moves her out the
