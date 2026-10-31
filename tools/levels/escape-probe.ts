@@ -15,6 +15,7 @@ import { ActionBit } from '../../src/sim/input';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';
+import { EscapePlan } from '../playtest/escape-plan';
 
 export const ESCAPE_FLAGS = ['cn-den-met', 'cn-den-fed', 'cn-den-down', 'cn-den-freed', 'cn-den-collapse'];
 
@@ -44,111 +45,26 @@ export function runEscape(
   placePlayer(s, o.startX ?? 1856, 1344, t, scene(), []);
   const E = den.escape;
   if (!E) throw new Error('cn-den has no escape');
-  const lag = Math.max(0, o.lag ?? 0);
-  const delay = Math.max(0, o.delay ?? 0);
+  const plan = new EscapePlan(den, o);
   const tape: number[] = [];
   const hits: string[] = [];
   const events: string[] = [];
-  let prev = 0;
   let end = 'timeout';
   let f = 0;
-  // The stands she goes by, in order: the west shelf, the perches, the heap, the passage's floor.
-  const gate = (id: string) => (den.gates ?? []).find((g) => g.id === id);
-  const stands: Array<{ x0: number; x1: number; top: number }> = [{ x0: 1152, x1: 1536, top: 1088 }];
-  for (let i = 1; gate(`rubble-${i}`); i++) {
-    const g = gate(`rubble-${i}`);
-    if (g) stands.push({ x0: g.x, x1: g.x + g.w, top: g.y });
-  }
-  const heap = gate('rubble-heap');
-  if (heap) stands.push({ x0: heap.x, x1: heap.x + heap.w, top: heap.y });
-  stands.push({ x0: 3264, x1: 3840, top: 384 });
-  let next = 0;
-  let jumped = -1;
-  let dj = false;
-  let wallT = -1;
   for (; f < (o.max ?? 3600); f++) {
     const p = s.player;
     const cx = p.x + p.w / 2;
     const fy = p.y + p.h;
-    // (Where she stands now: the furthest stand under her feet; the next one is the goal.)
-    if (p.grounded)
-      for (let k = stands.length - 1; k >= 0; k--) {
-        const q = stands[k];
-        if (q && Math.abs(fy - q.top) <= 4 && cx >= q.x0 - 8 && cx <= q.x1 + 8) {
-          next = Math.min(stands.length - 1, k + 1);
-          if (k === stands.length - 1) next = k;
-          break;
-        }
-      }
-    const g = stands[next] as { x0: number; x1: number; top: number };
-    const gx = next === stands.length - 1 ? 3800 : (g.x0 + g.x1) / 2;
-    const dir = gx < cx ? -1 : 1;
-    const H = dir < 0 ? L : R;
-    let m = 0;
-    if (s.caught) m = 0;
-    else if (p.grounded) {
-      dj = false;
-      m = H;
-      // (A careful person waits for a rock telling or falling over the next stand.)
-      if (o.careful) {
-        const esc = s.kit.escape;
-        for (let i = 0; i < E.rocks.length; i++) {
-          const r = E.rocks[i];
-          const st = esc.rock[i] ?? 0;
-          // (She sees the grit only `lag` frames after it starts.)
-          const seen = st === 2 || (st === 1 && (esc.rockT[i] ?? 0) >= lag);
-          if (r && seen && r.x + r.w / 2 > g.x0 && r.x - r.w / 2 < g.x1 && r.y1 <= g.top + 4) m = 0;
-        }
-      }
-      // (Jump at the lip of what she stands on, or once the next stand's near edge is within reach.)
-      const near = dir > 0 ? g.x0 - cx : cx - g.x1;
-      const here = stands[Math.max(0, next - 1)];
-      const lip = here && Math.abs(fy - here.top) <= 4 ? (dir > 0 ? here.x1 - cx : cx - here.x0) : 999;
-      if (m && f - jumped > 12 && (near < 150 || lip < 24) && next < stands.length - 1) {
-        m |= J;
-        jumped = f;
-      }
-      // (Off the heap: at the den's east wall, a jump into it, then the claws up it.)
-      if (next === stands.length - 1 && fy > 500) {
-        m = R;
-        if (cx > 3180 && f - jumped > 12) {
-          m |= J;
-          jumped = f;
-        }
-      }
-    } else {
-      // In the air: hold the jump 12 frames; steer at the stand, braking over it; a double jump if falling short.
-      const over = cx >= g.x0 && cx <= g.x1;
-      m = Math.abs(cx - gx) < 16 ? 0 : cx < gx ? R : L;
-      if (next === stands.length - 1) {
-        m = R;
-        // (On the wall: a kick up it after `delay` frames, holding into it.)
-        if (p.wallDir === 1 || p.mode === 'wallSlide') {
-          if (wallT < 0) wallT = f;
-          if (f - wallT >= delay && !(prev & J)) {
-            m |= J;
-            jumped = f;
-            wallT = -1;
-          }
-        } else wallT = -1;
-      }
-      if (f - jumped < 22) m |= J;
-      if (!dj && p.vy > 0 && (fy > g.top - 16 || next === stands.length - 1) && !over) {
-        m |= J;
-        dj = true;
-      }
-      if (dj && p.vy < 0) m |= J;
-    }
+    const m = plan.act(s);
     if (o.trace && f % 3 === 0)
       console.error(
-        `${f} (${Math.round(cx)},${Math.round(fy)}) g${p.grounded ? 1 : 0} vy ${p.vy.toFixed(1)} next ${next} m ${m} front ${s.kit.escape.frontOn ? Math.round(s.kit.escape.front) : '-'}`,
+        `${f} (${Math.round(cx)},${Math.round(fy)}) g${p.grounded ? 1 : 0} vy ${p.vy.toFixed(1)} m ${m} front ${s.kit.escape.frontOn ? Math.round(s.kit.escape.front) : '-'}`,
       );
     // (Her moves are planned, as a person's are; only what is new (the rocks' grit) reaches her `lag` frames late.)
     const use = m;
     const ev: SimEvent[] = [];
     step(s, use, t, scene(), ev, W);
     tape.push(use);
-    prev = m;
     for (const e of ev) {
       if (e.type === 'escapeHit') hits.push(`${f} ${e.what} (${e.x},${e.y})`);
       if (

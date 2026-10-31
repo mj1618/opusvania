@@ -47,19 +47,54 @@ Render and audio build against these; sim / content names only (render never wri
   (`rockY` its bottom) / 3 down): `escapeStart {id, x, y}` (also after each return), `rockfall {id, phase: tell | fall
   | land, x, y, w, tell}`, `collapseFront {id, phase: start | stop, y, x0, x1}` (its live top: `kit.escape.front`),
   `escapeCheckpoint {id, cp, x, y}`, `escapeHit {id, what (a rock's id | 'front'), x, y, frames}` then a `fallReturn`
-  with id `escape:<what>` (no light lost), `escapeEnd {id, x, y}` + flag `cn-den-escaped`. The den's rubble is now
-  two gates shut on `cn-den-collapse`: `rubble-slab` (a roof slab, 2688-2880 top 1152) and `rubble-root` (the
-  taproot's top half hanging from the roof, 2944-3040 x 448-944, a claw face east); the taproot gate falls as before.
-  `scene.escape.path` is the freed cloud's line out (render). Camera zone `escape` (zoom 0.85) over the chimney,
-  shaft and passage until `cn-den-escaped`.
+  with id `escape:<what>` (no light lost), `escapeEnd {id, x, y}` + flag `cn-den-escaped`. The den's rubble (as built,
+  bb63744; the first commit's slab and hanging root are gone): gates shut on `cn-den-collapse`: `rubble-heap` (2944-3264,
+  top 704, to the floor: the taproot and earth against the east wall) and six torn-root perches `rubble-1..6` (48 tall;
+  `DEN_PERCHES`); the taproot gate falls as before. `scene.escape.path` is the freed cloud's line out (render). Camera
+  zone `escape` (zoom 0.8, `after: cn-den-collapse`, until `cn-den-escaped`) over the whole arena and the passage.
 - **The chase** (#5): `fireflyChase` phase **`back`** (+ `lure`): a fall in the chase puts her at the last hook she
   flung off (`kit.firefly.hook`, a lure index), her centre on its flame, drifting as at the first lesson for
   `kit.firefly.hold` frames (`player.lessonK` eases in: render's thickened air applies). It waits at every hook now,
-  and never goes on to the nest while she falls.
+  and never goes on to the nest while she falls. A seventh hook `hook-7` (3440, 1160) replaces the chain's lamp on the
+  line: off hook-6 down-left, then a left fling into the roost's mouth.
 - **The sit** (#4): zone `crown-sit` zoom 1.3, `frames` 120 (the push-in's length), `lean {1700, 860, 0.5}` (the
   pair and the moon's edge), `after: cn-kin-sat` (render must honour `after`).
 - **Fixed**: an `after` lamp that is dark (its flag not saved) never sends `lureRelight` (the gap's dark hooks sent
   one every frame from `tickLures`).
+
+### v14 as built (round 14, the level/sim lane)
+- **The Keeper's beats.** P1 (gate: 2 moths): slow rams (`firstTellRams`' 1.5x tell, 0.6x speed: the boss pins
+  `e.rams` to 0 while `boss.angry` is 0), the first moth, the rage beat (rear 40, slam, stand 30), then fast rams to
+  the end. P3's sweep: `sweep` mode (glances) for `sweepTell` 42, the claws 10 frames, then eat (open) 90. The death
+  roll moves the box itself (`rollStep` in stage `end`); on a later visit the creature is `gone` (it woke on re-entry
+  before: `init` never hid it).
+- **Measured** (headless unless said): the den plan (`keeper-run.ts --lag=0|8|15`) 68-87 s, 0-1 hits; live on the GPU
+  page with lag 15 (`escape-live.ts`, which runs keeper-live first) 50 s, 0 hits; **the crude reactive controller**
+  (`keeper-react.ts`, lag 15, review r13's kind): jumping on the ram's charge never leaves P1 (11 fades in 5 min: the
+  fast rams after the beat); jumping in the tell wins in 41-58 s with 1 hit; `--learn` (on the charge until it has seen
+  the rage beat, then in the tell) wins in 130 s, 6 hits, 1 fade. Reading the sweep's arc (`boss.tellX0..X1`) it takes
+  0 claw hits (9 without it: render's arc carries P3). Its remaining hits are the slam's floor wave (render #6).
+  The phases' gates put a floor of ~37 s under any fight (P1 ~11 s, P2 12.6 s, P3 13.5 s).
+- **The escape.** Way: the cage, west onto the west shelf, up `rubble-1/2`, east along `rubble-3..6` under the roof,
+  onto the heap, the claws up the east wall over it (`climbs.ts den-escape`, delays 0-16), through the roof's gate,
+  east along the passage. Rocks (`rock-1..7`): behind her (drama) except `rock-2` / `rock-3`, telling 64 frames over
+  the next perch (a runner passes before they drop; a careful one waits and sees them land). The front follows where
+  she last STOOD (`kit.escape.stand`), not her jumps (a missed jump to the gate fell back into it: a cheap loop);
+  checkpoints mark on entering their rect (a leap over a perch counts). `escape-probe.ts [--careful] [--lag]`:
+  runner 7.3 s, careful (lag 15) 7.3-9.9 s, no hits; live (lag 15) 8.3 s from the roof's giving, 3.5 s of column
+  before it. **Short of the 20 s asked**: the den's room (3840 x 1536, the cellar above, the ledge below) holds
+  ~4,300 px of way; the next step for length is the clifftop room's chimney (out-1..3) under the front, not done.
+- **The chase.** Her progress counts only in the air and not falling (`fallVy` 2; caught counts as falling): the
+  shelf under the S projected onto it and sent the firefly into the nest while she stood. A landing mid-chase off a
+  hook past the first, short of the nest (`nestPx` 160), is a fall (`chase:<hook>` catch, once: landed again without
+  a fling she stays); the hook she is put back at is the last `fling` event's, and every ember of the chain burns
+  again. `chase-probe.ts --beat=0|6 / --closest` all reach the nest (`--beat=10`+ misses hook-6: back at hook-5).
+  `hook-probe.ts` maps a hook's fling outcomes by press offset (how hook-7 was placed).
+- **Gotchas (r14)**: render's `zoneAt` honours `after` only since r14 (r13's `crown-sit` was always on); zones are
+  first-match, so a zone that must follow another is ordered after it with `until`s, not `after`s. `slashLures` runs
+  after `slashEnemies` in a slash, so a cage's hit can ask whether its keeper took the same blade. An `after` lamp
+  is put out by kit.ts every step before its flag: `tickLures` relit it every frame (fixed). Tools that run in the page
+  (escape-plan.ts, keeper-live.ts) must not touch `process` outside a `typeof` guard.
 
 ## v13 (round 13, review canopy-r12.md): the contract (landed in c932ad7)
 Render and audio build against these; sim / content names only (render never writes them).
