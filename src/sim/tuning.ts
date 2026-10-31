@@ -567,6 +567,8 @@ export const defaultTuning = withVariants({
       fallVy: 2,
       // (A landing within `nestPx` of the path's end is the nest, not a fall.)
       nestPx: 160,
+      // (Her nearest point at the firefly's own counts only within `edgePx` of the path there.)
+      edgePx: 240,
     },
     /**
      * The Canopy r14, moment 7: the full escape (src/sim/escape.ts). A hit holds her `hitFrames`, then back to the last

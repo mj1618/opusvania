@@ -246,10 +246,13 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
     fireflyAt(f, 0, AT);
     ff.x = AT.x;
     ff.y = AT.y;
-    if (!starts(state, scene, f)) return;
-    state.save.flags.push(f.flag);
+    const again = state.save.flags.includes(f.flag);
+    if (again ? !onTrigger(state, f) : !starts(state, scene, f)) return;
+    if (!again) {
+      state.save.flags.push(f.flag);
+      events.push({ type: 'flagSet', flag: f.flag, by: f.id, x: AT.x, y: AT.y });
+    }
     events.push({ type: 'fireflyStart', id: f.id, x: AT.x, y: AT.y, frames: f.frames });
-    events.push({ type: 'flagSet', flag: f.flag, by: f.id, x: AT.x, y: AT.y });
     ff.beat = 1;
     ff.t = 0;
     ff.d = 0;
@@ -267,7 +270,10 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
   // (r14, review r13 #5: not while she falls (out of a fling's aim, sinking): a fall past the line is no progress.)
   // (Her progress is made on the line, in the air: standing on the shelf under the S is none.)
   const falling = (!p.grounded && p.fling < 0 && p.vy > K.fallVy) || !!state.caught;
-  if (PJ.dist <= K.nearPx && p.faded === 0 && !falling && !p.grounded) ff.her = PJ.d;
+  // (r14, first-timer ft14chase: gliding low into the nest, her nearest point clamped at the firefly's own and pushed
+  // it on, a ratchet to the nest while the S was never flown. At the clamp she must be close to it.)
+  const clamped = PJ.d >= ff.d - 1 && PJ.dist > K.edgePx;
+  if (PJ.dist <= K.nearPx && p.faded === 0 && !falling && !p.grounded && !clamped) ff.her = PJ.d;
   if (ff.hold > 0) ff.hold--;
   // (The last hook she flung off: a fall puts her back there.)
   const lures = scene.lures ?? [];
@@ -427,6 +433,16 @@ export function chaseBack(
   return { x: l.x, y: Math.round(l.y + t.body.height / 2) };
 }
 
+/** Is she standing in pass `f`'s trigger (a chase's restart: she is back on its shelf)? */
+function onTrigger(state: GameState, f: FireflyPass): boolean {
+  const p = state.player;
+  const r = f.trigger;
+  if (!r || !p.grounded || p.faded > 0) return false;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  return cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
+}
+
 /** Does pass `f` start this step (its flag not saved, none under way)? */
 function starts(state: GameState, scene: Scene, f: FireflyPass): boolean {
   if (state.save.flags.includes(f.flag)) return false;
@@ -479,20 +495,9 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
       ff.d = 0;
       ff.her = 0;
       fireflyAt(f, 0, AT);
-      // (A chase she left before its end (a fall down the drop, a fade): it waits for her at its last stop.)
-      const c = f.chase;
-      if (c && state.save.flags.includes(f.flag)) {
-        const last = c.waits.length > 0 ? (c.waits[c.waits.length - 1] as number) : 0;
-        ff.d = pointD(f.path, last);
-        ff.her = 0;
-        ff.beat = 3;
-        along(f.path, ff.d, AT);
-        // (The hooks behind that stop burn.)
-        for (const id of c.kindles) {
-          const l = (scene.lures ?? []).find((q) => q.id === id);
-          if (l?.after && !state.save.flags.includes(l.after)) state.save.flags.push(l.after);
-        }
-      }
+      // (A chase she left before its end (a fall down the drop, out by the roost's shaft, a fade): r14, first-timer
+      // ft14chase: it used to wait at its last stop by the nest, and a player back in the roost ended it unflown. Now it
+      // perches at its start again and bolts when she is back on the shelf; the hooks it lit stay lit.)
       ff.x = ff.px = AT.x;
       ff.y = ff.py = AT.y;
       // (Its first hook is the light it is hanging: lit already.)

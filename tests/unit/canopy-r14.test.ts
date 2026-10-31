@@ -358,6 +358,39 @@ describe('the chase holds (r14, review r13 #5)', () => {
   });
 });
 
+describe('the chase is flown, not skipped (r14, first-timer ft14chase)', () => {
+  it('gliding low off the shelf into the roost does not send the firefly to its nest: it waits at a stop', () => {
+    const s = at('cn-gap', 4300, 1344);
+    const ev: SimEvent[] = [];
+    run(s, L, 40, ev);
+    run(s, 0, 40, ev);
+    expect(ev.some((q) => q.type === 'fireflyChase' && q.phase === 'start')).toBe(true);
+    // (As the first-timer did: off the shelf's west lip, wings open, into the hanging roots' pocket.)
+    for (let k = 0; k < 120 && s.player.x + s.player.w / 2 > 3500; k++) run(s, L, 1, ev);
+    run(s, L | J, 80, ev);
+    for (let k = 0; k < 200 && !s.player.grounded; k++) run(s, L | J, 1, ev);
+    run(s, 0, 600, ev);
+    expect(s.player.y + s.player.h).toBe(1216);
+    expect(ev.some((q) => q.type === 'fireflyChase' && q.phase === 'nest')).toBe(false);
+    expect(s.kit.firefly.beat).toBe(3);
+    // Out by the roost's shaft and back in: it perches at its start again, its lit hooks lit, and bolts once she is
+    // back on the shelf (it never ends unflown by the nest).
+    const lit = (gap.lures ?? []).filter(
+      (l, i) => l.id.startsWith('hook-') && (s.lures.hp[i] ?? 0) > 0,
+    ).length;
+    const s2 = at('cn-gap', 3040, 1216, CG, [...s.save.flags]);
+    const ev2 = run(s2, 0, 300);
+    expect(s2.kit.firefly.beat).toBe(0);
+    expect(ev2.some((q) => q.type === 'fireflyChase' && q.phase === 'nest')).toBe(false);
+    expect(
+      (gap.lures ?? []).filter((l, i) => l.id.startsWith('hook-') && (s2.lures.hp[i] ?? 0) > 0).length,
+    ).toBe(lit);
+    placePlayer(s2, 3900, 1344, t, withShortcuts(gap, s2.save), []);
+    const ev3 = run(s2, 0, 60);
+    expect(ev3.some((q) => q.type === 'fireflyChase' && q.phase === 'start')).toBe(true);
+  });
+});
+
 describe('moonlight for two pushes in (r14, review r13 #4)', () => {
   it('`crown-sit` after the kin sits: 1.3 over 2 s, leaning to the moon', () => {
     const z = getRoom('cn-crown').camera?.zones?.find((q) => q.id === 'crown-sit');
