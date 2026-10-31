@@ -104,6 +104,23 @@ export function lessonFlag(scene: Scene, l: Lure): string {
 }
 
 /**
+ * The Canopy r15 (review r14 #5): is she put back at a chase's hook and still held there (`kit.firefly.hold`), within
+ * `lures.lessonPx` of it? She hangs there (`kit.firefly.backFall`) until she presses or the hold runs out.
+ */
+export function chaseHoldNear(state: GameState, scene: Scene, t: Tuning): boolean {
+  const ff = state.kit.firefly;
+  if (ff.hold <= 0 || ff.hook < 0) return false;
+  const l = scene.lures?.[ff.hook];
+  if (!l || (state.lures.hp[ff.hook] ?? 0) <= 0) return false;
+  const p = state.player;
+  const cx = centreX(p);
+  const cy = centreY(p);
+  const r = t.lures.lessonPx;
+  const f = flameAt(state.lures, ff.hook, l, state.frame, t, F);
+  return (f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy) <= r * r;
+}
+
+/**
  * Is she within `lures.lessonPx` of a burning lesson lamp (`Lure.lesson`) she has not flung off yet (`lessonFlag`)? (The first fling,
  * the Canopy r10: her fall slows there, src/sim/player/player.ts `gravity`.)
  */

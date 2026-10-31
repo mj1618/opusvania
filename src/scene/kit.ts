@@ -129,7 +129,9 @@ export const KIT_FIELDS = {
       after: id,
       sets: id,
       area: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
-      end: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+      end: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
+      next: id.optional(),
+      breaks: z.array(id).optional(),
       path: z.array(z.tuple([int, int])).min(2),
       checkpoints: z
         .array(
@@ -167,11 +169,25 @@ export const KIT_FIELDS = {
           near: int.positive(),
           speed: z.number().positive(),
           creep: z.number().min(0),
+          start: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
         })
         .strict()
         .optional(),
     })
     .strict()
+    .optional(),
+  // --- The Canopy r15 (src/sim/quiet.ts): quiet moments on a story flag (the vista).
+  quiet: z
+    .array(
+      z
+        .object({
+          id,
+          flag: id,
+          frames: int.min(1).max(1200),
+          air: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
+        })
+        .strict(),
+    )
     .optional(),
   // --- Finds (src/sim/finds.ts).
   mothStones: z.array(z.object({ id, x: int, y: int, area: id }).strict()).optional(),
@@ -250,6 +266,11 @@ export const CAMERA_ZONES = z
           .object({ x: int, y: int, k: z.number().min(0).max(1) })
           .strict()
           .optional(),
+        /**
+         * The Canopy r15 (review r14 #1): the view's centre sits this many px under her (the escape: the collapse front
+         * in the frame's lower part, 200-260 px under her feet). Render's camera reads it.
+         */
+        below: int.min(0).max(600).optional(),
         /** Frames the view takes to slide into this zone (Lanternroot's chambers: 20; default the camera's own). */
         frames: int.min(1).max(120).optional(),
       })

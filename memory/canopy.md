@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v14, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v15, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,44 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v15 (round 15, review canopy-r14.md): the contract
+Render and audio build against these; sim / content names only (render never writes them).
+- **The escape felt** (#1): the den's way out is **low and east, then the clifftop's chimney** (no more roof gate,
+  shaft or passage: the den <-> out link is at the arena's floor, world y 6,976). The collapse opens gate
+  **`den-breach`** (the arena's east wall at the floor, 3,264-3,392 x 1,088-1,344, `flag: cn-den-collapse`: solid
+  before, torn open after) onto a root corridor east to the way out's pocket; down its root shaft, along the low
+  passage, and up the chimney (out-1..3) under the front to the clifftop. Two escape blocks, one `sets`
+  (`cn-den-escaped`): the den's **`den-escape`** has no `end` and **`next: 'cn-out'`** (rocks on the floor run, no front);
+  the way out's **`out-escape`** (`after: cn-den-collapse`) ends on the clifftop (`escapeEnd` there: the vista with
+  it), its front waits for her at the chimney's foot (**`front.start`** box) and **follows her up the walls** (a wall
+  slide counts as standing), 240 under her (`lag`), creeping to 200 (`near`). **`Escape.breaks`**: bark that comes down
+  as it begins (`out-plug`: `barkBreak by: 'escape'`). The r14 perches `rubble-3..6` and `rubble-heap` are gone;
+  `rubble-1`, `rubble-2` stay (the caved den's way back up to the balcony). Camera zones **`escape`** in both rooms:
+  zoom 1.0, and the new CameraZone field **`below`** (px: the view's centre that far under her; the chimney: the front
+  in the frame's lower part). The vista trigger `out-vista` now covers the chimney's mouth (she bursts out there).
+- **The fair wave** (#2): event **`keeperWave {id, phase: tell | slam, x, y, x0, x1, frames, speed}`**: `tell` as it
+  rears for a slam with a wave (`frames` to the slam, `x0..x1` the wave's reach); `slam` when it lands: the two fronts
+  start out from `x` along the floor at `y` **`frames` later** (`keeper.waveDelay` 12: a crack opens at its feet
+  first), at `speed` px/f. Through the rear **`boss.tell` = 'slam'** with `tellFrames`, `tellX0..tellX1` (as the
+  sweep's). `EnemyState.waveWait` (frames to the fronts). In P3 it never rears for its rotation's slam within
+  `cageSlamPx` 300 of her while she is within `cageNearPx` 140 of the fallen cage (it rams).
+- **The rage beat's bridge** (#6): **`boss.bridge`** 1 from the beat until its first fast ram has run (2 while it
+  runs): that ram is told `keeper.bridgeTell` 1.3x and runs at `bridgeSpeed` 0.8x (`enemyWindup.frames` / `speed` say so).
+- **The chase's hold** (#5): put back at a hook she **hangs** there (`kit.firefly.backFall` 0.12 px/f) until she
+  presses or `backHold` (180) runs out (`kit.firefly.hold` > 0 and the hook: `lures.ts chaseHoldNear`).
+- **The sit acted** (#3): `kinSit` as before (the start), then **`kinBeat {id, phase, frames, x, y, her}`** as each
+  beat begins, and **`state.kit.kinSit {phase, t, frames, x, y, her}`** (src/sim/quiet.ts `KIN_PHASES`): `come` 90
+  (it shuffles over), `look` 60 (both look at the moon), `open` 50 (its wings open to the moon), `try` 64 (the torn
+  wing lifts, trembling), `fail` 36 (it falls back half open), `turn` 120 (it turns its face to her and holds), `answer`
+  72 (Wing opens her wings once, mirrored: `her` 1 if she stood by it as the beat began), `fold` 48, `lean` 180, then
+  `stay` (open-ended; also if she walks `leavePx` 200 past the sit's `r` before the lean). Tuning `t.kit.kinSit`. On a
+  later visit (`cn-kin-sat` saved) it starts at `stay`.
+- **Quiet moments** (#10): **`state.kit.quiet {why: '' | column | sit | vista, t, vista}`** and **`quietMoment {why,
+  on, x, y}`** on each change: `column` (the great release until the roof gives: the boss's `collapse` under
+  `collapseRubble`), `sit` (`kinSit` until `stay`), `vista` (scene field **`quiet: [{id, flag, frames, air?}]`**: the
+  clifftop's `cn-out-vista` for 240 frames, and while she is in the air over the valley after it: the glide). Render
+  fades the HUD and holds the prompts while it is on.
 
 ## v14 (round 14, review canopy-r13.md): the contract
 Render and audio build against these; sim / content names only (render never writes them).

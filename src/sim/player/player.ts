@@ -5,6 +5,7 @@ import { ActionBit, axisX, type InputFrame } from '../input';
 import { floorBarkAt, slashKit, thornAt } from '../kit';
 import { kindle, kindleTarget, spendGlow, startGust } from '../light';
 import {
+  chaseHoldNear,
   flameAt,
   flingAim,
   flingLaunch,
@@ -1043,7 +1044,12 @@ function gravity(c: Ctx): void {
   p.lessonK = near ? Math.min(1, p.lessonK + ease) : Math.max(0, p.lessonK - ease);
   if (p.lessonK > 0) {
     const capX = P.maxRun + (L.lessonRun - P.maxRun) * p.lessonK;
-    const capY = P.maxFall + (L.lessonFall - P.maxFall) * p.lessonK;
+    let capY = P.maxFall + (L.lessonFall - P.maxFall) * p.lessonK;
+    // (The Canopy r15, review r14 #5: put back at a chase's hook she hangs on it, not drifts off it.)
+    if (near && chaseHoldNear(c.state, c.scene, P.tuning)) {
+      const hang = P.tuning.kit.firefly.backFall;
+      capY = P.maxFall + (hang - P.maxFall) * p.lessonK;
+    }
     if (Math.abs(p.vx) > capX) p.vx = p.vx > 0 ? capX : -capX;
     if (p.vy > capY) p.vy = capY;
   }

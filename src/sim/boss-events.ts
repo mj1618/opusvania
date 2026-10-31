@@ -132,6 +132,22 @@ export type BossEvent =
    */
   | { type: 'keeperRage'; id: string; x: number; y: number; phase: 'rear' | 'slam'; frames: number }
   /**
+   * The Canopy r15 (review r14 #2): a slam with a floor wave (P1 / P3's rear). `phase` `tell`: it rears (`frames` to the
+   * slam; `x` its centre, `x0` / `x1` the wave's reach); `slam`: it lands, and the wave's two fronts start out from `x`
+   * along the floor at `y` after `frames` (the delay: a crack opening at its feet), at `speed` px/f, to `x0` / `x1`.
+   */
+  | {
+      type: 'keeperWave';
+      id: string;
+      phase: 'tell' | 'slam';
+      x: number;
+      y: number;
+      x0: number;
+      x1: number;
+      frames: number;
+      speed: number;
+    }
+  /**
    * The Canopy r14 (review r13 #2): P3's sweep tell, nothing like eating: it rears its front half, claws up (creature
    * mode `sweep`, NOT open: every cut glances, `keeperGlance sweep`), for `frames`; then the claws come down over the
    * floor `x0`..`x1` at `y` (`keeperSweep`), and only then it eats, open (`keeperEat sweep: true`). `boss.sweep` is the

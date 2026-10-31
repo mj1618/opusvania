@@ -402,6 +402,9 @@ function startBrace(e: EnemyState, info: StepInfo, B: Row, tell = -1, px = -1): 
   const p3Px = e.keep > 0 ? info.t.keeper.p3ChargePx : B.p3ChargePx;
   e.chargeLeft = frames(px >= 0 ? px : e.phase === 3 ? p3Px : B.chargePx, 1);
   let n = tell >= 0 ? frames(tell, 1) : tellFrames(e, B);
+  // (The Canopy r15, review r14 #6: the Keeper's first fast ram after its rage beat is told longer: a bridge.)
+  const bridge = tell < 0 && bridged(e, info);
+  if (bridge) n = frames(n * info.t.keeper.bridgeTell, 1);
   // (Round 6: braced closer than `strikeMinPx` (no room behind it to back off), the tell is longer by what the
   // ram would have taken to cover the difference: never less time to answer than from `strikeMinPx`.)
   if (B.strikeMinPx > 0 && tell < 0) {
@@ -429,8 +432,20 @@ function startBrace(e: EnemyState, info: StepInfo, B: Row, tell = -1, px = -1): 
     dir: e.facing,
     frames: n,
     px: e.chargeLeft,
-    speed: e.rams < B.firstTellRams ? B.chargeSpeed * B.firstRamSpeedMult : B.chargeSpeed,
+    speed:
+      e.rams < B.firstTellRams
+        ? B.chargeSpeed * B.firstRamSpeedMult
+        : bridge
+          ? B.chargeSpeed * info.t.keeper.bridgeSpeed
+          : B.chargeSpeed,
   });
+}
+
+/** The Keeper's bridge (the Canopy r15): its first fast ram after the rage beat (`boss.bridge` 1, P1). */
+function bridged(e: EnemyState, info: StepInfo): boolean {
+  return (
+    e.keep > 0 && e.phase <= 1 && info.state.boss?.bridge === 1 && e.rams >= info.t.oldBurrback.firstTellRams
+  );
 }
 
 /**
@@ -625,8 +640,24 @@ function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean, wave = false)
   e.strikeCd = Math.max(e.strikeCd, frames(B.slamCalmFrames));
   // (A slam told by its rear sends a wave along its floor: round 6.)
   if (wave && B.slamWaveSpeed > 0) {
-    e.wave = 1;
+    // (The Canopy r15, review r14 #2: the Keeper's wave starts `waveDelay` frames after the slam: a crack opens at
+    // its feet first, so the front is seen running before it arrives.)
+    const delay = e.keep > 0 ? frames(info.t.keeper.waveDelay) : 0;
     e.waveX = cx;
+    if (delay > 0) e.waveWait = delay;
+    else e.wave = 1;
+    if (e.keep > 0)
+      info.events.push({
+        type: 'keeperWave',
+        id: e.id,
+        phase: 'slam',
+        x: Math.round(cx),
+        y: Math.round(e.fromY),
+        x0: Math.round(cx - B.slamReachPx),
+        x1: Math.round(cx + B.slamReachPx),
+        frames: delay,
+        speed: B.slamWaveSpeed,
+      });
   }
   info.events.push({
     type: 'enemySlam',
@@ -638,6 +669,20 @@ function slam(e: EnemyState, info: StepInfo, B: Row, big: boolean, wave = false)
     shook,
     px: B.slamReachPx,
   });
+}
+
+/**
+ * The Canopy r15 (review r14 #2: 6 of 8 hits were the wave, most at the fallen cage with its rear behind her): in P3
+ * the Keeper never rears for its rotation's slam within `cageSlamPx` of her while she is within `cageNearPx` of the
+ * cage (it rams instead).
+ */
+function cageClose(e: EnemyState, info: StepInfo): boolean {
+  const b = info.state.boss;
+  if (e.keep === 0 || e.phase !== 3 || !b) return false;
+  const K = info.t.keeper;
+  const p = info.state.player;
+  const pc = p.x + p.w / 2;
+  return Math.abs(pc - b.cageX) <= K.cageNearPx && Math.abs(pc - (e.x + e.w / 2)) < K.cageSlamPx;
 }
 
 /** She is past the taproot from it (the strip it cannot reach: the root stops a body 96 tall, not hers). */
@@ -963,6 +1008,7 @@ function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
   const cx = e.x + e.w / 2;
   // (The slam's floor wave runs out each way; a front that crosses her feet on its floor hurts her.)
   e.waveHit = false;
+  if (e.waveWait > 0 && --e.waveWait === 0) e.wave = 1;
   if (e.wave > 0) {
     const was = e.wave;
     e.wave += B.slamWaveSpeed;
@@ -1026,7 +1072,8 @@ function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
     e.phase !== 2 &&
     e.strikeCd === 0 &&
     e.rams - e.slams >= B.slamEveryRams &&
-    Math.abs(p.y + p.h - e.fromY) <= 2;
+    Math.abs(p.y + p.h - e.fromY) <= 2 &&
+    !cageClose(e, info);
   if (free && (e.camp >= frames(B.campFrames) || rotation)) {
     e.slams = e.rams;
     const n = frames(B.rearFrames, 1);
@@ -1588,6 +1635,8 @@ export const burrback: KindRules = {
         e.ramSpeed = B.ramUnderJump ? underJump(e, info, B) : 0;
         // (Round 4: the first rams of a try are slower too: a late jump still clears them.)
         if (e.ramSpeed === 0 && e.rams < B.firstTellRams) e.ramSpeed = B.chargeSpeed * B.firstRamSpeedMult;
+        // (The Canopy r15: the Keeper's bridge ram, slower.)
+        if (e.ramSpeed === 0 && bridged(e, info)) e.ramSpeed = B.chargeSpeed * info.t.keeper.bridgeSpeed;
         // (Phase 3: desperate, fast.)
         if (e.phase === 3) e.ramSpeed = Math.max(e.ramSpeed, B.p3ChargeSpeed);
         events.push({

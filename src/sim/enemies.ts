@@ -242,6 +242,7 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     streak: 0,
     wave: 0,
     waveX: 0,
+    waveWait: 0,
     waveHit: false,
     slams: 0,
     shy: 0,

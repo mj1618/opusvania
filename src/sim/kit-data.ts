@@ -266,7 +266,14 @@ export interface Escape {
   after: string;
   sets: string;
   area: EscapeBox;
-  end: EscapeBox;
+  /**
+   * Where it ends (`sets` saved, `escapeEnd`). The Canopy r15: absent in a room it runs on out of (the den: `next`
+   * names the room it goes on in, where a second block with the same `sets` takes it to its end).
+   */
+  end?: EscapeBox;
+  next?: string;
+  /** The Canopy r15: rotten bark (ids) that comes down for good as it begins (`barkBreak` by `escape`). */
+  breaks?: string[];
   /** The way out as a line (render: the freed cloud streams along it ahead of her). */
   path: Array<[number, number]>;
   /** Where a hit puts her (feet `x`, `y`): marked when she stands (grounded) with her centre in `at`. The first is the start's. */
@@ -302,5 +309,7 @@ export interface Escape {
     near: number;
     speed: number;
     creep: number;
+    /** The Canopy r15: it waits until her centre has been in this box (the chimney's foot), then rises. */
+    start?: EscapeBox;
   };
 }

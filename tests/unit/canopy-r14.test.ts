@@ -128,14 +128,16 @@ describe("the Keeper's honest tells (r14, review r13 #2, #3, #7)", () => {
       if (q.type === 'enemyWindup') expect(q.speed).toBeLessThan(t.oldBurrback.chargeSpeed);
     expect(burr(s).wave).toBe(0);
     expect(s.boss?.angry).toBe(2);
-    // After it, its rams are the fast ones.
+    // After it, its rams are the fast ones (r15, review r14 #6: the first of them a bridge, told longer, slower).
     const ev2: SimEvent[] = [];
-    for (let f = 0; f < 1800 && !ev2.some((q) => q.type === 'enemyWindup'); f++) {
+    for (let f = 0; f < 3600 && ev2.filter((q) => q.type === 'enemyWindup').length < 2; f++) {
       s.player.invuln = 60;
       run(s, 0, 1, ev2);
     }
-    const w = ev2.find((q) => q.type === 'enemyWindup') as Of<'enemyWindup'>;
-    expect(w?.speed).toBe(t.oldBurrback.chargeSpeed);
+    const [w, w2] = ev2.filter((q) => q.type === 'enemyWindup') as Of<'enemyWindup'>[];
+    expect(w?.speed).toBeCloseTo(t.oldBurrback.chargeSpeed * t.keeper.bridgeSpeed);
+    expect(w2?.speed).toBe(t.oldBurrback.chargeSpeed);
+    expect(w?.frames ?? 0).toBeGreaterThan(w2?.frames ?? 0);
   });
 
   it('at its gate: `keeperGate` on (why `moths` in P1), `boss.gated`; off once the gate lets go', () => {

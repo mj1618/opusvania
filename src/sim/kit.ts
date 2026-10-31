@@ -36,6 +36,14 @@ import { strikeBell } from './light';
 import { lureHpMax } from './lures';
 import { solidAt } from './physics/aabb';
 import type { Box } from './player/attack';
+import {
+  createKinSit,
+  createQuiet,
+  type KinSitState,
+  type QuietState,
+  updateKinSit,
+  updateQuiet,
+} from './quiet';
 import type { Scene, SolidRect } from './scene';
 import type { EnemyState, GameState, PlayerState, SaveState } from './state';
 import type { Tuning } from './tuning';
@@ -71,6 +79,10 @@ export interface KitState {
   sitStill: number;
   /** The Canopy r14 (`scene.escape`, src/sim/escape.ts): the full escape. */
   escape: EscapeState;
+  /** The Canopy r15 (src/sim/quiet.ts): the kin's sit, beat by beat (after `kinSit`). */
+  kinSit: KinSitState;
+  /** The Canopy r15 (src/sim/quiet.ts): the quiet moment now (render fades the HUD and the prompts). */
+  quiet: QuietState;
 }
 
 /** A gate stands (a solid) with these flags: until its `flag`, and an arena's door only once `shut` is set. */
@@ -182,6 +194,8 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     firefly: createFirefly(),
     sitStill: 0,
     escape: createEscape(scene),
+    kinSit: createKinSit(scene, save),
+    quiet: createQuiet(),
   };
 }
 
@@ -204,6 +218,8 @@ export function cloneKit(k: KitState): KitState {
     firefly: { ...k.firefly },
     sitStill: k.sitStill,
     escape: cloneEscape(k.escape),
+    kinSit: { ...k.kinSit },
+    quiet: { ...k.quiet },
   };
 }
 
@@ -648,7 +664,9 @@ export function updateKit(
   fillCages(state, scene, events);
   updateFireflies(state, scene, t, events);
   updateSits(state, scene, events);
+  updateKinSit(state, scene, t, events);
   updateEscape(state, scene, t, events);
+  updateQuiet(state, scene, t, events);
   const gates = scene.gates ?? [];
   for (let i = 0; i < gates.length; i++) {
     const g = gates[i];

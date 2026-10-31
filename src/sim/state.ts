@@ -730,6 +730,8 @@ export interface EnemyState {
   waveX: number;
   waveHit: boolean;
   slams: number;
+  /** The Canopy r15 (review r14 #2): frames until a slam's wave starts to run (the Keeper's `waveDelay`; 0 = none). */
+  waveWait: number;
   /** Lanternroot: 1 while silver light keeps it from starting a strike (`enemyShy` fired; src/sim/light.ts). */
   shy: number;
   /**
@@ -1087,6 +1089,12 @@ export interface BossState {
   angry: number;
   gated: number;
   sweep: number;
+  /**
+   * The Canopy r15 (review r14 #6): 1 from the rage beat until its first fast ram has run (the bridge: told
+   * `keeper.bridgeTell` x as long, `bridgeSpeed` x as fast). Through a rear that ends in a slam with a wave (P1 / P3's
+   * rotation) `tell` = 'slam', `tellFrames` the frames to the slam and `tellX0` / `tellX1` the wave's reach.
+   */
+  bridge: number;
   /** The death roll (r14): from `rollFrom` to `rollX` (its centre), `rollT` frames in (`keeperRoll`). */
   rollX: number;
   rollFrom: number;

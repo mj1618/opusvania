@@ -1,4 +1,5 @@
 import type { SlashDir } from './events';
+import type { KinPhase, QuietWhy } from './quiet';
 
 /**
  * The level kit's events (src/sim/kit.ts, memory/level-kit.md); part of `SimEvent`. Unless said
@@ -44,8 +45,11 @@ export type KitEvent =
       h: number;
       dir: SlashDir;
       floor: boolean;
-      /** Lanternroot: heartwood broken by a burrback's ram (`by: 'ram'`, `dir` = its way), not by her blade. */
-      by?: 'ram';
+      /**
+       * Lanternroot: heartwood broken by a burrback's ram (`by: 'ram'`, `dir` = its way), not by her blade. The Canopy
+       * r15: shaken down as an escape begins (`by: 'escape'`, `Escape.breaks`).
+       */
+      by?: 'ram' | 'escape';
     }
   | {
       type: 'kitClang';
@@ -101,6 +105,29 @@ export type KitEvent =
    * to sit by her (render: the walk-over, the wings, the lean; the sim never moves the kin). `x`, `y` = her feet.
    */
   | { type: 'kinSit'; id: string; x: number; y: number }
+  /**
+   * The Canopy r15 (review r14 #3): the sit's beats after `kinSit`, one event as each begins (`state.kit.kinSit` holds
+   * the live one): `come` (it shuffles over beside her), `look` (both look up at the moon), `open` (it opens its
+   * wings to the moon), `try` (the torn wing lifts and trembles), `fail` (it falls back, half open), `turn` (it turns
+   * its face to her and holds still), `answer` (Wing opens her wings once, mirrored: `her` 1 if she is still by it),
+   * `fold` (it folds its wings), `lean` (it leans against her), `stay` (the end, or she left: it stays on the limb,
+   * looking at the moon). `frames` = the beat's length (0 for `stay`); `x`, `y` = the sit's spot.
+   */
+  | {
+      type: 'kinBeat';
+      id: string;
+      phase: KinPhase;
+      frames: number;
+      x: number;
+      y: number;
+      her: number;
+    }
+  /**
+   * The Canopy r15 (review r14 #10): a quiet moment begins or ends (`state.kit.quiet`): `column` (the great release
+   * until the roof gives), `sit` (the kin's sit until it stays), `vista` (the clifftop's hold and the glide over the
+   * valley). Render fades the HUD and the prompts while it is on. `x`, `y` = her feet.
+   */
+  | { type: 'quietMoment'; why: QuietWhy; on: 0 | 1; x: number; y: number }
   /**
    * The Canopy r13, moment 5 (`Lure.fills`): a moth of the passing stream is caught in the newly hung cage: `n` in
    * it now of `of` (`state.lures.fill`); it can be cut once full. `x`, `y` = the cage.

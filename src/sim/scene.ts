@@ -542,6 +542,16 @@ export interface Scene {
   /** The Canopy r14, moment 7: the full escape (src/sim/escape.ts). */
   escape?: Escape;
   /**
+   * The Canopy r15 (review r14 #10, src/sim/quiet.ts): a quiet moment on a story flag: `frames` after `flag` is saved
+   * on this visit, and while she is in the air inside `air` once it is (the clifftop's vista and the glide after).
+   */
+  quiet?: Array<{
+    id: string;
+    flag: string;
+    frames: number;
+    air?: { x: number; y: number; w: number; h: number };
+  }>;
+  /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).
    */
