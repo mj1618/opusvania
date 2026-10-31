@@ -996,14 +996,27 @@ function nestNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: num
  * twisting and splitting (a plain post reads as a trunk to climb), flaring into the floor and the roof, a dim lit edge
  * on the fungus side, gaps where the banks show through.
  */
-function denColumns(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
-  const B = BRANCH;
-  const T = plan.tone;
+/** A braided root column of the den's near plane: its foot (x, floor y), the roof it hangs from, width, lean. */
+export interface DenColumn {
+  x: number;
+  y: number;
+  top: number;
+  w: number;
+  lean: number;
+}
+
+/**
+ * Where the den's root columns stand in back `b` (the near plane's, `denColumns`), and so where the great cage's light
+ * throws their shadows (the Canopy r12, lantern/keeper.ts). Pure: the same plan and seed give the same columns.
+ */
+export function denColumnsIn(plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): DenColumn[] {
   const r = rngFor(seed, 977);
-  const body = mixc(T.near, T.grain, 0.35);
+  const out: DenColumn[] = [];
   for (const [x0, x1, y] of topsIn(plan, b)) {
     if (x1 - x0 < 300) continue;
     for (let x = x0 + range(r, 160, 520); x < x1 - 140; x += range(r, 620, 1150)) {
+      const w = range(r, 60, 110);
+      const lean = range(r, -60, 60);
       if (tornK(b, e, x, y - 200) < 0.4) continue;
       // The roof over it: the lowest underside above the floor here, or the back's top.
       let top = b.y - 40;
@@ -1011,11 +1024,28 @@ function denColumns(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: n
         const bot = m.y + m.h;
         if (x >= m.x && x <= m.x + m.w && bot <= y - 200 && bot > top) top = bot;
       }
+      if (y - top < 260) continue;
+      out.push({ x, y, top, w, lean });
+    }
+  }
+  return out;
+}
+
+/** Every root column of a den plan's near plane (all its backs, as `paintNearBacks` seeds them: `nearSeed`). */
+export function denColumnsOf(plan: InteriorPlan, nearSeed: number): DenColumn[] {
+  if (plan.look !== 'den') return [];
+  return plan.backs.flatMap((b, i) => denColumnsIn(plan, b, plan.edges[i] as BackEdges, nearSeed + i * 13));
+}
+
+function denColumns(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 978);
+  const body = mixc(T.near, T.grain, 0.35);
+  for (const { x, y, top, w: w0, lean } of denColumnsIn(plan, b, e, seed)) {
+    {
       const h = y - top;
-      if (h < 260) continue;
-      const w0 = range(r, 60, 110);
       const strands = 3 + (r() < 0.4 ? 1 : 0);
-      const lean = range(r, -60, 60);
       for (let k = 0; k < strands; k++) {
         const ph = (k / strands) * Math.PI * 2 + r();
         const turns = range(r, 0.8, 1.6);

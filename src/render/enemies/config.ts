@@ -755,6 +755,30 @@ export const BOSS = {
   },
   /** The wake (1.5 s on her drop into the arena, the sim's `wake`): eyes open by this frame, risen by this one. */
   wake: { eyes: 18, rise: 60, shake: 0.06, dust: 10 },
+  /**
+   * The Keeper's coat (the Canopy r12, canopy-moments.md moment 6: "its shell stippled with dead moth wings stuck in
+   * its plates, a predator's coat, readable at play zoom"): it sleeps under the great cage and eats what falls, and the
+   * wings stay on it. `n` wings over the dome (thicker toward the crown and the back, where they fall), each `len` rig
+   * px (x 4.4: 9-16 world px, a moth's wing at play zoom), ash pale against the shell's 10-20 luma (`wing`, `wingDark`
+   * at the root, `vein`), never as bright as its rim. Some single torn forewings, some pairs still joined. On its death
+   * `shed` of them lift off and drift down.
+   */
+  crust: {
+    n: 64,
+    len: [1.7, 3.1] as const,
+    wing: 0x75685a,
+    wingDark: 0x2a221d,
+    vein: 0x120d0b,
+    alpha: 0.82,
+    shed: 14,
+  },
+  /**
+   * The death roll (moment 6's ending beat: "rolls onto its back and doesn't get up; its shell cracks along the split;
+   * a few moth wings drift off its plates; it breathes out once, long, and is still"): frames after the killing hold.
+   * It rolls over by `roll` (heavy, no hop), its legs kick and curl by `curl`, the split opens over `crack`, the breath
+   * swells to `breath` and sags out over `out`; then it lies there (the carcass stays: no burst).
+   */
+  death: { roll: 34, hop: 6, curl: [20, 70] as const, crack: [30, 60] as const, breath: 90, out: 150 },
 } as const;
 
 /**

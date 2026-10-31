@@ -20,11 +20,20 @@ import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { lookOf } from '../scene/lib/looks';
 import { LOOK } from '../scene/lib/room-look';
 import { arrivalView } from './arrive';
-import { BurrRig, bossColors, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
+import {
+  BurrRig,
+  bossColors,
+  COLORS,
+  crustWing,
+  drawBurrback,
+  loadColors,
+  stepFeelers,
+  topHit,
+} from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
-import { Painter, type RGB, type Shade } from './paint';
+import { Painter, type RGB, rgb, type Shade } from './paint';
 
 const MAX_P = 160;
 /** The room's look, for `creatureArt` (kinds.ts): which kinds this renderer draws here. */
@@ -38,6 +47,17 @@ const WAVE_C: RGB = rgbOf(BOSS.waveColor);
 /** The rolling ball's shell (BURR's shell colours, popped toward `pop` on a hit). */
 const BALL_TOP: [number, number, number] = [0, 0, 0];
 const BALL_LOW: [number, number, number] = [0, 0, 0];
+/** A wing shed off the Keeper's coat (its colours set per wing). */
+const SH_WING: Shade & { alpha: number } = {
+  c0: [0, 0, 0],
+  c1: [0, 0, 0],
+  rim: 0.1,
+  cool: 0.1,
+  form: 0.05,
+  band: 0.5,
+  ember: 0,
+  alpha: 1,
+};
 const SH_BALL: Shade = { c0: BALL_TOP, c1: BALL_LOW, rim: 0.45, cool: 0.3, form: 0.25, band: 0.18 };
 const SH_SEAM: Shade = {
   c0: rgbOf(BURR.color.seam),
@@ -132,6 +152,20 @@ export class EnemyRenderer {
   drawn = 0;
   verts = 0;
   private readonly rigs: BurrRig[] = [];
+  /** The Keeper's body once dead (the sim drops it; the renderer keeps it on its back): by enemy index. */
+  private readonly corpses: Array<EnemyState | null> = [];
+  /** Moth wings let go off the Keeper's coat as it rolls over, drifting down (world px, render s). */
+  private readonly wings: Array<{
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    a: number;
+    va: number;
+    t: number;
+    life: number;
+    len: number;
+  }> = [];
   private readonly lamps: (LampRig | undefined)[] = [];
   private readonly scaleC: [number, number, number] = [0, 0, 0];
   private readonly zw: [number, number, number] = [0, 1, 0];
@@ -234,6 +268,76 @@ export class EnemyRenderer {
    * The burst: shell plates thrown along the cut (spinning, one bounce), a soft puff of spore dust
    * and a few small motes that lift away. A finisher throws everything further.
    */
+  /** The Keeper rolls over: the first `BOSS.crust.shed` wings of its coat lift off and drift down, fluttering. */
+  private shedWings(rig: BurrRig, e: EnemyState, scale: number): void {
+    const K = BOSS.crust;
+    const half = BURR.halfLen * scale;
+    for (let k = 0; k < K.shed; k++) {
+      const w = crustWing(k);
+      this.wings.push({
+        x: rig.x + w.u * half * 0.9 * (e.facing || 1),
+        y: rig.y - 20 - 40 * w.v,
+        vx: (this.rand() - 0.5) * 70,
+        vy: -60 - this.rand() * 90,
+        a: w.a,
+        va: (this.rand() - 0.5) * 5,
+        t: -this.rand() * 0.8,
+        life: 3.5 + this.rand() * 2.5,
+        len: (K.len[0] + (K.len[1] - K.len[0]) * w.len) * scale,
+      });
+    }
+  }
+
+  /** The shed wings: each falls slowly, rocking side to side like a leaf, and settles on the floor (`floor`). */
+  private drawWings(dt: number, clock: number, sim: SimView): void {
+    const p = this.painter;
+    const K = BOSS.crust;
+    const wing = rgb(K.wing);
+    const dark = rgb(K.wingDark);
+    for (let i = this.wings.length - 1; i >= 0; i--) {
+      const w = this.wings[i]!;
+      w.t += dt;
+      if (w.t < 0) continue;
+      if (w.t > w.life) {
+        this.wings.splice(i, 1);
+        continue;
+      }
+      // Rocking fall: a leaf's swing, a slow sink.
+      w.vy = Math.min(55, w.vy + 140 * dt);
+      w.vx *= 1 - 1.5 * dt;
+      w.x += (w.vx + Math.sin(w.t * 3.1 + w.len) * 46) * dt;
+      w.y += w.vy * dt;
+      w.a += (w.va + Math.cos(w.t * 3.1 + w.len) * 2.2) * dt;
+      const fade = sat(w.t / 0.15) * (1 - smooth(w.life - 0.8, w.life, w.t));
+      const L = w.len;
+      const ca = Math.cos(w.a);
+      const sa = Math.sin(w.a);
+      const flat = 0.35 + 0.65 * Math.abs(Math.cos(w.t * 3.1 + w.len));
+      const pts = [0, 0, 0.5, -0.13, 1, -0.07, 0.95, 0.13, 0.55, 0.27, 0.15, 0.18];
+      for (let k = 0; k < 6; k++) {
+        const x = (pts[k * 2]! - 0.45) * L;
+        const y = pts[k * 2 + 1]! * L * flat;
+        p.px[k] = w.x + x * ca - y * sa;
+        p.py[k] = w.y + x * sa + y * ca;
+      }
+      SH_WING.c0 = wing;
+      SH_WING.c1 = dark;
+      SH_WING.alpha = 0.9 * fade;
+      p.shape(
+        6,
+        w.x,
+        w.y,
+        SH_WING,
+        w.x + 0.5 * L * ca,
+        w.y + 0.5 * L * sa,
+        w.x - 0.45 * L * ca,
+        w.y - 0.45 * L * sa,
+      );
+    }
+    void clock;
+    void sim;
+  }
+
   private burst(rig: BurrRig, e: EnemyState): void {
     const D = BURR.death;
     const dir = e.hitDir || 1;
@@ -759,7 +863,7 @@ export class EnemyRenderer {
       // burrback's rig, scaled: kinds.ts. The test grove draws only its own two kinds.)
       const art = creatureArt(e0.kind, lookKey());
       // An ambush's creature on its way in is drawn on its eased path (arrive.ts).
-      const e = e0.arrive > 0 ? arrivalView(e0, sim, art === 'beetle') : e0;
+      let e = e0.arrive > 0 ? arrivalView(e0, sim, art === 'beetle') : e0;
       if (art === 'moth') {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
@@ -776,6 +880,30 @@ export class EnemyRenderer {
       if (!rig) {
         rig = new BurrRig(i);
         this.rigs[i] = rig;
+      }
+      // The Keeper's carcass (the Canopy r12, moment 6: "it stays on its back in the arena, a landmark"): the sim
+      // drops a dead body after `deadFrames`; the renderer keeps it, rolled over, for good. Met already dead (its
+      // `sets` flag saved: a later entry), it lies where it fell, or at its home.
+      if (kindScale > 2) {
+        const spec = sim.scene.enemies?.[i] as { sets?: string } | undefined;
+        const down = !!spec?.sets && sim.save.flags.includes(spec.sets);
+        if (e.mode === 'dead' && rig.deathF < 0) {
+          rig.deathF = 0;
+          this.corpses[i] = { ...e, gone: false };
+        } else if (e.gone && down && !this.corpses[i]) {
+          rig.deathF = 1e4;
+          this.corpses[i] = { ...e, gone: false, mode: 'dead', hitstop: 0, knockVx: 0, vx: 0, vy: 0 };
+        }
+        const c = this.corpses[i];
+        if (c && (e.gone || e.mode === 'dead')) {
+          if (e.mode === 'dead' && !e.gone) this.corpses[i] = { ...e, gone: false };
+          else e = c;
+          // (Its hold first: the roll starts as the killing blow lets go.)
+          if (e.hitstop === 0 || e.gone) rig.deathF += dt * 60;
+        } else if (e.mode !== 'dead') {
+          rig.deathF = -1;
+          this.corpses[i] = null;
+        }
       }
       if (e.gone) {
         rig.deadStage = 3;
@@ -972,7 +1100,19 @@ export class EnemyRenderer {
           if (Math.abs(e.knockVx) > 5) this.puffs(rig.x - dir * 20, rig.y, -dir, 1, 0.7);
         }
       }
-      if (e.mode === 'dead') {
+      if (e.mode === 'dead' && rig.deathF >= 0) {
+        // The Keeper's roll: a heavy thud of dust as its back meets the floor, and its coat lets go a few wings.
+        if ((rig.deadStage & 4) === 0 && rig.deathF >= BOSS.death.roll * 0.6 && rig.deathF < 1e3) {
+          rig.deadStage |= 4;
+          const half = BURR.halfLen * scale;
+          for (let k = 0; k < 9; k++) {
+            const u = k / 8 - 0.5;
+            this.dust(rig.x + u * half * 1.7, rig.y, u * 220, 2.2, 1.8);
+          }
+          this.shedWings(rig, e, scale);
+        }
+        rig.deadStage |= 1;
+      } else if (e.mode === 'dead') {
         if ((rig.deadStage & 4) === 0 && rig.mf >= D.roll) {
           rig.deadStage |= 4;
           for (let k = 0; k < 3; k++) this.dust(rig.x + (k - 1) * 14, rig.y, (k - 1) * 26 + dir * 12);
@@ -1073,6 +1213,8 @@ export class EnemyRenderer {
         this.sparksUp(topHit.x, topHit.y, rig.topU, rig.y);
       }
     }
+
+    this.drawWings(dt, clock, sim);
 
     // --- Debris: in front of the grass, except what a blow knocks off (chips, wing scales), which
     // goes with the bodies so her slash is drawn over it.

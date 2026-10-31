@@ -112,6 +112,12 @@ export class BossHud {
     const spec = sim.scene.boss;
     const painted = (sim.scene as { art?: { mode?: string } }).art?.mode !== 'greybox';
     const cx = SAFE_W / 2;
+    // The Canopy's Keeper (r12, canopy-moments.md moment 6): no name card, no bar, no phase names, no win line; its
+    // name is never shown. The fight is read off the den (the cage's light, the moths it eats, the cloud's thinning).
+    if ((spec?.kind as string | undefined) === 'keeper') {
+      this.root.visible = false;
+      return;
+    }
     if (sim.scene.id === 'br-hub') {
       // Back in the hub with all three fallen: the run's card (once a visit), its whole time.
       const all = ['br-weaver-down', 'br-gloam-down', 'br-mantis-down'].every((f) =>

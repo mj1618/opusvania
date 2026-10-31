@@ -27,6 +27,7 @@ import { mix } from '../scene/lib/look';
 import { LOOK } from '../scene/lib/room-look';
 import { hash01, LR, ROOM_LAMPS, TRAP } from './config';
 import type { GlowPool } from './glow';
+import { keeperFake } from './keeper';
 import { MothClouds, mothCount } from './moths';
 import {
   along,
@@ -240,6 +241,11 @@ export class Lamps {
   private readonly hung = new Map<number, number>();
   /** Moonwick kindle blooms: seconds since (by index). */
   private readonly lit = new Map<number, number>();
+  /**
+   * Lures whose release another module draws (the den's great cage: keeper.ts's column up to the roof, the Canopy
+   * r12): their bars still burst here, their moths do not swirl round her.
+   */
+  readonly handOff = new Set<string>();
   /** Point light ids this module registered last frame. */
   private readonly lightIds = new Set<string>();
   /** This room's lamps against the kind's (ROOM_LAMPS). */
@@ -466,7 +472,7 @@ export class Lamps {
     const lures = sim.scene.lures ?? [];
     const li = lures.findIndex((l) => l.id === id);
     const scale = li >= 0 ? (this.info[li]?.size ?? 38) / 38 : 1;
-    for (let k = 0; k < drawn; k++) {
+    for (let k = 0; k < (this.handOff.has(id) ? 0 : drawn); k++) {
       const a = hash01(id, k) * Math.PI * 2;
       const sp = (160 + 320 * hash01(id, k + 99)) * (great ? 1.4 : 1);
       const seed = hash01(id, k + 61);
@@ -560,6 +566,7 @@ export class Lamps {
       const l = lures[i] as Lure;
       const info = this.info[i] as LampInfo;
       const at = flameAt(sim.lures, i, l, f, tuning, AT);
+      if (this.handOff.has(l.id)) keeperFake(at, clock, l, info.floorY ?? l.y + 600);
       const x = at.x;
       const y = at.y;
       if (Math.abs(x - cam.x) > halfW + 400 || Math.abs(y - cam.y) > halfH + 400) continue;
@@ -571,6 +578,16 @@ export class Lamps {
         continue;
       }
       if (!info.moonwick) this.clouds.set(i, x, y, burning && !this.embers.has(i), dt);
+      // (The Keeper's cage, the Canopy r12: its cloud thins as the moths are eaten or saved, `boss.left` of them.)
+      const kb = sim.boss as unknown as {
+        left?: number;
+        swingT?: number;
+        pivotX?: number;
+        pivotY?: number;
+      } | null;
+      const keeps = info.trap && sim.scene.boss?.heart === l.id && kb && typeof kb.left === 'number';
+      if (keeps)
+        this.clouds.keep(i, Math.max(0, Math.min(1, (kb.left as number) / Math.max(1, l.moths ?? 1))));
       // Just hung: it grows into its size as the firefly lets it down (eased, a little overshoot).
       const ht = this.hung.get(i);
       const grow = ht === undefined ? 1 : Math.min(1, ht / 0.9);
@@ -599,8 +616,13 @@ export class Lamps {
       if (info.trap && info.floorY !== null) this.fallen(i, x, info.floorY, back);
       // The thread it hangs by (a swinging lamp's runs from its pivot).
       const topY = y - s * 0.62;
-      const tieX = l.swing ? l.x : x;
-      const tieY = info.tieY ?? y - 900;
+      let tieX = l.swing ? l.x : x;
+      let tieY = info.tieY ?? y - 900;
+      // Swinging (the Keeper's P2, the sim's `swingT`): a pendulum from the roof over where it hung.
+      if (keeps && (kb.swingT ?? -1) >= 0) tieX = l.x;
+      // On the floor (ripped down, P3): no thread; it lies on its side.
+      const down = info.floorY !== null && y > info.floorY - s * 1.6 && info.trap;
+      if (down) tieY = topY;
       const thread = burning ? LR.lamp.silk : mix(LR.lamp.silk, 0x000000, 0.4);
       back
         .moveTo(tieX, tieY)

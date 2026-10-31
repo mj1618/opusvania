@@ -22,6 +22,7 @@ import { Creatures } from './creatures';
 import { drawMotes, InteriorDepth } from './fore';
 import { Fx } from './fx';
 import { GlowPool } from './glow';
+import { KeeperStage } from './keeper';
 import { Kit } from './kit';
 import { Lamps } from './lamps';
 import { Moonlight } from './moonlight';
@@ -36,6 +37,8 @@ export class LanternPieces implements EnvModule {
   private fx!: Fx;
   /** The Canopy's small events (acts.ts): the first fling's moths, arrivals, patch flares, the kin's lights. */
   private acts: Acts | null = null;
+  /** The den's great cage and its keeper (keeper.ts, the Canopy r12): light, shadows, moths, the column, the moon. */
+  private keeper: KeeperStage | null = null;
   private water: RootWater | null = null;
   private depth: InteriorDepth | null = null;
   private vista: Vista | WoodVista | null = null;
@@ -53,6 +56,8 @@ export class LanternPieces implements EnvModule {
     this.lamps = new Lamps(ctx.scene, ctx.lights);
     this.fx = new Fx(ctx.lights);
     if (LOOK.kit === 'wood') this.acts = new Acts(ctx, ctx.lights);
+    this.keeper = KeeperStage.for(ctx, ctx.lights);
+    if (this.keeper) this.lamps.handOff.add(this.keeper.cageId);
     const marks = ctx.scene.marks as
       | { landmarks?: Array<{ kind: string; x: number; y: number }> }
       | undefined;
@@ -97,6 +102,7 @@ export class LanternPieces implements EnvModule {
     this.moon?.onEvents(sim.events);
     this.water?.onEvents(sim.events, sim);
     this.acts?.onEvents(sim.events, sim);
+    this.keeper?.onEvents(sim);
     this.back.clear();
     this.front.clear();
     this.glowBack.begin();
@@ -118,6 +124,7 @@ export class LanternPieces implements EnvModule {
     this.fx.draw(dt, clock, sim, this.front, this.glowFront);
     this.acts?.draw(dt, clock, sim, camera, this.back, this.front, this.glowBack, this.glowFront);
     this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
+    this.keeper?.draw(dt, clock, sim, camera);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
     this.vista?.update(camera, clock);
     this.night?.update(clock, camera.x, camera.y, this.anchorY);
@@ -134,6 +141,7 @@ export class LanternPieces implements EnvModule {
     this.lamps?.destroy();
     this.fx?.destroy();
     this.acts?.destroy();
+    this.keeper?.destroy();
     this.depth?.destroy();
     this.vista?.destroy();
     this.moon?.destroy();
