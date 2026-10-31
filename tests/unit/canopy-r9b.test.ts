@@ -116,7 +116,7 @@ describe("the gap's chain: an early press is kept (r9b)", () => {
 });
 
 describe("the den's warning frames the den's mouth (r9b)", () => {
-  // (r10, review r9 #6: the mouth is an arch in the east wall at the floor, 7,808-8,000 x 1,600-1,856; zoom 1.0.)
+  // (r10, review r9 #6: the mouth is an arch in the east wall at the floor, 7,808-8,000 x 1,600-1,856; zoom 1.1.)
   for (const [vw, vh] of [
     [1920, 1080],
     [1920, 1200],
@@ -138,7 +138,7 @@ describe("the den's warning frames the den's mouth (r9b)", () => {
         // (The view's w / h are screen px; the world rect is that over the zoom.)
         const w = vw / cam.zoom;
         const h = vh / cam.zoom;
-        expect(cam.zoom).toBeCloseTo(1, 1);
+        expect(cam.zoom).toBeGreaterThanOrEqual(1);
         expect(v.y + h / 2, `bottom at x ${x}`).toBeGreaterThanOrEqual(1856 + 96);
         expect(v.x + w / 2, `east edge at x ${x}`).toBeGreaterThanOrEqual(7960);
         const k = (1728 - (v.y - h / 2)) / h;

@@ -2523,9 +2523,10 @@ function gap(): Json {
   r.lamp('wick-gap-3', GAP_WICK3[0], GAP_WICK3[1]);
   // The firefly once (r10, review r9 #2: "a light that flees and relights lamps behind her"; Kuro's first pass). As she
   // lands below the chain (the pod garden, or anywhere on the floor's east half) the first time, a light comes out of
-  // the roost's mouth, touches the three lamps (any she flung burns again), crosses the gap to the moon's side and is
-  // gone over the far canopy: 4 s, no control lost. The gap's lamps relight slowly on their own (`GAP_RELIGHT`): the
-  // firefly is what lights them the first time.
+  // the roost's mouth, touches the three lamps (any she flung burns again), swoops down past her over the garden and
+  // flees ahead of her down the drop to the fork, the way she is going: 5 s, ~3 of them in her frame, no control lost
+  // (render's note: v10's first path crossed to the moon's side, out of frame but for 1 s). The gap's lamps relight
+  // slowly on their own (`GAP_RELIGHT`): the firefly is what lights them the first time.
   r.set('fireflies', [
     {
       id: 'firefly-gap',
@@ -2536,11 +2537,13 @@ function gap(): Json {
         [3400, 1400],
         [3250, 1450],
         [2800, 1570],
-        [2000, 1300],
-        [700, 520],
-        [380, 200],
+        [2620, 1780],
+        [2900, 1930],
+        [3180, 1900],
+        [3330, 2060],
+        [3330, 2330],
       ],
-      frames: 240,
+      frames: 300,
       relights: ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'],
     },
   ]);
@@ -2808,9 +2811,9 @@ function tunnel(): Json {
         h: WARN_FLOOR - 1088,
         // (r9b: a set zoom centred on a small frame in the room's south-east corner: the view asks for more than the
         // room's foot and east edge, and the room's soft edges (the zones' 220 px knee) stop it ~20 px short of both.
-        // r10, review r9 #6: zoom 1.0 (0.85 made the fight small), the mouth an arch at the floor's east end now: the
-        // floor and the mouth fill the frame, the pit's far lip on its left.)
-        zoom: 1,
+        // r10, review r9 #6: zoom 1.1 (0.85 made the fight small; render asked closer than 1.0), the mouth an arch at
+        // the floor's east end now: the floor and the mouth fill the frame, the pit's far lip on its left.)
+        zoom: 1.1,
         bounds: { x: 8000 - 640, y: 2176 - 640, w: 640, h: 640 },
         until: 'cn-tunnel-clear',
       },

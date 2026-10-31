@@ -15,6 +15,8 @@
  *    pit), at the mark patch.
  */
 import { describe, expect, it } from 'vitest';
+import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
+import { cameraFor } from '../../src/render/camera/tuning';
 import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
@@ -242,7 +244,7 @@ describe("the firefly's pass at the gap (r10, review r9 #2)", () => {
       s.lures.hp[k] = 0;
       s.lures.out[k] = 1;
     }
-    const ev = run(s, 0, 300);
+    const ev = run(s, 0, 330);
     const start = ev.filter((e) => e.type === 'fireflyStart');
     expect(start.length).toBe(1);
     expect(ev.filter((e) => e.type === 'fireflyRelight').map((e) => (e as { lure: string }).lure)).toEqual(
@@ -256,6 +258,41 @@ describe("the firefly's pass at the gap (r10, review r9 #2)", () => {
     placePlayer(s, 3100, 2016, t, withShortcuts(scene, s.save), []);
     expect(run(s, 0, 60).some((e) => e.type === 'fireflyStart')).toBe(false);
   });
+});
+
+describe("the firefly's pass stays in her frame (r10, render's note)", () => {
+  for (const [vw, vh] of [
+    [1920, 1080],
+    [1920, 1200],
+    [2560, 1080],
+  ] as const)
+    it(`landing in the pod garden, it is in the view 2.5 s or more at ${vw}x${vh}, and leaves by the drop ahead of her`, () => {
+      for (const x of [2800, 3000, 3200]) {
+        const scene = getRoom('cn-gap');
+        const s = at('cn-gap', x, 2048 - 64);
+        const ct = cameraFor(scene);
+        const cam = createCamera(s, scene, ct, vw, vh);
+        let seen = 0;
+        for (let k = 0; k < 330; k++) {
+          run(s, 0);
+          stepCamera(cam, s, scene, ct);
+          if (s.kit.firefly.pass < 0) continue;
+          const v = lerpCamera(cam, cam, 1);
+          const w = vw / cam.zoom;
+          const h = vh / cam.zoom;
+          const { x: fx, y: fy } = s.kit.firefly;
+          if (Math.abs(fx - v.x) < w / 2 - 40 && Math.abs(fy - v.y) < h / 2 - 40) seen++;
+        }
+        expect(seen, `from ${x}`).toBeGreaterThanOrEqual(150);
+        const f = scene.fireflies?.[0];
+        const end = f?.path[f.path.length - 1] ?? [0, 0];
+        // (Gone down the drop to the fork: the way on.)
+        const drop = (scene.exits ?? []).find((e) => e.id === 'fork');
+        expect(drop?.edge).toBe('s');
+        expect(end[0]).toBeGreaterThanOrEqual(drop?.from ?? 0);
+        expect(end[0]).toBeLessThanOrEqual(drop?.to ?? 0);
+      }
+    });
 });
 
 describe('a gate never shuts on her (r10)', () => {

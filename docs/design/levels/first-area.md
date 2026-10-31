@@ -248,7 +248,8 @@ premise" has every name).
   the two read differently in play: what to use and what to free. That also closed a lost-for-good: a swing at the
   well hollow's ambush lampwing cut `wick-hollow`, the shard's only way up (the video agent's find). **The firefly
   once**: landing below the gap's chain the first time, a light leaves the roost's mouth, touches the three lamps
-  (any she flung burns again), crosses to the moon's side and is gone, 4 s, no control lost (`scene.fireflies`,
+  (any she flung burns again), swoops down past her and flees ahead of her down the drop to the fork, 5 s (2.5+ of
+  them in her frame at every shape), no control lost (`scene.fireflies`,
   `state.kit.firefly`, `fireflyStart / fireflyRelight / fireflyEnd`). **The hub keeps the count**: each freed trap's
   moths roost in the hub (`scene.roosts`, `roostsLit`): the hub's on the high block's claw face (the shard chamber's
   way up, lit), the Grove's over the kin's lamp, the warning's in the lampoak's crown over the drop.
@@ -260,7 +261,7 @@ premise" has every name).
   (6,912) to the lid, its middle clear (a knuckle at each end, a pod), the lamps at its ends (the springboard by the
   pit's lip, the trap by the mouth). The den's mouth an arch in the east wall at the floor (lintel 7,808-8,000 x
   1,408-1,600, the cellar shortcut's ledge on it), its lid a root gate standing in it; the link to the den moved up to
-  it (the den's balcony 192 higher). Zoom 1.0 (was 0.85): the mouth sits in the middle third of the frame at 16:9,
+  it (the den's balcony 192 higher). Zoom 1.1 (was 0.85; render asked for closer): the mouth sits in the middle third of the frame at 16:9,
   16:10 and 21:9, the pit's far lip in the frame's left part. Beat 2 comes out of the mouth. The east root curtain by
   the hub's shaft is shorter (the moved hump put its first tier under it: the solver's tunnel claims caught it).
 - **#7, the boss as payoff.** Played: my own reactive controller through `window.__game` (bait at ~360 px, jump the

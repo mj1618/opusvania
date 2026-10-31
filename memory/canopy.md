@@ -40,8 +40,10 @@ Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render 
   sockets), the den's (`snuffs`), the valley's out-of-reach lights.
 - **The firefly's pass** (`scene.fireflies: [{id, trigger, flag, path, frames, relights}]`, src/sim/firefly.ts): the
   gap's `firefly-gap`. She lands (grounded) in `trigger` (the floor below the chain, 2,688-3,456 x 1,856-2,240) the
-  first time: `flagSet cn-firefly-gap`, `fireflyStart {id, x, y, frames: 240}`. It flies `path` at a steady speed
-  (out of the roost's mouth 3,040 x 1,150, past the three lamps, west over the gap, up past the moon to 380 x 200).
+  first time: `flagSet cn-firefly-gap`, `fireflyStart {id, x, y, frames: 300}`. It flies `path` at a steady speed
+  (out of the roost's mouth 3,040 x 1,150, past the three lamps, down past her over the garden, then ahead of her down
+  the drop to the fork, 3,330 x 2,330: in her frame 2.5 s+ at 16:9, 16:10 and 21:9; a first path over the gap to the
+  moon's side was on screen 1 s).
   Each lamp of `relights` it passes within `kit.firefly.relightPx` 48 while out burns again: `lureRelight {by:
   'firefly'}` then `fireflyRelight {id, lure, x, y}`. `fireflyEnd {id, x, y}` at the path's end. Live state:
   **`state.kit.firefly` = `{pass, frame, x, y}`** (`pass` -1 = none; render may call `fireflyAt(pass, frame +
@@ -69,7 +71,7 @@ Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render 
 - **The den's warning** (v10): the hump and pit 128 west; 1,024 px of flat floor from the pit (6,912) to the lid
   (`den-lid`, now a root gate standing in the mouth, 7,936-8,000 x 1,600-1,856); the den's mouth an arch in the east
   wall at the floor (its lintel 7,808-8,000 x 1,408-1,600, the cellar shortcut's ledge on top); the link to the den
-  moved up to it (the den's balcony at 320, was 512). Zone: zoom 1.0. Beat 2 arrives out of the mouth (7,980). Knuckles
+  moved up to it (the den's balcony at 320, was 512). Zone: zoom 1.1 (render asked closer). Beat 2 arrives out of the mouth (7,980). Knuckles
   gone. Foreshadowing landmarks for render: `shell-land`, `shell-warn` (kind `shell`: a shed back the old burrback's
   size), `scrape-hump`, `scrape-mouth` (kind `scrape`: claw marks 4x a burrback's); beat 2's start (`flagSet
   cn-tunnel-beat2`) wants a deep slam from the den (render / audio, ~0.3 trauma).
