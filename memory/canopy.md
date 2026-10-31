@@ -69,6 +69,19 @@ Names are the contract with render and audio (section 6 of the director's plan);
   and after each); `tuning.hatch.listenFrom` 210 (was 150: the break never comes in the black); camera zone
   `promise` (x 2,816-3,296 on the crown's limb before the lip, zoom 0.85, no lock); `marks.stage.lights` (the valley's
   false lights, x 4,200-6,200, y 1,250-1,610, 9).
+- **The intro's camera**: zone `intro` on the balcony (zoom 0.72, bounds over the arena's west two thirds) until
+  `boss.fed` (`cn-den-fed`: the sleeper took the moth, or she came down first): the fall and the snap are in frame.
+- **Render asks (r12)**: the gate `taproot` is the old taproot mass (standing until `cn-den-collapse`, then fallen) and
+  `rubble-1..6` are the collapse's rubble (solid from `cn-den-collapse`): both drew as root-lattice gates in r12's
+  first build. A Pixi `addressModeU` of null threw once on P2's start (`cageSwing`) in the dev page (render's
+  uncommitted code at the time); the next step drew.
+- **Gotcha: `rearmArenas` re-arms only a trigger's `shut` flag** (r12): a fade or an entry used to take back every
+  standing `shut` flag, so the den's rubble would have vanished on re-entry.
+- **The fight, measured** (r12): the den's controller (`keeper-run.ts`) wins in 64 s, 0 hits (P2 at 22 s, P3 at 44 s),
+  65-83 saved by cuts and catches, 116-117 freed; `humanplay -- den --room cn-den --at 300` (every skill, seeds 1-4):
+  **12 of 12 down in 38-62 s, 0-2 hits**. Played by hand through `window.__game` (bursts): P1 ended on one wall stun
+  (3 cuts), P2 on a blind back cut, a caught moth and a spent ram's 2 cuts, P3 on two sweeps; two hits taken, both
+  standing still in P3; 114 freed. Lenient: Matt's play decides.
 - Tools: `npx tsx tools/levels/keeper-probe.ts [--from=balcony|floor] [--phase=n]` (events of a stand-still),
   `npx tsx tools/playtest/keeper-run.ts [--catch] [--cage] [--trace]` (the den's fight controller from the balcony).
 

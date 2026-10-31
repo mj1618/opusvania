@@ -175,9 +175,13 @@ describe('the hatching', () => {
     // The first-timer's opening: J10 .90, then R20 .60 J20 (A and X came after): jump, right, jump.
     const s = sim(WOOD_HATCH);
     const x0 = s.state.player.x;
-    const ev = s.run(J, 10).concat(s.run(0, 90), s.run(R, 20), s.run(0, 60), s.run(J, 20));
+    const ev = s.run(J, 10).concat(s.run(0, 90), s.run(R, 20), s.run(0, 60), s.run(J, 20), s.run(0, 40));
     expect(ev.filter((e) => e.type === 'hatchStir' && !e.auto)).toHaveLength(3);
-    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({ auto: false, frames: 181 });
+    // (The third press at 181; since the Canopy r12 it listens from 210 (3 s of black first): it breaks then.)
+    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({
+      auto: false,
+      frames: Math.max(181, s.t.hatch.listenFrom + 1),
+    });
     expect(ev.some((e) => e.type === 'jump')).toBe(false);
     // Three quick presses during the fade-up count, and the cocoon breaks as it starts to listen.
     const q = sim(WOOD_HATCH);

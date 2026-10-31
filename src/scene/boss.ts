@@ -119,7 +119,7 @@ export function checkBoss(s: BossRoom, seen: Set<string>): void {
     const cage = (s.lures ?? []).find((q) => q.id === b.heart) as
       | { kind: string; trap?: boolean }
       | undefined;
-    if (!cage || cage.kind !== 'wick' || cage.trap !== true)
+    if (cage?.kind !== 'wick' || cage.trap !== true)
       throw new Error(`${where}: its heart "${b.heart}" must be a trap wick (the great cage)`);
     if (!b.lowered) throw new Error(`${where}: the Keeper needs where its cage falls (\`lowered\`)`);
     if (b.floor === undefined) throw new Error(`${where}: the Keeper needs its floor`);
