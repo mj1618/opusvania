@@ -282,7 +282,13 @@ premise" has every name).
   every other flingable lamp a springboard; the hollow lamp relights; the roosts; the map on a pass; the firefly's
   pass and its relights, once; the gate push; the arena thorn return; the warning's floor and its re-form.
   `canopy-r9b.test.ts` moved with the pit (the glide lock holds at -128) and frames the new mouth. Proofs: every claim
-  (see below); the route bar met (the warning's window 9.0 a screen, 3.0x).
+  (`tools/solve/canopy.ts`, 100 claims in 27 rooms, on fee9700: all hold); the route bar met (the warning's window 9.0
+  a screen, 3.0x); `canopy-furniture.ts --check --route` met.
+- **Bots** (playtest-reports/canopy-r10, on ba98685; bugs only): all three out of the hatch in 30-49 s (the first
+  fling's lesson and aim: the casual bot had fallen 36 times in a row on the first try of the lesson, with a 200 px
+  zone), every one cut the hub's trap on the way west (30 moths freed), the average and skilled bots up the well to the
+  limbs (r9: none), the skilled back to the hub. No softlock. Deaths: the well hollow's ambush (906 / 419 x 1,152, 2-3
+  each). Lost time: the well's bottom and gallery (80-180 s), the skilled bot 140 s under the lampoak's east limb.
 
 ## v9b: round 9's weak list, a fix pass before deploy
 - **The tunnel's glide is clear.** The hump steps up from the west to a plumb east face that is the pit's west wall:

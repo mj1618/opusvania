@@ -345,6 +345,9 @@ Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render 
   lookahead flung and the hands never did, "did not go as foreseen"). v7's still played the old catch. Their old
   lamp-cut lines snuff lamps for good: a required lamp must `relight`. r8 run (canopy-r8): all three out of the
   hatch in the first minute, two clear the hollow's ambush, none finds the shelf to the limbs.
+- r10 (canopy-r10): out of the hatch in 30-49 s, each cut the hub's trap (30 moths), the average and skilled bots
+  reached the limbs (r9: none); a lesson zone wider than the reach (200) had made the casual bot stall outside it and
+  fall 36 times: tune lessons on the bots' hatch runs (`runHeadless` on cn-hatch, `until: 'exit'`).
 - r9 (canopy-r9): claws at 1:22-2:19; the average and skilled bots in the hollow at 3:37-3:54, the average on the
   door's floor 14 s after the ambush, then off to explore (the shard's shelf they cannot fling to, the well's bottom);
   none to the limbs. Their explorer chases unwalked ground before exits.
