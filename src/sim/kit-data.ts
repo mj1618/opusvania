@@ -157,3 +157,34 @@ export interface Moonseed {
   x: number;
   y: number;
 }
+
+/**
+ * The firefly's pass (the Canopy r10, review r9 #2: "a light that flees and relights lamps behind her", Kuro's first
+ * pass in Ori): her box centre in `trigger`, grounded (she lands there), the first time (`flag` not in the save)
+ * starts it; the firefly
+ * then flies `path` (points in the air, world px) at a steady speed over `frames`, and every lamp of `relights` that
+ * it passes within `kit.firefly.relightPx` of while that lamp is out burns again (`lureRelight` with `by:
+ * 'firefly'`, then `fireflyRelight`). No control is taken from her. Room-local state: `state.kit.firefly`.
+ */
+export interface FireflyPass {
+  id: string;
+  trigger: { x: number; y: number; w: number; h: number };
+  flag: string;
+  path: Array<[number, number]>;
+  frames: number;
+  relights?: string[];
+}
+
+/**
+ * Where freed moths gather (the Canopy r10, review r9 #2 / #9: the hub changes as she frees lamps): a rect in this
+ * room that holds the moths of trap lamp `lure` (`room:id`) once the save has it in `snuffed`. Render draws a cloud
+ * settled there; `roostsLit` (src/sim/firefly.ts) says which.
+ */
+export interface Roost {
+  id: string;
+  lure: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}

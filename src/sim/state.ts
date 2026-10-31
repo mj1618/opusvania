@@ -165,6 +165,13 @@ export interface PlayerState {
   flingFrames: number;
   flingCd: number;
   flingBuf: number;
+  /**
+   * A Lamp press found no flame and the key is still held (the Canopy r10, `lures.heldPress`): the first flame to
+   * come into reach takes it as a press.
+   */
+  lampArmed: boolean;
+  /** Near a lesson lamp (`Lure.lesson`, the Canopy r10): 0..1, how far her speed caps have eased to the lesson's. */
+  lessonK: number;
   /** Where the fling chain began (her last ground before its first launch): landing back there is a miss. */
   chainX: number;
   chainY: number;

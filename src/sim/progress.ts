@@ -29,6 +29,8 @@ function patchUnder(state: GameState, scene: Scene, t: Tuning): number {
   const fx = p.x + p.w / 2;
   const fy = p.y + p.h;
   for (let i = 0; i < list.length; i++) {
+    // (A `mark` patch is a re-form point only: never a rest.)
+    if ((list[i] as MoonPatch).mark) continue;
     const b = patchBox(list[i] as MoonPatch, t);
     if (fx >= b.x && fx < b.x + b.w && fy > b.y && fy <= b.y + b.h + 1) return i;
   }
@@ -43,7 +45,8 @@ function patchThrough(state: GameState, scene: Scene, t: Tuning): number {
   const fx = p.x + p.w / 2;
   const fy = p.y + p.h;
   for (let i = 0; i < list.length; i++) {
-    const b = patchBox(list[i] as MoonPatch, t);
+    const q = list[i] as MoonPatch;
+    const b = q.area ?? patchBox(q, t);
     if (fx >= b.x && fx < b.x + b.w && fy > b.y && fy <= b.y + b.h + 1) return i;
   }
   return -1;
@@ -98,6 +101,10 @@ export function updatePatches(
     if (q && (cur?.room !== scene.id || cur.id !== q.id)) {
       state.save.patch = { room: scene.id, id: q.id };
       events.push({ type: 'patchMark', id: q.id, room: scene.id, x: q.x, y: q.y });
+      // A map station opens the map on her first pass too (the Canopy r10, review r9 #9: it fired only on a rest, and
+      // a runner never stopped); then on each rest. The save remembers the pass (`map:room:id` in flags).
+      if (q.map && remember(state.save.flags, `map:${scene.id}:${q.id}`))
+        events.push({ type: 'mapStation', id: q.id, room: scene.id, x: q.x, y: q.y });
     }
   }
   const r = state.rest;

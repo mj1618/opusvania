@@ -14,6 +14,11 @@ import type { SlashDir } from './events';
  * - `gateShut`: an arena's door (`shut`) closes behind her: its trigger's flag is set (render: it drops).
  * - `flagSet`: a trigger (`by`) set a story flag in the save. `gateOpen`: a gate's flag is set: its
  *   solid is gone (`w`, `h` its rect).
+ * - `gatePush`: a gate shut while her box overlapped it: she was moved clear by (`dx`, `dy`) (the Canopy r10: a
+ *   gate never shuts on her).
+ * - The firefly's pass (src/sim/firefly.ts, `state.kit.firefly`): `fireflyStart` (`x`, `y` = where it sets off,
+ *   `frames` its length), `fireflyRelight` (it lit lamp `lure` as it passed: a `lureRelight` with `by: 'firefly'`
+ *   comes first), `fireflyEnd` (`x`, `y` = the path's last point, where it is gone).
  *
  * A down cut on thorns or a seed-case, and every cut on bark, is a `slashHit` with `target.kind`
  * `thorns` / `seedCase` / `bark` (so the blade's contact, the impact and the pogo read as usual).
@@ -65,6 +70,10 @@ export type KitEvent =
   | { type: 'storyHoldEnd'; id: string; x: number; y: number }
   | { type: 'gateOpen'; id: string; flag: string; x: number; y: number; w: number; h: number }
   | { type: 'gateShut'; id: string; flag: string; x: number; y: number; w: number; h: number }
+  | { type: 'gatePush'; id: string; dx: number; dy: number; x: number; y: number }
+  | { type: 'fireflyStart'; id: string; x: number; y: number; frames: number }
+  | { type: 'fireflyRelight'; id: string; lure: string; x: number; y: number }
+  | { type: 'fireflyEnd'; id: string; x: number; y: number }
   /**
    * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it
    * gives, `pogo` = off a down cut, `held` = jump was held (the higher throw).

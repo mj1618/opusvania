@@ -12,7 +12,7 @@ import { markOfferTarget, updateOffer } from './giving';
 import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import { createHatch, updateHatch } from './hatch';
 import { ActionBit, type InputFrame, wasPressed } from './input';
-import { afterCatch, catchHold, rearmArenas, updateKit } from './kit';
+import { afterCatch, arenaShut, catchHold, rearmArenas, updateKit } from './kit';
 import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
 import { dropGlints, updateDrops, updatePickups } from './pickups';
@@ -28,7 +28,7 @@ import {
 } from './player/player';
 import { updatePods } from './pods';
 import { updateGlades, updatePatches, updateSeen, updateShortcuts } from './progress';
-import { clearOfThorns, returnPoint } from './return';
+import { arenaReturn, clearOfThorns, returnPoint } from './return';
 import { seedRng } from './rng';
 import type { RoomDoor, RoomExit, Scene } from './scene';
 import { markSeen } from './seen';
@@ -405,9 +405,15 @@ export function step(
     // The last ground she stood on (any length of time), inset from its lip: a fall costs the gap. A zone
     // may name its own return point (`back`: the glade's lip top).
     const zoneBack = S.catches?.find((z) => z.id === id)?.back;
-    const safe = zoneBack ?? returnPoint(state.player.groundX, state.player.groundY, S, t);
+    // (Thorns inside a shut arena, the Canopy r10: the far end of her floor from the bed, away from every bed.)
+    const bed =
+      id.startsWith('thorns:') && arenaShut(S, state.save.flags)
+        ? S.thorns?.find((q) => `thorns:${q.id}` === id)
+        : undefined;
+    const arena = bed ? arenaReturn(state.player.groundX, state.player.groundY, bed, S, t) : null;
+    const safe = zoneBack ?? arena ?? returnPoint(state.player.groundX, state.player.groundY, S, t);
     // (Not where her natural next jump carries her straight back into thorns.)
-    const back = clearOfThorns(state, safe.x, safe.y, state.player.groundX, S, t, P);
+    const back = clearOfThorns(state, safe.x, safe.y, arena ? safe.x : state.player.groundX, S, t, P);
     const x = back.x;
     const y = back.y;
     const from = state.player;

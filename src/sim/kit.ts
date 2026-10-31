@@ -28,8 +28,10 @@
  */
 import type { SimEvent, SlashDir } from './events';
 import { updateFinds } from './finds';
+import { createFirefly, type FireflyState, updateFireflies } from './firefly';
 import type { Bark, BounceCap } from './kit-data';
 import { strikeBell } from './light';
+import { solidAt } from './physics/aabb';
 import type { Box } from './player/attack';
 import type { Scene, SolidRect } from './scene';
 import type { EnemyState, GameState, PlayerState, SaveState } from './state';
@@ -60,12 +62,20 @@ export interface KitState {
   storyBy: string;
   /** Fall catches so far per `scene.catches` (room-local): a zone's `glideAssist` reads it. */
   catchCount: number[];
+  /** The firefly's pass under way (src/sim/firefly.ts; `pass` -1 = none). */
+  firefly: FireflyState;
 }
 
 /** A gate stands (a solid) with these flags: until its `flag`, and an arena's door only once `shut` is set. */
 export function gateShut(g: { flag: string; shut?: string | undefined }, flags: readonly string[]): boolean {
   if (flags.includes(g.flag)) return false;
   return g.shut === undefined || flags.includes(g.shut);
+}
+
+/** Is an arena locked now (a gate with `shut` standing)? */
+export function arenaShut(scene: Scene, flags: readonly string[]): boolean {
+  for (const g of scene.gates ?? []) if (g.shut !== undefined && gateShut(g, flags)) return true;
+  return false;
 }
 
 /**
@@ -135,6 +145,7 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     story: 0,
     storyBy: '',
     catchCount: (scene.catches ?? []).map(() => 0),
+    firefly: createFirefly(),
   };
 }
 
@@ -154,6 +165,7 @@ export function cloneKit(k: KitState): KitState {
     story: k.story,
     storyBy: k.storyBy,
     catchCount: k.catchCount.slice(),
+    firefly: { ...k.firefly },
   };
 }
 
@@ -587,6 +599,7 @@ export function updateKit(
       state.lures.out[i] = 0;
     }
   }
+  updateFireflies(state, scene, t, events);
   const gates = scene.gates ?? [];
   for (let i = 0; i < gates.length; i++) {
     const g = gates[i];
@@ -594,6 +607,8 @@ export function updateKit(
     const open = gateShut(g, save.flags) ? 0 : 1;
     if (open === kit.gates[i]) continue;
     kit.gates[i] = open;
+    // A gate never shuts on her (the Canopy r10: a Grove trigger once shut one on her head, stuck in a solid).
+    if (!open) pushClear(state, scene, g, gates, events);
     events.push({
       type: open ? 'gateOpen' : 'gateShut',
       id: g.id,
@@ -626,6 +641,52 @@ export function updateKit(
   }
   events.push({ type: 'thornHit', id: r.id, x: cx, y: p.y + p.h, hp: state.player.hp, damage, frames });
   return true;
+}
+
+/**
+ * Gate `g` is shutting with her box in its rect: she is moved out the shortest way to a spot clear of every solid
+ * and of every gate standing on this step's flags (`gatePush`). Her speed into the gate is dropped.
+ */
+function pushClear(
+  state: GameState,
+  scene: Scene,
+  g: { id: string; x: number; y: number; w: number; h: number },
+  gates: readonly { id: string; x: number; y: number; w: number; h: number; flag: string; shut?: string }[],
+  events: SimEvent[],
+): void {
+  const p = state.player;
+  if (!(p.x < g.x + g.w && g.x < p.x + p.w && p.y < g.y + g.h && g.y < p.y + p.h)) return;
+  const flags = state.save.flags;
+  const free = (x: number, y: number) => {
+    if (solidAt(scene, x, y, p.w, p.h)) return false;
+    for (const o of gates)
+      if (gateShut(o, flags) && x < o.x + o.w && o.x < x + p.w && y < o.y + o.h && o.y < y + p.h)
+        return false;
+    return true;
+  };
+  const tries: Array<[number, number]> = [
+    [p.x, g.y + g.h],
+    [p.x, g.y - p.h],
+    [g.x - p.w, p.y],
+    [g.x + g.w, p.y],
+  ];
+  tries.sort(
+    (a, b) => Math.abs(a[0] - p.x) + Math.abs(a[1] - p.y) - (Math.abs(b[0] - p.x) + Math.abs(b[1] - p.y)),
+  );
+  for (const [x, y] of tries) {
+    if (!free(x, y)) continue;
+    const dx = x - p.x;
+    const dy = y - p.y;
+    p.x = x;
+    p.y = y;
+    p.rx = 0;
+    p.ry = 0;
+    if (dy > 0) p.vy = Math.max(0, p.vy);
+    if (dy < 0) p.vy = Math.min(0, p.vy);
+    if (dx !== 0) p.vx = 0;
+    events.push({ type: 'gatePush', id: g.id, dx, dy, x: p.x + p.w / 2, y: p.y + p.h });
+    return;
+  }
 }
 
 /** A creature really killed (`dead`, or removed with no health left), not sent away. */

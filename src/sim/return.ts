@@ -64,6 +64,49 @@ export function returnPoint(sx: number, sy: number, scene: Scene, t: Tuning): { 
   return { x, y: groundY(x, sy, scene, step) };
 }
 
+/**
+ * A thorn return inside a shut arena (the Canopy r10, review r9 #3: four returns in a row put her back on the Grove's
+ * pit floor facing the bed she had walked into): on the top she last stood on, the end farthest from bed `bed`, inset
+ * `room.returnInset`, and at least `room.arenaThornPx` from every thorn rect. Null when the top cannot be found.
+ */
+export function arenaReturn(
+  sx: number,
+  sy: number,
+  bed: { x: number; y: number; w: number; h: number },
+  scene: Scene,
+  t: Tuning,
+): { x: number; y: number } | null {
+  // (Her last ground must be the bed's floor: a stale one, far above or below, is not this fight's.)
+  if (Math.abs(sy - bed.y) > 192) return null;
+  const step = Math.max(0, Math.round(t.ground.stepUp));
+  const run = topRun(sx, sy, scene, step);
+  if (!run) return null;
+  const inset = Math.min(Math.round(t.room.returnInset), Math.floor((run.x1 - run.x0) / 2));
+  const bc = bed.x + bed.w / 2;
+  const dir = sx < bc ? -1 : 1;
+  const w = t.body.width;
+  const h = t.body.height;
+  const fits = (x: number) => !solidAt(scene, Math.round(x - w / 2), groundY(x, sy, scene, step) - h, w, h);
+  // Walk away from the bed along the top until her box stops fitting (a top runs on under walls and behind rotten
+  // bark: the Grove's pit floor runs under its west wall into the secret pocket), or the top ends.
+  let far = sx;
+  for (let x = sx; dir < 0 ? x >= run.x0 + inset : x <= run.x1 - inset; x += dir * 16) {
+    if (!fits(x)) break;
+    far = x;
+  }
+  const keep = Math.round(t.room.arenaThornPx);
+  // From there back toward the bed until no thorns lie within `keep` of her box.
+  for (let x = far; dir < 0 ? x <= sx : x >= sx; x -= dir * 16) {
+    const y = groundY(x, sy, scene, step);
+    const near = (scene.thorns ?? []).some(
+      (r) =>
+        x - w / 2 - keep < r.x + r.w && r.x < x + w / 2 + keep && y - 2 * keep < r.y + r.h && r.y < y + keep,
+    );
+    if (!near) return { x: Math.round(x), y };
+  }
+  return null;
+}
+
 /** Scratch events for the probe (thrown away). */
 const PROBE_EVENTS: SimEvent[] = [];
 

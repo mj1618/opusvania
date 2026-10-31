@@ -423,6 +423,32 @@ export const defaultTuning = withVariants({
      * (canopy r9b: the gap's chain brings the next lamp into reach inside the cooldown). Let go, it is dropped.
      */
     flingBufferFrames: 8,
+    /**
+     * A Lamp key pressed with no flame in reach and held on counts as a press when a flame comes into reach (the
+     * Canopy r10, review r9 #1: a first-timer holds Lamp from the jump and the first lamp never answered). Not in a
+     * glow room (Lanternroot's Lamp is held to mend there).
+     */
+    heldPress: true,
+    /**
+     * The first fling's lesson (`Lure.lesson`, review r9 #1: a running jump had 8 frames in reach, a standing one
+     * none): while near that lamp (`lessonPx`), in the air, her fall is capped at `lessonFall` px/f and her speed
+     * across at `lessonRun` (eased in over `lessonEase` frames): a slow drift past the flame, until she has flung
+     * once (a running jump carried her through the reach in 8 frames).
+     */
+    lessonFall: 1.25,
+    lessonRun: 2.5,
+    /** Frames the lesson's caps take to ease in (and out). */
+    lessonEase: 6,
+    /**
+     * ...within this many px of the flame: just past the fling's reach (110), so she slows as she comes into it, never
+     * short of it (at 200 a jump slowed 150 px out and bots stalled outside the reach).
+     */
+    lessonPx: 130,
+    /**
+     * A trap lamp's cuts (`Lure.trap`, review r9 #2): three, so freeing one is a choice made on purpose (each cut a
+     * `lureHit`, the cage cracking), not a graze.
+     */
+    trapHp: 3,
     /** Landing within this many px of where a fling chain began (on the same ground) is a miss: its embers relight. */
     chainBackPx: 160,
     /**
@@ -502,6 +528,11 @@ export const defaultTuning = withVariants({
    */
   kit: {
     thorns: { damage: 1, holdFrames: 30, returnInvuln: 60, safeMargin: 96 },
+    /**
+     * The firefly's pass (`scene.fireflies`, src/sim/firefly.ts): a lamp of its `relights` burns again when it passes
+     * within `relightPx` of the flame.
+     */
+    firefly: { relightPx: 48 },
     /** The longest held story beat a trigger may ask for (`hold`), frames: journey.md's 3 s; the `finale` one, ~10 s. */
     storyHoldMax: 180,
     finaleHoldMax: 600,
@@ -1721,6 +1752,12 @@ export const defaultTuning = withVariants({
      */
     returnProbeStep: 40,
     returnProbeFrames: 180,
+    /**
+     * A thorn return inside a shut arena (a gate with `shut` standing; the Canopy r10, review r9 #3: four returns in a
+     * row put her back facing the Grove's bed): the end of the top farthest from the bed she hit, at least this far
+     * from any thorns.
+     */
+    arenaThornPx: 160,
     /**
      * Frames the dip lasts when there IS a room on the other side (memory/world.md): she goes on with
      * the input she held as she crossed (her run, her glide), then enters the next room with her

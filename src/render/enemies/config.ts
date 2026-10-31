@@ -729,3 +729,14 @@ export const BOSS = {
   flash: 0.85,
   flashLen: 0.12,
 } as const;
+
+/**
+ * Beetles in the den's look (canopy review r9 #6: 25-35 px of dark on umber at play zoom, read only by their
+ * coordinates): drawn this much bigger (the sim's box is unchanged), with a warm backlight behind the dome.
+ */
+export const DEN_READ = {
+  scale: 1.22,
+  backR: 46,
+  back: [1.0, 0.74, 0.48] as [number, number, number],
+  backA: 0.34,
+};

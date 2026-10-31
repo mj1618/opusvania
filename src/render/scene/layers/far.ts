@@ -60,6 +60,7 @@ import {
 } from '../lib/bg-shapes';
 import { buildWoodFar, woodFar, woodStage } from '../lib/bg-wood';
 import { mix, PALETTE, prng } from '../lib/look';
+import { moonShown } from '../lib/moon-vistas';
 import { isGroveKit, LOOK } from '../lib/room-look';
 import { SKY_OUTPUT, SKY_RECT } from './sky';
 
@@ -994,6 +995,10 @@ export class FarLayers implements EnvModule {
       if (this.moonWindow) {
         this.moonWindow.position.set(-host.position.x / sx, -host.position.y / sx);
         this.moonWindow.scale.set(1 / sx);
+        // Open only at the room's vistas (moon-vistas.ts): elsewhere the far canopy closes over the moon.
+        const shown = moonShown(this.ctx.scene.id, frame.camera.x, frame.camera.y);
+        this.moonWindow.alpha = shown;
+        this.moonWindow.visible = shown > 0.002;
       }
     }
   }

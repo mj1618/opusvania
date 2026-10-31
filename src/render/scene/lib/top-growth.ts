@@ -55,13 +55,15 @@ export interface GrowthSpec {
 }
 
 export const GROWTH: Record<TopFamily, GrowthSpec> = {
+  // (Canopy review r9 #8: a saturated pea-green in chains of round beads read as bubble wrap or slime. 0.6x the chroma
+  // and 0.85x the value of r8's, under the lit lip; tufts of blades, not beads.)
   lime: {
-    deep: 0x173c26,
-    body: 0x34703a,
-    high: 0x6ea84a,
-    lit: 0x9ccc5e,
+    deep: 0x203328,
+    body: 0x415f44,
+    high: 0x718f5f,
+    lit: 0x95ad75,
     shadow: 0x040a07,
-    moss: 1,
+    moss: 0.7,
     th: [16, 60],
     run: [120, 460],
     cover: [0.5, 0.84],
@@ -130,7 +132,7 @@ export const GROWTH: Record<TopFamily, GrowthSpec> = {
 
 /** The live rim's lit and shaded colour per family (pf-rim.ts): the thin lip that says "walk here". */
 export const RIM_FAMILY: Record<TopFamily, { lit: number; shade: number }> = {
-  lime: { lit: 0xa6d884, shade: 0x3e6e4a },
+  lime: { lit: 0xb5d89d, shade: 0x4c6e55 },
   amber: { lit: 0xe6c27c, shade: 0x6a4c26 },
   frost: { lit: 0xd6eaff, shade: 0x56708a },
   fungus: { lit: 0xc8c2d6, shade: 0x4a4554 },
@@ -139,7 +141,8 @@ export const RIM_FAMILY: Record<TopFamily, { lit: number; shade: number }> = {
 
 /** The face moss beside it (the faces she clings to): mid and lit, or none. */
 export const FACE_FAMILY: Record<TopFamily, { moss: number; lit: number } | null> = {
-  lime: null,
+  // (r9 #8: the walk's own green on the faces was the neon; a dull frond green, a step under the lip.)
+  lime: { moss: 0x3a5640, lit: 0x7e9a6c },
   amber: { moss: 0x594630, lit: 0x9a815f },
   frost: null,
   fungus: { moss: 0x3c3640, lit: 0x8a8296 },
@@ -210,6 +213,46 @@ const mixc = (c0: number, c1: number, t: number): number => {
   const m = (s: number) => Math.round(lerp(ch(c0, s), ch(c1, s), clamp(t, 0, 1)));
   return (m(16) << 16) | (m(8) << 8) | m(0);
 };
+
+/**
+ * A tuft: `n` blades (3-7) fanning from (x, y) about the angle `ang` (radians, 0 = up, + = toward +x), each a thin
+ * tapered sliver of `len` px, the outer ones shorter and bent further out. The lime moss's unit (r9 #8: beads read as
+ * bubble wrap).
+ */
+export function tuft(
+  p: Paint,
+  x: number,
+  y: number,
+  ang: number,
+  n: number,
+  len: number,
+  w: number,
+  color: number,
+  h: number,
+  moss: number,
+  r: () => number,
+  alpha = 1,
+): void {
+  for (let k = 0; k < n; k++) {
+    const t = n === 1 ? 0 : k / (n - 1) - 0.5;
+    const a = ang + t * 1.3 + (r() - 0.5) * 0.25;
+    const l = len * (1 - Math.abs(t) * 0.7) * (0.75 + r() * 0.4);
+    const bend = t * 0.5;
+    const tx = x + Math.sin(a) * l;
+    const ty = y - Math.cos(a) * l;
+    const mx = x + Math.sin(a - bend * 0.5) * l * 0.55;
+    const my = y - Math.cos(a - bend * 0.5) * l * 0.55;
+    const nx = Math.cos(a) * w * 0.5;
+    const ny = Math.sin(a) * w * 0.5;
+    p.solid(
+      [x - nx, y - ny, mx - nx * 0.6, my - ny * 0.6, tx, ty, mx + nx * 0.6, my + ny * 0.6, x + nx, y + ny],
+      color,
+      h,
+      { moss },
+      alpha,
+    );
+  }
+}
 
 /**
  * Paints the growth of `fam` along a top [x0, x1] whose walk line is `topAt(x)`, at relief height `h`; `dropW` /
@@ -316,24 +359,41 @@ type Piece = (
 
 /** Lime: cushions along the crest (each its own size, a lit cap), and now and then a clump of drips under a run. */
 const limeCushions: Piece = (p, G, a, b, Y, thick, h, sd, r, bumps) => {
-  let x = a + range(r, 4, 24);
-  while (x < b - 6) {
-    const k = smoothstep(a, a + 30, x) * smoothstep(b, b - 30, x);
-    const rx = range(r, 7, 18) * (0.5 + 0.5 * k);
-    const ry = rx * range(r, 0.5, 0.75);
-    const rise = range(r, 0.2, 1) * G.rise * k;
-    const cy = Y(x) - rise + ry;
-    bumps.push([x, rise, rx * 0.8]);
-    p.solid(chaikin(blob(x, cy, rx, ry, sd + Math.round(x), 0.2, 12), 1), G.body, h + 0.22, { moss: 1 });
-    p.solid(
-      chaikin(blob(x - rx * 0.1, cy - ry * 0.35, rx * 0.7, ry * 0.45, sd + Math.round(x) + 1, 0.2, 10), 1),
-      r() < 0.6 ? G.lit : G.high,
-      h + 0.28,
-      { moss: 1 },
-      range(r, 0.6, 0.95),
-    );
-    // (Gaps between the cushions: a dark notch reads as a clump of separate tufts, not a band.)
-    x += rx * range(r, 1.3, 2.6);
+  // Clumps of 2-5 tufts of 3-7 blades on a low dark mound, with bare gaps between the clumps (r9 #8: round beads).
+  let x = a + range(r, 4, 30);
+  while (x < b - 8) {
+    const nt = 2 + Math.floor(r() * 4);
+    for (let q = 0; q < nt && x < b - 8; q++) {
+      const k = smoothstep(a, a + 30, x) * smoothstep(b, b - 30, x);
+      const len = range(r, 8, 22) * (0.5 + 0.5 * k);
+      const rise = range(r, 0.2, 1) * G.rise * k;
+      const base = Y(x) - rise + 3;
+      bumps.push([x, rise, len * 0.5]);
+      p.solid(
+        chaikin(blob(x, base + 2, len * 0.55, len * 0.22, sd + Math.round(x), 0.25, 10), 1),
+        G.body,
+        h + 0.2,
+        { moss: G.moss },
+      );
+      const lean = range(r, -0.35, 0.35);
+      tuft(p, x, base, lean, 3 + Math.floor(r() * 5), len, range(r, 2.2, 3.6), G.body, h + 0.22, G.moss, r);
+      tuft(
+        p,
+        x + range(r, -2, 2),
+        base - 1,
+        lean,
+        2 + Math.floor(r() * 3),
+        len * 0.7,
+        range(r, 1.6, 2.6),
+        r() < 0.5 ? G.high : G.lit,
+        h + 0.28,
+        G.moss,
+        r,
+        range(r, 0.5, 0.85),
+      );
+      x += len * range(r, 0.6, 1.1);
+    }
+    x += range(r, 24, 90);
   }
   if (b - a > 140 && r() < 0.7) {
     const nd = 1 + Math.floor(r() * 3);
@@ -499,8 +559,9 @@ export interface WrapSpec {
 
 export const WRAP: Record<TopFamily, WrapSpec> = {
   lime: {
-    faceTh: [34, 70],
-    faceCover: [0.55, 0.92],
+    faceTh: [30, 60],
+    // (r9 #8: a face's lime wrap <= 40% of its length.)
+    faceCover: [0.24, 0.4],
     underTh: [20, 44],
     underCover: [0.6, 0.92],
     clumpGap: [50, 170],
@@ -635,7 +696,40 @@ function facePieces(
   sd: number,
   r: Rng,
 ): void {
-  if (fam === 'lime' || fam === 'straw') {
+  if (fam === 'lime') {
+    // Fronds: tufts of blades leaning out and up off the face in clumps, bare bark between (r9 #8: beads).
+    let u = u0 + range(r, 2, 20);
+    while (u < u1 - 6) {
+      const nt = 1 + Math.floor(r() * 3);
+      for (let q = 0; q < nt && u < u1 - 6; q++) {
+        const d = thick(u);
+        if (d > 5) {
+          const x = off(u) - dir * d * range(r, 0.1, 0.4);
+          const len = range(r, 0.6, 1.1) * Math.max(10, d);
+          // (0 = up: out from the face and a little up.)
+          const ang = dir * range(r, 0.7, 1.2);
+          tuft(p, x, u, ang, 3 + Math.floor(r() * 4), len, range(r, 2.2, 3.4), G.body, h + 0.18, G.moss, r);
+          if (r() < 0.6)
+            tuft(
+              p,
+              x,
+              u - 2,
+              ang - dir * 0.2,
+              2,
+              len * 0.7,
+              2,
+              G.high,
+              h + 0.24,
+              G.moss,
+              r,
+              range(r, 0.5, 0.8),
+            );
+        }
+        u += range(r, 10, 22);
+      }
+      u += range(r, 30, 110);
+    }
+  } else if (fam === 'straw') {
     // Cushions bulging out past the edge, each its own size, a lit cap on the upper side.
     let u = u0 + range(r, 2, 16);
     while (u < u1 - 6) {

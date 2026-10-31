@@ -20,6 +20,7 @@ import type { EnvModule, SceneContext, SceneFrame } from '../index';
 import { BG_VERT, noiseTexture, quadGeometry, rgb, ZONES, zoneWeights } from '../lib/bg-bake';
 import { WOOD } from '../lib/bg-wood';
 import { KEY_LIGHT } from '../lib/look';
+import { moonShown } from '../lib/moon-vistas';
 import { LOOK } from '../lib/room-look';
 
 export const SKY = {
@@ -101,6 +102,8 @@ export const SKY = {
     horizonParallax: 0.12,
     /** Thin cloud streaks: amount, and how much the moon silvers the ones near it. */
     clouds: 0.55,
+    /** The halo's strength where the disc is hidden (moon-vistas.ts): the moon behind the canopy, a cool glow. */
+    hiddenHalo: 0.35,
     cloud: 0x1c2e4c,
     cloudLit: 0x8aa6cc,
     /** Cloud drift, view px per second (visible in a second's difference, not a rush). */
@@ -322,6 +325,7 @@ export class SkyLayer implements EnvModule {
   private target!: RenderTexture;
   private toTarget!: Matrix;
   private anchorY = 0;
+  private roomId = '';
 
   /** The off-tree mesh that shades the sky into its target (the target's sprite is in the tree). */
   destroy(): void {
@@ -330,6 +334,7 @@ export class SkyLayer implements EnvModule {
 
   init(ctx: SceneContext): void {
     this.anchorY = ctx.layers.anchor.y;
+    this.roomId = ctx.scene.id;
     this.uniforms = new UniformGroup({
       uGlow: { value: new Float32Array([SAFE_W / 2, SKY.glowRestY]), type: 'vec2<f32>' },
       uDir: { value: new Float32Array([KEY_LIGHT.dirX, KEY_LIGHT.dirY]), type: 'vec2<f32>' },
@@ -481,6 +486,10 @@ export class SkyLayer implements EnvModule {
       (u.uZoneCam as Float32Array).set([1, 0, 0, 0]);
       (u.uMoon as Float32Array).set([mx, my, moon.r * SKY.wood.glowK, 0]);
       (u.uDisc as Float32Array)[0] = moon.r * cam.zoom;
+      // The disc only at the room's vistas (moon-vistas.ts); elsewhere a dim halo, the moon behind the canopy.
+      const shown = moonShown(this.roomId, cam.x, cam.y);
+      (u.uDisc as Float32Array)[1] = shown;
+      (u.uZoneCam as Float32Array)[0] = SKY.wood.hiddenHalo + (1 - SKY.wood.hiddenHalo) * shown;
       // The horizon haze and the afterglow ride with the far crowns (far0's parallax).
       const W = SKY.wood;
       const hy = W.horizonY + (WOOD.refCamY - cam.y) * W.horizonParallax;

@@ -85,16 +85,20 @@ export type SimEvent =
       side?: number;
       /** Put out by a gust (Lanternroot), from range. */
       gust?: boolean;
+      /** A trap lamp (the Canopy r10): its `moths` are freed for good and counted in `save.moths` (`total`). */
+      trap?: boolean;
+      total?: number;
     }
   /**
    * The fling (memory/lures.md). `flingStart`: Lamp pressed near lure `id` (`x`, `y` = its flame): the moment
    * snaps (she holds, the world slows) for at most `frames` while she aims (`player.lureAimX/Y`, the arc in
    * `player.lureArc`). `fling`: she leaves it at (`vx`, `vy`) along (`aimX`, `aimY`); a `lureSnuff` (fling) follows.
-   * `lureRelight`: a flame burns again (embers after a failed chain, or a toy room's `relight`).
+   * `lureRelight`: a flame burns again (embers after a failed chain, a `relight` lamp's time, or `by: 'firefly'`:
+   * the firefly's pass lit it, src/sim/firefly.ts).
    */
   | { type: 'flingStart'; id: string; x: number; y: number; frames: number }
   | { type: 'fling'; id: string; x: number; y: number; vx: number; vy: number; aimX: number; aimY: number }
-  | { type: 'lureRelight'; id: string; x: number; y: number }
+  | { type: 'lureRelight'; id: string; x: number; y: number; by?: 'firefly' }
   /** A flame she flung from smoulders (embers) until she lands safe (`lureSnuff`) or fails (`lureRelight`). */
   | { type: 'lureEmber'; id: string; x: number; y: number }
   /**

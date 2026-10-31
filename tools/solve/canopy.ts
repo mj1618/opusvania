@@ -75,7 +75,8 @@ const CLAIMS: Claim[] = [
     room: 'cn-hub',
     from: [6160, 1152],
     kit: [],
-    reach: ['trunk', 'fork', 'cn-hub:p-crossing', 'place:clearing'],
+    // (r10: the trap lamp's floor, `place:trap`: freed with no ability.)
+    reach: ['trunk', 'fork', 'cn-hub:p-crossing', 'place:clearing', 'place:trap'],
     not: ['limbs', 'door', 'cn-hub:stone-heart', 'cn-hub:shard-high', 'cn-hub:shelf-great', 'vent'],
     max: 9000,
   },
@@ -372,8 +373,9 @@ const CLAIMS: Claim[] = [
     room: 'cn-tunnel',
     from: [7420, 1856],
     kit: [C, G],
-    reach: ['place:east', 'cellar'],
-    not: ['den', 'place:low'],
+    // (r10: the den's mouth an arch at the floor's east end, its lid a root gate standing in it.)
+    reach: ['place:east', 'place:mouth', 'cellar', 'place:ledge'],
+    not: ['den'],
     max: 9000,
   },
   // (r8: the nest, the hall's lower floor: down the shaft by the pile, back up it or round by the burrow.)
@@ -402,7 +404,7 @@ const CLAIMS: Claim[] = [
   // (The balcony's lip reaches the arena floor: v3's bitten corner sealed it, a softlock only the video found.)
   {
     room: 'cn-den',
-    from: [300, 512],
+    from: [300, 320],
     kit: [C, G],
     reach: ['tunnel', 'cn-den:p-den', 'place:floor'],
     not: ['out'],

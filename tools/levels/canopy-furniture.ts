@@ -320,19 +320,19 @@ export const ROUTE: Array<[string, Array<[number, number]>]> = [
       [5440, 0],
       [5440, 1856],
       // (r9b: up the hump to its lip, the jump's apex, the glide down onto the warning's floor.)
-      [5984, 1472],
-      [6080, 1472],
-      [6400, 1220],
+      // (r10: 128 further west, the warning's floor 1,024 to the den's mouth at its east end.)
+      [5856, 1472],
+      [5952, 1472],
+      [6272, 1220],
       [7420, 1856],
-      [7820, 2048],
-      [8000, 2048],
+      [8000, 1856],
     ],
   ],
   [
     'cn-den',
     [
-      [0, 512],
-      [300, 512],
+      [0, 320],
+      [300, 320],
       [1700, 1344],
       [3700, 1344],
       [3840, 1344],

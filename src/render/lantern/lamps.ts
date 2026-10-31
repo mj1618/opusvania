@@ -24,13 +24,18 @@ import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import type { LightRegistry } from '../lights';
 import { mix } from '../scene/lib/look';
-import { hash01, LR, ROOM_LAMPS } from './config';
+import { LOOK } from '../scene/lib/room-look';
+import { hash01, LR, ROOM_LAMPS, TRAP } from './config';
 import type { GlowPool } from './glow';
 import { MothClouds, mothCount } from './moths';
 
 const AT = { x: 0, y: 0 };
 
 interface LampInfo {
+  /** A trap lamp (the Canopy r10, `Lure.trap`): a cage of glow, a dense cloud, fallen moths under it. */
+  trap: boolean;
+  /** The ground under it (where its dead moths lie), or null. */
+  floorY: number | null;
   /** Where its thread is tied (null: hangs from a twig out of the dark above). */
   tieY: number | null;
   /** A moonwick standing on something: the ground under it (null: it hangs). */
@@ -41,7 +46,7 @@ interface LampInfo {
 }
 
 interface Fx {
-  kind: 'snuff' | 'kindle' | 'fan' | 'refuse' | 'cold' | 'launch' | 'snap' | 'relight';
+  kind: 'snuff' | 'kindle' | 'fan' | 'refuse' | 'cold' | 'launch' | 'snap' | 'relight' | 'crack';
   x: number;
   y: number;
   t: number;
@@ -59,6 +64,8 @@ interface Freed {
   tx: number;
   ty: number;
   seed: number;
+  /** A trap's moth (the Canopy r10): seconds it flies with her before it streams off toward the moon (0 = none). */
+  follow: number;
 }
 
 interface Scrap {
@@ -216,7 +223,12 @@ export class Lamps {
       }
       if (l.swing) tieY = l.y - l.swing.length;
       const k = l.kind as string;
+      let floorY: number | null = null;
+      for (const q of [...scene.solids, ...scene.oneWays])
+        if (px >= q.x && px <= q.x + q.w && q.y > l.y && (floorY === null || q.y < floorY)) floorY = q.y;
       this.info.push({
+        trap: l.trap === true,
+        floorY,
         tieY,
         standY: moonwick ? standY : null,
         size: sizeOf(l) * (moonwick ? 1 : this.roomK.size),
@@ -231,6 +243,7 @@ export class Lamps {
       });
     }
     // The clouds: every warm lamp's moths on the GPU (the firefly's own lamp draws the biggest).
+    const canopy = scene.id.startsWith('cn-');
     this.clouds = new MothClouds(
       lures.map((l, i) => {
         const inf = this.info[i] as LampInfo;
@@ -239,9 +252,15 @@ export class Lamps {
           x: l.x,
           y: l.y,
           size: firefly ? 70 : inf.size,
+          // (The Canopy r10: a trap holds a dense cloud; the firefly's springboards hold a few stragglers.)
           count: inf.moonwick
             ? 0
-            : mothCount(firefly ? 70 : inf.size, (firefly ? 1.6 : 1) * this.roomK.moths),
+            : mothCount(
+                firefly ? 70 : inf.size,
+                (firefly ? 1.6 : 1) *
+                  this.roomK.moths *
+                  (inf.trap ? TRAP.cloud : canopy ? TRAP.springCloud : 1),
+              ),
         };
       }),
       7,
@@ -272,10 +291,14 @@ export class Lamps {
         case 'lureSnuff': {
           this.embers.delete(i);
           this.outT.set(i, 0);
-          this.fx.push({ kind: 'snuff', x: ev.x, y: ev.y, t: 0, life: 0.9, i });
-          this.burst(ev.x, ev.y, ev.moths ?? 0, ev.id ?? '', sim);
+          const trap = (ev as { trap?: boolean }).trap === true;
+          this.fx.push({ kind: 'snuff', x: ev.x, y: ev.y, t: 0, life: trap ? 1.6 : 0.9, i });
+          this.burst(ev.x, ev.y, ev.moths ?? 0, ev.id ?? '', sim, trap);
           break;
         }
+        case 'lureHit':
+          if (this.info[i]?.trap) this.fx.push({ kind: 'crack', x: ev.x, y: ev.y, t: 0, life: 0.55, i });
+          break;
         case 'lureEmber':
           this.embers.add(i);
           break;
@@ -308,7 +331,7 @@ export class Lamps {
   }
 
   /** Moths out of a snuffed lamp: they burst out, then stream to the nearest real moonlight. */
-  private burst(x: number, y: number, n: number, id: string, sim: SimView): void {
+  private burst(x: number, y: number, n: number, id: string, sim: SimView, trap = false): void {
     const holes =
       (sim.scene.marks as { moonholes?: Array<{ x: number; y: number }> } | undefined)?.moonholes ?? [];
     let tx = x + (hash01(id, 7) - 0.5) * 300;
@@ -322,7 +345,7 @@ export class Lamps {
         ty = h.y;
       }
     }
-    const count = Math.min(LR.lamp.freedMax, Math.max(4, n));
+    const count = trap ? TRAP.freedDrawn : Math.min(LR.lamp.freedMax, Math.max(4, n));
     for (let k = 0; k < count; k++) {
       const a = hash01(id, k) * Math.PI * 2;
       const sp = 120 + 260 * hash01(id, k + 99);
@@ -336,7 +359,13 @@ export class Lamps {
         tx: tx + (hash01(id, k + 13) - 0.5) * 160,
         ty: ty + (hash01(id, k + 17) - 0.5) * 120,
         seed: hash01(id, k + 61),
+        // A trap's moths fly with her a while, each leaving at its own time, then stream off toward the moon.
+        follow: trap ? TRAP.follow[0] + (TRAP.follow[1] - TRAP.follow[0]) * hash01(id, k + 71) : 0,
       });
+      if (trap) {
+        const m = this.freed[this.freed.length - 1] as Freed;
+        m.life += m.follow;
+      }
     }
     // Torn paper: a few scraps of the calyx thrown out.
     for (let k = 0; k < 5; k++) {
@@ -405,6 +434,8 @@ export class Lamps {
         if (fling === i) this.aim(x, y, 60, clock, sim, front, glowFront);
         continue;
       }
+      // A trap's dead: moths that circled until they fell, lying under it (the stakes are real; they stay).
+      if (info.trap && info.floorY !== null) this.fallen(i, x, info.floorY, back);
       // The thread it hangs by (a swinging lamp's runs from its pivot).
       const topY = y - s * 0.62;
       const tieX = l.swing ? l.x : x;
@@ -444,6 +475,7 @@ export class Lamps {
         ribs(back, x, y, s * 1.04, squash, 2, 2);
         back.stroke({ color: LR.lamp.rib, width: 1.6, alpha: 0.35 });
         sepals(back, x, y - s * 1.25 * squash * 0.45, s);
+        if (info.trap) this.cage(i, x, y, s, hp, clock, back, glow);
         mid.add(x, y + s * 0.12, s * 0.5 * flick, LR.lamp.core, 0.55 * flick, s * 0.62 * flick);
         // The halo (bloom carries it further).
         glow.add(x, y, s * 2.4 * flick, LR.lamp.halo, 0.3);
@@ -498,7 +530,70 @@ export class Lamps {
     this.clouds.update(clock);
     this.light(cands);
     this.drawFx(dt, front, glowFront);
-    this.drawFreed(dt, clock, front, glowFront);
+    this.drawFreed(dt, clock, front, glowFront, sim);
+  }
+
+  /**
+   * A trap's cage of glow: warm bars bowed round the lamp like a lantern's frame, meeting in a ring over it and a
+   * knot under it, breathing with the moths' circling. Each cut breaks a bar (`hp` of `trapHp`), and the cage
+   * shudders (`crack`).
+   */
+  private cage(
+    i: number,
+    x: number,
+    y: number,
+    s: number,
+    hp: number,
+    clock: number,
+    g: Graphics,
+    glow: GlowPool,
+  ): void {
+    const T = TRAP;
+    const hpMax = Math.max(1, Math.round(tuning.lures.trapHp));
+    const broken = Math.round(((hpMax - hp) / hpMax) * T.bars);
+    const shake = this.fx.some((f) => f.kind === 'crack' && f.i === i) ? Math.sin(clock * 60) * 3 : 0;
+    const rx = s * T.cageW;
+    const ry = s * T.cageH;
+    const top = y - ry * 0.95;
+    const bot = y + ry * 0.9;
+    const breath = 1 + 0.03 * Math.sin(clock * 2.1 + i);
+    for (let k = 0; k < T.bars; k++) {
+      // Bars at their angle round the cage (front ones brighter); the broken ones are the last ones round.
+      if (k >= T.bars - broken) continue;
+      const a = (k / T.bars) * Math.PI * 2 + clock * 0.25 + i;
+      const f = Math.sin(a);
+      const front = 0.5 + 0.5 * Math.cos(a);
+      const bx = x + f * rx * breath + shake;
+      g.moveTo(x + shake * 0.5, top).bezierCurveTo(bx, top + ry * 0.25, bx, bot - ry * 0.3, x, bot);
+      g.stroke({ color: T.bar, width: 1 + 1.2 * front, alpha: 0.2 + 0.45 * front });
+    }
+    g.ellipse(x, top, rx * 0.22, rx * 0.07).stroke({ color: T.bar, width: 1.6, alpha: 0.55 });
+    g.circle(x, bot, 3).fill({ color: T.bar, alpha: 0.6 });
+    glow.add(x, y, Math.max(rx, ry) * 1.3, T.glow, 0.12 + 0.03 * Math.sin(clock * 2.1 + i));
+  }
+
+  /** Dead moths on the ground under a trap: pale wings spread or folded, a few. */
+  private fallen(i: number, x: number, fy: number, g: Graphics): void {
+    for (let k = 0; k < TRAP.fallen; k++) {
+      const h = hash01(`fallen${i}`, k);
+      const fx = x + (h - 0.5) * 150 + (hash01(`fallen${i}`, k + 40) - 0.5) * 40;
+      const w = 6 + 4 * hash01(`fallen${i}`, k + 9);
+      const rot = (hash01(`fallen${i}`, k + 17) - 0.5) * 1.2;
+      const c = Math.cos(rot);
+      const sn = Math.sin(rot);
+      const P = (px: number, py: number): [number, number] => [
+        fx + px * c - py * sn,
+        fy - 1.5 + px * sn + py * c,
+      ];
+      const wing = (d: number): number[] => [
+        ...P(0, 0),
+        ...P(d * w * 1.2, -w * 0.35),
+        ...P(d * w * 0.9, w * 0.35),
+      ];
+      g.poly(wing(-1)).fill({ color: TRAP.dead, alpha: 0.7 });
+      g.poly(wing(1)).fill({ color: TRAP.dead, alpha: 0.7 });
+      g.ellipse(fx, fy - 1.5, w * 0.35, w * 0.12).fill({ color: 0x2a2018, alpha: 0.8 });
+    }
   }
 
   private drawWick(
@@ -765,11 +860,24 @@ export class Lamps {
         glow.add(f.x, f.y, 60 + 90 * e, LR.aim.glow, 0.6 * (1 - u));
       } else if (f.kind === 'relight') {
         glow.add(f.x, f.y, 40 + 60 * e, LR.lamp.halo, 0.6 * (1 - u));
+      } else if (f.kind === 'crack') {
+        // A cut on a trap: a flash, a few sparks off the broken bar.
+        glow.add(f.x, f.y, 50 + 70 * e, TRAP.glow, 0.7 * (1 - u));
+        for (let k = 0; k < 5; k++) {
+          const a = hash01(`crack${f.i}${Math.round(f.x)}`, k) * Math.PI * 2;
+          const d = 20 + 70 * e;
+          front
+            .circle(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d + 30 * e * e, 2)
+            .fill({ color: TRAP.bar, alpha: 1 - u });
+        }
       }
     }
   }
 
-  private drawFreed(dt: number, clock: number, front: Graphics, glow: GlowPool): void {
+  private drawFreed(dt: number, clock: number, front: Graphics, glow: GlowPool, sim: SimView): void {
+    const p = sim.player;
+    // Where the moon is, as a side of the sky (its view x in the room's look; the hatch's swarm went that way).
+    const moonSide = LOOK.moon ? Math.sign(LOOK.moon.x - 960) || 1 : -1;
     for (let k = this.freed.length - 1; k >= 0; k--) {
       const m = this.freed[k] as Freed;
       m.age += dt;
@@ -778,23 +886,41 @@ export class Lamps {
         this.freed.splice(k, 1);
         continue;
       }
-      // Out in a burst, then steering to the moonlight, faster as they go.
+      if (m.follow > 0) {
+        if (m.age < m.follow) {
+          // With her: a loose ring round her, each on its own orbit, lagging her moves.
+          const a = clock * (1.2 + m.seed) + m.seed * 20;
+          m.tx = p.cx + Math.cos(a) * (60 + 90 * m.seed);
+          m.ty = p.cy - 40 + Math.sin(a * 1.3) * (40 + 50 * m.seed);
+        } else if (m.age - dt < m.follow) {
+          // Away: up and toward the moon's side of the sky, past the edge of the picture.
+          m.tx = m.x + moonSide * (700 + 500 * m.seed);
+          m.ty = m.y - 1400 - 400 * m.seed;
+        }
+      }
+      // Out in a burst, then steering to the moonlight (or her), faster as they go.
       const steer = Math.min(1, Math.max(0, (m.age - 0.35) / 0.8));
       const dx = m.tx - m.x;
       const dy = m.ty - m.y;
       const d = Math.hypot(dx, dy) || 1;
-      const speed = 220 + 340 * steer;
+      const speed = m.follow > 0 && m.age < m.follow ? Math.min(420, 60 + d * 2.2) : 220 + 340 * steer;
       m.vx += ((dx / d) * speed - m.vx) * Math.min(1, dt * 2.2 * steer + dt * 0.4);
       m.vy += ((dy / d) * speed - m.vy) * Math.min(1, dt * 2.2 * steer + dt * 0.4);
       m.vx += Math.sin(clock * 7 + m.seed * 40) * 40 * dt * 10;
       m.vy += Math.cos(clock * 6 + m.seed * 30) * 30 * dt * 10;
       m.x += m.vx * dt;
       m.y += m.vy * dt;
-      const fade = Math.min(1, m.age * 4) * Math.min(1, (m.life - m.age) * 1.5) * (d < 60 ? d / 60 : 1);
+      const fade =
+        Math.min(1, m.age * 4) *
+        Math.min(1, (m.life - m.age) * 1.5) *
+        (d < 60 && !(m.follow > 0 && m.age < m.follow) ? d / 60 : 1);
       const flap = Math.abs(Math.sin(clock * 30 + m.seed * 50));
-      const w = 6 + 4 * m.seed;
+      // (A trap's moths, with her a while, a little bigger: the eye follows them.)
+      const w = (m.follow > 0 ? 8 : 6) + 4 * m.seed;
       moth(front, m.x, m.y, w, flap, m.vx >= 0 ? 1 : -1, LR.lamp.freed, 0.95 * fade);
       if (m.age < 0.6) glow.add(m.x, m.y, 10, LR.lamp.halo, 0.3 * (1 - m.age / 0.6));
+      // A trap's freed moths carry a little moonlight (cool, not the lamp's warmth) while they fly with her.
+      else if (m.follow > 0) glow.add(m.x, m.y, 14, TRAP.freedGlow, 0.18 * fade);
     }
     for (let k = this.scraps.length - 1; k >= 0; k--) {
       const s = this.scraps[k] as Scrap;
