@@ -198,9 +198,11 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
         out.push(blow('hitTick', e.x, ty, C.flameDb, { cents: C.flameCents + jitter('hitTick', 2) }, 1));
       else if (kind === 'pod')
         out.push(blow('hitTick', e.x, ty, C.flameDb - 2, { cents: 498 + jitter('hitTick', 2) }, 1));
-      else if (kind === 'bark' || kind === 'thorns')
+      else if (kind === 'bark' || kind === 'thorns') {
         out.push(blow('thock', e.x, ty, C.thockDb, { cents: jitter('thock', 2, 80) }, 1));
-      else if (kind === 'seedCase')
+        // (r16: rotten bark gives: a crunch under the knock, so it never sounds like a cut into a solid.)
+        if (kind === 'bark') out.push(blow('crunch', e.x, ty, C.thockDb - 3, { cents: -400 }, 2));
+      } else if (kind === 'seedCase')
         out.push(blow('clang', e.x, ty, C.clangDb - 3, { cents: 300 + jitter('clang', 2) }, 1));
       return out;
     }

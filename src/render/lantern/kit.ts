@@ -43,7 +43,20 @@ export const KIT = {
     skinLit: 0xa08a5a,
   },
   /** Rotten heartwood in the wood: its face over the mass, rot blooms, the crack's lit lip, chips, a cut's dust. */
-  rot: { face: 0x1e120c, soft: 0x2e1c12, bloom: 0x8a7458, lit: 0xb08a5a, chip: 0x3a2618, dust: 0x9a8468 },
+  rot: {
+    face: 0x1e120c,
+    soft: 0x2e1c12,
+    bloom: 0x8a7458,
+    lit: 0xb08a5a,
+    chip: 0x3a2618,
+    dust: 0x9a8468,
+    /** Light through its crack (r16): warm, from the space behind. */
+    leak: 0xffb060,
+    /** A teaching wall's punky face, its beetle holes and shelf fungus (r16). */
+    punk: 0x6e5236,
+    hole: 0x140a06,
+    shelf: 0xd8c49a,
+  },
   /** A shut root door (a side shortcut, the Canopy r16): roots, their lit edge, grain, the silk lashing and knot. */
   door: {
     root: 0x2a1c14,
@@ -408,7 +421,7 @@ export class Kit {
       if (left <= 0 || !seen(b.x, b.y, b.w, b.h)) return;
       const hit = this.hits.get(i);
       const shake = hit ? Math.max(0, 1 - hit.t / KIT.shake) : 0;
-      const ox = shake * Math.sin(hit ? hit.t * 90 : 0) * 3 * (hit?.dir || 1);
+      const ox = shake * Math.sin(hit ? hit.t * 90 : 0) * 6 * (hit?.dir || 1);
       const max = (b as { hp?: number }).hp ?? 3;
       // In the wood the wall is the mass it sits in (baked: mass-patches.ts); only a faint seam and its cuts show.
       if (patch) {
@@ -419,6 +432,13 @@ export class Kit {
         ).some((l) => l.kind === 'teach' && l.id === b.id);
         this.rot(back, b.x + ox, b.y, b.w, b.h, b.floor === true, teach ? 1 : 0.7, b.id);
         this.seam(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
+        // (The Canopy r16, first-timer ft16a: the giant's wall "looked like a solid post"; cuts there gave "no shake,
+        // no mark". Warm light leaks through its crack from the space behind, a thread of it on a teaching wall before
+        // any cut, more with each cut taken: the wall is thin, and it is giving.)
+        const leak = (teach ? 0.12 : 0) + (0.22 * (max - left)) / Math.max(1, max) + (hit ? 0.35 * shake : 0);
+        if (leak > 0.01 && !b.floor)
+          for (let q = 0; q < 4; q++)
+            glow.add(b.x + ox + b.w * 0.5, b.y + b.h * (0.2 + 0.2 * q), 26 + 14 * leak, KIT.rot.leak, leak);
         if (hit && hit.t < KIT.dust)
           this.dust(back, b.x + b.w / 2, b.y + b.h / 2, b.w, b.h, hit.t / KIT.dust, b.id);
         return;
@@ -779,6 +799,30 @@ export class Kit {
   ): void {
     const R = KIT.rot;
     g.poly(ragged(x + 3, y + 3, w - 6, h - 6, `${id}r`, 6)).fill({ color: R.face, alpha: 0.55 * k });
+    // (The Canopy r16, first-timer ft16a: the teaching wall "looked like a solid post" through two first-timers. A wall
+    // the room teaches with is punky, pale rot over its whole face: soft wood gone to fungus, bored by beetles, shelf
+    // fungus on its edges. A secret's stays a faint seam.)
+    if (k >= 1 && !floor) {
+      g.poly(ragged(x + 2, y + 6, w - 4, h - 12, `${id}p`, 5)).fill({ color: R.punk, alpha: 0.85 });
+      for (let q = 0; q < 9; q++) {
+        const bx = x + w * (0.2 + 0.6 * hash01(id, q + 200));
+        const by = y + h * (0.08 + 0.84 * hash01(id, q + 210));
+        g.ellipse(bx, by, 2.5 + 2 * hash01(id, q + 220), 3 + 2.5 * hash01(id, q + 230)).fill({
+          color: R.hole,
+          alpha: 0.9,
+        });
+      }
+      for (let q = 0; q < 4; q++) {
+        const side = q % 2 ? 1 : -1;
+        const fx = side > 0 ? x + w - 2 : x + 2;
+        const fy = y + h * (0.2 + 0.18 * q + 0.05 * hash01(id, q + 240));
+        const fw = 10 + 8 * hash01(id, q + 250);
+        g.ellipse(fx + side * fw * 0.45, fy, fw * 0.55, 4.5).fill({ color: R.shelf, alpha: 0.95 });
+        g.moveTo(fx, fy + 2)
+          .lineTo(fx + side * fw, fy + 2)
+          .stroke({ color: R.face, width: 1.2, alpha: 0.6 });
+      }
+    }
     g.poly(ragged(x + w * 0.2, y + h * 0.15, w * 0.6, h * 0.7, `${id}q`, 5)).fill({
       color: R.soft,
       alpha: 0.4 * k,
@@ -818,7 +862,6 @@ export class Kit {
     }
   }
 
-  /** A puff of rot dust from a cut (t: 0..1 of its life). */
   /**
    * A shut root door (a side shortcut): three roots stood side by side, lashed with two bands of silk whose knot sits
    * on the side that opens it (`opens`), lit; moonlight leaks between the roots from the far side. `knock`: it
@@ -892,7 +935,19 @@ export class Kit {
     if (knock && kt < 0.9) this.dust(g, x + w / 2, y + 10 + 60 * kt, w, 20, kt / 0.9, `${id}k`);
   }
 
+  /** A puff of rot dust from a cut (t: 0..1 of its life), and (r16) chips of rot thrown out of it, falling. */
   private dust(g: Graphics, cx: number, cy: number, w: number, h: number, t: number, id: string): void {
+    for (let q = 0; q < 8; q++) {
+      const a = Math.PI * (0.15 + 0.7 * hash01(id, q + 170)) + (q % 2 ? 0 : Math.PI);
+      const v = 60 + 140 * hash01(id, q + 180);
+      const px = cx + Math.cos(a) * v * t * 0.6;
+      const py = cy - Math.abs(Math.sin(a)) * v * t * 0.5 + 260 * t * t;
+      const sz = 3 + 4 * hash01(id, q + 190);
+      g.poly([px, py, px + sz, py - sz * 0.7, px + sz * 1.3, py + sz * 0.4]).fill({
+        color: KIT.rot.bloom,
+        alpha: 0.9 * (1 - t),
+      });
+    }
     for (let q = 0; q < 7; q++) {
       const a = hash01(id, q + 150) * 6.28;
       const d = (10 + 40 * hash01(id, q + 160)) * t;
