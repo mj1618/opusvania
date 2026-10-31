@@ -18,6 +18,7 @@ import type { CameraView, SimView } from '../contract';
 import type { SceneContext } from '../scene/index';
 import type { LayerTree } from '../scene/layer-tree';
 import { mix } from '../scene/lib/look';
+import { moonShown } from '../scene/lib/moon-vistas';
 import { LOOK } from '../scene/lib/room-look';
 import { hash01 } from './config';
 import { GlowPool } from './glow';
@@ -28,12 +29,12 @@ export const OPENING = {
   shadow: {
     flock: 26,
     flocks: [1.2, 2.6, 3.6] as const,
-    size: [10, 22] as const,
+    size: [16, 34] as const,
     speed: [260, 420] as const,
-    alpha: [0.16, 0.24, 0.32] as const,
+    alpha: [0.12, 0.18, 0.24] as const,
     color: 0x02040a,
     /** The band over the branch they cross (px over / under the hatch point), how long after the hatch they last (s). */
-    band: [-200, 20] as const,
+    band: [-175, -55] as const,
     after: 2.4,
   },
   /** The title: size (safe px), letter spacing, alpha, its fade (s: in, hold, out), gap under the moon's disc. */
@@ -138,7 +139,7 @@ export class Opening {
     this.far.clear();
     this.farGlow.begin();
     if (this.hatchAt) this.drawShadows(clock, hatch);
-    this.drawTitle(cam);
+    this.drawTitle(cam, sim.scene.id);
     if (this.lights) this.drawValley(clock, cam);
     this.farGlow.end();
   }
@@ -182,7 +183,7 @@ export class Opening {
   }
 
   /** LAMPFALL under the moon, `titleAfter` frames after the hatch (screen space, carried in the air layer). */
-  private drawTitle(cam: CameraView): void {
+  private drawTitle(cam: CameraView, room: string): void {
     const t = this.title;
     if (!t) return;
     const T = OPENING.title;
@@ -204,7 +205,8 @@ export class Opening {
     const sy = m.y + (m.r ?? 88) + T.under;
     this.titleBox.position.set(cam.x + (sx - 960) / cam.zoom, cam.y + (sy - 540) / cam.zoom);
     this.titleBox.scale.set(1 / cam.zoom);
-    t.alpha = T.alpha * k;
+    // (It goes with the moon: where the canopy closes over the disc, the title is gone too.)
+    t.alpha = T.alpha * k * moonShown(room, cam.x, cam.y);
   }
 
   /** The valley's false lights far below, each with its knot of moths, and the pour off the river into them. */

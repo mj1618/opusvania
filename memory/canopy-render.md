@@ -485,3 +485,57 @@ were the fastest way to judge the small things (the clip tool's 1280 frames hide
 - **Not done / weak**: creatures are not held by the release's hold (they jump ~14 frames of motion after it); the
   hub's `landing` zone ends on the snuff (`until: cn-hub-freed`), so the follow camera drops ~250 px under the
   release's ease; many identical hanging-root ledges in the tunnel's run; the den's far rank is still a flat pale band.
+
+## Round 12: the moments (canopy-moments.md moments 1, 2, 6, 7 render; close-up #1)
+Clips `clips/r12-opening-<WxH>.mp4` (960x540, 960x600, 1260x540), `r12-keeper-intro.mp4`, `r12-keeper-death.mp4`,
+`r12-keeper-release.mp4`, `r12-vista-<WxH>.mp4`; moss before / after `shots/canopy-r12-render/before|after/<room>/`.
+Scratch tools (not in the repo): `.scratch/r12-render/probe.mts` (a `?manual` page, setup js, named shots) and
+`rec.mts` (setup js, then N frames each running `each` js, ffmpeg to clips/); `kill.js` kills the Keeper from P3
+(`g.boss({phase: 3})`, pogos from above and cuts from behind, `g.health(4)` each try).
+- **The Keeper's den** (lantern/keeper.ts `KeeperStage`, a room with a trap of >= `RELEASE.great` moths and an
+  old burrback; reads `sim.boss` loosely: `swingT`, `phase`, `left`, `moth`/`mothX`/`mothY`/`mothT`, `caught`,
+  `stage`; events `enemyFeed`, `mothEaten`, `cageRelease`, `lureSnuff`, `gateOpen`, `denCollapse`). The cage
+  (`flameAt`, it moves by `lures.live.dx/dy`) is the den's one light: a warm pool on the back and every den column
+  (interior.ts `denColumnsOf`, pure, the same spots the near back paints), ledge, narrow solid, the Keeper and her
+  thrown onto the back in `airBack` (shadow = P + (P - L) x 0.55, three soft layers). P2 (`swingT >= 0`) and P3 add
+  the dark outside the light (`Dark`: a soft-hole sprite + four rects, behind the playfield 0.62 and over it 0.3).
+  Probe a phase's light before the sim drives it: `window.__keeper = {phase: 2 | 3}` (moves the drawn cage too,
+  `keeperFake`). The falling moth, saved moths round her, P3's low cloud (`boss.left`), the column (the great
+  cage's moths are handed over: `Lamps.handOff`; straight up to under the roof, along to the gate, up the shaft),
+  the moonbeam (in `air`, additive) once `den-roof` opens, the collapse's grit.
+- **The cage's count as density**: moths.ts `uKeep` per lamp (a moth shows while its seed < the share);
+  lamps.ts sets it from `boss.left / moths` for the boss's `heart`. Swinging, its thread runs from the roof over its
+  rest x; on the floor, none.
+- **The Keeper's body** (enemies/): `bossColors(true)` also turns on its coat (`BOSS.crust`: 64 dead moth wings on
+  the dome, `crustWing(i)` pure, shed 14 on the roll); its death (`BOSS.death`, `rig.deathF` in render frames: a
+  heavy roll onto its back lifted `lift` x its height so it rests on the floor, legs curl, the split widens, one
+  breath, no burst); the sim drops a dead body after `deadFrames`: index.ts keeps `corpses[i]` and draws it for
+  good, and on a later entry with its `sets` flag saved. `enemyFeed` -> `rig.peekT` (`BOSS.snap`: heave up, lids
+  fly open, sink back). Modes `eat` (head down, jaws working) and `feed` (low, fast). Its name card and bar are off
+  (bossrush/hud.ts returns for `kind: 'keeper'`).
+- **The den's rubble** (`rubble-*` gates, `shut` on the collapse) is a heap of clods (kit.ts `rubble`), never the
+  tall root gate's lattice; the `taproot` gate draws nothing (the bake's `paintTaproot` column is it).
+- **The opening** (lantern/opening.ts, camera/open-cam.ts, room-fade.ts `setBlack`, `marks.stage.open`): black for
+  `black` frames before the room's fade; zoom `zooms[presses]` about her cocoon (`room.hatch`), the breakout eases
+  to 1 over 1.8 s; the swarm's shadows sweep east over the branch band (flocks of soft dark flecks, more with each
+  press, gone 2.4 s after the hatch); LAMPFALL under the moon `titleAfter` frames after the hatch (a Text carried
+  in `air`, scaled 1/zoom, placed from `LOOK.moon`); the river's tail leaves at `hatchTail` (swarm/paths.ts
+  `tailAt`: the release fires whether she reached the lip or not, so the sky empties). The valley's lights
+  (`stage.lights`) in `swarmFar`, framed from the `promise` camera mark (`OPENING.valley.at` / `spread`), each a
+  warm glow with a knot of moths, and a pour off the river into them while it flows. The hatch state is not in the
+  view: opening.ts reads `hatchStir` / `hatch` events and the save's `hatch.sets` flag.
+- **The vista** (lantern/vista-river.ts, a room with `stage.vista`): far streams in `swarmFar` placed from the
+  vista camera (one per freed cage outside the den, the den's own) joining a river to the mountain, density by
+  `save.moths`; the river at her height along the glide (vista landmark's clifftop end -> the `arch`), moths in front
+  (`air`) and behind (`goal`). Probe: `window.__vista = {moths, snuffed: [...]}`.
+- **The kin's answer** (character/tatter.ts `TATTER.answer`, `answerT` set by cast.ts on a `lureSnuff` within 200 px
+  of its want): watches the cloud rise, three steps after it (it moves its own `me` like the way out's beat), wings
+  once (the torn one lifts a little), a freed moth on its head (`answerG`) opens its wings and goes, then it turns
+  to her. The swarm's try on the hatch's branch hops 44 px now (16 read as a twitch).
+- **Stippled lime moss** (top-growth.ts `limeStipple`, `LIME_STIPPLE`; the hub's tops are lime now:
+  `ROOM_TOP_FAMILY`): overlapping cushions 26-90 px, a lobed dark core, mid and lit layers stacked up-left, a
+  stipple of 1.8-3.4 px marks in five value steps (the palest rare: under the warm key a pale green cap goes
+  grey-pink), up to 18 px over the line (the crest profile), a fine dark fringe of strands (wide pale drips read as
+  icicles / paint), fronds now and then. The bake softens marks under ~2 px: they vanish.
+- `MOON_VISTAS`: the hub's landing and the way out's clifftop have boxes (8 of the area's wide stops show the disc).
+- Weak still: see the round's reply.
