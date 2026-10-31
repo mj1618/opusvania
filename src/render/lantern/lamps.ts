@@ -18,6 +18,7 @@
  */
 import type { Container, Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
+import { ActionBit } from '../../sim/input';
 import { flameAt } from '../../sim/lures';
 import type { Lure } from '../../sim/scene';
 import { tuning } from '../../sim/tuning';
@@ -60,6 +61,17 @@ export const READY = {
   ringColor: 0xffd9a0,
   /** Seconds it takes to turn toward her (and away). */
   ease: 0.25,
+  /**
+   * In reach, the way a fling would throw her now (the Canopy r18, ft17b: "~35 s of fiddling to understand" the aim;
+   * ft17a: "sometimes up, sometimes sideways-down"): a tongue of the flame's light leans out along it, the held
+   * direction, else the lamp's own aim, else out from the flame through her, and sparks run along it. It swings to a
+   * new held direction over `peekTurn` s. `peekLen` px past the flame's edge; sparks every `peekEvery` s.
+   */
+  peekLen: 92,
+  peekW: 9,
+  peekTurn: 0.08,
+  peekEvery: 0.32,
+  peekColor: 0xffe2b0,
 };
 
 interface LampInfo {
@@ -276,6 +288,8 @@ export class Lamps {
   private readonly embers = new Set<number>();
   /** How much each flame wants her (0..1, eased; READY) and the time in her reach (s, for the pulse). */
   private readonly want = new Map<number, { k: number; t: number }>();
+  /** In reach: the way a fling would throw her now, eased (radians), by lamp (READY.peek*). */
+  private readonly peek = new Map<number, number>();
   /** Seconds since a lamp went out here (by index), for the husk's settle. */
   private readonly outT = new Map<number, number>();
   /** Cages the firefly just hung (`fireflyHang`, the Canopy r11): seconds since (by index). */
@@ -795,7 +809,8 @@ export class Lamps {
           const a = (1 - u) * Math.min(1, rt * 6) * 0.75;
           front.circle(x, y, r).stroke({ color: READY.ringColor, width: 2.2 * (1 - u) + 0.6, alpha: a });
           glowFront.add(x, y, s * 1.4, LR.lamp.core, 0.35 * (1 - u) * Math.min(1, rt * 6));
-        }
+          this.peekAt(i, l, x, y, s, rt, dt, clock, sim, front, glowFront);
+        } else this.peek.delete(i);
         // A room whose lamps are its picture (ROOM_LAMPS): their warmth washes the wood round them.
         if (this.roomK.light > 1)
           glow.add(x, y + 60, 520 * this.roomK.light * 0.5, LR.lamp.halo, 0.1 * flick, 420);
@@ -1112,6 +1127,82 @@ export class Lamps {
     for (const id of this.lightIds) if (!keep.has(id)) this.lights.remove(id);
     this.lightIds.clear();
     for (const id of keep) this.lightIds.add(id);
+  }
+
+  /**
+   * In her reach, before the press (READY.peek*): which way a fling would throw her now. The held direction (8-way, as
+   * the sim takes it), else the lamp's own `aim`, else out from the flame through her (`flingAim`'s rule). A tongue of
+   * warm light leans out of the flame that way and sparks run out along it; it swings as the held direction changes.
+   */
+  private peekAt(
+    i: number,
+    l: Lure,
+    x: number,
+    y: number,
+    s: number,
+    rt: number,
+    dt: number,
+    clock: number,
+    sim: SimView,
+    front: Graphics,
+    glow: GlowPool,
+  ): void {
+    const p = sim.player;
+    const inp = sim.input ?? 0;
+    const ix = (inp & ActionBit.right ? 1 : 0) - (inp & ActionBit.left ? 1 : 0);
+    const iy = (inp & ActionBit.down ? 1 : 0) - (inp & ActionBit.up ? 1 : 0);
+    let dx = ix;
+    let dy = iy;
+    if (dx === 0 && dy === 0) {
+      if (l.aim && (l.aim[0] !== 0 || l.aim[1] !== 0)) {
+        dx = l.aim[0];
+        dy = l.aim[1];
+      } else {
+        dx = p.cx - x;
+        dy = p.cy - y;
+        if (Math.hypot(dx, dy) < 0.5) dy = -1;
+      }
+    }
+    const want = Math.atan2(dy, dx);
+    const was = this.peek.get(i);
+    let ang = want;
+    if (was !== undefined) {
+      let d = want - was;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      ang = was + d * Math.min(1, dt / READY.peekTurn);
+    }
+    this.peek.set(i, ang);
+    const k = Math.min(1, rt * 5);
+    const ux = Math.cos(ang);
+    const uy = Math.sin(ang);
+    const a0 = s * 0.85;
+    const a1 = a0 + READY.peekLen;
+    const w = READY.peekW;
+    // The tongue: wide at the flame, pointed at its end, a hot core down its middle.
+    front
+      .poly([
+        x + ux * a0 - uy * w,
+        y + uy * a0 + ux * w,
+        x + ux * a1,
+        y + uy * a1,
+        x + ux * a0 + uy * w,
+        y + uy * a0 - ux * w,
+      ])
+      .fill({ color: READY.peekColor, alpha: 0.42 * k });
+    front
+      .moveTo(x + ux * a0, y + uy * a0)
+      .lineTo(x + ux * (a1 - 10), y + uy * (a1 - 10))
+      .stroke({ color: 0xfff6e0, width: 2, alpha: 0.75 * k });
+    glow.add(x + ux * (a0 + a1) * 0.5, y + uy * (a0 + a1) * 0.5, READY.peekLen * 0.6, LR.lamp.halo, 0.22 * k);
+    // Sparks running out along it, each a little further and fainter.
+    for (let j = 0; j < 3; j++) {
+      const u = (clock / READY.peekEvery / 3 + j / 3) % 1;
+      const d = a0 + (a1 + 26 - a0) * u;
+      front
+        .circle(x + ux * d, y + uy * d, 3.2 * (1 - u) + 1)
+        .fill({ color: 0xfff1d0, alpha: 0.9 * k * Math.sin(Math.PI * u) });
+    }
   }
 
   /** The fling's aim, painted: a ring of light tightening on the flame, a wedge along her aim, the flight. */

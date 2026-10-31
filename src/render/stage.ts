@@ -35,9 +35,9 @@ import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
 import { CameraShake, escapeRumble } from './camera/shake';
 import { StageCamera } from './camera/stage-cam';
-import { type CameraTuning, cameraFor } from './camera/tuning';
+import { type CameraTuning, cameraFor, OPEN_GLIMMER } from './camera/tuning';
 import { CharacterRenderer } from './character/index';
-import type { CameraView, PlayerView, RenderContext, SimView } from './contract';
+import { type CameraView, type PlayerView, type RenderContext, type SimView, worldToView } from './contract';
 import { EnemyRenderer } from './enemies/index';
 import { GivingRenderer } from './giving/index';
 import { GoalCamera } from './goal/camera';
@@ -412,7 +412,17 @@ export class RenderStage {
       boss: this.game.state.boss,
       // (Lanternroot's light pieces: read loosely, the field is the level's sim.)
       light: (this.game.state as { light?: SimView['light'] }).light,
+      input: this.game.state.prevInput,
     };
+    // (The Canopy r18: her light breathing in the opening's black, where her cocoon hangs.)
+    const hs = this.game.state.hatch;
+    const ha = this.game.scene.hatch;
+    this.roomFade.glimmer(
+      dt,
+      events,
+      hs && !hs.done && ha ? worldToView(view, ha.x, ha.y - OPEN_GLIMMER.up) : null,
+      view.zoom,
+    );
     this.scene.layers.applyCamera(view);
     this.scene.update(dt, this.clock, view, sim);
     this.character.update(dt, this.clock, player, events, this.game.state.hatch, this.game.state.save.flags);

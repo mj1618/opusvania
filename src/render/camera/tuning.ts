@@ -253,6 +253,23 @@ export type CameraTuning = typeof cameraTuning;
  */
 export const CAMERA_OPEN = { above: 60, step: 0.9, out: 1.8 };
 
+/**
+ * Her light in the opening's black (the Canopy r18, room-fade.ts `glimmer`: every first-timer read 3 s of plain black as
+ * a hang): a soft silver glow where her cocoon hangs (`up` px over the hatch point, logical px `r` across at zoom 1),
+ * breathing every `period` s; a press stirs it (`stir` x brighter, `grow` x wider, easing off at `decay` /s). It goes
+ * with the black as the picture comes up.
+ */
+export const OPEN_GLIMMER = {
+  up: 0,
+  r: 60,
+  color: 0xd6e6f2,
+  alpha: 0.5,
+  period: 1.9,
+  stir: 0.9,
+  grow: 0.7,
+  decay: 3.2,
+};
+
 export const PREMISE_CAM = {
   release: { zoom: 1.06, pan: 0.12, in: 0.4, hold: 0.55, out: 1.0 },
   great: { zoom: 0.88, pan: 0.3, lift: 260, in: 0.9, hold: 5.6, out: 1.8 },
