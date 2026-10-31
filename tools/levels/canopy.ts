@@ -1501,11 +1501,12 @@ function trunk(): Json {
   // gotcha, no thorns where a drop lands; a knuckle by the lip was a hop up to the top, the claws' lock); a pod on each.
   r.thorns('thorn-t1', TRUNK_BED[0], 768, TRUNK_BED[1] - TRUNK_BED[0]);
   // (r16, first-timer ft15fix: "the stones are small and the pit punishes every miss", two fades here: the knuckles
-  // are 192 wide and 96 over the floor (were 128 and 128), gaps 48 / 160 / 48.)
-  r.oneWay(1712, 608, 192, 'branch');
-  r.oneWay(2064, 608, 192, 'branch');
-  r.pod('pod-t1', 1808, 608, 1200, 'sit');
-  r.pod('pod-t3', 2160, 608, 1200, 'sit');
+  // are 160 wide and 96 over the floor (were 128 and 128), gaps 32 / 96 / 192. The east one ends where v15's did: any
+  // nearer the top's lip and a jump off it climbs back to the hall without the claws (the solver's trunk claims).)
+  r.oneWay(1696, 608, 160, 'branch');
+  r.oneWay(1952, 608, 160, 'branch');
+  r.pod('pod-t1', 1776, 608, 1200, 'sit');
+  r.pod('pod-t3', 2032, 608, 1200, 'sit');
   // A fling line (review r6 #4): a lamp in the drop's shaft, a jump over tier 2's floor: flung up from it she is back
   // in the wall's chamber (the clawed return, `t2 -> t1`, now has a second way; the hall's way out stays the claws').
   r.lamp('wick-drop', TRUNK_WICK[0], TRUNK_WICK[1]);

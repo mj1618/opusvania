@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v15, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v16, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,43 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v16 (round 16, 2026-11-01): the first ten minutes (first-timer ft15fix stuck 5 of 7 min)
+Teach through the world, no text: every try at a thing that cannot act yet answers.
+- **The hub's cage** (`HUB_CAGE` 6,300 x **1,480**, 120 over the floor): the forward cut a player makes walking up to
+  it lands standing, from ~150 px either side (at 200 over, only an up cut or a jump's cut did; ft15fix's cuts were
+  jump cuts, one at a time, each a single unseen moth). The kin stands beside it (5,780 -> 6,150) and tries for it
+  again every 12 s (`TATTER.want.again`). Render: `TRAP.roomSize['cn-hub']` 1.35; a cut swings it (`jolt`) and drops
+  a bar on the floor; audio a second clink as it lands.
+- **`lureRefuse {id, x, y, side}`** (src/sim/player/player.ts, `trapNear`, `lures.trapRefusePx` 200): a Lamp press with
+  no flame in reach near a burning cage. Render: the cage rattles toward her, moths beat at the bars (`rattle` fx);
+  audio: three dull clinks. A trap is still never a springboard.
+- **The hub's east bank**: the lampoak's `east` limb stops at 6,944 (was 7,232: it roofed the bank's lip 227 over
+  the floor, so the 256 step could not be climbed: "every kick drops me back"). A full jump or the claws now.
+- **`shortcutShut {id, x, y, side}`** (src/sim/progress.ts): pushing a shut side shortcut from the side that does
+  not open it (at the push and every 45 frames held). Render draws side shortcuts as a **root door lashed with silk,
+  the knot on the side that opens it** (`rootDoor`, `KIT.door`), shuddering and dropping dust when pushed or cut
+  (also on `slashTerrain` there); audio a knock. Floor shortcuts keep the bark look. ft16a read it: "the knots are on
+  the far side, so it opens from behind".
+- **Rotten walls read as rot** (src/render/lantern/kit.ts `rot`): a `teach` wall (landmark kind `teach`, the giant's
+  wall and now `rot-door`) has a pale punky face, beetle holes and shelf fungus; every wall leaks warm light through
+  its crack as it is cut, shakes 6 px, throws chips; audio adds a crunch to a cut into bark. ft16a lost 7 min at the
+  giant's wall ("a solid post", its first standing cut unseen) before this.
+- **The giant's bramble bed**: knuckles 160 wide at 608 (96 over the floor; were 128 at 576), gaps 32 / 96 / 192.
+  Gotcha: the east knuckle must end by 2,112; nearer the top's lip a jump off it climbs back to the hall without the
+  claws (the solver's trunk claims fail).
+- **The hub's save at the kin's fire** (`p-crossing` 2,960 -> 2,740; the kin's stage 2,880): the fire looked like the
+  save and was 260 px off it.
+- **Small cues**: a moon shard's line counts (`shardLine`: "A moon shard: one of three. Three kindle a new light.");
+  a relight pops (flash, ring, sparks; audio 3 dB up); a fade's glints fall out of her where she lies, in the picture
+  (src/render/goal/drops.ts `PENDING` huddle on `fade`; the sim's cluster replaces it at the re-form).
+- **Checks**: solver all claims hold (2,416 s), climbs, world check, `npm run check` (e2e `--workers=2`), look:check
+  357/357.
+- **First-timers (from the hatch, fresh save)**: ft16a (30ddc75): cage 0:43, wall jump 8:58, no Grove in 13:30 (7 min at
+  the giant's wall). ft16b and ft16c (825b81f, the wall fix): cage 0:43 / 0:48, the Grove 3:27 / 4:09, longest stuck
+  ~27 s / ~55 s, both up the fork's claw wall. Still confusing: the hatch's first fling (all three fell 6-10 times,
+  ~25-30 s, before pressing the Lamp by the flame), the juvenile at the giant's door, the moth stream in the hub read
+  as a way, the jump press not breaking the cocoon, the hub's lampoak sockets (look like cages to reach).
 
 ## v15 fixes (before Matt's play, 2026-10-31): no new features
 - **Never wedged in a gate** (src/sim/kit.ts): every step, a gate standing over her box pushes her clear (`gatePush`),

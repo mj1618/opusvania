@@ -110,8 +110,8 @@ describe('a shut root door says so (r16)', () => {
 });
 
 describe("the fallen giant's bramble bed (r16)", () => {
-  it('its two knuckles are 192 wide, 96 over the floor', () => {
+  it('its two knuckles are 160 wide, 96 over the floor', () => {
     const ow = getRoom('cn-trunk').oneWays.filter((o) => o.y === 608);
-    expect(ow.map((o) => o.w)).toEqual([192, 192]);
+    expect(ow.map((o) => o.w)).toEqual([160, 160]);
   });
 });
