@@ -2014,6 +2014,8 @@ export const defaultTuning = withVariants({
     // (The Canopy r12, moment 1: 3 s of black first (`marks.stage.open.black` 180), then the close frame: the break
     // comes after it, every press still counted.)
     listenFrom: 210,
+    /** A press made before it listens breaks it this many frames into the close frame (r17: one jump in the black). */
+    pressedAfter: 45,
     autoFrames: 720,
     autoStirFrom: 300,
     autoStirEvery: 90,
