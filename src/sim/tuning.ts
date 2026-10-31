@@ -547,15 +547,15 @@ export const defaultTuning = withVariants({
       // her centre is within `nearPx` of the path. In the nest it flies to the shaft's top at `nestSpeed`, waits there
       // until she is within `callPx` of the nest's mouth (at most `callWait`), calls (`callFrames`), and is gone up the shaft.
       alarmFrames: 36,
-      chaseMax: 13,
+      chaseMax: 22,
       chaseEase: 0.09,
-      chaseHurry: 3,
+      chaseHurry: 7,
       nearPx: 560,
       // (Held `waitAfter` frames where its lead runs out, it waits flashing (`fireflyChase wait`); on once its goal is
       // `goPx` ahead.)
       waitAfter: 20,
       goPx: 40,
-      nestSpeed: 5,
+      nestSpeed: 9,
       callPx: 560,
       callWait: 1200,
       callFrames: 110,

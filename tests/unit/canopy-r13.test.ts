@@ -241,8 +241,28 @@ function fling(s: GameState, aim: number, next: string, ev: SimEvent[]): boolean
   for (let i = 0; i < 4; i++) run(s, aim | B, 1, ev);
   run(s, aim, 1, ev);
   const hold = aim & (L | R);
+  // ('chain': the chain's first or second lamp; either flings up-west into the roost's mouth.)
+  const ok = (k: number) =>
+    next === 'chain' ? k === ix('wick-gap-1') || k === ix('wick-gap-2') : k === ix(next);
   for (let k = 0; k < 160; k++) {
-    if (flingTarget(s, withShortcuts(gap, s.save), t) === ix(next)) return true;
+    const lid = flingTarget(s, withShortcuts(gap, s.save), t);
+    if (ok(lid)) {
+      // (She presses as the hook is nearest, the way one aims at it; the chain's lamp at once.)
+      const l = gap.lures?.[lid];
+      const dist = () =>
+        l ? Math.hypot(l.x - (s.player.x + s.player.w / 2), l.y - (s.player.y + s.player.h / 2)) : 0;
+      let d0 = dist();
+      for (
+        let j = 0;
+        next !== 'chain' && j < 40 && flingTarget(s, withShortcuts(gap, s.save), t) === lid;
+        j++
+      ) {
+        run(s, hold, 1, ev);
+        if (dist() > d0) break;
+        d0 = dist();
+      }
+      return true;
+    }
     run(s, hold, 1, ev);
     if (s.player.grounded && k > 4) return false;
   }
@@ -281,12 +301,12 @@ describe("the firefly's flight (r13, moment 4)", () => {
       [L, 'hook-4'],
       [D | L, 'hook-5'],
       [D | R, 'hook-6'],
-      [D | L, 'wick-gap-1'],
+      [D | L, 'chain'],
     ];
     for (const [aim, next] of plan) {
       expect(fling(s, aim, next, ev)).toBe(true);
       // (Each hook is lit by the time she reaches it: the firefly is ahead.)
-      expect(s.lures.hp[ix(next)]).toBeGreaterThan(0);
+      if (next !== 'chain') expect(s.lures.hp[ix(next)]).toBeGreaterThan(0);
     }
     for (let i = 0; i < 4; i++) run(s, U | L | B, 1, ev);
     run(s, U | L, 1, ev);
