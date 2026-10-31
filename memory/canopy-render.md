@@ -538,4 +538,10 @@ Scratch tools (not in the repo): `.scratch/r12-render/probe.mts` (a `?manual` pa
   grey-pink), up to 18 px over the line (the crest profile), a fine dark fringe of strands (wide pale drips read as
   icicles / paint), fronds now and then. The bake softens marks under ~2 px: they vanish.
 - `MOON_VISTAS`: the hub's landing and the way out's clifftop have boxes (8 of the area's wide stops show the disc).
-- Weak still: see the round's reply.
+- Gotcha: never cache a texture a sprite in the layer tree uses across rooms: `destroyTree` (lifecycle.ts) destroys
+  every sprite's texture source at the room's teardown; the den's cached hole came back destroyed (`addressModeU` of
+  null). Make it per instance.
+- Weak still: the swarm's shadows read as dark birds over the sky more than shadows on the bark; the Keeper's coat
+  is pale specks at play zoom more than wings; mid-roll the body is a slab on edge; the fallen cage stands upright
+  (no bent bars, not on its flank); the moss's stipple is lost under ~2 px in the bake (cushions read, marks do not);
+  the hub's roosts do not go empty with a few scales (`roostsLeft`).
