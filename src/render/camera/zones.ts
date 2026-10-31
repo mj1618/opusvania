@@ -60,3 +60,12 @@ export function zoneLean(z: CameraZone | null): { x: number; y: number; k: numbe
 export function zoneZoomFrames(z: CameraZone | null, own: number, last: number | undefined): number {
   return Math.max(own, z ? (z.frames ?? 0) : (last ?? 0));
 }
+
+/**
+ * A zone's `below` (the Canopy r15, the escape): the view's centre sits this many px under her, so what comes up under
+ * her (the collapse front) is in the frame's lower part. Read loosely (0 = none).
+ */
+export function zoneBelow(z: CameraZone | null): number {
+  const b = (z as { below?: number } | null)?.below;
+  return typeof b === 'number' && b > 0 ? b : 0;
+}

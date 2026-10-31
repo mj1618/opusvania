@@ -259,6 +259,16 @@ export class Cast {
             t.sitT = 0;
             t.sitAt = { x: (e as { x: number }).x, y: (e as { y: number }).y };
           }
+      // (The Canopy r15: the sim keys the sit's beats, `kinBeat`; render plays each as it begins.)
+      for (const e of events) {
+        const b = e as unknown as { type: string; phase?: string; frames?: number; x?: number; y?: number };
+        if (
+          b.type === 'kinBeat' &&
+          b.phase &&
+          Math.hypot((b.x ?? 0) - t.mesh.position.x, (b.y ?? 0) - t.mesh.position.y) < 600
+        )
+          t.kinBeat(b.phase, b.frames ?? 60, b.x ?? 0, b.y ?? 0);
+      }
       // The cage it wants cut open (the Canopy r12, moment 2): its answer.
       const w = t.wants;
       if (

@@ -84,6 +84,9 @@ const SEEN = {
   rate: 2.2,
 };
 
+/** How far her wings open in her answer at the sit (of Tatter's try spread on her rig). */
+const ANSWER_OPEN = 1;
+
 export class VesperCharacter implements CharacterSkin {
   /** 0..1: the catch fade (CharacterRenderer): she goes out over a catch's hold and comes back on the return. */
   fade = 1;
@@ -208,6 +211,9 @@ export class VesperCharacter implements CharacterSkin {
     };
   }
 
+  /** Her answer at the sit: seconds into it, its length (null = none). */
+  private answer: { t: number; dur: number } | null = null;
+
   update(dtIn: number, clock: number, sim: PlayerView, events: readonly SimEvent[]): void {
     const dt = clamp(dtIn, 0, 0.05);
     const { rig, sec, fx, painter: p, view } = this;
@@ -222,6 +228,19 @@ export class VesperCharacter implements CharacterSkin {
     rig.look.x = this.lookAt.x;
     rig.look.y = this.lookAt.y;
     rig.look.w = this.lookAt.w;
+    // Her answer at the sit (the Canopy r15, the sim's `kinBeat` `answer` with `her`): she opens her wings once to
+    // the kin, as she did when they dried (Tatter's `tryWings` lift on her own rig), and folds them.
+    for (const e of events) {
+      const b = e as unknown as { type: string; phase?: string; her?: number; frames?: number };
+      if (b.type === 'kinBeat' && b.phase === 'answer' && b.her === 1)
+        this.answer = { t: 0, dur: (b.frames ?? 90) / 60 };
+    }
+    if (this.answer) {
+      this.answer.t += dt;
+      const u = this.answer.t / this.answer.dur;
+      if (u >= 1 || !player.grounded || player.vx !== 0) this.answer = null;
+      rig.tryWings = this.answer ? Math.sin(Math.PI * Math.min(1, u)) ** 1.5 * ANSWER_OPEN : 0;
+    }
     rig.update(dt, clock, player, events);
     // Where the light leaves her (and comes to her): the open palm while she kindles, else her chest.
     {
