@@ -431,7 +431,7 @@ export function slashLures(
       continue;
     s.hitBy[i] = seq;
     // (Guarded by its keeper, the Canopy r11's great cage: the blade glances off the bars until the flag is saved.)
-    if (l.guard && !state.save.flags.includes(l.guard)) {
+    if (l.guard && !state.save.flags.includes(l.guard) && (s.live?.free[i] ?? 0) !== 1) {
       events.push({ type: 'lureGuarded', id: l.id, x: lx, y: ly, dir });
       continue;
     }
@@ -493,7 +493,9 @@ export function snuffLure(
   s.hp[i] = 0;
   s.out[i] = state.frame + 1;
   s.snuffed++;
-  const moths = Math.max(0, Math.round(l.moths ?? lureRowNow(s, i, l, t).moths));
+  // (A boss may say how many it frees now: the Keeper's cage frees every moth she saved, src/sim/boss/keeper.ts.)
+  const live = s.live?.moths[i] ?? -1;
+  const moths = live >= 0 ? live : Math.max(0, Math.round(l.moths ?? lureRowNow(s, i, l, t).moths));
   s.freed += moths;
   const key = `${scene.id}:${l.id}`;
   if (!bossOwnsLure(scene.boss, l.id) && !l.relight && !state.save.snuffed.includes(key)) {

@@ -13,7 +13,8 @@
     "abilities": [],
     "hatch": {
       "x": 864,
-      "y": 1190
+      "y": 1190,
+      "sets": "cn-hatched"
     },
     "exits": [
       {
@@ -474,7 +475,8 @@
       "tatter": {
         "x": 1210,
         "y": 1031,
-        "facing": -1
+        "facing": -1,
+        "tryOn": "cn-hatched"
       },
       "swarm": [
         [-300, 760],
@@ -631,6 +633,20 @@
           "y": 10048,
           "top": 6556,
           "w": 384
+        },
+        "open": {
+          "black": 180,
+          "zooms": [1.5, 1.25, 1],
+          "title": "LAMPFALL",
+          "titleAfter": 150,
+          "hatchTail": 480
+        },
+        "lights": {
+          "x": 4200,
+          "y": 1250,
+          "w": 2000,
+          "h": 360,
+          "count": 9
         }
       },
       "places": [
@@ -753,6 +769,14 @@
             "h": 1152
           },
           "until": "cn-first-fling"
+        },
+        {
+          "id": "promise",
+          "x": 2816,
+          "y": 560,
+          "w": 480,
+          "h": 420,
+          "zoom": 0.85
         }
       ]
     },
@@ -1590,7 +1614,8 @@
         "x": 1024,
         "y": 1088,
         "w": 128,
-        "h": 448
+        "h": 448,
+        "leaves": "cn-den-freed"
       },
       {
         "id": "roost-grove",
@@ -1598,7 +1623,8 @@
         "x": 2560,
         "y": 1344,
         "w": 320,
-        "h": 192
+        "h": 192,
+        "leaves": "cn-den-freed"
       },
       {
         "id": "roost-warn",
@@ -1606,7 +1632,8 @@
         "x": 6144,
         "y": 640,
         "w": 512,
-        "h": 320
+        "h": 320,
+        "leaves": "cn-den-freed"
       }
     ],
     "triggers": [
@@ -12675,14 +12702,6 @@
       },
       {
         "tag": "ground",
-        "x": 2944,
-        "y": 448,
-        "w": 96,
-        "h": 808,
-        "kick": false
-      },
-      {
-        "tag": "ground",
         "x": 3264,
         "y": 1152,
         "w": 64,
@@ -12720,6 +12739,7 @@
         "y": 1344,
         "facing": -1,
         "radius": 1300,
+        "hp": 10,
         "sets": "cn-den-down",
         "taproot": [2944, 3040],
         "snuffs": "wick-taproot"
@@ -12863,6 +12883,75 @@
         "h": 64,
         "flag": "cn-den-freed",
         "kick": false
+      },
+      {
+        "id": "taproot",
+        "x": 2944,
+        "y": 448,
+        "w": 96,
+        "h": 808,
+        "flag": "cn-den-collapse",
+        "kick": false
+      },
+      {
+        "id": "rubble-1",
+        "x": 2304,
+        "y": 1216,
+        "w": 128,
+        "h": 128,
+        "flag": "cn-den-rubble-gone",
+        "shut": "cn-den-collapse",
+        "kick": false
+      },
+      {
+        "id": "rubble-2",
+        "x": 2432,
+        "y": 1088,
+        "w": 128,
+        "h": 256,
+        "flag": "cn-den-rubble-gone",
+        "shut": "cn-den-collapse",
+        "kick": false
+      },
+      {
+        "id": "rubble-3",
+        "x": 2560,
+        "y": 960,
+        "w": 128,
+        "h": 384,
+        "flag": "cn-den-rubble-gone",
+        "shut": "cn-den-collapse",
+        "kick": false
+      },
+      {
+        "id": "rubble-4",
+        "x": 2688,
+        "y": 832,
+        "w": 128,
+        "h": 512,
+        "flag": "cn-den-rubble-gone",
+        "shut": "cn-den-collapse",
+        "kick": false
+      },
+      {
+        "id": "rubble-5",
+        "x": 2816,
+        "y": 704,
+        "w": 128,
+        "h": 640,
+        "flag": "cn-den-rubble-gone",
+        "shut": "cn-den-collapse",
+        "kick": false
+      },
+      {
+        "id": "rubble-6",
+        "x": 2944,
+        "y": 576,
+        "w": 320,
+        "h": 768,
+        "flag": "cn-den-rubble-gone",
+        "shut": "cn-den-collapse",
+        "kick": false
       }
     ],
     "patches": [
@@ -12872,6 +12961,30 @@
         "y": 320
       }
     ],
+    "boss": {
+      "id": "the-keeper",
+      "kind": "keeper",
+      "name": "The Keeper",
+      "arena": {
+        "x": 832,
+        "y": 1024,
+        "w": 2432,
+        "h": 320
+      },
+      "lock": [],
+      "flag": "cn-den-down",
+      "met": "cn-den-met",
+      "creature": "old-burr",
+      "heart": "trap-den",
+      "rings": [],
+      "retryOut": [],
+      "floor": 1344,
+      "lowered": {
+        "x": 1856,
+        "y": 1272
+      },
+      "collapse": "cn-den-collapse"
+    },
     "fireflies": [
       {
         "id": "firefly-den",

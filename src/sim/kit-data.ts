@@ -208,4 +208,9 @@ export interface Roost {
   y: number;
   w: number;
   h: number;
+  /**
+   * The Canopy r12 (the ending, moment 7): once this flag is saved its moths have gone on the migration (the den's
+   * great release): the roost is empty (`roostsLeft`), no longer lit.
+   */
+  leaves?: string;
 }

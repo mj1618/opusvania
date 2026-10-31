@@ -499,7 +499,8 @@ export interface Scene {
    * The hatching (src/sim/hatch.ts): she starts shut in her cocoon here (`x`, `y` = the cocoon's
    * centre, for render; her body stands at `spawn`). Absent = she starts free.
    */
-  hatch?: { x: number; y: number };
+  /** The hatching (src/sim/hatch.ts): her cocoon; `sets` = a save flag set as she breaks out (the kin's try). */
+  hatch?: { x: number; y: number; sets?: string };
   /** Lures (the story's lamps), in a fixed order: `GameState.lures` is indexed like this array. */
   lures?: Lure[];
   /** Moon patches: rest, save and re-form points. */

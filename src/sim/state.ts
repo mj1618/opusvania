@@ -422,6 +422,10 @@ export interface LureLive {
   dx: number[];
   dy: number[];
   shield: number[];
+  /** The moths it frees when it goes out now (-1 = its scene `moths`): the Keeper's cage frees what was saved. */
+  moths: number[];
+  /** 1 = its `guard` is off although the flag is not saved (the Keeper's cage on the floor, P3). */
+  free: number[];
 }
 
 /**
@@ -484,7 +488,9 @@ export type EnemyMode =
   | 'rear'
   | 'slam'
   | 'curl'
-  | 'roll';
+  | 'roll'
+  | 'feed'
+  | 'eat';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
@@ -718,6 +724,16 @@ export interface EnemyState {
   slams: number;
   /** Lanternroot: 1 while silver light keeps it from starting a strike (`enemyShy` fired; src/sim/light.ts). */
   shy: number;
+  /**
+   * The Keeper (the Canopy's boss, src/sim/boss/keeper.ts): `keep` 1 = the boss drives its phases (0 = an ordinary
+   * creature); `feedX` = the x of the moth it goes for (`feed`: it hurries there, braces at nothing; -1 = none);
+   * `blind` 1 = in P2's dark it cannot see her (it goes for `seekX`, where it saw her last, and sniffs there).
+   * Modes: `feed` (going for a moth), `eat` (head down over it: open, every cut lands).
+   */
+  keep: number;
+  feedX: number;
+  blind: number;
+  seekX: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */
@@ -1007,6 +1023,39 @@ export interface BossState {
   waveX: number;
   waveDir: number;
   waveT: number;
+  /**
+   * The Keeper (the Canopy's boss, src/sim/boss/keeper.ts; memory/canopy.md "The Keeper"): the great cage's moths
+   * `left` in it (hung, or circling low once it has fallen), `saved` (caught + freed by her cuts), `eaten`, and
+   * `caught` (the saved ones clinging to her).
+   */
+  left: number;
+  saved: number;
+  eaten: number;
+  caught: number;
+  /**
+   * The falling moth: `moth` 0 none, 1 leaving the orbit (the tell), 2 falling, 3 on the floor; where it is
+   * (`mothX`, `mothY`), frames in this stage (`mothT`), where it lands (`landX`, its floor `landY`); `nextDrop`
+   * frames to the next one. The intro's moth (before the lock) is the same moth.
+   */
+  moth: number;
+  mothX: number;
+  mothY: number;
+  mothT: number;
+  landY: number;
+  nextDrop: number;
+  /** The cage's flame now (it swings in P2, lies on the floor in P3); `swingT` frames into the swing (-1 none). */
+  cageX: number;
+  cageY: number;
+  swingT: number;
+  /** P3: cuts the fallen cage has taken (each freed a third). */
+  cageCuts: number;
+  /** P2: 1 while it sees her in the cage's light. */
+  lit: number;
+  /** The intro has played (its moth taken) this visit; frames to its sweep's next eat (P3). */
+  intro: number;
+  sweepCd: number;
+  /** The ending's collapse (the fallback): frames since the great release, -1 = not yet. */
+  collapse: number;
 }
 
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */
@@ -1116,6 +1165,8 @@ export function cloneState(s: GameState): GameState {
               dx: s.lures.live.dx.slice(),
               dy: s.lures.live.dy.slice(),
               shield: s.lures.live.shield.slice(),
+              moths: s.lures.live.moths.slice(),
+              free: s.lures.live.free.slice(),
             },
           }
         : {}),

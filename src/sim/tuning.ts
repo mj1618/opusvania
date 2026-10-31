@@ -1446,6 +1446,70 @@ export const defaultTuning = withVariants({
     rushP3Hp: 6,
   },
   /** The boss rush (docs/design/demos/bossrush.md): what every rush boss shares. */
+  /**
+   * The Keeper (the Canopy's boss, src/sim/boss/keeper.ts; docs/design/levels/canopy-moments.md moment 6): the old
+   * burrback eating from the great cage. Its hit points are the den's spawn's (`hp` 10); P2 from `p2Hp`, P3 from
+   * `p3Hp`. Frames at 60 Hz, px.
+   */
+  keeper: {
+    p2Hp: 7,
+    p3Hp: 4,
+    // --- The falling moths (P1, P2). One at a time: it leaves the orbit (`dropTell`: a pale flutter), then falls
+    // at `fallSpeed` swaying `fallSway` px either side over `fallSwayFrames`, to the floor. The first `dropFirst`
+    // after the phase begins, then every `dropEvery` (P2: `dropEveryP2`) once the last is gone.
+    dropFirst: 300,
+    dropEvery: 480,
+    dropEveryP2: 420,
+    dropTell: 40,
+    fallSpeed: 3,
+    fallSway: 40,
+    fallSwayFrames: 64,
+    /** P2: a moth leaves the swinging cage thrown on along its swing: it lands this share of the swing's offset further out. */
+    dropFling: 0.5,
+    /** She catches it with her box grown by this (it clings to her). */
+    catchPx: 36,
+    /** It goes for a moth at this (px/f), stops this close (its centre to the moth's x), and eats it once it is down this low (px over its top). */
+    feedSpeed: 4.2,
+    feedStopPx: 40,
+    eatReachPx: 120,
+    eatAbovePx: 40,
+    /** Head down over a moth: open this long, for this many cuts. */
+    eatFrames: 78,
+    eatOpenHits: 2,
+    // --- P2, the swinging light: the cage swings from its west root, `swingPeriod` frames a full swing, `swingReach`
+    // px either side of its point, rising `swingLift` at the ends. The light: a cone from the cage down, `lightBase`
+    // px wide each side at the cage, `lightSpread` px more per px down. Blind, it walks at `seekSpeed` to where it
+    // saw her last, sniffs `sniffFrames`; it sees her again the frame the light is on her.
+    swingIn: 45,
+    swingPeriod: 252,
+    swingReach: 560,
+    swingLift: 110,
+    lightBase: 120,
+    lightSpread: 0.42,
+    seekSpeed: 2.2,
+    seekStopPx: 30,
+    sniffFrames: 60,
+    // --- P3, the fallen cage. The rip: the cage falls `fallFrames` after the cue. The low cloud: it sweeps it every
+    // `sweepEvery` (the first `sweepFirst` after P3 begins), within `sweepReachPx` of the cage: a `sweepTell` beat,
+    // then `sweepEat` moths eaten, open the whole `sweepTell + sweepOpen` for `p3` open hits. `cageCuts` cuts on the
+    // fallen cage free a third each (`cutShare`) of what is in it; then the bars hold until it is beaten.
+    cageFallFrames: 24,
+    sweepFirst: 150,
+    sweepEvery: 330,
+    sweepReachPx: 150,
+    sweepTell: 30,
+    sweepEat: 3,
+    sweepOpen: 60,
+    cageCuts: 3,
+    cutShare: 3,
+    // --- The ending's collapse (the fallback, round 12: no hazards), frames from the great release.
+    collapseGroan: 100,
+    collapseDust: [150, 200, 260],
+    collapseRubble: 330,
+    collapseSettle: 420,
+    // --- The intro: the moth leaves as the firefly does (`introLead` frames before its pass ends).
+    introLead: 70,
+  },
   bossRush: {
     /** The final blow: she and the boss hold this many frames before the defeat plays on. */
     finalHold: 30,
@@ -1816,7 +1880,9 @@ export const defaultTuning = withVariants({
    */
   hatch: {
     presses: 3,
-    listenFrom: 150,
+    // (The Canopy r12, moment 1: 3 s of black first (`marks.stage.open.black` 180), then the close frame: the break
+    // comes after it, every press still counted.)
+    listenFrom: 210,
     autoFrames: 720,
     autoStirFrom: 300,
     autoStirEvery: 90,
@@ -1901,7 +1967,7 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       domeContact: true,
       domeShoulder: 0.62,
       // Explorer r2: "the kill has no moment". A 20-frame hold, the body lies 2.5 s, 1.5 s of story hold.
-      killHitstopFrames: 20,
+      killHitstopFrames: 22,
       deadFrames: 150,
       deathHoldFrames: 90,
       ramUnderJump: true,

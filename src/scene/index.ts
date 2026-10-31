@@ -205,7 +205,10 @@ const SceneSchema = z
           .strict(),
       )
       .optional(),
-    hatch: z.object({ x: int, y: int }).strict().optional(),
+    hatch: z
+      .object({ x: int, y: int, sets: z.string().min(1).optional() })
+      .strict()
+      .optional(),
     reform: z.object({ x: int, y: int }).strict().optional(),
     reformPatch: z.boolean().optional(),
     // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
@@ -342,6 +345,8 @@ const SceneSchema = z
             want: z.tuple([int, int]).optional(),
             when: z.string().min(1).optional(),
             until: z.string().min(1).optional(),
+            /** On this flag's `flagSet` it tries the air once (the hatch, r12: its jump after the swarm, and the fall back). */
+            tryOn: z.string().min(1).optional(),
           })
           .strict()
           .optional(),
