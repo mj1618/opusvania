@@ -42,10 +42,17 @@ export interface FireflyState {
   her: number;
   px: number;
   py: number;
+  /**
+   * The Canopy r14 (review r13 #5): the lure (index in `scene.lures`) of the last hook she flung off in the chase (-1
+   * none): a fall puts her back there, drifting in its reach for `hold` frames (`lessonK` eases in as at the first
+   * fling: time thickens round the flame).
+   */
+  hook: number;
+  hold: number;
 }
 
 export function createFirefly(): FireflyState {
-  return { pass: -1, frame: 0, x: 0, y: 0, beat: -1, t: 0, d: 0, her: 0, px: 0, py: 0 };
+  return { pass: -1, frame: 0, x: 0, y: 0, beat: -1, t: 0, d: 0, her: 0, px: 0, py: 0, hook: -1, hold: 0 };
 }
 
 /** The point `d` px along `path` (into `out`). */
@@ -241,7 +248,16 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
   // Her progress: the nearest point of the stretch of path behind the firefly, while she is near it (a fall to the
   // floor keeps the last).
   project(path, p.x + p.w / 2, p.y + p.h / 2, PJ, ff.her - K.nearPx, ff.d + 1);
-  if (PJ.dist <= K.nearPx && p.faded === 0) ff.her = PJ.d;
+  // (r14, review r13 #5: not while she falls (out of a fling's aim, sinking): a fall past the line is no progress.)
+  const falling = !p.grounded && p.fling < 0 && p.vy > K.fallVy;
+  if (PJ.dist <= K.nearPx && p.faded === 0 && !falling) ff.her = PJ.d;
+  if (ff.hold > 0) ff.hold--;
+  // (The last hook she flung off: a fall puts her back there.)
+  const lures = scene.lures ?? [];
+  for (const id of [...c.kindles, ...(f.relights ?? [])]) {
+    const i = lures.findIndex((q) => q.id === id);
+    if (i >= 0 && state.lures.ember[i]) ff.hook = i;
+  }
   if (ff.beat === 2 || ff.beat === 3) {
     // Its goal: its lead ahead of her, but never past a stop she is not yet near.
     let goal = Math.min(total, ff.her + c.lead[1]);
@@ -284,7 +300,6 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
         kindle(state, scene, f, id, t, events);
     }
     // (And the chain's lamps it passes burn again if she put them out before: its line is always lit ahead of her.)
-    const lures = scene.lures ?? [];
     for (const id of f.relights ?? []) {
       const i = lures.findIndex((q) => q.id === id);
       const l = lures[i];
@@ -295,7 +310,8 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
       events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
       events.push({ type: 'fireflyRelight', id: f.id, lure: l.id, x: l.x, y: l.y });
     }
-    if (ff.d >= total - 0.5) {
+    // (r14: never into the nest while she falls: it waits at the path's end until she is flying or down.)
+    if (ff.d >= total - 0.5 && !falling) {
       ff.beat = 4;
       ff.t = 0;
       say('nest');
@@ -335,6 +351,41 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
     ff.beat = -1;
     ff.frame = 0;
   }
+}
+
+/**
+ * Where a fall in a chase puts her back (the Canopy r14, review r13 #5: a fall from the S sent her to the start
+ * shelf): at the last hook she flung off, her centre on its flame, drifting in its reach for `backHold` frames (the
+ * lesson's thickened air) so the press is hers again. The hook burns. Null when no chase is on or she used none.
+ */
+export function chaseBack(
+  state: GameState,
+  scene: Scene,
+  t: Tuning,
+  events: SimEvent[],
+): { x: number; y: number } | null {
+  const ff = state.kit.firefly;
+  const f = scene.fireflies?.[ff.pass];
+  if (!f?.chase || ff.beat < 2 || ff.beat > 4 || ff.hook < 0) return null;
+  const l = scene.lures?.[ff.hook];
+  if (!l) return null;
+  const s = state.lures;
+  s.ember[ff.hook] = 0;
+  if ((s.hp[ff.hook] ?? 0) <= 0) {
+    s.hp[ff.hook] = lureHpMax(l, t);
+    s.out[ff.hook] = 0;
+    events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
+  }
+  ff.hold = Math.max(1, Math.round(t.kit.firefly.backHold));
+  events.push({
+    type: 'fireflyChase',
+    id: f.id,
+    phase: 'back',
+    x: Math.round(ff.x),
+    y: Math.round(ff.y),
+    lure: l.id,
+  });
+  return { x: l.x, y: Math.round(l.y + t.body.height / 2) };
 }
 
 /** Does pass `f` start this step (its flag not saved, none under way)? */

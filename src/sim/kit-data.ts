@@ -246,3 +246,61 @@ export interface Roost {
    */
   leaves?: string;
 }
+
+/** A rect (sim px). */
+export interface EscapeBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * The Canopy r14, moment 7: the full escape (src/sim/escape.ts; memory/canopy.md v14). Once `after` is saved and her
+ * centre is in `area`, the escape runs until she reaches `end` (`sets` saved: over for good). Its hazards never cost
+ * a light: a rock or the front puts her back at the last checkpoint she stood on (`escapeHit`, then `fallReturn` with
+ * id `escape:<what>`), and everything past that checkpoint plays again.
+ */
+export interface Escape {
+  id: string;
+  after: string;
+  sets: string;
+  area: EscapeBox;
+  end: EscapeBox;
+  /** The way out as a line (render: the freed cloud streams along it ahead of her). */
+  path: Array<[number, number]>;
+  /** Where a hit puts her (feet `x`, `y`): marked when she stands (grounded) with her centre in `at`. The first is the start's. */
+  checkpoints: Array<{ id: string; x: number; y: number; at: EscapeBox }>;
+  /**
+   * Rocks keyed to her progress: when her centre enters `when`, grit trickles at (`x`, `y0`) for `tell` frames
+   * (`rockfall` phase `tell`), then a rock `w` px across falls from `y0` to `y1` (`fall`: it hurts while it falls),
+   * and lands (`land`: harmless rubble, drawn by render). `cp`: the checkpoint it plays after (a return to that
+   * checkpoint or an earlier one re-arms it).
+   */
+  rocks: Array<{
+    id: string;
+    x: number;
+    w: number;
+    y0: number;
+    y1: number;
+    when: EscapeBox;
+    tell: number;
+    cp: number;
+  }>;
+  /**
+   * The collapse front (`collapseFront`, `state.kit.escape.front` = its top y): falling earth filling the place
+   * from below across `x0`..`x1`. Off until her feet are `lag` px over `y0`; then it rises to stay `lag` under her
+   * feet (at most `speed` px/f), creeping `creep` px/f closer while she stalls, never nearer than `near`, and never over
+   * `top`. Her feet under its top hurt her.
+   */
+  front?: {
+    x0: number;
+    x1: number;
+    y0: number;
+    top: number;
+    lag: number;
+    near: number;
+    speed: number;
+    creep: number;
+  };
+}

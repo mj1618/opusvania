@@ -26,6 +26,8 @@
  *
  * Pure: + - * / floor round min max abs.
  */
+
+import { cloneEscape, createEscape, type EscapeState, updateEscape } from './escape';
 import type { SimEvent, SlashDir } from './events';
 import { updateFinds } from './finds';
 import { createFirefly, type FireflyState, updateFireflies, updateSits } from './firefly';
@@ -67,6 +69,8 @@ export interface KitState {
   firefly: FireflyState;
   /** The Canopy r13 (`scene.sits`): frames she has stood still in a sit's reach. */
   sitStill: number;
+  /** The Canopy r14 (`scene.escape`, src/sim/escape.ts): the full escape. */
+  escape: EscapeState;
 }
 
 /** A gate stands (a solid) with these flags: until its `flag`, and an arena's door only once `shut` is set. */
@@ -177,6 +181,7 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     catchCount: (scene.catches ?? []).map(() => 0),
     firefly: createFirefly(),
     sitStill: 0,
+    escape: createEscape(scene),
   };
 }
 
@@ -198,6 +203,7 @@ export function cloneKit(k: KitState): KitState {
     catchCount: k.catchCount.slice(),
     firefly: { ...k.firefly },
     sitStill: k.sitStill,
+    escape: cloneEscape(k.escape),
   };
 }
 
@@ -642,6 +648,7 @@ export function updateKit(
   fillCages(state, scene, events);
   updateFireflies(state, scene, t, events);
   updateSits(state, scene, events);
+  updateEscape(state, scene, t, events);
   const gates = scene.gates ?? [];
   for (let i = 0; i < gates.length; i++) {
     const g = gates[i];

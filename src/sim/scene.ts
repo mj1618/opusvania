@@ -3,6 +3,7 @@ import type { BossSpec } from './boss/data';
 import type {
   Bark,
   BounceCap,
+  Escape,
   FireflyPass,
   FireflySign,
   FlagGate,
@@ -538,6 +539,8 @@ export interface Scene {
   roosts?: Roost[];
   /** The Canopy r13, moment 3: where she may sit with the kin (src/sim/firefly.ts `updateSits`). */
   sits?: Sit[];
+  /** The Canopy r14, moment 7: the full escape (src/sim/escape.ts). */
+  escape?: Escape;
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).

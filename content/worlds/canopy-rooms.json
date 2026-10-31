@@ -10078,7 +10078,13 @@
           "y": 464,
           "w": 720,
           "h": 624,
-          "zoom": 0.85,
+          "zoom": 1.3,
+          "frames": 120,
+          "lean": {
+            "x": 1700,
+            "y": 860,
+            "k": 0.5
+          },
           "after": "cn-kin-sat",
           "until": "cn-firefly-gap"
         }
@@ -10785,7 +10791,7 @@
         "chase": {
           "lead": [450, 600],
           "kindles": ["hook-1", "hook-2", "hook-3", "hook-4", "hook-5", "hook-6"],
-          "waits": [1, 4, 6],
+          "waits": [1, 2, 3, 4, 5, 6],
           "end": [3040, 120],
           "needs": "glide"
         },
@@ -13038,7 +13044,37 @@
           "w": 2944,
           "h": 1152,
           "lock": true,
+          "until": "cn-den-down"
+        },
+        {
+          "id": "den-end",
+          "x": 448,
+          "y": 320,
+          "w": 2944,
+          "h": 1152,
+          "lock": true,
+          "zoom": 1.1,
+          "lean": {
+            "x": 1856,
+            "y": 1240,
+            "k": 0.4
+          },
           "until": "cn-den-freed"
+        },
+        {
+          "id": "escape",
+          "x": 2560,
+          "y": 0,
+          "w": 1280,
+          "h": 1344,
+          "zoom": 0.85,
+          "bounds": {
+            "x": 2176,
+            "y": 0,
+            "w": 1664,
+            "h": 1472
+          },
+          "until": "cn-den-escaped"
         },
         {
           "id": "intro",
@@ -13092,64 +13128,24 @@
         "kick": false
       },
       {
-        "id": "rubble-1",
-        "x": 2304,
-        "y": 1216,
-        "w": 128,
-        "h": 128,
-        "flag": "cn-den-rubble-gone",
-        "shut": "cn-den-collapse",
-        "kick": false
-      },
-      {
-        "id": "rubble-2",
-        "x": 2432,
-        "y": 1088,
-        "w": 128,
-        "h": 256,
-        "flag": "cn-den-rubble-gone",
-        "shut": "cn-den-collapse",
-        "kick": false
-      },
-      {
-        "id": "rubble-3",
-        "x": 2560,
-        "y": 960,
-        "w": 128,
-        "h": 384,
-        "flag": "cn-den-rubble-gone",
-        "shut": "cn-den-collapse",
-        "kick": false
-      },
-      {
-        "id": "rubble-4",
+        "id": "rubble-slab",
         "x": 2688,
-        "y": 832,
-        "w": 128,
-        "h": 512,
+        "y": 1152,
+        "w": 192,
+        "h": 192,
         "flag": "cn-den-rubble-gone",
         "shut": "cn-den-collapse",
         "kick": false
       },
       {
-        "id": "rubble-5",
-        "x": 2816,
-        "y": 704,
-        "w": 128,
-        "h": 640,
-        "flag": "cn-den-rubble-gone",
-        "shut": "cn-den-collapse",
-        "kick": false
-      },
-      {
-        "id": "rubble-6",
+        "id": "rubble-root",
         "x": 2944,
-        "y": 576,
-        "w": 320,
-        "h": 768,
+        "y": 448,
+        "w": 96,
+        "h": 496,
         "flag": "cn-den-rubble-gone",
         "shut": "cn-den-collapse",
-        "kick": false
+        "kick": "east"
       }
     ],
     "patches": [
@@ -13222,6 +13218,146 @@
         }
       }
     ],
+    "escape": {
+      "id": "den-escape",
+      "after": "cn-den-collapse",
+      "sets": "cn-den-escaped",
+      "area": {
+        "x": 576,
+        "y": 128,
+        "w": 3264,
+        "h": 1216
+      },
+      "end": {
+        "x": 3648,
+        "y": 128,
+        "w": 192,
+        "h": 256
+      },
+      "path": [[1856, 1200], [2400, 1060], [2880, 1040], [3160, 980], [3160, 420], [3400, 280], [3840, 280]],
+      "checkpoints": [
+        {
+          "id": "cp-floor",
+          "x": 2100,
+          "y": 1344,
+          "at": {
+            "x": 576,
+            "y": 1088,
+            "w": 1600,
+            "h": 256
+          }
+        },
+        {
+          "id": "cp-slab",
+          "x": 2784,
+          "y": 1152,
+          "at": {
+            "x": 2688,
+            "y": 1024,
+            "w": 192,
+            "h": 128
+          }
+        },
+        {
+          "id": "cp-pass",
+          "x": 3392,
+          "y": 384,
+          "at": {
+            "x": 3264,
+            "y": 128,
+            "w": 256,
+            "h": 256
+          }
+        }
+      ],
+      "rocks": [
+        {
+          "id": "rock-1",
+          "x": 2272,
+          "w": 96,
+          "y0": 448,
+          "y1": 1344,
+          "when": {
+            "x": 1984,
+            "y": 1088,
+            "w": 128,
+            "h": 256
+          },
+          "tell": 36,
+          "cp": 0
+        },
+        {
+          "id": "rock-2",
+          "x": 2592,
+          "w": 96,
+          "y0": 448,
+          "y1": 1344,
+          "when": {
+            "x": 2368,
+            "y": 1088,
+            "w": 128,
+            "h": 256
+          },
+          "tell": 36,
+          "cp": 0
+        },
+        {
+          "id": "rock-3",
+          "x": 3096,
+          "w": 80,
+          "y0": 448,
+          "y1": 1344,
+          "when": {
+            "x": 3136,
+            "y": 832,
+            "w": 128,
+            "h": 192
+          },
+          "tell": 40,
+          "cp": 1
+        },
+        {
+          "id": "rock-4",
+          "x": 3168,
+          "w": 128,
+          "y0": 128,
+          "y1": 1344,
+          "when": {
+            "x": 3264,
+            "y": 128,
+            "w": 128,
+            "h": 256
+          },
+          "tell": 20,
+          "cp": 2
+        },
+        {
+          "id": "rock-5",
+          "x": 3456,
+          "w": 128,
+          "y0": 128,
+          "y1": 384,
+          "when": {
+            "x": 3584,
+            "y": 128,
+            "w": 128,
+            "h": 256
+          },
+          "tell": 20,
+          "cp": 2
+        }
+      ],
+      "front": {
+        "x0": 576,
+        "x1": 3264,
+        "y0": 1408,
+        "top": 448,
+        "lag": 320,
+        "near": 200,
+        "speed": 7,
+        "creep": 0.6
+      }
+    },
     "shots": {
       "wide": [
         {

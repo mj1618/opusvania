@@ -560,7 +560,18 @@ export const defaultTuning = withVariants({
       callWait: 1200,
       callFrames: 110,
       // --- Moment 3: the kin sits by her when she stands still this close to it (`scene.sits`; `r`, `frames` there).
+      // --- The Canopy r14 (review r13 #5): a fall in the chase puts her back at the last hook she flung off, drifting in
+      // its reach for `backHold` frames. Her progress counts only while she is not falling (vy over `fallVy`, out of a
+      // fling's aim): a fall past the line never sends it on to the nest.
+      backHold: 150,
+      fallVy: 2,
     },
+    /**
+     * The Canopy r14, moment 7: the full escape (src/sim/escape.ts). A hit holds her `hitFrames`, then back to the last
+     * checkpoint (no light lost). A rock falls from rest at `rockSpeed` + `rockAccel` a frame, at most `rockMax` px/f;
+     * its box is inset `rockInset` px for the touch. Her feet must be `frontGrace` px into the front to be caught.
+     */
+    escape: { hitFrames: 40, rockSpeed: 4, rockAccel: 0.9, rockMax: 20, rockInset: 10, frontGrace: 8 },
     /** The longest held story beat a trigger may ask for (`hold`), frames: journey.md's 3 s; the `finale` one, ~10 s. */
     storyHoldMax: 180,
     finaleHoldMax: 600,
@@ -1534,8 +1545,9 @@ export const defaultTuning = withVariants({
     sweepFirst: 150,
     sweepEvery: 330,
     sweepReachPx: 150,
-    // (r13: 36 (was 30): its claws now hurt, so the tell is one a person sees coming while at the cage.)
-    sweepTell: 36,
+    // (r13: 36 (was 30): its claws now hurt, so the tell is one a person sees coming while at the cage. r14, review r13
+    // #2: 42, so a person 15 frames late sees ~27 frames of it; and it is reared, claws up, not open.)
+    sweepTell: 42,
     // (r13, review r12 #2: the low cloud halves after two sweeps (was 3 a sweep).)
     sweepEat: 7,
     // (r13: 90 (was 60): out of the claws' way and back in, then two cuts.)
@@ -1559,12 +1571,22 @@ export const defaultTuning = withVariants({
     p3PairRest: 64,
     // --- The ending's collapse (the fallback, round 12: no hazards), frames from the great release.
     // (r13, review r12 #7: the rubble at +150 (was +330: 7 s of waiting before a staircase).)
-    collapseGroan: 40,
-    collapseDust: [70, 100, 125],
-    collapseRubble: 150,
-    collapseSettle: 240,
+    // (r14, review r13 #1: the column rises with nothing over it for ~3 s: the groan at +90 (as the held beat ends),
+    // the roof gives (the escape's start: `collapse`) at +210.)
+    collapseGroan: 90,
+    collapseDust: [130, 160, 185],
+    collapseRubble: 210,
+    collapseSettle: 300,
     // --- The intro: the moth leaves as the firefly does (`introLead` frames before its pass ends).
     introLead: 70,
+    // --- r14, review r13 #3: P1's beat before the fast rams: it rears `rageRear` frames, slams (no wave), stands
+    // `rageAfter`.
+    rageRear: 40,
+    rageAfter: 30,
+    // --- r14, review r13 #1: the death roll carries the carcass's centre `rollClearPx` from the fallen cage over
+    // `rollFrames` (eased out), so the cage is in sight and free to cut.
+    rollClearPx: 450,
+    rollFrames: 70,
   },
   bossRush: {
     /** The final blow: she and the boss hold this many frames before the defeat plays on. */

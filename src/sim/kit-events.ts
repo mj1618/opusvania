@@ -81,13 +81,16 @@ export type KitEvent =
    * then it bolts); `wait`: she fell behind (the low line, a fall), it hovers at its next stop flashing; `go`: she is
    * back within reach, it flies on; `nest`: it dives into the roost's mouth; `call`: at the shaft's top, one slow long
    * flash up at the sky (nothing answers); `gone`: up the shaft (`fireflyHide` comes with it). `x`, `y` = the firefly.
+   * `back` (r14): she fell in the chase and is put back at her last hook (`lure`; with the `fallReturn`), drifting in
+   * its reach (`kit.firefly.hold` frames); the firefly waits at its next stop.
    */
   | {
       type: 'fireflyChase';
       id: string;
-      phase: 'start' | 'wait' | 'go' | 'nest' | 'call' | 'gone';
+      phase: 'start' | 'wait' | 'go' | 'nest' | 'call' | 'gone' | 'back';
       x: number;
       y: number;
+      lure?: string;
     }
   /** The chase: a dark hook (`lure`) catches fire as it passes (a springboard from now on; `x`, `y` = the flame). */
   | { type: 'fireflyKindle'; id: string; lure: string; x: number; y: number }
@@ -105,6 +108,36 @@ export type KitEvent =
   | { type: 'trapFill'; lure: string; n: number; of: number; x: number; y: number }
   /** The cage is full and something under the den's floor answers (the deep slam: render ~0.3 trauma, dust). */
   | { type: 'denStir'; lure: string; x: number; y: number }
+  // --- The Canopy r14, moment 7: the full escape (src/sim/escape.ts, `scene.escape`, `state.kit.escape`).
+  /** It begins (her centre in its `area` once `after` is saved; again after each return): `x`, `y` = her feet. */
+  | { type: 'escapeStart'; id: string; x: number; y: number }
+  /**
+   * A rock keyed to her progress: `tell` (grit trickles at `x`, `y` for `tell` frames), `fall` (it drops from `y`;
+   * `w` across; it hurts while it falls), `land` (it hits at `x`, `y`: rubble, harmless).
+   */
+  | {
+      type: 'rockfall';
+      id: string;
+      phase: 'tell' | 'fall' | 'land';
+      x: number;
+      y: number;
+      w: number;
+      tell: number;
+    }
+  /**
+   * The collapse front: `start` (it begins to rise behind her from `y`), `stop` (the escape is over or reset). Its
+   * live top is `state.kit.escape.front` (`frontOn` 1 while it runs) across `x0`..`x1`.
+   */
+  | { type: 'collapseFront'; id: string; phase: 'start' | 'stop'; y: number; x0: number; x1: number }
+  /** She stood on a checkpoint (`cp` its index in `scene.escape.checkpoints`): a hit puts her back here. */
+  | { type: 'escapeCheckpoint'; id: string; cp: number; x: number; y: number }
+  /**
+   * A rock (`what` = its id) or the front (`what` = 'front') caught her: held `frames` (no light lost), then a
+   * `fallReturn` (id `escape:<what>`) to the last checkpoint, and everything past it plays again.
+   */
+  | { type: 'escapeHit'; id: string; what: string; x: number; y: number; frames: number }
+  /** She reached the escape's `end` (`sets` saved): the front stops, no more rocks. */
+  | { type: 'escapeEnd'; id: string; x: number; y: number }
   /**
    * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it
    * gives, `pogo` = off a down cut, `held` = jump was held (the higher throw).

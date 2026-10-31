@@ -48,6 +48,11 @@ type Of<K extends SimEvent['type']> = Extract<SimEvent, { type: K }>;
 const den = getRoom('cn-den');
 const cageIx = (den.lures ?? []).findIndex((l) => l.id === 'trap-den');
 const burr = (s: GameState) => s.enemies.find((e) => e.id === 'old-burr') as GameState['enemies'][number];
+/** Where she stands to cut the fallen cage at `cx` from the side away from the Keeper (r14: a cut on it is its own). */
+const farSide = (s: GameState, cx: number): number => {
+  const e = burr(s);
+  return e.x + e.w / 2 < cx ? cx + 40 : cx - 40;
+};
 
 /** She is on the den's floor (the lock), the fight under way, phase 1. */
 function fight(x = 1000): { s: GameState; ev: SimEvent[] } {
@@ -185,7 +190,7 @@ describe("the Keeper's length and bite (r13, review r12 #1, #2)", () => {
     const ev3: SimEvent[] = [];
     for (let n = 0; n < 6 && !ev3.some((q) => q.type === 'cageRelease'); n++) {
       s.player.invuln = 60;
-      placePlayer(s, cx - 30, 1344, t, withShortcuts(den, s.save), []);
+      placePlayer(s, farSide(s, cx), 1344, t, withShortcuts(den, s.save), []);
       run(s, U | A, 1, ev3);
       run(s, U, 24, ev3);
     }

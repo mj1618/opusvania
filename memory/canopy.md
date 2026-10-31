@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v13, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v14, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,43 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v14 (round 14, review canopy-r13.md): the contract
+Render and audio build against these; sim / content names only (render never writes them).
+- **The kill's payoff** (#1): `keeperRoll {id, x, y, toX, frames}` on the death: the carcass's centre rolls from `x`
+  to `toX` (>= `keeper.rollClearPx` 450 from the fallen cage, not past the taproot) over `rollFrames` 70, eased out;
+  the creature's box moves with it (`boss.rollFrom / rollX / rollT`). Camera zone **`den-end`** (zoom 1.1, `lock`,
+  **`lean {x, y, k}`**: a new CameraZone field, the view's centre `k` of the way from her to the point; here the
+  cage, k 0.4) from the kill until the release: zones are first-match, so `arena` is `until: cn-den-down` now. The
+  collapse is later so the column has ~3 s alone: groan +90, dust +130/160/185, `rubble` (the escape's start) +210,
+  settle +300.
+- **Honest tells** (#2, #3, #7): creature mode **`sweep`** (new EnemyMode): P3's sweep tell, reared, claws up, NOT
+  open (every cut glances: `keeperGlance why: 'sweep'`); `keeperSweepTell {id, x0, x1, y, frames}` at its start
+  (`sweepTell` 42, was 36), `keeperSweep` at the claws as before, then `keeperEat {sweep: true}` only when it eats
+  (open, `sweepOpen` 90). `boss.sweep` 0 / 1 tell / 2 claws / 3 eating; `boss.tell` 'sweep' with `tellFrames`,
+  `tellX0`..`tellX1` (where the claws land) through the tell. **P1's beat**: `keeperRage {id, x, y, phase: rear |
+  slam, frames}`: after P1's first moth is gone it rears (mode `rear`, `rageRear` 40), slams once with no wave, stands
+  `rageAfter` 30; `boss.angry` 0 calm (slow, long-told rams) / 1 the beat / 2 angry (every eye lit, fast rams, to the
+  end; P2+ always 2). **The gate**: `boss.gated` 0/1 and `keeperGate {id, x, y, on, why: moths | time | sweeps}` on
+  each change. **A cut that meets the Keeper is never a cage cut** (src/sim/lures.ts `keeperInBox`).
+- **The full escape** (moment 7; src/sim/escape.ts, room block `escape` = src/sim/kit-data.ts `Escape`, live state
+  **`state.kit.escape {on 0/1/2, t, cp, frontOn, front, rock[], rockT[], rockY[]}`**: rock 0 armed / 1 tell / 2 falling
+  (`rockY` its bottom) / 3 down): `escapeStart {id, x, y}` (also after each return), `rockfall {id, phase: tell | fall
+  | land, x, y, w, tell}`, `collapseFront {id, phase: start | stop, y, x0, x1}` (its live top: `kit.escape.front`),
+  `escapeCheckpoint {id, cp, x, y}`, `escapeHit {id, what (a rock's id | 'front'), x, y, frames}` then a `fallReturn`
+  with id `escape:<what>` (no light lost), `escapeEnd {id, x, y}` + flag `cn-den-escaped`. The den's rubble is now
+  two gates shut on `cn-den-collapse`: `rubble-slab` (a roof slab, 2688-2880 top 1152) and `rubble-root` (the
+  taproot's top half hanging from the roof, 2944-3040 x 448-944, a claw face east); the taproot gate falls as before.
+  `scene.escape.path` is the freed cloud's line out (render). Camera zone `escape` (zoom 0.85) over the chimney,
+  shaft and passage until `cn-den-escaped`.
+- **The chase** (#5): `fireflyChase` phase **`back`** (+ `lure`): a fall in the chase puts her at the last hook she
+  flung off (`kit.firefly.hook`, a lure index), her centre on its flame, drifting as at the first lesson for
+  `kit.firefly.hold` frames (`player.lessonK` eases in: render's thickened air applies). It waits at every hook now,
+  and never goes on to the nest while she falls.
+- **The sit** (#4): zone `crown-sit` zoom 1.3, `frames` 120 (the push-in's length), `lean {1700, 860, 0.5}` (the
+  pair and the moon's edge), `after: cn-kin-sat` (render must honour `after`).
+- **Fixed**: an `after` lamp that is dark (its flag not saved) never sends `lureRelight` (the gap's dark hooks sent
+  one every frame from `tickLures`).
 
 ## v13 (round 13, review canopy-r12.md): the contract (landed in c932ad7)
 Render and audio build against these; sim / content names only (render never writes them).

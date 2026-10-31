@@ -115,8 +115,11 @@ export function lessonInReach(state: GameState, scene: Scene, t: Tuning): boolea
   const cy = centreY(p);
   for (let i = 0; i < list.length; i++) {
     const l = list[i];
-    if (!l?.lesson || (state.lures.hp[i] ?? 0) <= 0) continue;
-    if (state.save.flags.includes(lessonFlag(scene, l))) continue;
+    if (!l || (state.lures.hp[i] ?? 0) <= 0) continue;
+    // (The Canopy r14: a chase's hook she was put back at drifts as a lesson does while its hold lasts.)
+    const ff = state.kit.firefly;
+    const back = ff.hold > 0 && ff.hook === i;
+    if (!back && (!l.lesson || state.save.flags.includes(lessonFlag(scene, l)))) continue;
     const r = t.lures.lessonPx;
     const f = flameAt(state.lures, i, l, state.frame, t, F);
     if ((f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy) <= r * r) return true;
@@ -379,6 +382,9 @@ export function tickLures(state: GameState, scene: Scene, t: Tuning, events: Sim
     for (let i = 0; i < list.length; i++) {
       const l = list[i];
       if (!l?.relight || (s.hp[i] ?? 0) > 0 || !s.out[i]) continue;
+      // (An `after` lamp burns only once its flag is saved (src/sim/kit.ts puts it out each step before): no relight
+      // of a dark hook, the Canopy r14's fix (a dark chase hook sent `lureRelight` every frame).)
+      if (l.after && !state.save.flags.includes(l.after)) continue;
       if (state.frame + 1 - (s.out[i] as number) < l.relight) continue;
       s.hp[i] = lureHpMax(l, t);
       s.out[i] = 0;
@@ -391,6 +397,16 @@ export function tickLures(state: GameState, scene: Scene, t: Tuning, events: Sim
   if (p.lureThrow > 0) p.lureThrow--;
   const g = state.lures.grace;
   for (let i = 0; i < g.length; i++) if ((g[i] as number) > 0) g[i] = (g[i] as number) - 1;
+}
+
+/** Is lure `id` a keeper boss's cage with its living creature inside the blade's box `box`? */
+function keeperInBox(state: GameState, scene: Scene, id: string, box: Box): boolean {
+  const b = scene.boss;
+  if (b?.kind !== 'keeper' || b.heart !== id) return false;
+  const k = (scene.enemies ?? []).findIndex((q) => q.id === b.creature);
+  const e = state.enemies[k];
+  if (!e || e.mode === 'dead' || e.gone) return false;
+  return e.x < box.x + box.w && box.x < e.x + e.w && e.y < box.y + box.h && box.y < e.y + e.h;
 }
 
 /**
@@ -439,6 +455,9 @@ export function slashLures(
     if (lx + rr <= box.x || lx - rr >= box.x + box.w || ly + rr <= box.y || ly - rr >= box.y + box.h)
       continue;
     s.hitBy[i] = seq;
+    // (The Canopy r14, review r13 #7: a cut that meets the Keeper is the Keeper's: the cage beside it takes only cuts
+    // aimed at it, with the Keeper outside the blade's box.)
+    if (keeperInBox(state, scene, l.id, box)) continue;
     // (Guarded by its keeper, the Canopy r11's great cage: the blade glances off the bars until the flag is saved.)
     // (And a cage still filling, the Canopy r13: it can't be cut empty.)
     if (
