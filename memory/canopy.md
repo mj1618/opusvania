@@ -44,11 +44,20 @@ Render and audio build against these; sim / content names only (render never wri
   start out from `x` along the floor at `y` **`frames` later** (`keeper.waveDelay` 12: a crack opens at its feet
   first), at `speed` px/f. Through the rear **`boss.tell` = 'slam'** with `tellFrames`, `tellX0..tellX1` (as the
   sweep's). `EnemyState.waveWait` (frames to the fronts). In P3 it never rears for its rotation's slam within
-  `cageSlamPx` 300 of her while she is within `cageNearPx` 140 of the fallen cage (it rams).
+  `cageSlamPx` 300 of her while she is within `cageNearPx` 140 of the fallen cage (it rams). **Fixed**: the wave ran
+  only in the creature's phase step, so through the Keeper's `feed` / `eat` / `sweep` its fronts stood still on the
+  floor and ran on after from wherever they stopped (review r14's "the wave began at her feet"); it runs every step
+  now (`burrback.ts waveStep`).
 - **The rage beat's bridge** (#6): **`boss.bridge`** 1 from the beat until its first fast ram has run (2 while it
   runs): that ram is told `keeper.bridgeTell` 1.3x and runs at `bridgeSpeed` 0.8x (`enemyWindup.frames` / `speed` say so).
-- **The chase's hold** (#5): put back at a hook she **hangs** there (`kit.firefly.backFall` 0.12 px/f) until she
-  presses or `backHold` (180) runs out (`kit.firefly.hold` > 0 and the hook: `lures.ts chaseHoldNear`).
+- **The chase breathes** (#5): the gap's hooks are **`Lure.hook: true`**: while a chase runs, within
+  `kit.firefly.catchPx` 140 of the next burning hook her flight eases (speed across to `catchRun` 6, fall `catchFall`
+  3.5, rise `catchRise` 7, gravity thinned): **`player.catchK`** 0..1 (render: thicken the air as with `lessonK`).
+  A press on a hook pulls her onto its flame while she aims (`hookPull` 0.4 a frame) and she is flung from the flame:
+  a press 0-20 frames after the hook comes into reach flies the same line (hook-4 left reach at 12 before). The chase's
+  **`chase.rests`** (`hook-3`, `hook-5`): there she drifts onto the hook and hangs until she presses (a breath; the
+  firefly flashes on ahead). Put back at a hook after a fall she **hangs** there too (`backFall` 0.12 px/f) until she
+  presses or `backHold` (180) runs out (`lures.ts chaseHoldNear`).
 - **The sit acted** (#3): `kinSit` as before (the start), then **`kinBeat {id, phase, frames, x, y, her}`** as each
   beat begins, and **`state.kit.kinSit {phase, t, frames, x, y, her}`** (src/sim/quiet.ts `KIN_PHASES`): `come` 90
   (it shuffles over), `look` 60 (both look at the moon), `open` 50 (its wings open to the moon), `try` 64 (the torn
