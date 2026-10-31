@@ -33,7 +33,7 @@ const log: string[] = [];
 const seen: GameState[] = [];
 const go = (m: number) => {
   const e: SimEvent[] = [];
-  step(s, m, t, withShortcuts(den, s.save), e, W);
+  step(s, m, t, withShortcuts(W.rooms[s.room]?.scene ?? den, s.save), e, W);
   tape.push(m);
   for (const q of e)
     if (
@@ -90,8 +90,10 @@ for (let n = 0; n < 900 && !s.save.flags.includes('cn-den-freed'); n++) {
 // (r14: then the escape, played as a careful person with the same lag, out onto the clifftop.)
 if (process.argv.includes('--escape')) {
   while (!s.save.flags.includes('cn-den-collapse') && tape.length < 20000) go(0);
-  const plan = new EscapePlan(den, { careful: true, lag });
-  for (let n = 0; n < 3600 && s.room === 'cn-den' && !s.exit; n++) go(plan.act(s));
+  // (r15: on through the breach into the way out and up its chimney, to the escape's end on the clifftop.)
+  const plan = new EscapePlan({ careful: true, lag });
+  for (let n = 0; n < 4800 && !s.save.flags.includes('cn-den-escaped'); n++)
+    go(plan.act(s, withShortcuts(W.rooms[s.room]?.scene ?? den, s.save)));
   for (let n = 0; n < 240; n++) go(0);
 } else for (let n = 0; n < 420; n++) go(0);
 const letters: Array<[number, string]> = [

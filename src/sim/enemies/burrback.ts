@@ -999,6 +999,27 @@ function feed(e: EnemyState, info: StepInfo, t: Row): boolean {
 }
 
 /**
+ * The slam's floor wave runs out each way; a front that crosses her feet on its floor hurts her. (The Canopy r15: every
+ * step whatever its mode: in the Keeper's feed, eat and sweep the fronts stood still on the floor and ran on after,
+ * from beside her feet: review r14 #2's "the wave began at her feet". The Keeper's start `waveDelay` after the slam.)
+ */
+function waveStep(e: EnemyState, info: StepInfo, B: Row): void {
+  const p = info.state.player;
+  e.waveHit = false;
+  if (e.waveWait > 0 && --e.waveWait === 0) e.wave = 1;
+  if (e.wave <= 0) return;
+  const was = e.wave;
+  e.wave += B.slamWaveSpeed;
+  const onFloor = p.grounded && p.hp > 0 && p.faded === 0 && Math.abs(p.y + p.h - e.fromY) <= 2;
+  const l0 = e.waveX - e.wave;
+  const l1 = e.waveX - was;
+  const r0 = e.waveX + was;
+  const r1 = e.waveX + e.wave;
+  if (onFloor && ((p.x < l1 && p.x + p.w > l0) || (p.x < r1 && p.x + p.w > r0))) e.waveHit = true;
+  if (e.wave >= B.slamReachPx) e.wave = 0;
+}
+
+/**
  * The old burrback's boss phases (round 5), each step before its ordinary rules: the camp count, the phase
  * changes, the rear and slam, the curl, the roll. Returns what `update` returns, or null to go on with the
  * ordinary rules (phase 1 and 3's brace and ram, every stagger and open window).
@@ -1006,20 +1027,6 @@ function feed(e: EnemyState, info: StepInfo, t: Row): boolean {
 function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
   const p = info.state.player;
   const cx = e.x + e.w / 2;
-  // (The slam's floor wave runs out each way; a front that crosses her feet on its floor hurts her.)
-  e.waveHit = false;
-  if (e.waveWait > 0 && --e.waveWait === 0) e.wave = 1;
-  if (e.wave > 0) {
-    const was = e.wave;
-    e.wave += B.slamWaveSpeed;
-    const onFloor = p.grounded && p.hp > 0 && p.faded === 0 && Math.abs(p.y + p.h - e.fromY) <= 2;
-    const l0 = e.waveX - e.wave;
-    const l1 = e.waveX - was;
-    const r0 = e.waveX + was;
-    const r1 = e.waveX + e.wave;
-    if (onFloor && ((p.x < l1 && p.x + p.w > l0) || (p.x < r1 && p.x + p.w > r0))) e.waveHit = true;
-    if (e.wave >= B.slamReachPx) e.wave = 0;
-  }
   // (Up off its floor, on a ledge or hopping about one, or tucked under one: the count runs; only her feet
   // on its open floor end it.)
   const near = p.hp > 0 && p.faded === 0 && Math.abs(p.x + p.w / 2 - cx) <= B.slamReachPx;
@@ -1404,6 +1411,7 @@ export const burrback: KindRules = {
     if (e.strikeCd > 0) e.strikeCd--;
     if (e.roused > 0) e.roused--;
     if (e.stirred > 0) e.stirred--;
+    if (e.phase > 0) waveStep(e, info, B);
     const free = (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0;
     // (Round 4, the pit: only its ram hurts; otherwise its body shoulders her out, never pins her.
     // Not while it lies open: she may stand in it and cut.)

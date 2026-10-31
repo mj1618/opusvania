@@ -172,6 +172,11 @@ export interface PlayerState {
   lampArmed: boolean;
   /** Near a lesson lamp (`Lure.lesson`, the Canopy r10): 0..1, how far her speed caps have eased to the lesson's. */
   lessonK: number;
+  /**
+   * The Canopy r15 (review r14 #5): 0..1, how far her flight has eased near a chase's next hook (`Lure.hook`): render
+   * may thicken the air with it as with `lessonK`.
+   */
+  catchK: number;
   /** Where the fling chain began (her last ground before its first launch): landing back there is a miss. */
   chainX: number;
   chainY: number;

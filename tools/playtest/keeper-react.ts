@@ -29,7 +29,15 @@ export interface ReactRun {
 }
 
 export function runReact(
-  o: { lag?: number; jump?: 'start' | 'tell'; learn?: boolean; frames?: number; trace?: boolean } = {},
+  o: {
+    lag?: number;
+    jump?: 'start' | 'tell';
+    learn?: boolean;
+    frames?: number;
+    trace?: boolean;
+    /** r15: it reads the slam's wave (`keeperWave`, render's crack): hops a front it sees coming, `lag` frames late. */
+    wave?: boolean;
+  } = {},
 ): ReactRun {
   const t = cloneTuning(defaultTuning);
   const room = getRoom('cn-den');
@@ -79,7 +87,12 @@ export function runReact(
       const tellJump = o.learn ? rage >= 0 : o.jump === 'tell';
       const coming = Math.sign(e.vx) === -d;
       const arc = b.tell === 'sweep' || b.sweepHit > 0;
-      if (arc && px > b.tellX0 - 40 && px < b.tellX1 + 40) {
+      // (r15: the wave's fronts where it saw them, run on `lag` frames: one about to reach her is hopped.)
+      const W = t.oldBurrback.slamWaveSpeed;
+      const run = e.wave > 0 ? e.wave + W * lag : e.waveWait > 0 ? Math.max(0, lag - e.waveWait) * W : -1;
+      const toFront = Math.abs(px - e.waveX) - run;
+      if (o.wave && run >= 0 && p.grounded && toFront > -W && toFront < W * 5) m = prev & J ? 0 : J;
+      else if (arc && px > b.tellX0 - 40 && px < b.tellX1 + 40) {
         // (The sweep's lit arc on the floor, as render draws it: out of it, the nearer way.)
         m = px < (b.tellX0 + b.tellX1) / 2 ? L : R;
       } else if (mode === 'windup' && tellJump && dist < 700) m = prev & J ? 0 : J;
@@ -158,6 +171,7 @@ if (process.argv[1]?.endsWith('keeper-react.ts')) {
     learn: process.argv.includes('--learn'),
     frames: Number(arg('minutes') ?? 5) * 3600,
     trace: process.argv.includes('--trace'),
+    wave: process.argv.includes('--wave'),
   });
   const ph = Object.entries(r.phaseAt)
     .map(([n, at]) => `P${n} at ${(at / 60).toFixed(1)} s`)

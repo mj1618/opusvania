@@ -301,10 +301,12 @@ function onOneWay(s: GameState, scene: Scene): boolean {
 
 /** The old burrback's slam wave (round 6) is on its way to her and close: a person jumps it. */
 function waveComing(s: GameState, e: EnemyState, lead: number): boolean {
-  if (e.wave <= 0) return false;
+  // (r15: the Keeper's fronts start `waveDelay` frames after its slam (`waveWait`): a crack at its feet first.)
+  if (e.wave <= 0 && (e.waveWait ?? 0) <= 0) return false;
   const v = defaultTuning.oldBurrback.slamWaveSpeed;
   const p = s.player;
-  const ahead = Math.abs(p.x + p.w / 2 - e.waveX) - p.w / 2 - e.wave;
+  const run = e.wave > 0 ? e.wave : -(e.waveWait ?? 0) * v;
+  const ahead = Math.abs(p.x + p.w / 2 - e.waveX) - p.w / 2 - run;
   return ahead > -v && ahead < v * (lead + 8);
 }
 

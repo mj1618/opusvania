@@ -572,6 +572,22 @@ export const defaultTuning = withVariants({
       // (r15, review r14 #5: put back at a hook she hangs there, falling at most `backFall` px/f, until she presses or
       // `backHold` runs out: at 1.25 she drifted out of its reach in ~1 s.)
       backFall: 0.12,
+      // (r15, review r14 #5: a chase's hooks (`Lure.hook`): within `catchPx` of the next one burning, her flight eases
+      // over `catchEase` frames to at most `catchRun` across, `catchFall` down and `catchRise` up, gravity thinned by `catchFloat` (a beat to press: at a
+      // fling's 15 px/f a hook was in reach ~12 frames, and a 12-frame-late press missed hook-4); a press on one pulls
+      // her `hookPull` of the way to its flame a frame while she aims, and she is flung from the flame.)
+      catchPx: 140,
+      catchEase: 5,
+      catchRun: 6,
+      catchFall: 3.5,
+      catchRise: 7,
+      catchFloat: 0.6,
+      hookPull: 0.4,
+      // (r15: the chase's `rests` (two hooks): there her flight eases to `restRun` / `restFall` / `restRise`, gravity
+      // gone: she hangs at the hook, a breath before the next stretch, until she presses.)
+      restRun: 1.5,
+      restFall: 0.15,
+      restRise: 3,
     },
     /**
      * The Canopy r15 (review r14 #3, src/sim/quiet.ts): the kin's sit, beat by beat after `kinSit` (frames each). She
@@ -1533,7 +1549,7 @@ export const defaultTuning = withVariants({
     /** P2: a moth leaves the swinging cage thrown on along its swing: it lands this share of the swing's offset further out. */
     dropFling: 0.5,
     /** She catches it with her box grown by this (it clings to her). */
-    catchPx: 36,
+    catchPx: 140,
     /** It goes for a moth at this (px/f), stops this close (its centre to the moth's x), and eats it once it is down this low (px over its top). */
     feedSpeed: 4.2,
     feedStopPx: 40,

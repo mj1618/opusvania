@@ -117,6 +117,11 @@ export interface CameraZone {
    * fallen cage after the kill), the crown's `crown-sit` (the pair and the moon).
    */
   lean?: { x: number; y: number; k: number };
+  /**
+   * The Canopy r15 (review r14 #1): the view's centre sits this many px under her (the escape's `escape` zones: the
+   * collapse front 200-260 px under her feet in the frame's lower part).
+   */
+  below?: number;
 }
 
 /** One of the art kit's mood stops: from world x on, the room leans this way (blended between stops). */

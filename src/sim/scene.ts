@@ -263,6 +263,12 @@ export interface Lure {
    */
   relight?: number;
   /**
+   * The Canopy r15 (review r14 #5): a chase's hook. While a chase runs, her flight eases as she comes into its reach
+   * (`kit.firefly.catch*`: a held beat, room to press), and a press on it pulls her onto its flame: she is flung from
+   * the flame, so a late press flies the same line as an early one.
+   */
+  hook?: boolean;
+  /**
    * A trap lamp (the Canopy r10, review r9 #2: the story's verb): a cage of moths, not a springboard. No fling off
    * it (`flingTarget` skips it); the blade puts it out in `lures.trapHp` cuts, for good (saved), and its `moths`
    * are freed (`lureSnuff` with `trap: true`; `save.moths` counts them). Render draws it unlike a springboard.

@@ -104,6 +104,38 @@ export function lessonFlag(scene: Scene, l: Lure): string {
 }
 
 /**
+ * The Canopy r15 (review r14 #5): is she in the air within `kit.firefly.catchPx` of a chase's hook (`Lure.hook`)
+ * that burns, while a chase runs? Its index (-1 none): her flight eases there, and at one of the chase's `rests` she
+ * hangs there until she presses (a breath). src/sim/player/player.ts `catchHook`.
+ */
+export function chaseCatchAt(state: GameState, scene: Scene, t: Tuning): number {
+  const ff = state.kit.firefly;
+  if (ff.pass < 0 || ff.beat < 1 || ff.beat > 4) return -1;
+  const list = scene.lures;
+  if (!list) return -1;
+  const p = state.player;
+  const cx = centreX(p);
+  const cy = centreY(p);
+  const r = t.kit.firefly.catchPx;
+  // (Not the hook she was just flung off: its launch is hers at full speed.)
+  if (p.lureThrow > Math.round(t.lures.throwFrames) - 2) return -1;
+  for (let i = 0; i < list.length; i++) {
+    const l = list[i];
+    if (!l?.hook || i === ff.hook || (state.lures.hp[i] ?? 0) <= 0) continue;
+    const f = flameAt(state.lures, i, l, state.frame, t, F);
+    if ((f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy) <= r * r) return i;
+  }
+  return -1;
+}
+
+/** Is lure `i` one of the running chase's `rests` (she hangs there until she presses)? */
+export function chaseRest(state: GameState, scene: Scene, i: number): boolean {
+  const ff = state.kit.firefly;
+  const id = scene.lures?.[i]?.id;
+  return !!id && ff.pass >= 0 && !!scene.fireflies?.[ff.pass]?.chase?.rests?.includes(id);
+}
+
+/**
  * The Canopy r15 (review r14 #5): is she put back at a chase's hook and still held there (`kit.firefly.hold`), within
  * `lures.lessonPx` of it? She hangs there (`kit.firefly.backFall`) until she presses or the hold runs out.
  */

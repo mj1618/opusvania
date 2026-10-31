@@ -99,6 +99,7 @@ export const KIT_FIELDS = {
               waits: z.array(int.min(0)),
               end: z.tuple([int, int]),
               needs: id.optional(),
+              rests: z.array(id).optional(),
             })
             .strict()
             .optional(),

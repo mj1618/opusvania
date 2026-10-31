@@ -3,8 +3,7 @@
  *  - The kill's payoff (#1): the carcass rolls clear of the fallen cage; `den-end` leans to it.
  *  - The Keeper's honest tells (#2, #3, #7): the sweep reared and not open; P1's beat before the fast rams; the gate
  *    as state; a cut that meets it never counts on the cage; beaten, it is gone on a later visit.
- *  - The full escape (moment 7): passable by a person's plan, a hit puts her back on a checkpoint with no light lost,
- *    over for good once out.
+ *  - The full escape (moment 7): rebuilt in r15 (canopy-r15.test.ts).
  *  - The chase (#5): an on-reach press holds to the nest; a fall puts her back at her last hook.
  *  - The sit (#4): `crown-sit` pushes in.
  *  - Audio's bug: a dark chase hook never sends `lureRelight`.
@@ -19,7 +18,6 @@ import { flingTarget } from '../../src/sim/lures';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';
-import { ESCAPE_FLAGS, runEscape } from '../../tools/levels/escape-probe';
 
 const t = cloneTuning(defaultTuning);
 const W = getWorld('canopy');
@@ -221,66 +219,7 @@ describe("the kill's payoff (r14, review r13 #1)", () => {
   });
 });
 
-describe('the full escape (r14, moment 7)', () => {
-  it("a person's plan gets out: running, and waiting on the grit with a 15-frame reaction; 6-12 s; no hits", () => {
-    const run1 = runEscape({});
-    const run2 = runEscape({ careful: true, lag: 15 });
-    const run3 = runEscape({ careful: true });
-    for (const r of [run1, run2, run3]) {
-      expect(r.pass).toBe(true);
-      expect(r.hits).toEqual([]);
-      expect(r.frames).toBeGreaterThan(6 * 60);
-      expect(r.frames).toBeLessThan(12 * 60);
-    }
-  });
-
-  it('it begins with the roof; its rocks tell first; the earth rises under her; a fall into it costs no light and puts her back', () => {
-    const s = at('cn-den', 1856, 1344, CG, ESCAPE_FLAGS);
-    const E = den.escape;
-    expect(E?.rocks.every((r) => r.tell >= 12)).toBe(true);
-    const ev = run(s, 0, 2);
-    expect(ev.some((q) => q.type === 'escapeStart')).toBe(true);
-    // Up on the west roots (the second perch is a checkpoint): the front starts rising under her.
-    const p2 = E?.checkpoints[1];
-    placePlayer(s, p2?.x ?? 0, p2?.y ?? 0, t, withShortcuts(den, s.save), []);
-    const ev2 = run(s, 0, 60);
-    expect(ev2.some((q) => q.type === 'escapeCheckpoint' && q.cp === 1)).toBe(true);
-    expect(ev2.some((q) => q.type === 'collapseFront' && q.phase === 'start')).toBe(true);
-    expect(s.kit.escape.frontOn).toBe(1);
-    expect(s.kit.escape.front).toBeGreaterThanOrEqual((p2?.y ?? 0) + (E?.front?.near ?? 0));
-    // Off the perch to the floor: the front has her; held, back on the perch, her lights as they were.
-    const hp = s.player.hp;
-    const ev3: SimEvent[] = [];
-    for (let f = 0; f < 200 && !ev3.some((q) => q.type === 'fallReturn'); f++) run(s, R, 1, ev3);
-    expect(ev3.some((q) => q.type === 'escapeHit' && q.what === 'front')).toBe(true);
-    const back = ev3.find((q) => q.type === 'fallReturn') as Of<'fallReturn'>;
-    expect(back?.id).toBe('escape:front');
-    expect(back?.x).toBe(p2?.x);
-    expect(back?.y).toBe(p2?.y);
-    expect(s.player.hp).toBe(hp);
-    expect(s.player.faded).toBe(0);
-  });
-
-  it('a rock hurts only while it falls; over once she is out (the caved den is quiet after)', () => {
-    const s = at('cn-den', 1856, 1344, CG, ESCAPE_FLAGS);
-    run(s, 0, 2);
-    // Stand on the third perch as the rock over it comes down: caught by it.
-    const r2 = den.escape?.rocks.find((r) => r.id === 'rock-2');
-    const p2 = den.escape?.checkpoints[1];
-    placePlayer(s, p2?.x ?? 0, p2?.y ?? 0, t, withShortcuts(den, s.save), []);
-    run(s, 0, 2);
-    placePlayer(s, r2?.x ?? 0, r2?.y1 ?? 0, t, withShortcuts(den, s.save), []);
-    const ev = run(s, 0, (r2?.tell ?? 0) + 60);
-    expect(ev.some((q) => q.type === 'rockfall' && q.id === 'rock-2' && q.phase === 'tell')).toBe(true);
-    expect(ev.some((q) => q.type === 'escapeHit' && q.what === 'rock-2')).toBe(true);
-    // Escaped: nothing more.
-    const s2 = at('cn-den', 1856, 1344, CG, [...ESCAPE_FLAGS, 'cn-den-escaped']);
-    const ev2 = run(s2, R, 300);
-    expect(
-      ev2.some((q) => q.type === 'rockfall' || q.type === 'escapeStart' || q.type === 'collapseFront'),
-    ).toBe(false);
-  });
-});
+// (The full escape's tests moved to canopy-r15.test.ts: r15 rebuilt it low and east, then the clifftop's chimney.)
 
 // --- The chase.
 const gap = getRoom('cn-gap');

@@ -210,6 +210,8 @@ export interface FireflyPass {
     waits: number[];
     end: [number, number];
     needs?: string;
+    /** The Canopy r15: hooks (ids) where she hangs until she presses, a breath (`kit.firefly.rest*`). */
+    rests?: string[];
   };
 }
 

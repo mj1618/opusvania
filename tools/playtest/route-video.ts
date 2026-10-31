@@ -43,7 +43,7 @@
  * state, so it never chains three): the hub's under the landing limb first, the Grove's after the wave, the
  * warning's (hung by the firefly once the warning is cleared) from the knuckle under it, the great cage over the
  * old burrback from a jump off the west shelf; both firefly sightings (the gap's on the chain's first fling, the
- * warning's), and the den's way out up through its roof to the clifftop's vista.
+ * warning's), and the den's way out (r15: through the breach and up the way out's chimney) to the clifftop's vista.
  *
  * v9 (2026-10-31, video v12): `render --audio` records the game's sound (src/audio, memory/audio.md) with the
  * picture: the page (`?audio`) records the audio director's tape from the first step, and every `AUDIO_CHUNK` sim
@@ -376,13 +376,14 @@ export const ROUTE: Leg[] = [
   },
   // v9 (r12): the Keeper (the old burrback on the boss framework: the falling moths, the swinging light, the fallen
   // cage); the cage it ripped down lies on the floor, cut open standing. v10 (r14): the roof gives and the escape is
-  // on (the rocks, the earth rising under her): up the torn roots, east under the falling roof, the claws up the wall
-  // over the heap, out onto the clifftop (the vista). The column's ~3.5 s first, nothing moving.
+  // on (the rocks, the earth rising under her). v11 (r15): east along the floor under the falling roof, out through the
+  // breach in the east wall's foot and the corridor, then the way out's shaft and its chimney (the plug shaken down)
+  // with the earth rising under her, onto the clifftop (the vista). The column's ~3.5 s first, nothing moving.
   { name: 'cn-den: the Keeper', kind: 'fight', ids: ['old-burr'], seconds: 300 },
   { name: 'cn-den: the great cage cut open', kind: 'cage', lure: 'trap-den' },
   { name: 'cn-den: the column, then the roof gives', kind: 'script', script: '.240' },
-  { name: 'cn-den: the escape', kind: 'goal', test: flag('cn-den-escaped'), max: 16000 },
-  { name: 'cn-den: out onto the clifftop', kind: 'exit', exit: 'out', max: 6000 },
+  { name: 'cn-den: the escape, out through the breach', kind: 'exit', exit: 'out', max: 9000 },
+  { name: 'cn-out: the escape, up the chimney', kind: 'goal', test: flag('cn-den-escaped'), max: 16000 },
   { name: 'cn-out: the vista', kind: 'script', script: '.200' },
   // The ledge after the boss: down the chimney, a rotten wall in the way out's foot, a great in the room behind it.
   { name: 'cn-out: down the chimney', kind: 'goal', test: near(1088, 1856, 200), max: 12000, optional: true },
@@ -395,14 +396,7 @@ export const ROUTE: Leg[] = [
     optional: true,
   },
   { name: 'cn-ledge: back out', kind: 'exit', exit: 'out', max: 12000, optional: true },
-  // The way back up: the chimney's three legs, its rotten plug cut from a cling, the clifftop, the glide over the valley.
-  {
-    name: 'cn-out: the plug and the chimney',
-    kind: 'goal',
-    test: opened('out-plug'),
-    max: 16000,
-    optional: true,
-  },
+  // The way back up: the chimney's three legs (its plug came down in the escape), the clifftop, the glide.
   {
     name: 'cn-out: up to the clifftop',
     kind: 'goal',

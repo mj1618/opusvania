@@ -155,6 +155,7 @@ const SceneSchema = z
             swing: SWING,
             after: z.string().min(1).optional(),
             relight: int.min(30).max(3600).optional(),
+            hook: z.boolean().optional(),
             // Lanternroot: a moonwick that burns for good once kindled; a lamp whose going out sets a flag.
             keep: z.boolean().optional(),
             lit: z.boolean().optional(),
