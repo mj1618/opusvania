@@ -85,15 +85,18 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
     over: Partial<Cue> = {},
     k = 0,
   ): Cue => cue(sound, bus, ctx, f, i * 8 + k, { x, y, db, ...over });
+  // (Some events have no position (`collapseFront`): her feet then.)
+  const ex = (e as { x?: number }).x ?? h.x;
+  const ey = (e as { y?: number }).y ?? h.y;
   /** Hers: pans with her, never quieter for distance. */
   const hero = (sound: SoundId, db: number, over: Partial<Cue> = {}, k = 0) =>
-    at('hero', sound, e.x, e.y, db, { place: 'hero', priority: 3, ...over }, k);
+    at('hero', sound, ex, ey, db, { place: 'hero', priority: 3, ...over }, k);
   /** The blade's: at the target (or her) but at full level wherever the camera is. */
   const blow = (sound: SoundId, x: number, y: number, db: number, over: Partial<Cue> = {}, k = 0) =>
     at('combat', sound, x, y, db, { place: 'hero', priority: 5, ...over }, k);
   /** A creature's: placed in the world (pan and distance from the camera). */
   const beast = (sound: SoundId, db: number, over: Partial<Cue> = {}, k = 0) =>
-    at('creatures', sound, e.x, e.y, db, { priority: 4, ...over }, k);
+    at('creatures', sound, ex, ey, db, { priority: 4, ...over }, k);
 
   switch (e.type) {
     // --- Her moves: air, felt, scale-dust. ---

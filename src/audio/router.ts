@@ -13,12 +13,14 @@
 
 import { zoneWeights } from '../render/scene/lib/fx-zones';
 import { wind } from '../render/scene/lib/look';
+import { roostsLit } from '../sim/firefly';
 import { flameAt, lureRowNow } from '../sim/lures';
 import type { Scene, SceneTag } from '../sim/scene';
 import type { GameState, PlayerState } from '../sim/state';
 import type { Tuning } from '../sim/tuning';
 import { SOUNDS, type SoundId } from './bake';
 import { dbToGain, hash01, salt } from './dsp';
+import { canopyAmbient, canopyLayers, routeCanopy } from './route-canopy';
 import { fightPulse, routeLantern, signNotes } from './route-lr';
 import { type PlayEvent, routePlay } from './route-play';
 import { AUDIO, type BusId, bedOf, LAMP_BEAT, LAMP_HZ, PITCH } from './tuning';
@@ -84,9 +86,91 @@ export interface AudioSnap {
     down?: boolean;
     /** What it is doing (`EnemyState.mode`): ants skitter only while they walk. */
     mode?: string;
+    id?: string;
+    /** A big one's phase (the old burrback 1-3). */
+    phase?: number;
   }>;
   /** A boss fight: its stage and phase, the creature's centre, the frame the phase began, her health low. */
   boss?: { stage: string; phase: number; x: number; y: number; since: number; low: boolean };
+  /**
+   * The Canopy (score.ts, route-canopy.ts). `fight`: the den's boss as the score reads it, from the boss framework
+   * (the Keeper, round 12) or the old burrback's own phases: asleep, waking, fighting, down. `lit`: how lit she is
+   * (the Keeper sees only in its cage's light). `flags`: the save flags the score cares for (`SCORE_FLAGS`).
+   * `arena`: an ambush under way (1 its first beat, 2 a later one). `hatch`: the cocoon. `firefly`: where it flies.
+   * `roosts`: lit roosts (freed moths at rest).
+   */
+  fight?: { kind: string; stage: 'sleep' | 'wake' | 'fight' | 'down'; phase: number; x: number; y: number };
+  lit?: number;
+  flags?: string[];
+  arena?: number;
+  hatch?: { presses: number; done: boolean; frames: number };
+  firefly?: { x: number; y: number };
+  roosts?: Array<{ x: number; y: number }>;
+}
+
+/** The save flags the score and the Canopy's sounds read (snap.flags). */
+export const SCORE_FLAGS = new Set([
+  'cn-hub-freed',
+  'cn-out-vista',
+  'cn-den-down',
+  'cn-den-freed',
+  'cn-tunnel-beat2',
+  'cn-warn-hung',
+]);
+
+/** The den's boss as the score reads it: the framework's stages, or an old burrback's own phases. */
+function fightSnap(state: GameState): AudioSnap['fight'] {
+  const b = state.boss;
+  const big = state.enemies.find((e) => e.kind === 'oldBurrback' || (e.kind as string) === 'keeper');
+  if (b) {
+    const e = state.enemies.find((x) => !x.gone && (BOSSES.has(x.kind as string) || x.id === b.id)) ?? big;
+    const stage =
+      b.stage === 'wait'
+        ? 'sleep'
+        : b.stage === 'intro'
+          ? 'wake'
+          : b.stage === 'end' || b.stage === 'down'
+            ? 'down'
+            : 'fight';
+    return {
+      kind: (e?.kind as string) ?? b.id,
+      stage,
+      phase: Math.max(1, b.phase),
+      x: e ? e.x + e.w / 2 : 0,
+      y: e ? e.y + e.h / 2 : 0,
+    };
+  }
+  if (!big) return undefined;
+  const down = big.gone || big.mode === 'dead' || big.hp <= 0;
+  const asleep = !!big.dozing || big.mode === 'sleep';
+  // (Its `wake` mode comes back after blows too: only a whole one is waking.)
+  const waking = (big.mode as string) === 'wake' && big.hp >= big.hpMax;
+  return {
+    kind: big.kind,
+    stage: down ? 'down' : asleep ? 'sleep' : waking ? 'wake' : 'fight',
+    phase: Math.max(1, big.phase),
+    x: big.x + big.w / 2,
+    y: big.y + big.h / 2,
+  };
+}
+const BOSSES = new Set(['oldBurrback', 'keeper', 'gloamweaver', 'weaverBoss', 'mantis']);
+
+/**
+ * An ambush under way: a creature woken by a flag that is not yet down, whose own `sets` is not yet saved. 1 if a
+ * trigger woke it (the first beat), 2 if another creature's `sets` did (a later beat).
+ */
+function arenaOf(state: GameState, scene: Scene): number {
+  const flags = state.save.flags;
+  const spawns = scene.enemies ?? [];
+  const triggered = new Set((scene.triggers ?? []).map((t) => (t as { sets?: string }).sets));
+  let level = 0;
+  for (const e of state.enemies) {
+    if (e.gone || e.mode === 'dead' || e.hp <= 0) continue;
+    const sp = spawns.find((x) => x.id === e.id) as { wakes?: string; sets?: string } | undefined;
+    if (!sp?.wakes || !sp.sets || !flags.includes(sp.wakes) || flags.includes(sp.sets)) continue;
+    level = Math.max(level, triggered.has(sp.wakes) ? 1 : 2);
+  }
+  return level;
 }
 
 /** The boss fight as the sound reads it (loosely: the fields are the boss framework's). */
@@ -126,7 +210,9 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
     if ((l.kind as string) === 'moonwick') return;
     const f = flameAt(state.lures, i, l, state.frame, t);
     const row = lureRowNow(state.lures, i, l, t);
-    lures.push({ i, x: f.x, y: f.y, kind: l.kind, reach: row.radius * AUDIO.lamp.reachScale });
+    // A cage of a hundred moths or more hums as a great lamp (the den's: over D3, canopy-moments.md Moment 6).
+    const kind = l.trap && (l.moths ?? 0) >= 100 ? 'great' : l.kind;
+    lures.push({ i, x: f.x, y: f.y, kind, reach: row.radius * AUDIO.lamp.reachScale });
   });
   // (The fling's fields are read loosely: the sound builds against a sim with or without them.)
   const fl = p as PlayerState & { fling?: number; flingFrames?: number };
@@ -161,6 +247,18 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
     wallet: state.pickups.count,
     seenLevel: p.seenLevel ?? 0,
     boss: bossSnap(state),
+    fight: fightSnap(state),
+    lit: p.lit,
+    flags: state.save.flags.filter((f) => SCORE_FLAGS.has(f)),
+    arena: arenaOf(state, scene),
+    hatch: state.hatch
+      ? { presses: state.hatch.presses, done: state.hatch.done, frames: state.hatch.frames }
+      : undefined,
+    firefly:
+      state.kit?.firefly && state.kit.firefly.pass >= 0
+        ? { x: state.kit.firefly.x, y: state.kit.firefly.y }
+        : undefined,
+    roosts: roostsLit(scene, state.save).map((r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })),
     creatures: state.enemies
       .filter((e) => !e.gone)
       .map((e) => ({
@@ -173,6 +271,8 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
         dozing: !!e.dozing,
         down: e.mode === 'dead' || e.mode === 'hurt' || e.hp <= 0,
         mode: e.mode,
+        id: e.id,
+        phase: e.phase,
       })),
   };
 }
@@ -202,6 +302,9 @@ export interface Cue {
   far: number;
   /** Higher survives voice stealing. */
   priority: number;
+  /** Seconds it plays before it is let go over `release` s (a held note's length; absent = the whole buffer). */
+  dur?: number;
+  release?: number;
 }
 
 /** What the router needs besides the event: the scene and the seed. */
@@ -271,6 +374,14 @@ export function cue(
  * route-play.ts; the grove's lanterns and giving are here.
  */
 export function route(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  // The Canopy's world (route-canopy.ts): the hatch, the firefly, the gates, a cage's bars, the boss's rams; added to
+  // whatever else the event asks for.
+  const cn = routeCanopy(e, i, snap, ctx);
+  const base = routeBase(e, i, snap, ctx);
+  return cn.length ? [...base, ...cn] : base;
+}
+
+function routeBase(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] {
   // Lanternroot's light (route-lr.ts): her glow, the moonwicks, moss, the gust, the cap.
   const lr = routeLantern(e, i, snap, ctx);
   if (lr) return lr;
@@ -472,6 +583,7 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
   // Lanternroot's firefly signs flashing their phrase near her, and the Gloamweaver's heartbeat (route-lr.ts).
   out.push(...signNotes(snap, ctx));
   out.push(...fightPulse(snap, ctx));
+  out.push(...canopyAmbient(snap, cam, ctx));
   // Drips: rare, at canopy positions across the view, duller and wetter the farther back.
   if (bed.drips > 0 && hash01(seed, f, salt('drip')) < bed.drips / (F.dripMeanS * 60)) {
     const u = hash01(seed, f, salt('drip'), 1);
@@ -497,6 +609,18 @@ export function ambient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext): Cue[
         priority: 0,
       }),
     );
+    // A cold shaft answers each drip (the well): the same drip again, later, darker, all far.
+    if ((bed.echo ?? 0) > 0)
+      out.push(
+        cue(sound, 'world', ctx, f, 100, {
+          x: px,
+          y: py,
+          db: F.dripDb - 9 * depth + AUDIO.canopy.echoDb + amp(bed.echo ?? 0),
+          delay: AUDIO.canopy.echoS * (0.8 + 0.4 * depth),
+          far: 1,
+          priority: 0,
+        }),
+      );
   }
   // The far voice: the forest's own mind, where the room is open enough to hear it.
   if (bed.voice && voiceFrame(seed, f)) {
@@ -618,6 +742,19 @@ export interface Layers {
   /** The world bed's gain (1 = as is; lower in held moments) and the low-pass over all but the lamps (Hz). */
   duck: number;
   muffleHz: number;
+  /** Everything (1; 0 = the boss's last hit's total silence: score.ts). */
+  hush: number;
+  /** The Canopy's own layers (voices/canopy.ts): the earth's rumble, the swarm passing over the hatch (gain, pan,
+   * band Hz), the valley's false lights far below, the nearest lampwing's and hawker's wings (gain, pan). */
+  earth: number;
+  river: number;
+  riverPan: number;
+  riverHz: number;
+  valley: number;
+  lampwing: number;
+  lampwingPan: number;
+  hawker: number;
+  hawkerPan: number;
 }
 
 /** Screen pan of world x: -1..1 at the view's edges. */
@@ -769,5 +906,7 @@ export function layers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: Route
     aimHz: LAMP_HZ[key] * (0.5 + 1.5 * (h.aim ?? 0)),
     duck: dbToGain(AUDIO.duckDb * clamp01(held)),
     muffleHz,
+    hush: 1,
+    ...canopyLayers(snap, cam, clock, ctx),
   };
 }

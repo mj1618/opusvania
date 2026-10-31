@@ -206,6 +206,11 @@ export class AudioDirector {
     if (this.engine && this.ctx) this.engine.graph.setVolumes(this.ctx.currentTime);
   }
 
+  /** The score's piece now (score.ts: 'silence', 'opening', 'boss2', 'vista', ...), muted or not. */
+  score(): string {
+    return this.conductor.mood();
+  }
+
   /** The last n cues routed (muted or not), newest last. */
   cues(n = 20): Cue[] {
     return this.conductor.recent.slice(-n).map((c) => ({ ...c }));

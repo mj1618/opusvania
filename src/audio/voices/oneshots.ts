@@ -15,6 +15,7 @@ interface Playing {
   end: number;
   priority: number;
   start: number;
+  bus: string;
 }
 
 export class OneShots {
@@ -38,8 +39,11 @@ export class OneShots {
     if (!buffer) return;
     const t = when + cue.delay;
     this.playing = this.playing.filter((p) => p.end > t);
-    if (this.playing.length >= AUDIO.maxVoices) {
-      const victim = [...this.playing].sort((a, b) => a.priority - b.priority || a.start - b.start)[0];
+    // The score keeps its own pool: a chord never steals her wingbeat, nor a blow a held note.
+    const score = cue.bus === 'score';
+    const pool = this.playing.filter((p) => (p.bus === 'score') === score);
+    if (pool.length >= (score ? AUDIO.score.maxVoices : AUDIO.maxVoices)) {
+      const victim = [...pool].sort((a, b) => a.priority - b.priority || a.start - b.start)[0];
       if (!victim || victim.priority > cue.priority) return;
       victim.gain.gain.setTargetAtTime(0, t, 0.004);
       victim.src.stop(t + 0.03);
@@ -69,19 +73,44 @@ export class OneShots {
       head = lp;
     }
     head.connect(gain).connect(panner).connect(g.buses[cue.bus].in);
-    const dur = buffer.duration / rate;
+    let dur = buffer.duration / rate;
+    if (cue.dur !== undefined && cue.dur < dur) {
+      // A held note let go: the gain falls from its level (a damper, a bow lifting), never a cut.
+      const rel = Math.max(0.01, cue.release ?? 0.2);
+      gain.gain.setValueAtTime(level, t + cue.dur);
+      gain.gain.setTargetAtTime(0, t + cue.dur, rel / 3);
+      dur = Math.min(dur, cue.dur + rel * 2);
+    }
     if (cue.panTo !== undefined) {
       panner.pan.setValueAtTime(pan, t);
       panner.pan.linearRampToValueAtTime(cue.panTo, t + dur);
     }
     // Wetter the farther: the room for everything, the far send for distant things.
-    const room = new GainNode(ctx, { gain: cue.bus === 'lantern' ? 0.5 : cue.bus === 'hero' ? 0.16 : 0.3 });
+    const room = new GainNode(ctx, {
+      gain: score ? AUDIO.score.hall : cue.bus === 'lantern' ? 0.5 : cue.bus === 'hero' ? 0.16 : 0.3,
+    });
     panner.connect(room).connect(g.buses[cue.bus].room);
     if (cue.far > 0) {
       const far = new GainNode(ctx, { gain: 0.9 * cue.far });
       panner.connect(far).connect(g.buses[cue.bus].far);
     }
     src.start(t);
-    this.playing.push({ src, gain, end: t + dur, priority: cue.priority, start: t });
+    if (cue.dur !== undefined) src.stop(t + dur);
+    this.playing.push({ src, gain, end: t + dur, priority: cue.priority, start: t, bus: cue.bus });
+  }
+
+  /** Lets go of everything on `bus` from `t` (playing or yet to start) over ~`tau` s: the score cut short. */
+  cut(bus: string, t: number, tau = 0.08): void {
+    for (const p of this.playing) {
+      if (p.bus !== bus) continue;
+      p.gain.gain.cancelScheduledValues(t);
+      p.gain.gain.setTargetAtTime(0, t, tau);
+      p.end = Math.min(p.end, Math.max(p.start, t + tau * 6));
+      try {
+        p.src.stop(p.end);
+      } catch {
+        // Already stopped.
+      }
+    }
   }
 }
