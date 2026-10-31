@@ -92,7 +92,7 @@ export class VistaRiver {
     const freed = fake?.moths ?? sim.save.moths ?? 0;
     this.snuffed = fake?.snuffed ?? sim.save.snuffed ?? [];
     if (freed > 0) {
-      this.drawFar(clock, sim, cam, freed);
+      this.drawFar(clock, cam, freed);
       this.drawGlide(clock, sim, cam, freed);
     }
     this.glowFar.end();
@@ -112,7 +112,7 @@ export class VistaRiver {
     ];
   }
 
-  private drawFar(clock: number, sim: SimView, cam: CameraView, freed: number): void {
+  private drawFar(clock: number, cam: CameraView, freed: number): void {
     const V = VISTA_RIVER;
     const g = this.far;
     const dens = Math.min(1, 0.35 + (0.65 * freed) / V.full);

@@ -57,14 +57,14 @@ export const KEEPER = {
   /** The column: moths drawn, seconds to rise, its width (px), where it goes once through the gate (up the shaft). */
   column: {
     n: 140,
-    secs: [2.4, 4.6] as const,
+    secs: [3.6, 6] as const,
     w: 170,
     size: [7, 12] as const,
     color: 0xf4ecd8,
     cool: 0xd8e6ff,
   },
   /** The moonbeam down the shaft: its colour, alpha, width at the gate and at the floor (px), the light's reach. */
-  moon: { color: 0xcfe0ff, alpha: 0.16, w0: 190, w1: 520, light: 900, in: 2.2 },
+  moon: { color: 0xcfe0ff, alpha: 0.15, w0: 190, w1: 520, light: 900, in: 2.2 },
   /** The ending's dust: grains per second along the roof while it groans, their colour. */
   dust: { rate: 60, color: 0x6a5a48 },
 };
@@ -238,8 +238,13 @@ export class KeeperStage {
       if (this.lure.x >= s.x && this.lure.x <= s.x + s.w && s.y > this.lure.y && s.y < fy) fy = s.y;
     this.floorY = fy;
     const back = ctx.layers.get('airBack');
-    back.addChild(this.darkBack.container, this.pool.container, this.shadows, this.beam.container);
-    ctx.layers.air.addChild(this.darkFront.container, this.front, this.glowFront.container);
+    back.addChild(this.darkBack.container, this.pool.container, this.shadows);
+    ctx.layers.air.addChild(
+      this.darkFront.container,
+      this.beam.container,
+      this.front,
+      this.glowFront.container,
+    );
     lights.set('keeper-cage', this.lightCage);
     lights.set('keeper-moon', this.lightMoon);
   }
@@ -599,18 +604,29 @@ export class KeeperStage {
         this.risers.splice(i, 1);
         continue;
       }
-      // Straight up off the cage at first, then the column leans to the gate, narrowing; then up the shaft.
-      const climb = Math.min(1, u / 0.82);
-      const e = climb * climb * (3 - 2 * climb);
-      const lean = Math.max(0, (climb - 0.15) / 0.85) ** 1.6;
-      const spread = C.w * (1 - 0.55 * e) * (r.seed - 0.5);
-      let x = r.x0 + (gx - r.x0) * lean + spread + Math.sin(clock * (3 + r.seed * 4) + r.seed * 30) * 18;
-      let y = r.y0 + (gy - r.y0) * e;
-      if (u > 0.82) {
+      // A column: straight up off the cage to under the roof, then along under it to the gate, narrowing; then up the
+      // shaft and away.
+      const yMid = gy + 260;
+      const spread = C.w * (r.seed - 0.5);
+      const wob = Math.sin(clock * (3 + r.seed * 4) + r.seed * 30) * 18;
+      let x: number;
+      let y: number;
+      if (u < 0.5) {
+        const v = u / 0.5;
+        const e = v * v * (3 - 2 * v);
+        x = r.x0 + spread * (1 - 0.3 * e) + wob;
+        y = r.y0 + (yMid - r.y0) * e;
+      } else if (u < 0.82) {
+        const v = (u - 0.5) / 0.32;
+        const e = v * v * (3 - 2 * v);
+        x = r.x0 + spread * 0.7 * (1 - e) + (gx - r.x0) * e + wob;
+        y = yMid + (gy - yMid) * e - Math.sin(Math.PI * v) * 60;
+      } else {
         const v = (u - 0.82) / 0.18;
-        x = gx + spread * 0.4 + Math.sin(clock * 5 + r.seed * 20) * 10;
+        x = gx + spread * 0.3 + Math.sin(clock * 5 + r.seed * 20) * 10;
         y = gy - 280 * v;
       }
+      const e = Math.min(1, u * 1.2);
       const fade = Math.min(1, r.t / 0.2) * (u > 0.9 ? (1 - u) / 0.1 : 1);
       // Gold out of the cage, cooling as they climb toward the moon.
       const col = mix(C.color, C.cool, Math.min(1, e * 1.2));
@@ -653,14 +669,14 @@ export class KeeperStage {
       const y = y0 + (y1 - y0) * t * kk;
       const w = M.w0 + (M.w1 - M.w0) * t;
       // (The beam slants a little west, the moon's side.)
-      const x = x0 - 120 * t;
+      const x = x0 - 30 * t;
       this.beam.add(x, y, w * 0.5, M.color, M.alpha * breathe * kk * (1 - 0.45 * t), 120, 0);
     }
-    this.beam.add(x0 - 120, y1 - 10, M.w1 * 0.6, M.color, 0.22 * kk * breathe, 40);
+    this.beam.add(x0 - 30, y1 - 10, M.w1 * 0.6, M.color, 0.22 * kk * breathe, 40);
     this.lightMoon.x = x0 - 80;
     this.lightMoon.y = (y0 + y1) / 2 + 120;
     this.lightMoon.radius = M.light;
-    this.lightMoon.intensity = 0.45 * kk;
+    this.lightMoon.intensity = 0.7 * kk;
     // Motes drifting up through it.
     for (let i = 0; i < 26; i++) {
       const h = hash01('mm', i);
