@@ -1243,6 +1243,7 @@
         "x": 6300,
         "y": 1480,
         "trap": true,
+        "cuts": 2,
         "moths": 30,
         "sets": "cn-hub-freed"
       }
@@ -1312,6 +1313,12 @@
           "id": "mouth",
           "kind": "way",
           "x": 400,
+          "y": 1920
+        },
+        {
+          "id": "giant-door",
+          "kind": "doorWarm",
+          "x": 150,
           "y": 1920
         },
         {

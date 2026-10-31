@@ -1337,7 +1337,8 @@ function hub(): Json {
   // (r11, review r10 #3: the cage hangs under the landing limb, in the frame where she lands from the drop (v10's was
   // 1,800 px west, out of it: holding right, the reviewer never saw it). 200 over the floor: a standing up cut reaches
   // it (`lures.trapRadius`), the first cut lets one moth out. Freed, `cn-hub-freed`: the landing's frame lets go.)
-  r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, moths: 30, sets: 'cn-hub-freed' });
+  // (r17, ft17c: two cuts, "cutting it only swings it", and it was left: the first cage opens on the second cut.)
+  r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, cuts: 2, moths: 30, sets: 'cn-hub-freed' });
   r.set('roosts', [
     // (r12, the ending: once the den's great cage is freed the roosts' moths go on the migration: `leaves`.)
     // (r17, first-timers ft16a / ft16c: up the high block's claw face the moths read as "the way" and led only to the
@@ -1391,6 +1392,9 @@ function hub(): Json {
   });
   r.landmark('seed-door', 'goal', 1920 + HX, 1600);
   r.landmark('mouth', 'way', 400, 1920);
+  // (r17, ft17b: "the left end of the hall seems a dead end": it stopped 230 px short of the giant's door. The
+  // giant's amber shows through it, spilling in, motes drawn out through it.)
+  r.landmark('giant-door', 'doorWarm', 150, 1920);
   r.landmark('clearing', 'landmark', 2960, 1600);
   // The clearing's one warm light (r8, review r7 #5): the kin's lamp on a root stake beside it, the warmest place
   // since the hatch. Render's (a `light` landmark): a kept flame, not a fling lamp (no false light, nothing to snuff).

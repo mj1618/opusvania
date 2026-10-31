@@ -137,7 +137,7 @@ const TRAPS: Array<[string, string, number, string[]?]> = [
 
 describe('the premise: trap lamps (r10, review r9 #2)', () => {
   for (const [room, id, floor, flags] of TRAPS)
-    it(`${room}:${id} is a trap, no springboard, cut out for good from the floor in three cuts`, () => {
+    it(`${room}:${id} is a trap, no springboard, cut out for good from the floor in its cuts`, () => {
       const scene = getRoom(room);
       const k = (scene.lures ?? []).findIndex((l) => l.id === id);
       const l = scene.lures?.[k];
@@ -164,7 +164,7 @@ describe('the premise: trap lamps (r10, review r9 #2)', () => {
       const snuff = ev.find((e) => e.type === 'lureSnuff' && e.id === id) as
         | Extract<SimEvent, { type: 'lureSnuff' }>
         | undefined;
-      expect(hits).toBe(t.lures.trapHp - 1);
+      expect(hits).toBe((l?.cuts ?? t.lures.trapHp) - 1);
       expect(snuff?.trap).toBe(true);
       expect(snuff?.moths).toBe(l?.moths);
       expect(s.save.snuffed).toContain(`${room}:${id}`);

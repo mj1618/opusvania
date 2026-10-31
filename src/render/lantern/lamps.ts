@@ -869,7 +869,8 @@ export class Lamps {
     flank = 0,
   ): void {
     const T = TRAP;
-    const hpMax = Math.max(1, Math.round(tuning.lures.trapHp));
+    const cuts = (this.scene.lures ?? [])[i]?.cuts;
+    const hpMax = Math.max(1, Math.round(cuts ?? tuning.lures.trapHp));
     const ca = Math.cos(flank);
     const sa = Math.sin(flank);
     // The cage's own frame (dx across, dy down) turned onto its flank about the flame.

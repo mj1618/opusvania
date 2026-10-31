@@ -608,10 +608,10 @@ export class Kit {
           // Cut at: each socket in turn rings out (the empty ones a pale ring opening: "a seed goes here").
           const st = this.seedKnock.get(i);
           if (st !== undefined) {
-            const u = (st - k * 0.18) / 0.7;
+            const u = (st - k * 0.22) / 0.9;
             if (u > 0 && u < 1) {
               front
-                .circle(sx, sy, 11 + 22 * u)
+                .circle(sx, sy, 11 + 36 * u)
                 .stroke({ color: KIT.seed.glow, width: 2.5 * (1 - u) + 0.5, alpha: 0.9 * (1 - u) });
               glowFront.add(sx, sy, 30, KIT.seed.glow, 0.5 * (1 - u));
             }

@@ -51,7 +51,7 @@ describe("the hub's cage, learnable (r16)", () => {
     [6230, R],
     [6400, L],
   ] as const)
-    it(`three forward cuts standing from ${x} free it`, () => {
+    it(`forward cuts standing from ${x} free it (r17: two)`, () => {
       const s = at('cn-hub', x, 1600);
       const ev = run(s, 0, 20);
       run(s, face, 2, ev);
@@ -60,7 +60,7 @@ describe("the hub's cage, learnable (r16)", () => {
         run(s, A, 1, ev);
         run(s, 0, 24, ev);
       }
-      expect(ev.filter((e) => e.type === 'lureHit' && e.id === 'trap-crossing').length).toBe(2);
+      expect(ev.filter((e) => e.type === 'lureHit' && e.id === 'trap-crossing').length).toBe(1);
       expect(ev.some((e) => e.type === 'lureSnuff' && e.id === 'trap-crossing')).toBe(true);
       expect(s.save.moths).toBe(30);
     });

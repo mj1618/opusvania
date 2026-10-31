@@ -144,6 +144,12 @@ export const ACTS = {
     /** The point light at the door. */
     light: 0.55,
     radius: 560,
+    /**
+     * A warm way out (`doorWarm`, the Canopy r17: the Crossing's west end into the fallen giant, where ft17b stopped
+     * a few steps short, "a dead end"): the giant's amber inside instead of the night.
+     */
+    warm: 0xe8a868,
+    warmCore: 0xffe2b8,
   },
   stones: {
     /** The crook: how high it rises over the husk and how far it reaches across (px); a stone's size; threads. */
@@ -870,7 +876,9 @@ export class Acts {
       sim.scene.marks as { landmarks?: Array<{ id: string; kind: string; x: number; y: number }> } | undefined
     )?.landmarks;
     for (const l of lms ?? []) {
-      if (l.kind !== 'door') continue;
+      if (l.kind !== 'door' && l.kind !== 'doorWarm') continue;
+      const moon = l.kind === 'doorWarm' ? D.warm : D.moon;
+      const core = l.kind === 'doorWarm' ? D.warmCore : D.core;
       // Out is toward the nearer side wall of the room.
       const dir = l.x > sim.scene.width / 2 ? 1 : -1;
       const cx = l.x;
@@ -880,7 +888,7 @@ export class Acts {
       const light = this.reg.get(id);
       if (light) light.intensity = D.light * breathe;
       else {
-        this.reg.set(id, { x: cx, y: cy, radius: D.radius, color: D.moon, intensity: D.light * breathe });
+        this.reg.set(id, { x: cx, y: cy, radius: D.radius, color: moon, intensity: D.light * breathe });
         this.lights.push(id);
       }
       // Where the spill lands: down and in from the doorway.
@@ -888,9 +896,9 @@ export class Acts {
       const sa = Math.sin(D.angle);
       if (!seen(cx, cy, 200) && !seen(cx - dir * ca * D.beam, cy + sa * D.beam, 200)) continue;
       // The opening: the night beyond, brightest past the threshold.
-      glowBack.add(cx + dir * 30, cy, 150, D.moon, D.glow * breathe, D.half * 1.1);
-      glowBack.add(cx + dir * 110, cy - 10, 80, D.core, 0.32 * breathe, D.half * 0.8);
-      glowFront.add(cx + dir * 120, cy, 46, D.core, 0.22 * breathe, D.half * 0.6);
+      glowBack.add(cx + dir * 30, cy, 150, moon, D.glow * breathe, D.half * 1.1);
+      glowBack.add(cx + dir * 110, cy - 10, 80, core, 0.32 * breathe, D.half * 0.8);
+      glowFront.add(cx + dir * 120, cy, 46, core, 0.22 * breathe, D.half * 0.6);
       // The spill: overlapping soft ellipses along the beam, widening and fading as it falls into the hollow.
       const rot = dir > 0 ? -D.angle : D.angle;
       for (let k = 0; k < 16; k++) {
@@ -898,19 +906,11 @@ export class Acts {
         const sway = Math.sin(clock * 0.5 + t * 4) * 8 * t;
         const bx = cx - dir * (ca * D.beam * t) + sway;
         const by = cy + sa * D.beam * t;
-        glowBack.add(
-          bx,
-          by,
-          80 + 120 * t,
-          D.moon,
-          D.beamA * 0.6 * breathe * (1 - 0.55 * t),
-          34 + 44 * t,
-          rot,
-        );
+        glowBack.add(bx, by, 80 + 120 * t, moon, D.beamA * 0.6 * breathe * (1 - 0.55 * t), 34 + 44 * t, rot);
       }
       const fx = cx - dir * ca * D.beam * 0.95;
       const fy = floorUnder(sim, fx, cy + 40);
-      if (fy - cy < D.beam * 1.2) glowBack.add(fx, fy - 6, 230, D.moon, 0.12 * breathe, 26);
+      if (fy - cy < D.beam * 1.2) glowBack.add(fx, fy - 6, 230, moon, 0.12 * breathe, 26);
       // The motes: up out of the hollow along the light, quickening and brightening toward the door, out through it.
       for (let m = 0; m < D.motes; m++) {
         const q = hash01(`${l.id}m`, m);
@@ -928,8 +928,8 @@ export class Acts {
         const y = sy + (ey - sy) * t - lift * Math.sin(Math.PI * t) + Math.cos(clock * 1.1 + m) * 8 * (1 - t);
         const a = Math.sin(Math.PI * Math.min(1, v * 1.15)) * (0.35 + 0.65 * t);
         if (a <= 0.02 || !seen(x, y)) continue;
-        back.circle(x, y, 1.3 + 1.4 * q).fill({ color: D.core, alpha: 0.9 * a });
-        if (m % 3 === 0) glowFront.add(x, y, 14 + 8 * q, D.moon, 0.3 * a);
+        back.circle(x, y, 1.3 + 1.4 * q).fill({ color: core, alpha: 0.9 * a });
+        if (m % 3 === 0) glowFront.add(x, y, 14 + 8 * q, moon, 0.3 * a);
       }
     }
   }
