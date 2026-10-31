@@ -386,7 +386,29 @@ export class Acts {
     this.drawStones(clock, sim, back, glowFront, seen);
     this.drawDoors(clock, sim, back, glowBack, glowFront, seen);
     this.drawFirefly(dt, clock, sim, front, glowFront);
+    this.drawDenMouth(clock, sim, glowBack, seen);
     this.drawRoosts(dt, clock, sim, back, glowBack, seen);
+  }
+
+  // --- The den's mouth (the tunnel's lid, canopy review r9 #6): a red-amber breath of light out of it, so the
+  // warning's arrivals come out of light, and the boss's den reads as somewhere.
+  private drawDenMouth(
+    clock: number,
+    sim: SimView,
+    glow: GlowPool,
+    seen: (x: number, y: number, pad?: number) => boolean,
+  ): void {
+    for (const q of (
+      sim.scene as { gates?: Array<{ id: string; x: number; y: number; w: number; h: number }> }
+    ).gates ?? []) {
+      if (!q.id.endsWith('lid')) continue;
+      const cx = q.x + q.w / 2;
+      const cy = q.y + q.h * 0.62;
+      if (!seen(cx, cy, 400)) continue;
+      const b = 0.8 + 0.2 * Math.sin(clock * 0.9) * Math.sin(clock * 0.37 + 1);
+      glow.add(cx - 60, cy, 260, 0xc8582a, 0.2 * b, 200);
+      glow.add(cx - 20, cy + 20, 120, 0xffa060, 0.22 * b, 110);
+    }
   }
 
   // --- The firefly's pass (the gap): small, bright, fleeing; it relights what she put out behind her.

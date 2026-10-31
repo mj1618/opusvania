@@ -1321,6 +1321,63 @@ export function heartAngle(plan: InteriorPlan): number {
 }
 
 /** The deep back: lighter and softer than the near back, grain and dim roots, a fog band across it (layer coords). */
+const mixc = (a: number, b: number, t: number): number => {
+  const ch = (sh: number) => Math.round(lerp((a >> sh) & 255, (b >> sh) & 255, t));
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+
+/** The den's two ranks of banks (see the den branch of `drawDeepBack`). */
+function denBanks(
+  g: { poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown } },
+  b: Rect,
+  b0: Rect,
+  T: (typeof TONES)['den'],
+  seed: number,
+): void {
+  const r = rngFor(seed, b0.x, 991);
+  const ranks: Array<[number, number, number, number]> = [
+    // [colour, alpha, the rank's crest as a share of the back's height, hill scale px]
+    [mixc(T.fog, T.nearLit, 0.3), 0.8, 0.34, 700],
+    [mixc(T.deep, T.grain, 0.7), 0.95, 0.56, 480],
+  ];
+  ranks.forEach(([col, a, yK, scale], k) => {
+    const crest = b0.y + b0.h * yK;
+    const top: number[] = [];
+    const st = 40;
+    for (let x = b.x; x <= b.x + b.w + 0.01; x += st) {
+      const hill =
+        0.5 + 0.5 * wobble(x, seed + k * 17, scale) + 0.25 * wobble(x, seed + k * 29, scale * 0.35);
+      top.push(x, crest + (1 - hill) * b0.h * 0.22);
+    }
+    const poly = [...top, b.x + b.w, b.y + b.h, b.x, b.y + b.h];
+    g.poly(poly).fill({ color: col, alpha: a });
+    // A lighter lip along its crest (the fungus light catching the rim), broken.
+    for (let q = 0; q < top.length / 2 - 3; q += 3 + Math.floor(r() * 4)) {
+      const seg = top.slice(q * 2, (q + 3) * 2);
+      if (seg.length >= 6)
+        g.poly(strand(seg, k ? 4 : 3, 0.6)).fill({ color: T.deepLit, alpha: k ? 0.35 : 0.22 });
+    }
+    // The near rank's burrow mouths: dark ways in, a lit rim on the lower side.
+    if (k === 1)
+      for (let x = b0.x + range(r, 100, 500); x < b0.x + b0.w - 100; x += range(r, 700, 1500)) {
+        const ix = Math.round((x - b.x) / st);
+        const ty = (top[ix * 2 + 1] as number | undefined) ?? crest;
+        const my = ty + range(r, 70, 160);
+        const rx = range(r, 40, 80);
+        g.poly(chaikin(blob(x, my, rx * 1.1, rx * 0.8, seed + Math.round(x), 0.2, 14), 1)).fill({
+          color: mixc(T.nearLit, T.deepLit, 0.4),
+          alpha: 0.3,
+        });
+        g.poly(chaikin(blob(x, my - 4, rx, rx * 0.7, seed + Math.round(x), 0.2, 14), 1)).fill({
+          color: T.grain,
+          alpha: 0.95,
+        });
+      }
+    // Haze in front of the far rank: the near one stands out of it.
+    if (k === 0) softGrad(g, b.x, b.x + b.w, crest - 80, b0.y + b0.h, T.fog, 0.22, seed + 7);
+  });
+}
+
 export function drawDeepBack(
   g: {
     poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown };
@@ -1550,6 +1607,9 @@ export function drawDeepBack(
         });
       }
     } else if (plan.look === 'den') {
+      // Depth in the haze (canopy review r9 #6: "one flat brown plane with darker ovals"): two ranks of earth banks as
+      // silhouettes, the far one pale in the fog, the near one darker with burrow mouths in it, haze between them.
+      denBanks(g, b, b0, T, seed + i * 53);
       // Lit from below: the fungus on the floor throws a cold glow up the earth; dark roots hang into it from the roof.
       softGrad(
         g,

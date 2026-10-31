@@ -17,10 +17,11 @@ import { tuning } from '../../sim/tuning';
 import { clamp, sat } from '../character/math';
 import type { CameraView, RenderContext, SimView } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
+import { lookOf } from '../scene/lib/looks';
 import { LOOK } from '../scene/lib/room-look';
 import { arrivalView } from './arrive';
 import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
-import { BOSS, BURR, LAMP } from './config';
+import { BOSS, BURR, DEN_READ, LAMP } from './config';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
 import { Painter, type RGB, type Shade } from './paint';
@@ -749,6 +750,7 @@ export class EnemyRenderer {
     const halfH = cam.h / 2 / cam.zoom + 90;
     const D = BURR.death;
     let drawn = 0;
+    const den = LOOK.kit === 'wood' && lookOf(sim.scene) === 'den';
     this.react(sim);
     for (let i = 0; i < list.length; i++) {
       const e0 = list[i];
@@ -763,7 +765,10 @@ export class EnemyRenderer {
         continue;
       }
       if (art !== 'beetle') continue;
-      const scale = BEETLE_SCALE[e.kind] ?? 1;
+      const kindScale = BEETLE_SCALE[e.kind] ?? 1;
+      // (Canopy review r9 #6: in the den's umber the beetles were 25-35 px of dark on dark at play zoom. Drawn a
+      // little bigger there, backlit; the sim's box is unchanged.)
+      const scale = den && kindScale <= 2 ? kindScale * DEN_READ.scale : kindScale;
       const small = scale !== 1;
       // (A carrier in its crack is no one's: not drawn.)
       if (e.kind === 'carrier' && e.mode === 'under') continue;
@@ -1017,6 +1022,18 @@ export class EnemyRenderer {
       if (rig.big && !e.gone) p.soft(rig.x, rig.y - 6, BURR.halfLen * scale * 1.25, 26, SHADOW_C, 0.55);
       const v0 = p.vertexCount;
       const f0 = pf.vertexCount;
+      // The den's backlight: a warm haze behind each beetle, so its dark dome stands out of the dark earth.
+      if (den && !rig.big && e.mode !== 'dead')
+        p.glow(
+          rig.x,
+          rig.y - 16,
+          DEN_READ.backR,
+          DEN_READ.back,
+          DEN_READ.backA,
+          DEN_READ.backR * 0.62,
+          0,
+          18,
+        );
       if (rig.big && rig.rollK > 0.5 && e.mode !== 'dead') {
         // Rolling, the old burrback is a ball (its dome cannot turn over: half of it is belly): painted on its own.
         this.ball(rig, e, scale, clock);
