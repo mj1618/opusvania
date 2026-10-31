@@ -61,14 +61,14 @@ describe('sealed air, render side', () => {
     expect(Math.abs(len - 2000)).toBeLessThan(40);
   });
 
-  it("the den's warning's ledges are root knuckles", () => {
+  it("the den's warning's ledges (if any) are root knuckles", () => {
     const fam = shelfFamilies();
     const tunnel = ROOMS['cn-tunnel'];
     if (!tunnel) return;
     const arena = tunnel.oneWays
       .map((o, i) => ({ o, f: fam.get(shelfKey('cn-tunnel', i)) }))
       .filter(({ o }) => o.x > 7000);
-    expect(arena.length).toBeGreaterThan(0);
+    // (v10: the warning is 1,024 px of flat floor, its knuckles gone; any ledge put back there is a knuckle.)
     for (const { f } of arena) expect(f).toBe('hump');
   });
 
