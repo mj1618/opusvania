@@ -12,7 +12,7 @@
  * `cageRelease`) are read loosely: they sound when the sim lands them.
  */
 import { noteOf } from './bake-music';
-import { CREAK_S } from './bake-play';
+import { CREAK_S, MOTH_CENTS, REAR_S } from './bake-play';
 import { dbToGain, hash01, salt } from './dsp';
 import type { PlayEvent } from './route-play';
 import {
@@ -50,6 +50,10 @@ type Loose = PlayEvent & {
   hitY?: number;
   x0?: number;
   x1?: number;
+  toX?: number;
+  what?: string;
+  tell?: number;
+  cp?: number;
 };
 
 /** The lamp kind's hum row for a lure kind (route-play's rule: the ring and great lamps share the great's). */
@@ -144,6 +148,20 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
       if (q.phase === 'wait') return alarm(q.x, q.y, 3, C.callDb - 3, i, snap, ctx);
       if (q.phase === 'go') return alarm(q.x, q.y, 2, C.callDb - 2, i, snap, ctx);
       if (q.phase === 'call') return call(q.x, q.y, C.callDb, 0.55, 0.55, i, snap, ctx);
+      // (r14) A fall put her back at her last hook: its air catches her (a soft swell at the flame, a wing) and the
+      // firefly flashes twice where it waits. The music goes on where it was (score.ts).
+      if (q.phase === 'back')
+        return [
+          at('slowIn', 'lantern', AUDIO.lamp.slowDb - 4, { x: h.x, y: h.y - 40, cents: 700, priority: 4 }),
+          at(
+            'wingOpen',
+            'hero',
+            C.backWingDb,
+            { place: 'hero', x: h.x, y: h.y, delay: 0.08, priority: 3 },
+            1,
+          ),
+          ...alarm(q.x, q.y, 2, C.callDb - 4, i, snap, ctx).map((c) => ({ ...c, delay: c.delay + 0.3 })),
+        ];
       if (q.phase === 'gone')
         return [at('mothRush', 'lantern', AUDIO.lamp.rushDb - 8, { cents: 600, far: 0.6, priority: 2 })];
       return [];
@@ -331,6 +349,28 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
             at('clink', 'lantern', C.clinkDb + 4, { cents: 0, priority: 4 }),
             at('clink', 'lantern', C.clinkDb + 3, { cents: 702, delay: 0.14, priority: 4 }, 1),
           ];
+    // r14: the sweep's tell is danger, not food: claws raked back over the stone and a hiss drawn in through its
+    // teeth, rising, sized to the tell (and the score's stab, score.ts). The claws: a low swoop, a scrape, the cloud
+    // panicking. Only then it eats, open: wet crunches and a breath out (unlike anything before it).
+    case 'keeperSweepTell': {
+      const mid = ((q.x0 ?? q.x) + (q.x1 ?? q.x)) / 2;
+      const len = (q.frames ?? 42) / 60;
+      return [
+        at('sweepTell', 'creatures', C.sweepTellDb, {
+          x: snap.fight?.x ?? mid,
+          y: snap.fight?.y ?? q.y,
+          cents: Math.round(1200 * Math.log2(0.8 / Math.max(0.3, len))),
+          priority: 6,
+        }),
+        at(
+          'scrape',
+          'creatures',
+          AUDIO.creatures.rearDb - 3,
+          { x: snap.fight?.x ?? mid, y: q.y, cents: 300, priority: 3 },
+          1,
+        ),
+      ];
+    }
     case 'keeperSweep':
       return [
         at('dive', 'creatures', AUDIO.creatures.diveDb + 4, {
@@ -343,17 +383,96 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
       ];
     case 'keeperEat':
       if (q.sweep)
-        return [
-          at('creak', 'creatures', AUDIO.creatures.creakDb + 2, {
-            variant: nearestS(CREAK_S, (q.frames ?? 30) / 60),
-            cents: -1200,
-            priority: 5,
-          }),
-        ];
+        return [0, 1, 2].flatMap((k) => [
+          at(
+            'crunch',
+            'creatures',
+            AUDIO.combat.crunchDb - 5 - 2 * k,
+            { cents: -1100 - 150 * k, delay: 0.12 + k * 0.28, priority: 4 },
+            k,
+          ),
+          ...(k === 2
+            ? [
+                at(
+                  'exhale',
+                  'creatures',
+                  AUDIO.creatures.rearDb - 6,
+                  { cents: -700, delay: 0.95, priority: 2 },
+                  3,
+                ),
+              ]
+            : []),
+        ]);
       return [
         at('crunch', 'creatures', AUDIO.combat.crunchDb - 8, { cents: -1100, priority: 3 }),
         at('exhale', 'creatures', AUDIO.creatures.rearDb - 8, { cents: -700, delay: 0.3, priority: 2 }, 1),
       ];
+    // r14, P1's beat: it rears and roars (it has a mouth), its shell creaking up; then one slam with no wave, the
+    // roof shaken (grit). The score stops for the roar and comes back angry on the slam (score.ts).
+    case 'keeperRage':
+      if (q.phase === 'rear')
+        return [
+          at('roar', 'creatures', C.roarDb, { place: 'hero', x: q.x, y: q.y, priority: 7 }),
+          at(
+            'rear',
+            'creatures',
+            AUDIO.creatures.rearDb,
+            { variant: nearestS(REAR_S, (q.frames ?? 40) / 60), cents: -400, priority: 5 },
+            1,
+          ),
+        ];
+      return [
+        at('slam', 'creatures', AUDIO.creatures.slamDb + 3, { place: 'hero', cents: -300, priority: 7 }),
+        at(
+          'rockLand',
+          'creatures',
+          AUDIO.creatures.slamDb - 4,
+          { place: 'hero', cents: -500, priority: 5 },
+          1,
+        ),
+        at('trickle', 'world', C.trickleDb + 10, { delay: 0.35, far: 0.2, priority: 3 }, 2),
+        at('trickle', 'world', C.trickleDb + 6, { x: q.x - 600, delay: 0.6, far: 0.3, priority: 2 }, 3),
+      ];
+    // r14: its health at the phase's floor with the phase not done: its shell clamps shut (a dull low knock, a
+    // snort); open again: plates parting (a short creak up) and a breath in.
+    case 'keeperGate':
+      return q.on
+        ? [
+            at('clang', 'combat', AUDIO.combat.clangDb - 5, { cents: -1500, priority: 4 }),
+            at(
+              'exhale',
+              'creatures',
+              AUDIO.creatures.rearDb - 6,
+              { cents: -900, delay: 0.1, priority: 3 },
+              1,
+            ),
+          ]
+        : [
+            at('creak', 'creatures', AUDIO.creatures.creakDb, { variant: 0, cents: -300, priority: 4 }),
+            at(
+              'catchBreath',
+              'creatures',
+              AUDIO.creatures.rearDb - 6,
+              { cents: -800, delay: 0.15, priority: 3 },
+              1,
+            ),
+          ];
+    // r14: the carcass rolls clear of the cage: its shell grinding over the floor, plates scraping, one last thump
+    // on its back as it stops (into the last hit's silence).
+    case 'keeperRoll': {
+      const s2 = (q.frames ?? 70) / 60;
+      return [
+        at('rumble', 'creatures', AUDIO.creatures.rumbleDb + 2, { cents: -1100, delay: 0.05, priority: 5 }),
+        at('scrape', 'creatures', AUDIO.creatures.rearDb - 4, { cents: -900, delay: 0.25, priority: 3 }, 1),
+        at(
+          'thumpWood',
+          'creatures',
+          AUDIO.creatures.wallDb,
+          { x: q.toX ?? q.x, cents: -700, delay: s2 * 0.85, priority: 4 },
+          2,
+        ),
+      ];
+    }
     case 'keeperSight':
       // The light found her: its sharp in-breath. Lost her: a slow sniff.
       return (q as { lit?: boolean }).lit
@@ -363,16 +482,23 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
       const ph = (q as { phase?: string }).phase;
       if (ph === 'groan')
         return [
-          at('gateGroan', 'world', C.groanDb + 2, { cents: -700, place: 'fixed', pan: 0, priority: 5 }),
+          // (r14: under the column's music: far and low, a warning, not the moment.)
+          at('gateGroan', 'world', C.groanDb - 2, {
+            cents: -700,
+            place: 'fixed',
+            pan: 0,
+            far: 0.5,
+            priority: 5,
+          }),
           at(
             'rumble',
             'creatures',
-            AUDIO.creatures.rumbleDb + 2,
-            { cents: -900, place: 'fixed', pan: 0, priority: 4 },
+            AUDIO.creatures.rumbleDb - 2,
+            { cents: -900, place: 'fixed', pan: 0, far: 0.5, priority: 4 },
             1,
           ),
         ];
-      if (ph === 'dust') return [at('trickle', 'world', C.trickleDb + 6, { far: 0.3, priority: 3 })];
+      if (ph === 'dust') return [at('trickle', 'world', C.trickleDb + 4, { far: 0.45, priority: 3 })];
       if (ph === 'rubble')
         return [
           at('slam', 'creatures', AUDIO.creatures.slamDb, {
@@ -419,6 +545,120 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
           cents: 400,
           priority: 4,
         }),
+      ];
+    // --- The escape (r14, moment 7; src/sim/escape.ts). Each rock's tell is heard where it will fall (placed in the
+    // world, so panned by x): a root snapping in the roof, then grit trickling faster to the drop; the fall a swoop;
+    // the landing stone. The front is a layer (canopyLayers). Checkpoints a soft chime in tune: safe here.
+    case 'rockfall': {
+      const tell = Math.max(1, q.tell ?? 24) / 60;
+      const y = q.y;
+      if (q.phase === 'tell') {
+        const n = Math.max(1, Math.min(5, Math.round(tell / 0.18)));
+        return [
+          at('rootSnap', 'world', C.rootSnapDb, { y, place: 'world', priority: 6 }),
+          at(
+            'creak',
+            'world',
+            AUDIO.creatures.creakDb - 2,
+            { y, variant: nearestS(CREAK_S, tell), cents: 600, priority: 4 },
+            1,
+          ),
+          ...Array.from({ length: n }, (_, k) =>
+            at(
+              'trickle',
+              'world',
+              C.rockTrickleDb + (3 * k) / n,
+              { y, delay: (tell * k) / n, priority: 4 },
+              2 + k,
+            ),
+          ),
+        ];
+      }
+      if (q.phase === 'fall')
+        return [
+          at('dive', 'world', C.rockFallDb, { y: y + 200, cents: -700, priority: 5 }),
+          at('rootSnap', 'world', C.rootSnapDb - 4, { y, cents: -300, priority: 4 }, 1),
+        ];
+      return [
+        at('rockLand', 'world', C.rockLandDb, { y, priority: 6 }),
+        at('trickle', 'world', C.trickleDb + 6, { y, delay: 0.3, far: 0.2, priority: 2 }, 1),
+      ];
+    }
+    case 'collapseFront':
+      if (q.phase !== 'start') return [];
+      return [
+        at('slam', 'creatures', AUDIO.creatures.slamDb - 2, {
+          y: q.y,
+          place: 'fixed',
+          pan: 0,
+          cents: -700,
+          far: 0.3,
+          priority: 5,
+        }),
+        at('rootSnap', 'world', C.rootSnapDb - 2, { y: q.y - 200, delay: 0.15, priority: 4 }, 1),
+      ];
+    case 'escapeCheckpoint':
+      return [0, 1].map((k) =>
+        at(
+          'glintNote',
+          'lantern',
+          C.checkpointDb - 2 * k,
+          {
+            place: 'hero',
+            x: h.x,
+            y: h.y,
+            cents: (MOTH_CENTS[k === 0 ? 4 : 6] ?? 0) - 1200,
+            delay: k * 0.11,
+            priority: 4,
+          },
+          k,
+        ),
+      );
+    case 'escapeHit':
+      return q.what === 'front'
+        ? [
+            at('rumble', 'creatures', AUDIO.creatures.rumbleDb + 4, {
+              place: 'hero',
+              cents: -600,
+              priority: 6,
+            }),
+            at('hurt', 'hero', AUDIO.combat.hurtDb - 4, { place: 'hero', delay: 0.03, priority: 6 }, 1),
+          ]
+        : [
+            at('rockLand', 'creatures', C.rockLandDb + 2, { place: 'hero', cents: 300, priority: 7 }),
+            at('hurt', 'hero', AUDIO.combat.hurtDb - 4, { place: 'hero', delay: 0.02, priority: 6 }, 1),
+          ];
+    case 'escapeStart': {
+      // Put back at a checkpoint (a return): the cloud gathers round her again.
+      if (!(ctx.events ?? []).some((x) => x.type === 'fallReturn')) return [];
+      return [
+        at('mothRush', 'lantern', AUDIO.lamp.rushDb - 4, {
+          place: 'hero',
+          x: h.x,
+          y: h.y,
+          cents: 300,
+          priority: 3,
+        }),
+        at('wingOpen', 'hero', C.backWingDb, { place: 'hero', x: h.x, y: h.y, delay: 0.1, priority: 3 }, 1),
+      ];
+    }
+    case 'escapeEnd':
+      // Out ahead of it: the cloud pours on into the moonlight.
+      return [
+        at('mothRush', 'lantern', AUDIO.lamp.rushDb + 3, {
+          place: 'fixed',
+          pan: 0,
+          panTo: 0.6,
+          cents: 500,
+          priority: 5,
+        }),
+        at(
+          'wingOpen',
+          'hero',
+          C.backWingDb + 2,
+          { place: 'hero', x: h.x, y: h.y, delay: 0.05, priority: 4 },
+          1,
+        ),
       ];
     default:
       return [];
@@ -523,7 +763,18 @@ export function canopyAmbient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext)
 
 type CanopyLayers = Pick<
   Layers,
-  'earth' | 'river' | 'riverPan' | 'riverHz' | 'valley' | 'lampwing' | 'lampwingPan' | 'hawker' | 'hawkerPan'
+  | 'earth'
+  | 'river'
+  | 'riverPan'
+  | 'riverHz'
+  | 'valley'
+  | 'lampwing'
+  | 'lampwingPan'
+  | 'hawker'
+  | 'hawkerPan'
+  | 'collapse'
+  | 'collapseHz'
+  | 'collapsePan'
 >;
 
 export function canopyLayers(snap: AudioSnap, cam: AudioCam, clock: number, ctx: RouteContext): CanopyLayers {
@@ -539,8 +790,19 @@ export function canopyLayers(snap: AudioSnap, cam: AudioCam, clock: number, ctx:
     lampwingPan: 0,
     hawker: 0,
     hawkerPan: 0,
+    collapse: 0,
+    collapseHz: 120,
+    collapsePan: 0,
   };
   if (!room.startsWith('cn-')) return out;
+  // The escape's collapse front: louder and brighter the nearer it is under her, its tumble climbing as it rises.
+  const es = snap.escape;
+  if (es && es.front >= 0) {
+    const near = clamp01(1 - (es.gap - C.collapseNearPx) / C.collapseFarPx);
+    out.collapse = dbToGain(C.collapseDb) * (0.3 + 0.7 * near ** 1.4);
+    out.collapseHz = 110 + 260 * near + 120 * es.rise;
+    out.collapsePan = 0.35 * panOf((es.x0 + es.x1) / 2, cam);
+  }
   const bed = bedOf(room);
   if (bed.earth !== undefined)
     out.earth =

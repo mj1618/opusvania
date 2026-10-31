@@ -425,7 +425,7 @@ const P2_MEL: Array<Array<[number, string, number]>> = [
  */
 const boss = (phase: number): Piece => ({
   beat: BB_,
-  bar(k, d) {
+  bar(k, d, s) {
     const out: Note[] = [];
     if (phase === 1) {
       const j4 = k % 4;
@@ -441,8 +441,19 @@ const boss = (phase: number): Piece => ({
         { i: 'drum', m: 1, at: 8, db: -4 },
       );
       if (j4 === 3) out.push({ i: 'drum', m: 0, at: 12, db: -8 }, { i: 'drum', m: 1, at: 14, db: -6 });
-      const step = k >= 4 ? 1 : 2;
-      if (k >= 1)
+      // (r14: after its rage beat it is angry to the end: sixteenths at once, the drum pushing every eighth, the flat
+      // second high over it, the bass in driving octaves. The fight changed and the music says so.)
+      const mad = s.angry >= 2;
+      const step = k >= 4 || mad ? 1 : 2;
+      if (mad) {
+        for (let j = 2; j < 16; j += 4) out.push({ i: 'drum', m: 0, at: j, db: -8 });
+        ns('Eb5 E5').forEach((m, j) => {
+          out.push({ i: 'trem', m, at: 0, dur: 17, db: -10 - j, pan: 0.4 - 0.3 * j });
+        });
+        for (let j = 0; j < 8; j++)
+          out.push({ i: 'marc', m: root + (j % 2 === 1 ? 12 : 0), at: j * 2, dur: 2, db: -8, pan: -0.1 });
+      }
+      if (k >= 1 || mad)
         for (let j = 0; j < 16; j += step)
           out.push({
             i: 'colLegno',
@@ -509,14 +520,253 @@ const boss = (phase: number): Piece => ({
   },
 });
 
-/** The great cage let go: the forest's chord swelling up two octaves as the column rises, no motif (not yet). */
-const GREAT_RELEASE: Piece = {
-  beat: AUDIO.score.beat,
+/**
+ * The great cage let go (r14: the area's peak): the column of freed moths rising into the moonbeam through the roof,
+ * ~3 s alone before the roof gives. Wing's motif, for the first time carried to its end: A D E F E over B flat and C
+ * (the theme's way home), then home to D, under it the one major chord in the area (D with its F sharp: the real
+ * light), the forest's chord up in the moon's register and the celesta climbing after the moths. 150 bpm, 16th =
+ * 0.1 s, so the resolution lands 1.6 s into the column and rings until the escape takes over.
+ */
+const COLUMN: Piece = {
+  beat: AUDIO.score.columnBeat,
+  bars: 3,
+  bar(k, d) {
+    if (k === 0)
+      return [
+        ...ns('F3 A3 D4').map((m, j) => ({
+          i: 'glass' as const,
+          m,
+          at: 0,
+          dur: 8,
+          db: -2 - j,
+          pan: -0.4 + 0.4 * j,
+        })),
+        ...ns('E3 G3 C4').map((m, j) => ({
+          i: 'glass' as const,
+          m,
+          at: 8,
+          dur: 9,
+          db: -2 - j,
+          pan: -0.4 + 0.4 * j,
+        })),
+        { i: 'felt', m: nm('Bb1'), at: 0, db: 0, pan: -0.25 },
+        { i: 'felt', m: nm('F2'), at: 4, db: -6, pan: -0.2 },
+        { i: 'felt', m: nm('C2'), at: 8, db: -1, pan: -0.25 },
+        { i: 'felt', m: nm('G2'), at: 12, db: -6, pan: -0.2 },
+        { i: 'strings', m: nm('Bb2'), at: 0, dur: 8, db: -3, pan: -0.3 },
+        { i: 'strings', m: nm('D3'), at: 0, dur: 8, db: -7, pan: -0.1 },
+        { i: 'strings', m: nm('C3'), at: 8, dur: 8, db: -2, pan: -0.3 },
+        { i: 'strings', m: nm('E3'), at: 8, dur: 8, db: -6, pan: -0.1 },
+        // Her motif, plucked, the bowed section an octave under her (it is everyone's now).
+        { i: 'harp', m: nm('A4'), at: 0, dur: 5, db: 2 + d.vel(1), pan: 0.12 },
+        { i: 'harp', m: nm('D5'), at: 5, dur: 3, db: 1 + d.vel(2), pan: 0.12 },
+        { i: 'harp', m: nm('E5'), at: 8, dur: 2, db: 1 + d.vel(3), pan: 0.12 },
+        { i: 'harp', m: nm('F5'), at: 10, dur: 3, db: 2 + d.vel(4), pan: 0.12 },
+        { i: 'harp', m: nm('E5'), at: 13, dur: 3, db: 1 + d.vel(5), pan: 0.12 },
+        { i: 'strings', m: nm('A3'), at: 0, dur: 5, db: -5, pan: 0.25 },
+        { i: 'strings', m: nm('D4'), at: 5, dur: 3, db: -4, pan: 0.25 },
+        { i: 'strings', m: nm('E4'), at: 8, dur: 2, db: -4, pan: 0.25 },
+        { i: 'strings', m: nm('F4'), at: 10, dur: 3, db: -3, pan: 0.25 },
+        { i: 'strings', m: nm('E4'), at: 13, dur: 3, db: -3, pan: 0.25 },
+      ];
+    if (k === 1)
+      return [
+        // Home: D, its F sharp once, the forest's chord in the moon's register; the celesta climbs after the moths.
+        { i: 'harp', m: nm('D5'), at: 0, dur: 20, db: 3, pan: 0.12 },
+        { i: 'harp', m: nm('D4'), at: 0, dur: 20, db: -3, pan: 0.05 },
+        { i: 'strings', m: nm('D5'), at: 0, dur: 18, db: -2, pan: 0.25 },
+        { i: 'strings', m: nm('D2'), at: 0, dur: 26, db: -1, pan: -0.3 },
+        { i: 'strings', m: nm('A2'), at: 0, dur: 26, db: -4, pan: -0.15 },
+        { i: 'strings', m: nm('F#3'), at: 0, dur: 26, db: -5, pan: 0.05 },
+        { i: 'strings', m: nm('A3'), at: 0, dur: 26, db: -7, pan: 0.2 },
+        { i: 'felt', m: nm('D2'), at: 0, db: 1, pan: -0.25 },
+        { i: 'felt', m: nm('A2'), at: 4, db: -5, pan: -0.2 },
+        { i: 'felt', m: nm('D3'), at: 8, db: -6, pan: -0.15 },
+        { i: 'felt', m: nm('E3'), at: 12, db: -7, pan: -0.1 },
+        ...ns('D4 A4 E5 B5').map((m, j) => ({
+          i: 'glass' as const,
+          m,
+          at: 0,
+          dur: 30,
+          db: -1 - j,
+          pan: -0.45 + 0.3 * j,
+        })),
+        ...ns('D6 E6 A6 B6 D7').map((m, j) => ({
+          i: 'celesta' as const,
+          m,
+          at: 4 + 2 * j + d.jit(j, 0.3),
+          db: -5 - j * 0.8,
+          pan: 0.1 + 0.1 * j,
+          far: 0.25 + 0.12 * j,
+        })),
+      ];
+    if (k === 2)
+      return [
+        { i: 'celesta', m: nm('A6'), at: 0, db: -10, pan: 0.5, far: 0.8 },
+        { i: 'celesta', m: nm('E6'), at: 6, db: -12, pan: 0.55, far: 0.85 },
+      ];
+    return [];
+  },
+};
+
+/**
+ * The escape (r14, moment 7): the area's one driving music, 150 bpm, while the roof comes down behind her. The
+ * theme's heroic turn (D minor, B flat, C, A) under a bass in eighths and a galloping drum; her motif in octaves on
+ * the bowed section (bars 1-4), then the moths' version of it (bars 5-8) with the harp running sixteenths over it
+ * (the cloud leading her up). Layers by her progress (checkpoints) and by how near the front is under her.
+ */
+const ESC_ROOTS = ['D2', 'Bb1', 'C2', 'A1', 'Bb1', 'A1', 'G1', 'A1'];
+const ESC_PAD = [
+  'D4 F4 A4',
+  'D4 F4 Bb4',
+  'E4 G4 C5',
+  'E4 A4 C#5',
+  'D4 F4 Bb4',
+  'C4 F4 A4',
+  'D4 G4 Bb4',
+  'E4 A4 C#5',
+];
+const ESC_MEL: Array<Array<[number, string, number]>> = [
+  [
+    [0, 'A4', 4],
+    [4, 'D5', 4],
+    [8, 'E5', 8],
+  ],
+  [
+    [0, 'F5', 12],
+    [12, 'E5', 4],
+  ],
+  [
+    [0, 'D5', 4],
+    [4, 'E5', 4],
+    [8, 'F5', 4],
+    [12, 'G5', 4],
+  ],
+  [
+    [0, 'A5', 12],
+    [12, 'E5', 4],
+  ],
+  [
+    [0, 'C5', 4],
+    [4, 'F5', 4],
+    [8, 'G5', 8],
+  ],
+  [
+    [0, 'A5', 12],
+    [12, 'G5', 4],
+  ],
+  [
+    [0, 'F5', 4],
+    [4, 'E5', 4],
+    [8, 'D5', 8],
+  ],
+  [[0, 'E5', 16]],
+];
+const ESCAPE: Piece = {
+  beat: AUDIO.score.escapeBeat,
+  bar(k, d, s) {
+    const j8 = k % 8;
+    const root = nm(ESC_ROOTS[j8] as string);
+    const pad = ns(ESC_PAD[j8] as string);
+    const near = s.escGap >= 0 && s.escGap < AUDIO.score.escapeNearPx;
+    const out: Note[] = [];
+    if (k === 0)
+      out.push({ i: 'drum', m: 3, at: 0, db: 2 }, { i: 'marc', m: nm('D1') + 12, at: 0, dur: 6, db: 0 });
+    // The bass: eighths, octaves on the off-beats that push.
+    [0, 0, 12, 0, 0, 12, 0, 12].forEach((o, j) => {
+      out.push({
+        i: 'marc',
+        m: root + o,
+        at: j * 2,
+        dur: 2,
+        db: (j % 4 === 0 ? -1 : -6) + d.vel(j) * 0.4,
+        pan: -0.2,
+      });
+    });
+    out.push({ i: 'strings', m: root + 12, at: 0, dur: 16, db: -6, pan: -0.3 });
+    pad.forEach((m, j) => {
+      out.push({ i: 'trem', m, at: 0, dur: 17, db: -8 - j, pan: 0.1 + 0.2 * j });
+    });
+    // The gallop.
+    out.push(
+      { i: 'drum', m: 2, at: 0, db: -1 },
+      { i: 'drum', m: 0, at: 6, db: -8 },
+      { i: 'drum', m: 1, at: 8, db: -3 },
+      { i: 'drum', m: 0, at: 12, db: -9 },
+      { i: 'drum', m: 0, at: 14, db: -6 },
+    );
+    for (let j = 0; j < 16; j++)
+      out.push({ i: 'colLegno', m: j % 4, at: j, db: (j % 4 === 0 ? -5 : -13) + d.vel(j + 20), pan: 0.3 });
+    // The melody: her motif then theirs, the bowed section in octaves, felt doubling it once she is on her way.
+    for (const [at, n, dur] of ESC_MEL[j8] ?? []) {
+      out.push({ i: 'strings', m: nm(n), at, dur, db: -1, pan: 0.2 });
+      out.push({ i: 'strings', m: nm(n) - 12, at, dur, db: -5, pan: 0.1 });
+      if (s.escCp >= 1 || k >= 4)
+        out.push({ i: 'felt', m: nm(n), at, dur: dur + 1, db: -3 + d.vel(at), pan: 0.15 });
+    }
+    // The cloud leading her: the harp running up the chord in sixteenths (the moths' half, and once she climbs).
+    if (j8 >= 4 || s.escCp >= 2) {
+      const arp = [...pad, ...pad.map((m) => m + 12)];
+      for (let j = 0; j < 16; j++)
+        out.push({
+          i: 'harp',
+          m: arp[j % arp.length] as number,
+          at: j + d.jit(j, 0.1),
+          dur: 1.5,
+          db: -7 + (j % 4 === 0 ? 1 : 0) + d.vel(j + 40) * 0.5,
+          pan: 0.35,
+        });
+    }
+    // The front close under her: the flat second screaming high.
+    if (near)
+      ns('Eb6 E6').forEach((m, j) => {
+        out.push({ i: 'trem', m, at: 0, dur: 17, db: -9 - j, pan: 0.45 - 0.3 * j });
+      });
+    return out;
+  },
+};
+
+/**
+ * Out ahead of it (r14, `escapeEnd`): the drive lets go into the moonlit passage by the theme's way home, B flat and C,
+ * and lands on the forest's chord over D with her A on top: open, not her motif (the vista keeps that).
+ */
+const ESCAPED: Piece = {
+  beat: AUDIO.score.escapeBeat,
   bars: 4,
   bar(k) {
     if (k === 0)
       return [
-        ...ns('D3 A3 E4 B4').map((m, j) => ({
+        { i: 'drum', m: 3, at: 0, db: -1 },
+        { i: 'felt', m: nm('Bb1'), at: 0, db: 0, pan: -0.25 },
+        { i: 'strings', m: nm('Bb2'), at: 0, dur: 8, db: -3, pan: -0.3 },
+        ...ns('F3 A3 D4').map((m, j) => ({
+          i: 'strings' as const,
+          m,
+          at: 0,
+          dur: 8,
+          db: -6 - j,
+          pan: 0.1 * j,
+        })),
+        { i: 'strings', m: nm('F5'), at: 0, dur: 8, db: -2, pan: 0.2 },
+        { i: 'felt', m: nm('C2'), at: 8, db: -1, pan: -0.25 },
+        { i: 'strings', m: nm('C3'), at: 8, dur: 8, db: -3, pan: -0.3 },
+        ...ns('E3 G3 C4').map((m, j) => ({
+          i: 'strings' as const,
+          m,
+          at: 8,
+          dur: 8,
+          db: -6 - j,
+          pan: 0.1 * j,
+        })),
+        { i: 'strings', m: nm('G5'), at: 8, dur: 8, db: -2, pan: 0.2 },
+      ];
+    if (k === 1)
+      return [
+        { i: 'felt', m: nm('D2'), at: 0, db: 0, pan: -0.25 },
+        { i: 'felt', m: nm('A2'), at: 6, db: -7, pan: -0.2 },
+        { i: 'strings', m: nm('D3'), at: 0, dur: 30, db: -4, pan: -0.3 },
+        { i: 'strings', m: nm('A3'), at: 0, dur: 30, db: -6, pan: -0.1 },
+        ...ns('D4 A4 E5 B5').map((m, j) => ({
           i: 'glass' as const,
           m,
           at: 0,
@@ -524,24 +774,9 @@ const GREAT_RELEASE: Piece = {
           db: -2 - j,
           pan: -0.45 + 0.3 * j,
         })),
-        { i: 'strings', m: nm('D2'), at: 0, dur: 36, db: -6, pan: -0.3 },
-        { i: 'strings', m: nm('A2'), at: 4, dur: 32, db: -8, pan: -0.1 },
+        { i: 'harp', m: nm('A5'), at: 0, dur: 20, db: 0, pan: 0.15 },
+        { i: 'celesta', m: nm('E6'), at: 8, db: -7, pan: 0.4, far: 0.5 },
       ];
-    if (k === 1)
-      return [
-        ...ns('D4 A4 E5').map((m, j) => ({
-          i: 'glass' as const,
-          m,
-          at: 0,
-          dur: 30,
-          db: -4 - j,
-          pan: 0.45 - 0.3 * j,
-        })),
-        { i: 'celesta', m: nm('A5'), at: 4, db: -6, pan: 0.3, far: 0.4 },
-        { i: 'celesta', m: nm('D6'), at: 8, db: -7, pan: 0.35, far: 0.5 },
-        { i: 'celesta', m: nm('E6'), at: 12, db: -8, pan: 0.4, far: 0.6 },
-      ];
-    if (k === 2) return [{ i: 'celesta', m: nm('B6'), at: 0, db: -10, pan: 0.45, far: 0.8 }];
     return [];
   },
 };
@@ -604,7 +839,7 @@ const CHASE: Piece = {
     const out: Note[] = [];
     const n = Math.min(s.kindles, CHASE_CHORD.length);
     const top = (n > 0 ? (CHASE_CHORD[n - 1] as number) : nm('D5')) + 12;
-    const waiting = s.chaseBeat === 3;
+    const waiting = s.chaseBeat === 3 || s.chaseHold > 0;
     const close = !waiting && s.chaseLead < AUDIO.score.chaseClosePx;
     // The call: three short, one long, twice a bar.
     for (const h of [0, 8])
@@ -741,14 +976,27 @@ const PIECES: Record<string, Piece> = {
   boss1: boss(1),
   boss2: boss(2),
   boss3: boss(3),
-  greatRelease: GREAT_RELEASE,
+  column: COLUMN,
+  escape: ESCAPE,
+  escaped: ESCAPED,
   vista: VISTA,
   grant: GRANT,
   chase: CHASE,
   duet: DUET,
 };
 /** Pieces that start on the next beat, not the next bar. */
-const URGENT = new Set(['wake', 'boss1', 'tension1', 'tension2', 'greatRelease', 'vista', 'grant', 'chase']);
+const URGENT = new Set([
+  'wake',
+  'boss1',
+  'tension1',
+  'tension2',
+  'column',
+  'escape',
+  'escaped',
+  'vista',
+  'grant',
+  'chase',
+]);
 
 const BOSS_KINDS = new Set(['oldBurrback', 'keeper']);
 /**
@@ -811,6 +1059,18 @@ export class Score {
   private lastStab = -Infinity;
   /** The duet's frames (the bed drops to near silence under it). */
   private duetAt = -Infinity;
+  /** r14: the Keeper's P1 beat (`fight.angry`), and the roar's silence (no boss music until its slam). */
+  angry = 0;
+  private rageHold = -Infinity;
+  /** r14: the chase's phrase (its bars go on from where they were after a fall or a restart), and its hold. */
+  chaseHold = 0;
+  private chaseOff = 0;
+  private chaseBar = -1;
+  private chaseRoom = '';
+  /** r14: the escape (`snap.escape`): her last checkpoint, the front's gap under her (-1 off), a hit's muffle. */
+  escCp = 0;
+  escGap = -1;
+  private hitUntil = -Infinity;
 
   constructor(private readonly ctx: RouteContext) {}
 
@@ -832,6 +1092,11 @@ export class Score {
     this.prevStage = '';
     this.kindles = 0;
     this.chaseBeat = 0;
+    this.chaseOff = 0;
+    this.chaseBar = -1;
+    this.chaseRoom = '';
+    this.angry = 0;
+    this.rageHold = -Infinity;
   }
 
   private queue(piece: string, at: number): void {
@@ -847,7 +1112,7 @@ export class Score {
     if (room !== this.room) {
       // A room left mid-piece: an ambush or the boss do not follow her; the title, a glade's phrase and the vista
       // (the area's ending: it holds through the glide) play on.
-      const keep = ['glade', 'opening', 'vista', 'grant', 'duet'].includes(this.piece);
+      const keep = ['glade', 'opening', 'vista', 'grant', 'duet', 'escaped'].includes(this.piece);
       if (this.piece !== 'silence' && !keep) cut = 0.6;
       if (!keep) this.piece = 'silence';
       this.next = null;
@@ -861,7 +1126,11 @@ export class Score {
     if (snap.chase) {
       this.chaseBeat = snap.chase.beat;
       this.chaseLead = snap.chase.lead;
-    }
+      this.chaseHold = snap.chase.hold ?? 0;
+    } else this.chaseHold = 0;
+    this.angry = fight?.angry ?? 0;
+    this.escCp = snap.escape?.cp ?? 0;
+    this.escGap = snap.escape?.gap ?? -1;
     for (const raw of events) {
       const e = raw as Loose;
       switch (e.type) {
@@ -882,7 +1151,39 @@ export class Score {
           if (e.trap && releaseGreat(e.moths ?? 0)) {
             cut = 0;
             this.piece = 'silence';
-            this.queue('greatRelease', f + releaseFreeze(e.moths ?? 0) + 24);
+            // The column rises as the hold lets go (r14: the area's peak). A cut in the last hit's silence ends it.
+            this.queue('column', f + releaseFreeze(e.moths ?? 0));
+            if (f < this.hushTo + AUDIO.score.returnFrames) {
+              this.hushFrom = Infinity;
+              this.hushTo = -Infinity;
+            }
+          }
+          break;
+        case 'escapeStart':
+          if (!this.played.has('escaped') && this.piece !== 'escape' && this.next?.piece !== 'escape')
+            this.queue('escape', f);
+          break;
+        case 'escapeEnd':
+          if (!this.played.has('escaped')) {
+            this.played.add('escaped');
+            this.queue('escaped', f);
+          }
+          break;
+        case 'escapeHit':
+          this.hitUntil = f + ((raw as { frames?: number }).frames ?? 30) + 12;
+          break;
+        case 'keeperRage':
+          if (e.phase === 'rear') {
+            // It rears and roars: the music stops dead under it (route-canopy.ts plays the roar).
+            if (this.piece !== 'silence') cut = 0.05;
+            this.piece = 'silence';
+            this.next = null;
+            this.rageHold = f + ((raw as { frames?: number }).frames ?? 40) + 60;
+          } else {
+            // The slam: everything back at once, angry (the bar's grid starts on it).
+            this.rageHold = -Infinity;
+            this.piece = 'silence';
+            this.queue('boss1', f);
           }
           break;
         case 'enemyWake':
@@ -902,7 +1203,13 @@ export class Score {
           break;
         case 'fireflyChase':
           if (e.phase === 'start' && this.piece !== 'chase') {
-            this.kindles = 0;
+            // (r14: a chase begun again where one was left picks its phrase up where it was, its chord kept.)
+            if (room !== this.chaseRoom) {
+              this.kindles = 0;
+              this.chaseBar = -1;
+            }
+            this.chaseRoom = room;
+            this.chaseOff = this.chaseBar + 1;
             this.queue('chase', f);
           } else if (e.phase === 'nest' && (this.piece === 'chase' || this.next?.piece === 'chase')) {
             // It stops dead: the music cut, then its one slow call (route-canopy.ts), then the wind.
@@ -973,7 +1280,13 @@ export class Score {
     this.prevStage = stage;
 
     // The continuous states: the boss's phases, an ambush and its clearing.
-    if (fight && BOSS_KINDS.has(fight.kind) && fight.stage === 'fight' && f >= this.hushTo) {
+    if (
+      fight &&
+      BOSS_KINDS.has(fight.kind) &&
+      fight.stage === 'fight' &&
+      f >= this.hushTo &&
+      f >= this.rageHold
+    ) {
       const want = `boss${Math.min(3, fight.phase)}`;
       if (
         this.piece !== want &&
@@ -1005,7 +1318,7 @@ export class Score {
       const beat = this.beatOf(this.piece);
       const onBeat = since % beat === 0;
       const onBar = since % (beat * this.meterOf(this.piece)) === 0;
-      const now = this.piece === 'silence' || (URGENT.has(into) ? onBeat : onBar) || into === 'greatRelease';
+      const now = this.piece === 'silence' || (URGENT.has(into) ? onBeat : onBar) || into === 'column';
       if (now) {
         if (into.startsWith('boss') && this.piece.startsWith('boss') && cut === null) {
           // A phase change keeps the grid (the swing's period) and lets the last bar ring.
@@ -1013,7 +1326,9 @@ export class Score {
           URGENT.has(into) &&
           this.piece !== 'silence' &&
           cut === null &&
-          !this.piece.startsWith('boss')
+          !this.piece.startsWith('boss') &&
+          // (The column's last chord rings on under the escape: it takes over, it does not cut it off.)
+          !(this.piece === 'column' && into === 'escape')
         )
           cut = 0.15;
         this.piece = into;
@@ -1092,7 +1407,40 @@ export class Score {
           { i: 'marc', m: nm('D2'), at: 0, dur: 3, db: 1, pan: -0.2 },
           { i: 'marc', m: nm('D3'), at: 0, dur: 3, db: -4, pan: 0.1 },
         );
-      else if (e.type === 'fireflyKindle' && this.piece === 'chase') {
+      else if (e.type === 'keeperRage' && e.phase === 'slam' && inFight)
+        notes.push(
+          { i: 'drum', m: 3, at: 0, db: 3 },
+          { i: 'drum', m: 2, at: 0.5, db: 0 },
+          { i: 'marc', m: nm('D1') + 12, at: 0, dur: 6, db: 2, pan: -0.2 },
+          { i: 'marc', m: nm('D2'), at: 0, dur: 6, db: -2, pan: 0 },
+          { i: 'strings', m: nm('Eb4'), at: 0, dur: 6, db: -3, pan: 0.2 },
+          { i: 'strings', m: nm('D5'), at: 0, dur: 6, db: -4, pan: 0.3 },
+          { i: 'trem', m: nm('Eb5'), at: 0, dur: 8, db: -6, pan: 0.4 },
+        );
+      else if (e.type === 'keeperSweepTell' && inFight) {
+        // The sweep's tell: a held cluster swelling (the flat second over the pedal) and the bass's E flat: danger.
+        // (A sting's 16th is the score's beat / 4.)
+        const len = ((raw as { frames?: number }).frames ?? 42) / (AUDIO.score.beat / 4);
+        notes.push(
+          { i: 'trem', m: nm('Eb5'), at: 0, dur: len, db: -5, pan: 0.35 },
+          { i: 'trem', m: nm('E5'), at: 0.5, dur: len - 0.5, db: -6, pan: 0.15 },
+          { i: 'trem', m: nm('Bb5'), at: 1, dur: len - 1, db: -7, pan: 0.45 },
+          { i: 'marc', m: nm('Eb2'), at: 0, dur: len, db: -3, pan: -0.2 },
+        );
+      } else if (e.type === 'keeperSweep' && inFight)
+        notes.push(
+          { i: 'drum', m: 3, at: 0, db: 2 },
+          { i: 'marc', m: nm('D2'), at: 0, dur: 3, db: 1, pan: -0.2 },
+        );
+      else if (e.type === 'escapeCheckpoint' && this.piece === 'escape') {
+        // A checkpoint: a high bell of the cloud's chord, climbing with her (safe here).
+        const cp = Math.max(1, (raw as { cp?: number }).cp ?? 1);
+        const m = ns('A5 D6 E6 A6')[Math.min(3, cp - 1)] as number;
+        notes.push(
+          { i: 'celesta', m, at: 0, db: -2, pan: 0.3 },
+          { i: 'glass', m: m - 12, at: 0, dur: 6, db: -6, pan: 0.2 },
+        );
+      } else if (e.type === 'fireflyKindle' && this.piece === 'chase') {
         const n = Math.max(1, Math.min(this.kindles, CHASE_CHORD.length));
         const m = (CHASE_CHORD[n - 1] as number) + 12 + SHARP_ST;
         notes.push(
@@ -1126,8 +1474,13 @@ export class Score {
     return this.swingBeat > 0 && (name === 'boss2' || name === 'boss3') ? this.swingBeat : p.beat;
   }
 
-  private emit(p: Piece, k: number, f: number): Cue[] {
+  private emit(p: Piece, k0: number, f: number): Cue[] {
     const seed = this.ctx.seed;
+    let k = k0;
+    if (this.piece === 'chase') {
+      k = k0 + this.chaseOff;
+      this.chaseBar = k;
+    }
     const key = salt(this.piece);
     const dice: Dice = {
       jit: (j, s) => (hash01(seed, this.start, k, j, key, 1) - 0.5) * s,
@@ -1179,6 +1532,8 @@ export class Score {
       L.hush = f < this.hushTo ? Math.max(0, 1 - into) ** 2.2 : Math.min(1, Math.max(0, back)) ** 0.7;
     }
     if (this.cageFallen) L.lampHz /= 2;
+    // The escape: a hit muffles the music while she is held (it goes on, where it was).
+    if (f < this.hitUntil) L.scoreHz = Math.min(L.scoreHz, S.darkScoreHz);
     // The duet: the bed drops to near silence under it.
     const sinceDuet = f - this.duetAt;
     if (sinceDuet >= 0 && (this.piece === 'duet' || this.next?.piece === 'duet' || sinceDuet < 60))

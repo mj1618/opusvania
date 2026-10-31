@@ -247,3 +247,55 @@ Clips and numbers: `playtest-reports/canopy-audio-r13/README.md`.
   a relight only if that flame is still burning in the step's snap.
 - **Scratch dirs**: the orchestrator's scratchpad is shared by every agent: use a unique subdir (a `route/` there
   held another agent's stale head.txt / wip.diff).
+
+## Round 14 (2026-10-31): the Keeper's tells, the column, the escape, the chase's return
+Clips and numbers: `playtest-reports/canopy-audio-r14/README.md`. Tests: `tests/unit/audio-r14.test.ts`.
+- **The sweep's tell is danger, not food** (review r13): `keeperSweepTell` = `sweepTell` (claws raked back over stone,
+  scratches 110 -> 30 ms apart, a hiss through its teeth rising 1.8 -> 4.6 kHz; pitched to the tell's length) + the
+  score's stab (a tremolo cluster Eb5 E5 Bb5 held for the tell over the bass's E flat). The claws (`keeperSweep`): the
+  low swoop, scrape and panicked rush, a drum and the struck D. Only `keeperEat sweep: true` is wet now: three crunches
+  and a breath out. (r13's creak on `keeperEat sweep` was the tell; the event moved.)
+- **P1's rage beat** (`keeperRage`): `rear` = `roar` (it has a mouth: an in-breath, then a growl through two formants
+  opening, beaten at ~31 Hz over a sub falling 78 -> 52 Hz, its plates grinding) + the rear creak, and **the score
+  stops dead** (cut, no boss music until the slam: `rageHold`); `slam` = slam + `rockLand` + grit from the roof, a
+  stinger (drum, low D, E flat against D) and boss1 starts again on it, **angry** (`fight.angry` >= 2: col legno
+  sixteenths at once, the drum on every eighth, Eb5 E5 tremolo high, the bass in octaves). P2 / P3 are always angry.
+- `keeperGate` on = a dull low knock and a snort (the shell clamps); off = a short creak up and a breath in.
+  `keeperRoll` = a low grinding rumble, scrape, a thump where it stops (into the last hit's tail: it fades with it).
+- **The column** (piece `column`, replaces r1's `greatRelease`; queued at the great cage's hold end): her motif
+  carried home for the first time, 150 bpm (16th = 0.1 s): A D E F E over B flat and C (harp, the bowed section an
+  octave under), then **D at 1.6 s** with the area's one major third (F#3 in the strings), the forest chord in the
+  moon's register and the celesta climbing D6 E6 A6 B6 D7 after the moths. The great cage's `releaseSwell` sits 4 dB
+  back under it; the roof's groan is far and low (it comes 1.1 s into the column). A great release in the last
+  hit's silence ends the silence.
+- **The escape** (piece `escape`, on `escapeStart`, loops; the column's last chord is not cut): the theme's heroic
+  turn, D minor, B flat, C, A (then B flat, F/A, G minor, A), marcato eighths with octave pushes, a galloping drum,
+  col legno 16ths, tremolo chords; her motif in octaves on the strings (bars 1-4), the moths' version (bars 5-8) with
+  the harp running sixteenths (the cloud leading); felt doubles the tune from her first checkpoint; Eb6 E6 tremolo
+  while the front is within `escapeNearPx` 380 under her. A checkpoint = a celesta bell climbing A5 D6 E6 A6 (and a
+  glass chime pair in tune on the lantern bus); a hit muffles the score for its hold (it goes on where it was).
+  `escapeEnd` -> piece `escaped` (kept across the room change): B flat, C, then the forest chord over D with her A on
+  top, open; the vista's theme takes over at `cn-out-vista`.
+- **Rocks heard where they fall** (`rockfall`, placed in the world at the rock's x, so panned): tell = `rootSnap` (a
+  dry crack, splinters, sifting) + a creak sized to the tell + trickles spread over it and rising; fall = a swoop down
+  + a smaller snap; land = `rockLand` (stone: a 52-140 Hz body, inharmonic knocks, gravel, dust).
+- **The collapse front** (`CollapseVoice`, layers `collapse` / `collapseHz` / `collapsePan`, from `snap.escape` =
+  `kit.escape` with `gap` = front minus her feet): brown-noise earth under a low-pass opening 110 -> 490 Hz as it
+  nears and rises, a tumble band beaten unevenly, grit; `collapseDb` -27 RMS at its nearest. `collapseFront start`
+  = a deep slam and a snap; it fades when the escape ends.
+- **The chase's `back`**: a soft swell at the hook, a wing, the firefly's two pings; the piece never restarts: while
+  `chase.hold` > 0 (she drifts at the hook) the bars play the waiting texture (alarm + the kindled chord), then the
+  pulse again on the same grid. A chase begun again in the same room picks its bars up where they were
+  (`chaseOff`) and keeps its kindled chord (r13 reset it to nothing).
+- **Levels** (clips in the README): the whole fight + column + escape + vista (93 s) -15.2 LUFS / -4.5 dBTP, LRA 7;
+  the column the loudest stretch (momentary -12.9 / -11.7), the escape -12.6..-14, the rage beat -17 -> -14; P3
+  close-up -13.8; the chase with a fall -14.4. 0 clipped.
+- **Clips**: `keeper-tape.ts --lag=15 --escape` then append `R30 .360` (walks into `out-vista`), `npm run clip --
+  --room cn-den --at 300,320 --abilities wallJump,glide --pickups --wide --audio`; 93 s at 60 fps crf 16 is 72 MB:
+  re-encode `-r 30 -crf 25` (14.8 MB). A frozen build (`vite build --outDir <scratch>`, `vite preview --strictPort`)
+  kept HMR out of the 6,000-frame capture. The chase with a fall: chase-probe's plan, held past hook-6 once, then
+  after `back` press Lamp again (the drift ignores a press until a few frames in: retry every 11 frames).
+- **Gotcha**: a sting's 16th is `AUDIO.score.beat / 4` (0.23 s), not the piece's.
+- **Weak still**: the roar and the rake are synthesis an agent cannot hear (Matt's ear); the escape's strings are the
+  same wavetable section as the boss (it can sound like more boss music, not a new colour); the column's resolution
+  comes 1.6 s in and the bot's quick cut can shorten the last hit's silence to ~1.9 s.

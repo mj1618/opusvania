@@ -99,7 +99,17 @@ export interface AudioSnap {
    * `arena`: an ambush under way (1 its first beat, 2 a later one). `hatch`: the cocoon. `firefly`: where it flies.
    * `roosts`: lit roosts (freed moths at rest).
    */
-  fight?: { kind: string; stage: 'sleep' | 'wake' | 'fight' | 'down'; phase: number; x: number; y: number };
+  fight?: {
+    kind: string;
+    stage: 'sleep' | 'wake' | 'fight' | 'down';
+    phase: number;
+    x: number;
+    y: number;
+    /** The Keeper r14: P1's beat (0 calm, 1 the rage, 2 angry to the end), its phase gate, P3's sweep stage. */
+    angry?: number;
+    gated?: number;
+    sweep?: number;
+  };
   lit?: number;
   flags?: string[];
   arena?: number;
@@ -112,7 +122,23 @@ export interface AudioSnap {
    * from the stream (`state.lures.fill`): where, how many of how many, its lamp kind.
    */
   seen?: number;
-  chase?: { beat: number; lead: number };
+  /** (r14: `hold` frames she drifts at a hook after a fall put her back, `kit.firefly.hold`.) */
+  chase?: { beat: number; lead: number; hold?: number };
+  /**
+   * The Canopy r14, the full escape (`state.kit.escape`): under way (`on` 1), the last checkpoint and how many there
+   * are, the collapse front (`front`: its top y, or -1 while it is off; `gap`: px from her feet down to it), how far
+   * it has risen (`rise` 0 at its start .. 1 at its top), and the front's span.
+   */
+  escape?: {
+    on: number;
+    cp: number;
+    of: number;
+    front: number;
+    gap: number;
+    rise: number;
+    x0: number;
+    x1: number;
+  };
   fill?: { x: number; y: number; n: number; of: number; kind: string };
 }
 
@@ -142,6 +168,27 @@ function fillOf(state: GameState, scene: Scene): AudioSnap['fill'] {
   return undefined;
 }
 
+/** The escape under way (the Canopy r14), if any. */
+function escapeOf(state: GameState, scene: Scene): AudioSnap['escape'] {
+  const s = state.kit?.escape;
+  const E = scene.escape;
+  if (!s || !E || s.on !== 1) return undefined;
+  const p = state.player;
+  const feet = p.y + p.h;
+  const F = E.front;
+  const on = !!F && s.frontOn === 1;
+  return {
+    on: 1,
+    cp: s.cp,
+    of: E.checkpoints.length,
+    front: on ? Math.round(s.front) : -1,
+    gap: on ? Math.round(s.front - feet) : -1,
+    rise: on && F ? Math.min(1, Math.max(0, (F.y0 - s.front) / Math.max(1, F.y0 - F.top))) : 0,
+    x0: F?.x0 ?? 0,
+    x1: F?.x1 ?? 0,
+  };
+}
+
 /** The den's boss as the score reads it: the framework's stages, or an old burrback's own phases. */
 function fightSnap(state: GameState): AudioSnap['fight'] {
   const b = state.boss;
@@ -162,6 +209,9 @@ function fightSnap(state: GameState): AudioSnap['fight'] {
       phase: Math.max(1, b.phase),
       x: e ? e.x + e.w / 2 : 0,
       y: e ? e.y + e.h / 2 : 0,
+      angry: b.angry ?? 0,
+      gated: b.gated ?? 0,
+      sweep: b.sweep ?? 0,
     };
   }
   if (!big) return undefined;
@@ -286,8 +336,13 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
     seen: state.boss?.lit ?? 0,
     chase:
       state.kit?.firefly && state.kit.firefly.pass >= 0 && state.kit.firefly.beat > 0
-        ? { beat: state.kit.firefly.beat, lead: Math.round(state.kit.firefly.d - state.kit.firefly.her) }
+        ? {
+            beat: state.kit.firefly.beat,
+            lead: Math.round(state.kit.firefly.d - state.kit.firefly.her),
+            hold: state.kit.firefly.hold ?? 0,
+          }
         : undefined,
+    escape: escapeOf(state, scene),
     fill: fillOf(state, scene),
     creatures: state.enemies
       .filter((e) => !e.gone)
@@ -787,6 +842,10 @@ export interface Layers {
   lampwingPan: number;
   hawker: number;
   hawkerPan: number;
+  /** The escape's collapse front (voices/canopy.ts `CollapseVoice`): gain, its low-pass (Hz, nearer = brighter), pan. */
+  collapse: number;
+  collapseHz: number;
+  collapsePan: number;
 }
 
 /** Screen pan of world x: -1..1 at the view's edges. */

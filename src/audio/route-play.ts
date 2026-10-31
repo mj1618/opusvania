@@ -397,7 +397,8 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
         'releaseSwell',
         x,
         y,
-        R.swellDb,
+        // (r14: under the great cage's column the score carries the moment; the swell sits back.)
+        R.swellDb - (great ? 4 : 0),
         { place: 'fixed', pan: 0, delay: hold + 0.15, priority: 5, cents: great ? -1200 : 0 },
         2,
       ),
