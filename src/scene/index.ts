@@ -164,6 +164,8 @@ const SceneSchema = z
             burn: int.min(60).max(3600).optional(),
             // The Canopy r10: a trap lamp (cut out for good, frees its moths) and the first fling's lesson.
             trap: z.boolean().optional(),
+            // The Canopy r17: a trap's cuts, instead of `lures.trapHp` (the hub's first cage: 2).
+            cuts: int.min(1).max(9).optional(),
             lesson: z.boolean().optional(),
             aim: z.tuple([int, int]).optional(),
             // The Canopy r11: a cage its keeper guards (the blade glances off until the flag), a held beat on its snuff.

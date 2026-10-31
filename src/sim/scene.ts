@@ -275,6 +275,11 @@ export interface Lure {
    */
   trap?: boolean;
   /**
+   * A trap's cuts, instead of `lures.trapHp` (the Canopy r17: first-timer ft17c cut the hub's first cage twice, saw
+   * it only swing, and left it; the first cage the game shows opens on the second cut).
+   */
+  cuts?: number;
+  /**
    * The first fling's lesson (the Canopy r10, review r9 #1): until she has flung off it once (`lesson:room:id` in the
    * save's flags), her fall and run ease to a drift near it (`lures.lessonPx`, `lessonFall`, `lessonRun`): the window
    * to press Lamp is wide.

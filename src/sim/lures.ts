@@ -94,7 +94,7 @@ const F = { x: 0, y: 0 };
 
 /** Cuts it takes to put out. */
 export function lureHpMax(l: Lure, t: Tuning): number {
-  if (l.trap) return Math.max(1, Math.round(t.lures.trapHp));
+  if (l.trap) return Math.max(1, Math.round(l.cuts ?? t.lures.trapHp));
   return Math.max(1, Math.round(lureRow(t, l.kind).hp));
 }
 

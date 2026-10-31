@@ -973,6 +973,14 @@ const G = 'glide';
 
 /** The first fling's lamp (r8): over the gap between S5's cut end and S8, on a running jump's rise off the lip. */
 const FIRST_WICK: [number, number] = [3700, 660];
+/**
+ * The safe first flame (r17: every first-timer fell 6-10 times under FIRST_WICK, ~25-30 s, before pressing the Lamp by
+ * it): over S3's east half (top ~860), 265 over the limb, where a standing jump on the limb finds it and a miss lands on
+ * the limb she jumped from (or the trunk's step east of it: no void under it). Its lesson drift holds her in reach (the
+ * HUD shows the Lamp key by it); a fling with nothing held, right or up-right carries her up onto S4 (the crown's limb,
+ * the promise's vista) or S5 (the lip). Not over S2 -> S3's gap: its drift would slow a jump and drop her in.
+ */
+const PATH_WICK: [number, number] = [2640, 590];
 /** The promise's widen zone (r12, moment 1): the crown's limb west of the lip (the first fling's frame is the lip's). */
 const PROMISE_X: [number, number] = [2816, 3296];
 
@@ -1071,6 +1079,16 @@ function hatch(): Json {
     // 90 frames after it goes out (`relight`, never saved): cut down with the blade it was gone for good, and the
     // hatch with it (the bots' old lamp-cut lines found it: a softlock).)
     lures: [
+      {
+        id: 'wick-path',
+        kind: 'wick',
+        x: PATH_WICK[0],
+        y: PATH_WICK[1],
+        relight: 90,
+        lesson: true,
+        aim: [1, -1],
+        moths: 0,
+      },
       {
         id: 'wick-first',
         kind: 'wick',
@@ -1206,6 +1224,9 @@ function hub(): Json {
   // a place, 768 x 448).
   r.hole(192, 832, 960, 1280);
   r.bark('high-wall', 960, 1088, 64, 192);
+  // (r17, ft16c / ft17d dropped into the chamber from the limbs' vent and read it as a closed pocket: its way out is
+  // this wall. It reads as rot from both sides now, as the giant's does.)
+  r.landmark('high-wall', 'teach', 992, 1184);
   // (The chamber's west end steps down into a covered vent under the upper limbs' floor: review r5 #10, a hidden
   // route.)
   r.hole(0, 1280, 256, 1472);
@@ -1313,16 +1334,20 @@ function hub(): Json {
   // (r11, review r10 #6: the clump's east face lit, a claw route from the bank's floor to its crown.)
   r.lamp('wick-clump', 7944, 720);
   // The premise (r10, review r9 #2): the first trap lamp, a cage of moths hung over the root floor west of the seed
-  // door, the first thing she meets walking west from the drop. Three cuts free it for good; its moths settle on the
-  // high block's claw face (the shard chamber's way up, lit), the Grove's over the kin's lamp, the warning's in the
+  // door, the first thing she meets walking west from the drop. Three cuts free it for good; its moths settle under
+  // the landing limb over it (r17; on the high block's claw face they read as the way on), the Grove's over the kin's lamp, the warning's in the
   // lampoak's crown over the drop: the hub changes with each lamp freed (`roosts`, render draws them).
   // (r11, review r10 #3: the cage hangs under the landing limb, in the frame where she lands from the drop (v10's was
   // 1,800 px west, out of it: holding right, the reviewer never saw it). 200 over the floor: a standing up cut reaches
   // it (`lures.trapRadius`), the first cut lets one moth out. Freed, `cn-hub-freed`: the landing's frame lets go.)
-  r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, moths: 30, sets: 'cn-hub-freed' });
+  // (r17, ft17c: two cuts, "cutting it only swings it", and it was left: the first cage opens on the second cut.)
+  r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, cuts: 2, moths: 30, sets: 'cn-hub-freed' });
   r.set('roosts', [
     // (r12, the ending: once the den's great cage is freed the roosts' moths go on the migration: `leaves`.)
-    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 1024, y: 1088, w: 128, h: 448, leaves: DEN_FREED },
+    // (r17, first-timers ft16a / ft16c: up the high block's claw face the moths read as "the way" and led only to the
+    // limbs' top, "a bit of a letdown". They settle under the landing limb now, over the cage they came out of: a band
+    // along the bark, not a line up anything.)
+    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 5840, y: 1236, w: 400, h: 96, leaves: DEN_FREED },
     {
       id: 'roost-grove',
       lure: `cn-grove:${GROVE_TRAP}`,
@@ -1370,6 +1395,9 @@ function hub(): Json {
   });
   r.landmark('seed-door', 'goal', 1920 + HX, 1600);
   r.landmark('mouth', 'way', 400, 1920);
+  // (r17, ft17b: "the left end of the hall seems a dead end": it stopped 230 px short of the giant's door. The
+  // giant's amber shows through it, spilling in, motes drawn out through it.)
+  r.landmark('giant-door', 'doorWarm', 150, 1920);
   r.landmark('clearing', 'landmark', 2960, 1600);
   // The clearing's one warm light (r8, review r7 #5): the kin's lamp on a root stake beside it, the warmest place
   // since the hatch. Render's (a `light` landmark): a kept flame, not a fling lamp (no false light, nothing to snuff).
@@ -1467,7 +1495,11 @@ function trunk(): Json {
   // (r12, first-timer r11: "that bug pops up right where I land": on the hall's 320 px of floor east of the bed both
   // ends are landings (the drop from the top, the knuckles back east). It walks the top's floor now, seen from the
   // door (260 px off: its 30-frame tell plays before it can reach her), clear of the shaft's lip.)
-  r.juvenile('juv-t1', 2830, 384, -1, 70, { fenced: true });
+  // (r17, ft16a / ft16c: at 2,830 walking 2,760-2,900 it hit them as they came through the door, "before I could
+  // see it"; moved to the west end, ft17d topped out of the climb onto it. Both ends of the top are arrivals and the
+  // room's spawn wants 300 px clear (`ENEMY_SPAWN_CLEAR`): it keeps r16's spot on a shorter walk (2,796-2,876), its
+  // back to the door, so it turns (its 30-frame tell) before it comes. Not solved: the top is 576 px wide.)
+  r.juvenile('juv-t1', 2836, 384, -1, 40, { fenced: true });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);

@@ -783,6 +783,16 @@
     },
     "lures": [
       {
+        "id": "wick-path",
+        "kind": "wick",
+        "x": 2640,
+        "y": 590,
+        "relight": 90,
+        "lesson": true,
+        "aim": [1, -1],
+        "moths": 0
+      },
+      {
         "id": "wick-first",
         "kind": "wick",
         "x": 3700,
@@ -1233,6 +1243,7 @@
         "x": 6300,
         "y": 1480,
         "trap": true,
+        "cuts": 2,
         "moths": 30,
         "sets": "cn-hub-freed"
       }
@@ -1293,6 +1304,12 @@
       ],
       "landmarks": [
         {
+          "id": "high-wall",
+          "kind": "teach",
+          "x": 992,
+          "y": 1184
+        },
+        {
           "id": "seed-door",
           "kind": "goal",
           "x": 5440,
@@ -1302,6 +1319,12 @@
           "id": "mouth",
           "kind": "way",
           "x": 400,
+          "y": 1920
+        },
+        {
+          "id": "giant-door",
+          "kind": "doorWarm",
+          "x": 150,
           "y": 1920
         },
         {
@@ -1594,10 +1617,10 @@
       {
         "id": "roost-crossing",
         "lure": "cn-hub:trap-crossing",
-        "x": 1024,
-        "y": 1088,
-        "w": 128,
-        "h": 448,
+        "x": 5840,
+        "y": 1236,
+        "w": 400,
+        "h": 96,
         "leaves": "cn-den-freed"
       },
       {
@@ -2101,10 +2124,10 @@
       {
         "id": "juv-t1",
         "kind": "juvenileBurrback",
-        "x": 2830,
+        "x": 2836,
         "y": 384,
         "facing": -1,
-        "radius": 70,
+        "radius": 40,
         "senses": "always",
         "fenced": true
       },

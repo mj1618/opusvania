@@ -151,7 +151,7 @@ test('the default boot is scene 1 (wood-hatch): shut in the cocoon, then running
     const s0 = g.state();
     const x0 = s0.player.x;
     // Wait out the fade-up (the hatch listens from `tuning.hatch.listenFrom`, 210 since the Canopy r12's black), then
-    // three presses break the cocoon.
+    // the first press breaks the cocoon (the Canopy r17: one stir and the break; the later presses are her own).
     g.step(215);
     g.input('J1 .3 A1 .3 J1 .3');
     g.step(12);
@@ -178,7 +178,7 @@ test('the default boot is scene 1 (wood-hatch): shut in the cocoon, then running
   expect(r.room).toBe('wood-hatch');
   expect(r.rooms).toEqual(ROOMS);
   expect(r.shut).toEqual({ frames: 0, presses: 0, done: false });
-  expect(r.hatch).toBe(4);
+  expect(r.hatch).toBe(2);
   expect(r.moved).toBeGreaterThan(150);
   expect(r.abilities.owned).toEqual([]);
   expect(r.granted).toEqual(['glide', 'dash']);

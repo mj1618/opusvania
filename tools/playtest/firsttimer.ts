@@ -178,6 +178,9 @@ async function serve(): Promise<void> {
     const g = window.__game;
     g.load();
     g.pause();
+    // The key prompts a player sees (the Lamp's cap by the first flame, the glide's, the kick's): ?manual turns them
+    // off for captures, and every first-timer before r17 played without them (it learned nothing it was not shown).
+    if (window.__prompts) window.__prompts.enabled = true;
     m.setLabels(${args.labels ? 'true' : 'false'});
     m.record(${JSON.stringify(args.name ?? 'agent')});
   })()`);

@@ -41,6 +41,27 @@ import {
 
 const AT = { x: 0, y: 0 };
 
+/**
+ * A flame that wants her (the Canopy r17: every first-timer fell 6-10 times under the hatch's first flame before
+ * pressing the Lamp by it): a burning springboard leans toward her on its thread as she comes near, brightens, and
+ * once she is in its fling reach a ring of light breathes out of it in time (her press would catch it now). Cages
+ * never answer so (a trap is never a springboard).
+ */
+export const READY = {
+  /** She is noticed this many fling radii out (it eases in from there to the reach). */
+  notice: 3.2,
+  /** The lean toward her at full (px), how much brighter (x), the halo's growth (x). */
+  lean: 12,
+  bright: 0.45,
+  halo: 0.6,
+  /** In reach: a ring every `pulse` s, out to `ring` px, the core's flare. */
+  pulse: 0.7,
+  ring: 64,
+  ringColor: 0xffd9a0,
+  /** Seconds it takes to turn toward her (and away). */
+  ease: 0.25,
+};
+
 interface LampInfo {
   /** A trap lamp (the Canopy r10, `Lure.trap`): a cage of glow, a dense cloud, fallen moths under it. */
   trap: boolean;
@@ -253,6 +274,8 @@ export class Lamps {
   private readonly jolt = new Map<number, { t: number; side: number; k: number }>();
   /** Lamps flung from and smouldering (by index). */
   private readonly embers = new Set<number>();
+  /** How much each flame wants her (0..1, eased; READY) and the time in her reach (s, for the pulse). */
+  private readonly want = new Map<number, { k: number; t: number }>();
   /** Seconds since a lamp went out here (by index), for the husk's settle. */
   private readonly outT = new Map<number, number>();
   /** Cages the firefly just hung (`fireflyHang`, the Canopy r11): seconds since (by index). */
@@ -631,14 +654,46 @@ export class Lamps {
       const sw = jo ? Math.exp(-jo.t * TRAP.joltDamp) * Math.sin(jo.t * TRAP.joltRate) : 0;
       const jx = jo ? jo.k * (jo.side === 0 ? 0.35 : jo.side) * sw : 0;
       const hangX = at.x;
-      const x = at.x + jx;
-      const y = at.y - Math.abs(jx) * 0.12 - (jo && jo.side === 0 ? jo.k * 0.5 * Math.max(0, sw) : 0);
+      // A springboard that wants her (READY): it leans toward her on its thread, brighter, as she comes near.
+      const hp0 = sim.lures.hp[i] ?? 0;
+      const reach = (tuning.lures.kinds as Record<string, { fling?: number }>)[l.kind as string]?.fling ?? 0;
+      let wk = this.want.get(i);
+      const pd = Math.hypot(p.cx - at.x, p.cy - at.y);
+      const can = hp0 > 0 && reach > 0 && !info.trap && !info.moonwick && !this.embers.has(i) && fling < 0;
+      const goal = can ? Math.max(0, Math.min(1, 1 - (pd - reach) / (reach * (READY.notice - 1)))) : 0;
+      if (!wk && goal > 0) {
+        wk = { k: 0, t: 0 };
+        this.want.set(i, wk);
+      }
+      if (wk) {
+        wk.k += (goal - wk.k) * Math.min(1, dt / READY.ease);
+        wk.t = can && pd <= reach ? wk.t + dt : 0;
+        if (wk.k < 0.002 && goal === 0) this.want.delete(i);
+      }
+      const wantK = wk?.k ?? 0;
+      const lean = pd > 1 ? (READY.lean * wantK) / pd : 0;
+      const x = at.x + jx + (p.cx - at.x) * lean;
+      const y =
+        at.y -
+        Math.abs(jx) * 0.12 -
+        (jo && jo.side === 0 ? jo.k * 0.5 * Math.max(0, sw) : 0) +
+        Math.min(0, (p.cy - at.y) * lean) * 0.5;
       if (Math.abs(x - cam.x) > halfW + 400 || Math.abs(y - cam.y) > halfH + 400) continue;
       const hp = sim.lures.hp[i] ?? 0;
       const burning = hp > 0;
       // A cage the firefly has not hung yet (`after` a flag not saved, never put out): nothing is there.
       if (!burning && l.after && info.trap && !sim.save.snuffed.includes(`${sim.scene.id}:${l.id}`)) {
         this.clouds.set(i, x, y, false, dt);
+        continue;
+      }
+      // A lamp waiting on its flag (`after`, the hub's seed sockets; never lit or put out): a small closed bud, dark,
+      // no thread, no lace (r17: three first-timers read the lampoak's empty husks as "cages up the trunk" to reach).
+      if (!burning && l.after && !info.trap && !sim.save.snuffed.includes(`${sim.scene.id}:${l.id}`)) {
+        this.clouds.set(i, x, y, false, dt);
+        const bs = info.size * 0.5;
+        back.poly(calyx(x, y, bs, 1, 0)).fill({ color: LR.lamp.husk, alpha: 0.85 });
+        back.poly(calyx(x, y + bs * 0.1, bs * 0.55, 1, 0)).fill({ color: 0x120a06, alpha: 0.9 });
+        glow.add(x, y, bs * 1.6, LR.lamp.halo, 0.04);
         continue;
       }
       if (!info.moonwick) this.clouds.set(i, x, y, burning && !this.embers.has(i), dt);
@@ -662,7 +717,9 @@ export class Lamps {
       const s =
         info.size *
         (ht === undefined ? 1 : 0.25 + 0.75 * (1 - (1 - grow) ** 3) + 0.06 * Math.sin(grow * Math.PI));
-      const flick = 1 + 0.07 * Math.sin(clock * 9.1 + i * 1.7) + 0.05 * Math.sin(clock * 23.3 + i);
+      const flick =
+        (1 + 0.07 * Math.sin(clock * 9.1 + i * 1.7) + 0.05 * Math.sin(clock * 23.3 + i)) *
+        (1 + READY.bright * wantK);
       if (info.moonwick) {
         this.drawWick(i, l, x, y, info, burning, clock, sim, back, glow, cands, cam);
         continue;
@@ -729,7 +786,16 @@ export class Lamps {
         if (info.trap) this.cage(i, x, y, s, hp, clock, back, glow, down ? TRAP.flank : 0);
         mid.add(x, y + s * 0.12, s * 0.5 * flick, LR.lamp.core, 0.55 * flick, s * 0.62 * flick);
         // The halo (bloom carries it further).
-        glow.add(x, y, s * 2.4 * flick, LR.lamp.halo, 0.3);
+        glow.add(x, y, s * 2.4 * flick * (1 + READY.halo * wantK), LR.lamp.halo, 0.3);
+        // In her reach: a ring of light breathes out of it in time (a press would catch it now).
+        const rt = this.want.get(i)?.t ?? 0;
+        if (rt > 0) {
+          const u = (rt / READY.pulse) % 1;
+          const r = s * 0.8 + READY.ring * (1 - (1 - u) ** 2);
+          const a = (1 - u) * Math.min(1, rt * 6) * 0.75;
+          front.circle(x, y, r).stroke({ color: READY.ringColor, width: 2.2 * (1 - u) + 0.6, alpha: a });
+          glowFront.add(x, y, s * 1.4, LR.lamp.core, 0.35 * (1 - u) * Math.min(1, rt * 6));
+        }
         // A room whose lamps are its picture (ROOM_LAMPS): their warmth washes the wood round them.
         if (this.roomK.light > 1)
           glow.add(x, y + 60, 520 * this.roomK.light * 0.5, LR.lamp.halo, 0.1 * flick, 420);
@@ -803,7 +869,8 @@ export class Lamps {
     flank = 0,
   ): void {
     const T = TRAP;
-    const hpMax = Math.max(1, Math.round(tuning.lures.trapHp));
+    const cuts = (this.scene.lures ?? [])[i]?.cuts;
+    const hpMax = Math.max(1, Math.round(cuts ?? tuning.lures.trapHp));
     const ca = Math.cos(flank);
     const sa = Math.sin(flank);
     // The cage's own frame (dx across, dy down) turned onto its flank about the flame.

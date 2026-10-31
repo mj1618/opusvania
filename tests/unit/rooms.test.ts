@@ -148,17 +148,15 @@ describe('abilities', () => {
 });
 
 describe('the hatching', () => {
-  it('shut in: no input moves her; three presses of any button break the cocoon', () => {
+  it('shut in: no input moves her; once it listens one press of any button breaks the cocoon (r17)', () => {
     const s = sim(WOOD_HATCH);
     const x0 = s.state.player.x;
     s.run(0, s.t.hatch.listenFrom);
     expect(s.state.player.x).toBe(x0);
     const stirs: SimEvent[] = [];
-    for (let i = 0; i < 3; i++) {
-      stirs.push(...s.run(ActionBit.attack, 1), ...s.run(0, 3));
-    }
+    stirs.push(...s.run(ActionBit.attack, 1), ...s.run(0, 3));
     const kinds = stirs.map((e) => e.type);
-    expect(kinds.filter((k) => k === 'hatchStir')).toHaveLength(3);
+    expect(kinds.filter((k) => k === 'hatchStir')).toHaveLength(1);
     const hatch = stirs.find((e) => e.type === 'hatch');
     expect(hatch).toMatchObject({
       auto: false,
@@ -169,6 +167,18 @@ describe('the hatching', () => {
     expect(kinds).not.toContain('jump');
     s.run(R, 30);
     expect(s.state.player.x).toBeGreaterThan(x0 + 100);
+    // Jump and the Lamp break it too; one jump made in the black breaks it `pressedAfter` into the close frame.
+    for (const bit of [ActionBit.jump, ActionBit.lamp]) {
+      const q = sim(WOOD_HATCH);
+      q.run(0, q.t.hatch.listenFrom);
+      expect(q.run(bit, 1).some((e) => e.type === 'hatch')).toBe(true);
+    }
+    const b = sim(WOOD_HATCH);
+    const ev = b.run(ActionBit.jump, 10).concat(b.run(0, b.t.hatch.listenFrom + b.t.hatch.pressedAfter + 5));
+    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({
+      auto: false,
+      frames: b.t.hatch.listenFrom + b.t.hatch.pressedAfter + 1,
+    });
   });
 
   it('jump and a move key are presses too, even while the picture fades up; it breaks once it listens (curious first-timer)', () => {

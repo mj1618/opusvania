@@ -89,13 +89,13 @@ describe("the hub's cage (r11, review r10 #3 / #4)", () => {
       }
     });
 
-  it('a standing up cut from the floor under it frees it in three; the first lets one moth out', () => {
+  it('a standing up cut from the floor under it frees it in two (r17); the first lets one moth out', () => {
     const s = at('cn-hub', l?.x ?? 0, 1600, []);
     s.enemies.length = 0;
     run(s, 0, 30);
     const ev = standCuts(s, k);
     const hits = ev.filter((e) => e.type === 'lureHit' && e.id === 'trap-crossing') as Of<'lureHit'>[];
-    expect(hits.map((e) => e.escape ?? 0)).toEqual([1, 0]);
+    expect(hits.map((e) => e.escape ?? 0)).toEqual([1]);
     expect(hits.every((e) => e.trap)).toBe(true);
     const snuff = ev.find((e) => e.type === 'lureSnuff' && e.id === 'trap-crossing') as Of<'lureSnuff'>;
     expect(snuff?.trap).toBe(true);

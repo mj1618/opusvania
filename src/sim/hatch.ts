@@ -8,8 +8,8 @@ import type { Tuning } from './tuning';
  * The hatching (scene 1, docs/design/scenes/01-hatching-branch.md): a room with `scene.hatch` starts
  * with her shut in her cocoon. Her body already stands at the spawn on the branch, but no input
  * moves her. Presses of any button, a direction too (a bit of the input that was not held the step
- * before), stir the cocoon from the first frame; the `presses`-th breaks it, but not before
- * `tuning.hatch.listenFrom` (the picture is still fading up). With no input it stirs on its own and breaks after `autoFrames`.
+ * before), stir the cocoon from the first frame; once it listens (`tuning.hatch.listenFrom`: the picture is still
+ * fading up) any press breaks it, and one made before then breaks it `pressedAfter` frames later (the Canopy r17). With no input it stirs on its own and breaks after `autoFrames`.
  * Render (the acting) draws the cocoon from `state.hatch` and these events; she is hidden until `hatch`.
  */
 
@@ -40,11 +40,11 @@ export function updateHatch(
   // Every press counts, a move key's too, even while the picture still fades up (curious first-timer,
   // 2026-10-17: jump and right in the first seconds were lost, "I thought it had frozen"); the cocoon
   // only breaks once it is listening.
-  const press = (input & ~prev) !== 0 && h.presses < need;
+  const press = (input & ~prev) !== 0;
   const p = state.player;
   const x = p.x + p.w / 2;
   const y = p.y + p.h;
-  if (press) {
+  if (press && h.presses < need) {
     h.presses++;
     events.push({ type: 'hatchStir', x, y, auto: false, presses: h.presses, of: need, frames: h.frames });
   } else if (
@@ -54,9 +54,14 @@ export function updateHatch(
   ) {
     events.push({ type: 'hatchStir', x, y, auto: true, presses: h.presses, of: need, frames: h.frames });
   }
-  if ((h.presses >= need && h.frames > H.listenFrom) || h.frames >= auto) {
+  // (The Canopy r17: every first-timer pressed jump once in the black and thought it did nothing. Once it listens, any
+  // fresh press breaks it; a press made in the black breaks it `pressedAfter` frames into the close frame.)
+  const listening = h.frames > H.listenFrom;
+  const asked =
+    listening && (press || h.presses >= need || (h.presses > 0 && h.frames > H.listenFrom + H.pressedAfter));
+  if (asked || h.frames >= auto) {
     h.done = true;
-    events.push({ type: 'hatch', x, y, cx: at.x, cy: at.y, auto: h.presses < need, frames: h.frames });
+    events.push({ type: 'hatch', x, y, cx: at.x, cy: at.y, auto: !asked, frames: h.frames });
     // (The Canopy r12, moment 1: the kin's try after the swarm keys on this flag, `marks.tatter.tryOn`.)
     if (at.sets && !state.save.flags.includes(at.sets)) {
       state.save.flags.push(at.sets);
