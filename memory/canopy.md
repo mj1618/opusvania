@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v12, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v13, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,27 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v13 (round 13, review canopy-r12.md): the contract (landed in c932ad7)
+Render and audio build against these; sim / content names only (render never writes them).
+- **Moment 4, the chase** (`cn-gap:firefly-gap`, a `FireflyPass.chase {lead, kindles, waits, end, needs}`): events
+  `fireflyChase {id, phase: start | wait | go | nest | call | gone, x, y}`, `fireflyKindle {id, lure, x, y}`,
+  `fireflyHide {id, x, y}` (+ `fireflyStart` / `fireflyEnd`). State `kit.firefly {pass, x, y, px, py, beat (0 perched,
+  1 alarm, 2 flying, 3 waiting, 4 to the shaft, 5 the call, -1 none), t, d, her}`: a chase is not a function of the
+  frame, so draw `x, y` (interpolate from `px, py`), not `fireflyAt`. Hooks `hook-1..6` are `after` lamps (dark until
+  kindled: their flag `cn-gap-hook-n`). Camera zone `chase` (after `cn-firefly-gap`, until `cn-firefly-gap-done`).
+- **Moment 5, the trap is set** (`cn-tunnel:trap-warn`, `Lure.fills {frames: 180}`): `trapFill {lure, n, of, x, y}`
+  one per moth, `state.lures.fill[i]` (moths in it now; -1 = not filling), `denStir {lure, x, y}` when full (the slam
+  moves here from beat 2's start). `marks.stage.stream {points, count 40, captured: 'trap-warn'}` is the far stream.
+- **Moment 3, moonlight for two** (`cn-crown`): `scene.sits[0]` (sim) = `marks.tatter.sit {x 2000, y 1024, r 160,
+  frames 120}`; `kinSit {id, x, y}` + flag `cn-kin-sat`; the kin `when: cn-crown-wings` (a trigger over the glade),
+  `until: cn-firefly-gap`; zone `crown-sit` (zoom 0.85, **`after: cn-kin-sat`**: a new CameraZone field render's
+  zones.ts must honour, `until: cn-firefly-gap`).
+- **The opening's river** (review r12 #6): `marks.stage.open.tailFlag: 'cn-promise'` (trigger `promise` over the
+  promise zone) and `hatchTail` 1800 (the latest).
+- **The Keeper**: `keeperGlance {id, x, y, hitX, hitY, why: lit | gate}` (with the `enemyBlock`), `keeperLunge {id,
+  x, y, dir, frames, px}`, `keeperGuard {id, x, y, dir}`, `cageGuard {lure, x, y, on}`, `keeperSweep {id, x0, x1, y,
+  frames}` (its claws: `boss.hit*`), boss `drops`, `sweeps`, `sweepHit`; `EnemyState.gate`.
 
 ## v12 (round 12, docs/design/levels/canopy-moments.md): the Keeper, the ending's fallback, the opening's hooks
 Names are the contract with render and audio (section 6 of the director's plan); render and audio never write them.
