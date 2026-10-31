@@ -154,14 +154,14 @@ export const TATTER = {
     lean: 0.16,
     leave: 360,
     openSpan: 2.3,
-    tornSpan: 1.8,
+    tornSpan: 2,
     rim: 1,
     /**
      * The Canopy r15 (review r14 #3, the sim's `kinBeat` phases, src/sim/quiet.ts): how far the torn wing lifts in its
      * try (of the way to `wings.tornOpen`), how hard it trembles there (rad), how low it falls after (negative: below
      * its rest droop), how far the good wing stays open after the fail, how low the body sinks as it fails (perch).
      */
-    tryLift: 1.3,
+    tryLift: 1.6,
     tremble: 0.14,
     failDrop: -0.55,
     held: 0.85,
@@ -180,6 +180,9 @@ const WING_GRADE: {
 } = {
   ...TATTER.grade,
 };
+
+/** The torn wing's grade through the sit's beats: the old ash-pale membrane (it reads over the dark good wing). */
+const TORN_GRADE = { ...TATTER.grade, val: 1, lift: 0.5 };
 
 type Beat = 'away' | 'keep' | 'wait' | null;
 
@@ -965,7 +968,8 @@ export class Tatter {
     p.outline = 1.5;
     drawVesper(p, this.rig.frame, this.view, clock);
     p.outline = 1.2;
-    p.grade = WING_GRADE;
+    // (r15: in the sit the torn wing is old pale membrane, so its try reads against the dark good wing behind it.)
+    p.grade = this.kb && this.kb.phase !== 'stay' ? TORN_GRADE : WING_GRADE;
     drawMothWing(
       p,
       torn,

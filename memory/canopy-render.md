@@ -669,3 +669,50 @@ worktree at the round's base on 5216 (`scratchpad/r14-before`) gave the before s
 - Weak still: the collapse front's dust bank reads as a horizontal fog band more than earth thrown up; the escape clip
   is teleport-driven (her climb is not played); the kin is still small at the 960 px clip size even at 1.3; the
   column's moths sparkle more than they flutter at play zoom; the trap stream's framing is the level's (`look`).
+
+## Round 15: the escape felt, the torn sky, the sit acted (review r14 #1-#4, #8, #10; the sim's v15 contract)
+Clips `clips/r15-escape-{960x540,1260x540,960x600}.mp4` (PLAYED: the den's run and the chimney with the sim's
+`EscapePlan` input frame by frame, careful, lag 15), `r15-column-{960x540,960x600,1260x540}.mp4`, `r15-slam.mp4` (a P3
+slam: the tell, the crack, the fronts), `r15-sit.mp4` (`npm run clip`, standing still through every beat). Sheets in
+`shots/canopy-r15-render/` (`before/` = round 14; `escape-before-after`, `roofhole-before-after`, `sit-before-after`,
+`sit-beats-sheet`, `slam-tell-sheet`, `escape-clip-sheet`, `escape-21x9-16x10`). Scratch `.scratch/r15-render/`
+(`esc.sh` / `recesc.sh` the played escape: `escplay.js` `__play(n)`; `col.sh`, `slam.sh`, `sit.sh` a still per
+`kinBeat` phase; `recall.sh`, `recslam.sh`).
+- **Gotchas**: a `?room=cn-den` test boot owns NO abilities: grant `wallJump`, `glide` before playing the escape (the
+  plan wall-slid at the chimney's foot for ever). A `teleport` resets the Keeper stage's event-driven tells (no wave
+  tell in a probe that teleports after the `keeperWave`); step frame by frame round an event you want drawn.
+- **The front** (escape.ts `drawFront`): no band. A base line heaving in three slow sines, clods on world slots
+  (`ESCAPE.front.lump` 30 px, r 10-34) churning up through it and sinking on their own beat (irregular polys, a broken
+  cool rim on some: the column's moonlight), torn roots thrashing out of every fifth slot (forked, frayed), chunks
+  thrown off (irregular), dust in puffs that rise and swell (concentric soft lobes: flat discs read as bubbles), ragged
+  sides where it ends in view (a straight side drew its box), earth curtains only under a roof (open to the sky they
+  read as pale beams). Near-black below. **Rocks**: at least 72 px, a moonlit rim (near-black clods vanished on the
+  darkened den), a tapering dust streak (a stack of puffs read as pancakes), grit bouncing off the spot it will hit.
+  **The rumble** (camera/shake.ts `escapeRumble(..., gap)`): 0.18 -> 0.4 over 11 s, + `near` 0.14 as the front comes
+  within 380 px of her feet. **`CameraZone.below`** (zones.ts `zoneBelow`): the view's centre that far under her.
+  The stage runs on a block with no cloud path (the clifftop's `out-escape`).
+- **Perches** (torn-perch.ts `tornPerch`, `PerchSprings`): four twisted strands along the walk with frayed tips past
+  its ends, clods caught in them, dangling rootlets, its roof roots; a broken lit edge (never a line end to end); it
+  sags 3 px and sways when she lands. Only `rubble-1/2` are perches since the sim's v15 route. `*-breach` gates
+  (`breachPlug`): earth like the wall with glowing cracks, falling out in clods as it opens (a root gate read as a door).
+- **The roof hole** (keeper.ts `drawAnchor`, `KEEPER.anchor.deep/cloud`): asymmetric, leaning east, lips in smooth
+  bites (per-point jitter drew lightning), the night in it (moonlit cloud wisps drifting, stars), raw earth lips as
+  OPEN polylines (closed, the stroke drew a lit line across its mouth), backlit only in bits, one root spanning it.
+- **Column moths** (keeper.ts `flutter`): 62% near moths 13-19 px seen from behind, fore and hind wings opening and
+  closing (never to nothing), the rest 5-8 px specks; per-moth white glows mostly gone. 170-240 of them.
+- **The wave's tell** (keeper.ts `drawWaveTell`, from `keeperWave`): while it rears, short glowing red fissures along
+  the floor over the wave's reach, more and brighter to the slam (a ruled line read as a laser), its shadow thrown
+  ahead; slammed, a hot crack opening at its feet through the delay; each running front a 34 px tongue of light.
+- **The sit** (tatter.ts `kinBeat`, `TATTER.sit.tryLift/tremble/failDrop/held/sink`; cast.ts routes `kinBeat`): `come`
+  shuffle, `look` / `open` the good wing to the moon, `try` the torn wing up past half (1.6 of the way to `tornOpen`)
+  trembling, `fail` it drops below its rest and the body sinks, `turn` / `answer` it faces her and holds, `fold`,
+  `lean`. The torn wing is drawn ash-pale in the sit (`TORN_GRADE`: dark on the dark good wing it vanished). The kin
+  is 0.92 her scale, graded dusty ash-brown (val 0.8, lift 0.14), the moon rim (`keyK` 0.55). Her answer
+  (vesper/index.ts): `kinBeat answer` with `her` 1 lifts her rig's `tryWings` once. With wings open its rig takes a
+  glide-like tuck, so it reads crouched beside her (about 0.6 of her standing height).
+- **Quiet** (hud/index.ts `quietK`, `HUD.quietIn/Out`): `kit.quiet.why` fades the cluster, prompts, moth count and
+  item line out (0.8 s) and back (1.4 s).
+- Weak still: the den's run has no front (the sim's choice), only rocks and the dark; at the 960 clip the chimney's
+  front is a dark rubble mass whose rims are small; the kin sits crouched (its rig's tuck), so it is not her height;
+  the hole is a dome-topped opening (it reads as a hole with sky, not yet as a roof torn by roots); the wave's fissures
+  still read as a dashed line at 960 px.

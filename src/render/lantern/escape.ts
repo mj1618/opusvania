@@ -59,7 +59,6 @@ export const ESCAPE = {
     puffRise: 170,
     puffA: 0.42,
     dust: 0x221a13,
-    dustLit: 0x6e665c,
     /** Curtains of earth pouring off the roof into it (behind her): how many across the view, their width (px). */
     curtains: 7,
     curtainW: [40, 110] as const,
@@ -282,7 +281,7 @@ export class EscapeStage {
     for (const h of this.heaps) this.heap(b, h.x, h.y, h.w * ESCAPE.land.heap, h.seed);
     if (s && running) {
       this.drawRocks(b, f, clock, s);
-      this.drawFront(f, dt, clock, s, view);
+      this.drawFront(f, dt, clock, s, view, sim.scene.solids);
       this.roofDust(dt, s, view, sim);
       if (this.E.path.length >= 2) this.drawCloud(f, dt, clock, sim);
     }
@@ -454,6 +453,7 @@ export class EscapeStage {
     clock: number,
     s: EscapeView,
     view: { x0: number; x1: number; y0: number; y1: number },
+    solids: ReadonlyArray<{ x: number; y: number; w: number; h: number }>,
   ): void {
     const F = this.E.front;
     if (!F || s.frontOn !== 1) return;
@@ -499,7 +499,11 @@ export class EscapeStage {
       const cx = view.x0 + (view.x1 - view.x0) * ((c + 0.2 + 0.6 * h) / C.curtains);
       if (cx < F.x0 || cx > F.x1) continue;
       const w = C.curtainW[0] + (C.curtainW[1] - C.curtainW[0]) * hash01('cuw', c);
-      const yTop = view.y0;
+      // (Only under a roof: from the underside over it in view. Open to the sky, a curtain read as a pale beam.)
+      let yTop = Number.NEGATIVE_INFINITY;
+      for (const q of solids)
+        if (cx >= q.x && cx <= q.x + q.w && q.y + q.h <= top && q.y + q.h > yTop) yTop = q.y + q.h;
+      if (yTop < view.y0 - 200 || top - yTop < 120) continue;
       const sway = Math.sin(clock * 1.3 + c) * 8;
       b.poly([cx - w / 2, yTop, cx + w / 2, yTop, cx + w * 0.62 + sway, top, cx - w * 0.62 + sway, top]).fill(
         {
@@ -545,16 +549,28 @@ export class EscapeStage {
         const ang = p.s * 7 + k * 1.26 + Math.sin(clock * 1.5 + k) * 0.2;
         const ox = Math.cos(ang) * r * 0.5;
         const oy = Math.sin(ang) * r * 0.32 - (k % 2) * r * 0.2;
-        f.circle(p.x + ox, y + oy, r * (0.42 + 0.22 * hash01('fpk', k + p.s * 50))).fill({
-          color: C.dust,
-          alpha: a,
-        });
+        // (Concentric, so each lobe's edge is soft: one flat disc each read as bubbles.)
+        const lr = r * (0.42 + 0.22 * hash01('fpk', k + p.s * 50));
+        for (const kk of [1, 0.72, 0.45])
+          f.circle(p.x + ox, y + oy, lr * kk).fill({ color: C.dust, alpha: a * 0.36 });
       }
       // (Its crown catches the moonlight a little: dust, not fog.)
-      f.circle(p.x - r * 0.15, y - r * 0.55, r * 0.35).fill({ color: C.dustLit, alpha: a * 0.18 });
     }
     // The body: near-black under its crowns.
-    f.poly([...edge, x1, bottom, x0, bottom]).fill({ color: C.body, alpha: 0.99 });
+    // (Ragged sides where the front ends in view: a straight side drew its box.)
+    const side = (x: number, dir: number): Array<[number, number]> => {
+      const pts: Array<[number, number]> = [];
+      const y0 = base(x);
+      for (let q = 1; q <= 8; q++) {
+        const y = y0 + ((bottom - y0) * q) / 8;
+        const out = (hash01('fsd', q + dir * 20) * 50 + Math.sin(clock * 2 + q) * 6) * (q < 3 ? q / 3 : 1);
+        pts.push([x + dir * out, y]);
+      }
+      return pts;
+    };
+    const right = F.x1 <= view.x1 ? side(x1, 1) : [[x1, bottom] as [number, number]];
+    const left = F.x0 >= view.x0 ? side(x0, -1).reverse() : [[x0, bottom] as [number, number]];
+    f.poly([...edge, ...right.flat(), ...left.flat()]).fill({ color: C.body, alpha: 0.99 });
     // The churning clods: irregular lumps of earth, darker into the mass, a broken cool rim on the upper side of some.
     for (const l of clods) {
       if (l.cx + l.r < x0 - 20 || l.cx - l.r > x1 + 20) continue;
@@ -725,7 +741,13 @@ export class EscapeStage {
       }
       const a = 0.8 * (1 - q.t / q.life);
       if (q.clod) {
-        f.ellipse(q.x, q.y, q.s, q.s * 0.75).fill({ color: ESCAPE.front.edge, alpha: Math.min(1, a * 1.3) });
+        const pts: number[] = [];
+        for (let k = 0; k < 6; k++) {
+          const ang = q.t * 5 * (q.vx > 0 ? 1 : -1) + (k / 6) * Math.PI * 2;
+          const rr = q.s * (0.65 + 0.45 * hash01('gcl', k + Math.floor(q.s * 10)));
+          pts.push(q.x + Math.cos(ang) * rr, q.y + Math.sin(ang) * rr * 0.8);
+        }
+        f.poly(pts).fill({ color: ESCAPE.front.edge, alpha: Math.min(1, a * 1.3) });
         f.ellipse(q.x - q.s * 0.25, q.y - q.s * 0.35, q.s * 0.45, q.s * 0.2).fill({
           color: ESCAPE.front.lit,
           alpha: 0.6 * a,
