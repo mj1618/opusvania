@@ -29,6 +29,7 @@ import { Moonlight } from './moonlight';
 import { FireflyNest } from './nest';
 import { NightBack } from './night-back';
 import { Opening } from './opening';
+import { TrapStream } from './trap-stream';
 import { Vista, WoodVista } from './vista';
 import { VistaRiver } from './vista-river';
 import { RootWater } from './water';
@@ -44,6 +45,8 @@ export class LanternPieces implements EnvModule {
   private keeper: KeeperStage | null = null;
   /** The firefly's nest at the chase's end (nest.ts, the Canopy r13 moment 4). */
   private nest: FireflyNest | null = null;
+  /** The trap is set (trap-stream.ts, the Canopy r13 moment 5): the passing stream, the catch, the den's answer. */
+  private trap: TrapStream | null = null;
   /** The opening (opening.ts, the Canopy r12): the swarm's shadows, the title, the valley's lights and knots. */
   private opening: Opening | null = null;
   /** The ending's vista (vista-river.ts, the Canopy r12): the roosts' streams joining, the river round her glide. */
@@ -67,6 +70,7 @@ export class LanternPieces implements EnvModule {
     if (LOOK.kit === 'wood') this.acts = new Acts(ctx, ctx.lights);
     this.keeper = KeeperStage.for(ctx, ctx.lights);
     this.nest = FireflyNest.for(ctx, ctx.lights);
+    this.trap = TrapStream.for(ctx);
     this.opening = Opening.for(ctx);
     this.river = VistaRiver.for(ctx);
     if (this.keeper) this.lamps.handOff.add(this.keeper.cageId);
@@ -138,6 +142,7 @@ export class LanternPieces implements EnvModule {
     this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
     this.keeper?.draw(dt, clock, sim, camera);
     this.nest?.draw(dt, clock, sim, camera);
+    this.trap?.draw(dt, clock, sim, camera);
     this.opening?.draw(dt, clock, sim, camera);
     this.river?.draw(dt, clock, sim, camera);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);

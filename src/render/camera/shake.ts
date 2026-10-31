@@ -137,6 +137,9 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'bossCue':
         if (e.set === 'leap' && e.cue === 'land') add += B.bossLand;
         break;
+      default:
+        // The Canopy r13, moment 5: the cage full, something under the den answers (a deep slam).
+        if ((e.type as string) === 'denStir') add += B.denStir;
     }
   }
   return add;

@@ -588,6 +588,10 @@ export class Lamps {
       const keeps = info.trap && sim.scene.boss?.heart === l.id && kb && typeof kb.left === 'number';
       if (keeps)
         this.clouds.keep(i, Math.max(0, Math.min(1, (kb.left as number) / Math.max(1, l.moths ?? 1))));
+      // (A cage filling in front of her, the Canopy r13 moment 5: its cloud is the moths caught so far.)
+      const filling = (sim.lures as { fill?: number[] }).fill?.[i];
+      if (!keeps && info.trap && typeof filling === 'number' && filling >= 0)
+        this.clouds.keep(i, Math.max(0, Math.min(1, filling / Math.max(1, l.moths ?? 1))));
       // Just hung: it grows into its size as the firefly lets it down (eased, a little overshoot).
       const ht = this.hung.get(i);
       const grow = ht === undefined ? 1 : Math.min(1, ht / 0.9);

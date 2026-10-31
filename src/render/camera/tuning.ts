@@ -106,6 +106,8 @@ export const cameraTuning = {
       bossPhase: 0.4,
       bossLand: 0.35,
       bossOpen: 0.25,
+      /** The trap is set (moment 5): the den's deep slam under the floor as the cage fills. */
+      denStir: 0.3,
     },
   },
   /**
