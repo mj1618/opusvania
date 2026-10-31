@@ -44,6 +44,15 @@ export const KIT = {
   },
   /** Rotten heartwood in the wood: its face over the mass, rot blooms, the crack's lit lip, chips, a cut's dust. */
   rot: { face: 0x1e120c, soft: 0x2e1c12, bloom: 0x8a7458, lit: 0xb08a5a, chip: 0x3a2618, dust: 0x9a8468 },
+  /** A shut root door (a side shortcut, the Canopy r16): roots, their lit edge, grain, the silk lashing and knot. */
+  door: {
+    root: 0x2a1c14,
+    rootLit: 0x8a6a48,
+    grain: 0x120a06,
+    silk: 0xd8d0bc,
+    silkGlow: 0xe8e0c8,
+    leak: 0x9ab8e0,
+  },
   /** Seconds a cut's dust hangs. */
   dust: 0.6,
   heart: { body: 0x2c1410, ring: 0x401c14, ringLit: 0x6a3020, scar: 0xc8a888, sheen: 0x9a5a40 },
@@ -123,6 +132,11 @@ interface Hit {
 export class Kit {
   /** Bark shaking from a cut (by index). */
   private readonly hits = new Map<number, Hit>();
+  /**
+   * A shut shortcut knocked from the side that does not open it (the Canopy r16: `shortcutShut`, or a cut into it):
+   * seconds since, the side she is on.
+   */
+  private readonly knock = new Map<string, { t: number; side: number }>();
   /** Gates opening while she watches (seconds since, by index). */
   private readonly opening = new Map<number, number>();
   private readonly perches = new PerchSprings();
@@ -154,9 +168,23 @@ export class Kit {
         this.closing.clear();
         this.bellT.clear();
         this.readT.clear();
+        this.knock.clear();
         continue;
       }
       switch (ev.type) {
+        case 'shortcutShut':
+          this.knock.set(ev.id ?? '', { t: 0, side: (e as { side?: number }).side ?? 1 });
+          break;
+        case 'slashTerrain': {
+          // A cut into a shut shortcut from either side: it shudders too (the push's answer, by the blade).
+          const q = e as { x: number; y: number };
+          for (const sc of S.shortcuts ?? []) {
+            if (sim.save.opened.includes(`${S.id}:${sc.id}`)) continue;
+            if (q.x >= sc.x - 12 && q.x <= sc.x + sc.w + 12 && q.y >= sc.y - 12 && q.y <= sc.y + sc.h + 12)
+              this.knock.set(sc.id, { t: 0, side: sim.player.cx < sc.x + sc.w / 2 ? -1 : 1 });
+          }
+          break;
+        }
         case 'barkHit': {
           const i = (S.bark ?? []).findIndex((b) => b.id === ev.id);
           if (i >= 0) this.hits.set(i, { t: 0, dir: ev.dir === 'fwd' ? sim.player.facing : 0 });
@@ -252,6 +280,10 @@ export class Kit {
       if (b.t > 3) this.bellT.delete(k);
     }
     for (const [k, t] of this.readT) this.readT.set(k, t + dt);
+    for (const [k, n] of this.knock) {
+      n.t += dt;
+      if (n.t > 0.9) this.knock.delete(k);
+    }
     for (const [k, t] of this.capT) {
       if (t > 0.6) this.capT.delete(k);
       else this.capT.set(k, t + dt);
@@ -395,10 +427,15 @@ export class Kit {
       else this.bark(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
     });
 
-    // Shortcuts (closed): a plug like bark, the side that opens a shade lighter.
+    // Shortcuts (closed): a root door lashed shut, its knot on the side that opens it (the Canopy r16: a bark plug
+    // read as a wall to cut, and from the well's floor nothing said which side opened). Knocked, it shudders.
     for (const sc of S.shortcuts ?? []) {
       if (sim.save.opened.includes(`${room}:${sc.id}`) || !seen(sc.x, sc.y, sc.w, sc.h)) continue;
-      this.bark(back, sc.x, sc.y, sc.w, sc.h, sc.w > sc.h * 1.5, 0, sc.id);
+      if (sc.w > sc.h * 1.5) {
+        this.bark(back, sc.x, sc.y, sc.w, sc.h, true, 0, sc.id);
+        continue;
+      }
+      this.rootDoor(back, glow, sc.x, sc.y, sc.w, sc.h, sc.opens, sc.id, this.knock.get(sc.id), clock);
     }
 
     // Thorns: brambles.
@@ -782,6 +819,79 @@ export class Kit {
   }
 
   /** A puff of rot dust from a cut (t: 0..1 of its life). */
+  /**
+   * A shut root door (a side shortcut): three roots stood side by side, lashed with two bands of silk whose knot sits
+   * on the side that opens it (`opens`), lit; moonlight leaks between the roots from the far side. `knock`: it
+   * shudders (a damped shake) and dust falls from its head.
+   */
+  private rootDoor(
+    g: Graphics,
+    glow: GlowPool,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    opens: string,
+    id: string,
+    knock: { t: number; side: number } | undefined,
+    clock: number,
+  ): void {
+    const D = KIT.door;
+    const kt = knock?.t ?? 9;
+    const shake = knock ? Math.exp(-kt * 7) * Math.sin(kt * 55) * 4 * -knock.side : 0;
+    const open = opens === 'w' ? -1 : 1;
+    // Light from the far side between the roots (cool, faint, breathing a little).
+    for (let k = 1; k < 3; k++) {
+      const gx = x + (w * k) / 3;
+      glow.add(gx, y + h * 0.5, 26, D.leak, 0.07 + 0.02 * Math.sin(clock * 0.8 + k));
+    }
+    for (let k = 0; k < 3; k++) {
+      const rw = w / 3 + 6;
+      const cx = x + (w * (k + 0.5)) / 3 + shake * (0.6 + 0.2 * k);
+      const lean = (hash01(id, k + 300) - 0.5) * 10;
+      const pts: number[] = [];
+      const n = 8;
+      for (let j = 0; j <= n; j++) {
+        const yy = y - 6 + ((h + 12) * j) / n;
+        const bulge = 1 + 0.18 * Math.sin(j * 1.7 + k * 2.3 + hash01(id, k) * 6);
+        pts.push(cx + lean * (j / n - 0.5) - (rw / 2) * bulge, yy);
+      }
+      for (let j = n; j >= 0; j--) {
+        const yy = y - 6 + ((h + 12) * j) / n;
+        const bulge = 1 + 0.18 * Math.sin(j * 1.3 + k * 1.1 + hash01(id, k + 9) * 6);
+        pts.push(cx + lean * (j / n - 0.5) + (rw / 2) * bulge, yy);
+      }
+      g.poly(pts).fill(D.root);
+      // Its lit edge on the side that opens it, a dark seam on the other.
+      g.moveTo(cx + (open * rw) / 2 - open * 3, y)
+        .lineTo(cx + lean * 0.5 + (open * rw) / 2 - open * 3, y + h)
+        .stroke({ color: D.rootLit, width: 2, alpha: 0.55 });
+      // Grain.
+      for (let j = 0; j < 3; j++) {
+        const gx = cx + (hash01(id, k * 7 + j) - 0.5) * rw * 0.5;
+        g.moveTo(gx, y + h * 0.1).quadraticCurveTo(gx + 3, y + h * 0.5, gx - 2, y + h * 0.9);
+      }
+      g.stroke({ color: D.grain, width: 1, alpha: 0.5 });
+    }
+    // Two bands of silk across, and the knot on the opening side (a pale tie with two loose ends).
+    for (const by of [0.3, 0.68]) {
+      const yy = y + h * by;
+      g.moveTo(x - 4 + shake, yy - 4)
+        .quadraticCurveTo(x + w / 2 + shake, yy + 4, x + w + 4 + shake, yy - 3)
+        .stroke({ color: D.silk, width: 5, alpha: 0.75 });
+      const kx = (open > 0 ? x + w + 6 : x - 6) + shake;
+      g.circle(kx, yy, 7).fill({ color: D.silk, alpha: 0.95 });
+      g.moveTo(kx, yy)
+        .quadraticCurveTo(kx + open * 10, yy + 10, kx + open * 6, yy + 24)
+        .moveTo(kx, yy)
+        .quadraticCurveTo(kx + open * 16, yy + 4, kx + open * 16, yy + 18)
+        .stroke({ color: D.silk, width: 2.4, alpha: 0.85 });
+      glow.add(kx, yy, 22, D.silkGlow, 0.18);
+    }
+    // Knocked: dust shaken out of its head.
+    if (knock && kt < 0.9) this.dust(g, x + w / 2, y + 10 + 60 * kt, w, 20, kt / 0.9, `${id}k`);
+  }
+
   private dust(g: Graphics, cx: number, cy: number, w: number, h: number, t: number, id: string): void {
     for (let q = 0; q < 7; q++) {
       const a = hash01(id, q + 150) * 6.28;

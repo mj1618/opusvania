@@ -282,7 +282,7 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       // flame still burning after the step (round 13: the gap's dark hooks were relit and put out again every frame,
       // five relights a frame before the chase: 259 swells in 13 s).
       if (!(snap.lures ?? []).some((l) => Math.abs(l.x - e.x) < 8 && Math.abs(l.y - e.y) < 8)) return [];
-      return [at('lantern', 'slowIn', e.x, e.y, A.slowDb - 6, { cents: 700, priority: 3 })];
+      return [at('lantern', 'slowIn', e.x, e.y, A.slowDb - 3, { cents: 700, priority: 3 })];
     case 'lureBeat':
       return [hero('wing', A.beatDb, { x: h.x, y: h.y })];
     case 'lureFree':

@@ -93,4 +93,14 @@ export const TRAP = {
   freedDrawn: 36,
   follow: [2.2, 4.6] as readonly [number, number],
   freedGlow: 0xcfe0ff,
+  /**
+   * A cage drawn larger in a room (the Canopy r16: the hub's first cage hangs at her head, the verb's first instance,
+   * and reads as a thing to reach for, not a lamp in the scenery).
+   */
+  roomSize: { 'cn-hub': 1.35 } as Record<string, number>,
+  /** A knocked cage's swing (px each way: a cut, the Lamp by it), its rate (rad/s) and how fast it settles (1/s). */
+  joltCut: 22,
+  joltRefuse: 14,
+  joltRate: 11,
+  joltDamp: 2.6,
 };
