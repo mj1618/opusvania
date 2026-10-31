@@ -56,12 +56,25 @@ interface LampInfo {
 }
 
 interface Fx {
-  kind: 'snuff' | 'kindle' | 'fan' | 'refuse' | 'cold' | 'launch' | 'snap' | 'relight' | 'crack' | 'guard';
+  kind:
+    | 'snuff'
+    | 'kindle'
+    | 'fan'
+    | 'refuse'
+    | 'cold'
+    | 'launch'
+    | 'snap'
+    | 'relight'
+    | 'crack'
+    | 'guard'
+    | 'rattle';
   x: number;
   y: number;
   t: number;
   life: number;
   i: number;
+  /** A cage's rattle (`lureRefuse`): the side she is on (-1 west, 1 east). */
+  side?: number;
 }
 
 interface Freed {
@@ -233,6 +246,11 @@ export class Lamps {
   private readonly freed: Freed[] = [];
   private readonly scraps: Scrap[] = [];
   private readonly bars: Bar[] = [];
+  /**
+   * A cage knocked (the Canopy r16: a cut, or the Lamp pressed by it): it swings on its thread and settles, so every
+   * try at it is answered. Per lamp: seconds since, the way it swings (-1 west, 1 east), how far (px).
+   */
+  private readonly jolt = new Map<number, { t: number; side: number; k: number }>();
   /** Lamps flung from and smouldering (by index). */
   private readonly embers = new Set<number>();
   /** Seconds since a lamp went out here (by index), for the husk's settle. */
@@ -288,7 +306,8 @@ export class Lamps {
         size:
           sizeOf(l) *
           (moonwick ? 1 : this.roomK.size) *
-          (l.trap && releaseGreat(l.moths ?? 0) && sizeOf(l) < 60 ? 2.6 : 1),
+          (l.trap && releaseGreat(l.moths ?? 0) && sizeOf(l) < 60 ? 2.6 : 1) *
+          (l.trap ? (TRAP.roomSize[scene.id] ?? 1) : 1),
         moonwick,
         moths: moonwick
           ? 0
@@ -339,6 +358,7 @@ export class Lamps {
         this.freed.length = 0;
         this.scraps.length = 0;
         this.bars.length = 0;
+        this.jolt.clear();
         this.embers.clear();
         this.outT.clear();
         this.lit.clear();
@@ -357,6 +377,11 @@ export class Lamps {
         case 'lureHit':
           if (this.info[i]?.trap) {
             this.fx.push({ kind: 'crack', x: ev.x, y: ev.y, t: 0, life: 0.55, i });
+            // (The Canopy r16, first-timer ft15fix: "no feedback". The cage swings off the blade and a bar falls to
+            // the floor: the cut has done something, and two more will finish it.)
+            const dir = (ev as { dir?: string }).dir;
+            this.jolt.set(i, { t: 0, side: dir === 'fwd' ? sim.player.facing || 1 : 0, k: TRAP.joltCut });
+            this.dropBar(i, ev.x, ev.y, sim.player.facing || 1);
             // (Review r10 #3: teach the cut.) A bar breaks; on the first cut one moth gets out through the gap: it
             // circles her and goes, the promise of what three cuts do (the sim's `escape`; read loosely).
             const h = ev as { hpLeft?: number; hpMax?: number; escape?: number };
@@ -379,7 +404,9 @@ export class Lamps {
         case 'lureRelight':
           this.embers.delete(i);
           this.outT.delete(i);
-          this.fx.push({ kind: 'relight', x: ev.x, y: ev.y, t: 0, life: 0.5, i });
+          // (The Canopy r16, first-timer ft15fix: "lamps relight after a few seconds; nothing told me". It catches:
+          // a hot pop, a ring, sparks thrown up: a lamp that is back reads from across the screen.)
+          this.fx.push({ kind: 'relight', x: ev.x, y: ev.y, t: 0, life: 0.9, i });
           break;
         case 'flingStart':
           this.fx.push({ kind: 'snap', x: ev.x, y: ev.y, t: 0, life: 0.35, i });
@@ -397,6 +424,15 @@ export class Lamps {
         case 'kindleRefuse':
           this.fx.push({ kind: 'refuse', x: ev.x, y: ev.y, t: 0, life: 0.45, i });
           break;
+        case 'lureRefuse': {
+          if (i < 0) break;
+          // (The Canopy r16: the Lamp by a cage. Not like that: the moths throw themselves at the bars on her side, the
+          // cage rattles toward her and settles; no fling.)
+          const side = (ev as { side?: number }).side ?? 1;
+          this.fx.push({ kind: 'rattle', x: ev.x, y: ev.y, t: 0, life: 0.7, i, side });
+          this.jolt.set(i, { t: 0, side, k: TRAP.joltRefuse });
+          break;
+        }
         case 'lureCold':
           this.fx.push({ kind: 'cold', x: ev.x, y: ev.y, t: 0, life: 0.8, i });
           break;
@@ -523,6 +559,25 @@ export class Lamps {
     }
   }
 
+  /** One bar off a cut cage (the Canopy r16): it springs off the blade's side, turns and lies on the floor under it. */
+  private dropBar(i: number, x: number, y: number, side: number): void {
+    const info = this.info[i];
+    const s = (info?.size ?? 38) / 38;
+    const key = `bar${i}:${this.bars.length}:${Math.round(x)}`;
+    this.bars.push({
+      x: x + side * TRAP.cageW * 30 * s,
+      y,
+      vx: side * (90 + 60 * hash01(key, 1)),
+      vy: -140 - 60 * hash01(key, 2),
+      rot: (hash01(key, 3) - 0.5) * 0.6,
+      vr: side * (5 + 4 * hash01(key, 4)),
+      len: TRAP.cageH * 38 * s * 1.5,
+      bow: TRAP.cageW * 38 * s * 0.35 * side,
+      age: 0,
+      floor: info?.floorY ?? null,
+    });
+  }
+
   /** One moth out through a broken bar (a cut on a trap): it circles her a while, then goes to the moon. */
   private escape(x: number, y: number, key: string): void {
     this.freed.push({
@@ -558,6 +613,10 @@ export class Lamps {
     for (const [i, t] of this.lit) this.lit.set(i, t + dt);
     for (const [i, t] of this.hung) if (t > 3) this.hung.delete(i);
     for (const [i, t] of this.hung) this.hung.set(i, t + dt);
+    for (const [i, j] of this.jolt) {
+      j.t += dt;
+      if (j.t > 2.5) this.jolt.delete(i);
+    }
     const halfW = cam.w / 2 / cam.zoom + 200;
     const halfH = cam.h / 2 / cam.zoom + 200;
     const cands: Array<{ i: number; d: number; x: number; y: number; r: number; c: number; k: number }> = [];
@@ -567,8 +626,13 @@ export class Lamps {
       const info = this.info[i] as LampInfo;
       const at = flameAt(sim.lures, i, l, f, tuning, AT);
       if (this.handOff.has(l.id)) keeperFake(at, clock, l, info.floorY ?? l.y + 600);
-      const x = at.x;
-      const y = at.y;
+      // (A knocked cage swings on its thread: a damped pendulum from where it hangs, lifting a little at the ends.)
+      const jo = this.jolt.get(i);
+      const sw = jo ? Math.exp(-jo.t * TRAP.joltDamp) * Math.sin(jo.t * TRAP.joltRate) : 0;
+      const jx = jo ? jo.k * (jo.side === 0 ? 0.35 : jo.side) * sw : 0;
+      const hangX = at.x;
+      const x = at.x + jx;
+      const y = at.y - Math.abs(jx) * 0.12 - (jo && jo.side === 0 ? jo.k * 0.5 * Math.max(0, sw) : 0);
       if (Math.abs(x - cam.x) > halfW + 400 || Math.abs(y - cam.y) > halfH + 400) continue;
       const hp = sim.lures.hp[i] ?? 0;
       const burning = hp > 0;
@@ -620,7 +684,7 @@ export class Lamps {
       if (info.trap && info.floorY !== null) this.fallen(i, x, info.floorY, back);
       // The thread it hangs by (a swinging lamp's runs from its pivot).
       const topY = y - s * 0.62;
-      let tieX = l.swing ? l.x : x;
+      let tieX = l.swing ? l.x : hangX;
       let tieY = info.tieY ?? y - 900;
       // Swinging (the Keeper's P2, the sim's `swingT`): a pendulum from the roof over where it hung.
       if (keeps && (kb.swingT ?? -1) >= 0) tieX = l.x;
@@ -1072,7 +1136,18 @@ export class Lamps {
       } else if (f.kind === 'launch') {
         glow.add(f.x, f.y, 60 + 90 * e, LR.aim.glow, 0.6 * (1 - u));
       } else if (f.kind === 'relight') {
-        glow.add(f.x, f.y, 40 + 60 * e, LR.lamp.halo, 0.6 * (1 - u));
+        glow.add(f.x, f.y, 40 + 110 * e, LR.lamp.halo, 0.75 * (1 - u));
+        if (u < 0.15) glow.add(f.x, f.y, 30 + 120 * u, 0xfff0d0, 0.9 * (1 - u / 0.15));
+        front
+          .circle(f.x, f.y, 18 + 120 * e)
+          .stroke({ color: LR.lamp.paperHot, width: 2, alpha: 0.6 * (1 - u) * (1 - u) });
+        for (let k = 0; k < 7; k++) {
+          const a = -Math.PI / 2 + (hash01(`relight${f.i}`, k) - 0.5) * 2.2;
+          const d = 14 + 70 * e;
+          front
+            .circle(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d + 40 * u * u, 2.2 * (1 - u) + 0.6)
+            .fill({ color: LR.lamp.paperHot, alpha: 0.9 * (1 - u) });
+        }
       } else if (f.kind === 'guard') {
         // A glance off the great cage's bars: a white-gold flash and sparks thrown back down.
         glow.add(f.x, f.y, 40 + 40 * e, 0xfff0c8, 0.6 * (1 - u));
@@ -1082,6 +1157,33 @@ export class Lamps {
           front
             .circle(f.x + Math.cos(a) * d * (k % 2 ? 1 : -1), f.y + Math.sin(a) * d * 0.6 + 60 * e * e, 2.2)
             .fill({ color: 0xfff0c8, alpha: 1 - u });
+        }
+      } else if (f.kind === 'rattle') {
+        // The Lamp by a cage: a warm flash in the bars and the moths dashing at them on her side and falling back
+        // (a dozen short strokes), the flame ducking.
+        const side = f.side ?? 1;
+        const s = this.info[f.i]?.size ?? 38;
+        const rx = s * TRAP.cageW;
+        glow.add(
+          f.x + side * rx * 0.5,
+          f.y,
+          40 + 40 * e,
+          TRAP.glow,
+          0.5 * Math.sin(Math.PI * Math.min(1, u * 1.6)),
+        );
+        for (let k = 0; k < 12; k++) {
+          const h = hash01(`rattle${f.i}`, k);
+          const lag = 0.25 * hash01(`rattle${f.i}`, k + 20);
+          const v = Math.max(0, Math.min(1, (u - lag) / 0.55));
+          if (v <= 0 || v >= 1) continue;
+          const reach = Math.sin(Math.PI * v);
+          const yy = f.y + (h - 0.5) * s * TRAP.cageH * 1.4;
+          const x0 = f.x + side * rx * 0.2;
+          const x1 = f.x + side * rx * (0.75 + 0.3 * reach);
+          front
+            .moveTo(x0 + (x1 - x0) * reach * 0.6, yy)
+            .lineTo(x0 + (x1 - x0) * reach, yy + (h - 0.5) * 6)
+            .stroke({ color: 0xffe0a8, width: 1.6, alpha: 0.85 * (1 - v * 0.6), cap: 'round' });
         }
       } else if (f.kind === 'crack') {
         // A cut on a trap: a flash, a few sparks off the broken bar.

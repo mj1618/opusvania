@@ -510,6 +510,8 @@ export const defaultTuning = withVariants({
      * all missed a 20 px flame). A standing up cut reaches a cage 228 px over her feet.
      */
     trapRadius: 64,
+    /** A Lamp press this close to a burning cage (her centre to its flame) with no flame in reach: `lureRefuse`. */
+    trapRefusePx: 200,
     /** Hitstop when a cut lands on a flame and it holds, and when it goes out (the loudest beat). */
     hitstopFrames: 3,
     snuffHitstop: 9,

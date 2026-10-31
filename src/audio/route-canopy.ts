@@ -250,7 +250,30 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
     case 'lureGuarded':
       return [at('clang', 'combat', AUDIO.combat.clangDb - 2, { place: 'hero', cents: 500, priority: 4 })];
     case 'lureHit':
-      return q.trap ? [at('clink', 'lantern', C.clinkDb + 2, { place: 'hero', priority: 3 })] : [];
+      // (r16: and the bar it broke lands on the floor under it, a beat later.)
+      return q.trap
+        ? [
+            at('clink', 'lantern', C.clinkDb + 2, { place: 'hero', priority: 3 }),
+            at('clink', 'lantern', C.clinkDb - 6, { cents: -500, delay: 0.42, priority: 2 }, 1),
+          ]
+        : [];
+    // A shut root door pushed from its far side (r16): a dull knock of wood and a little grit falling.
+    case 'shortcutShut':
+      return [
+        at('thock', 'world', C.clinkDb - 1, { cents: -700, priority: 3 }),
+        at('scrape', 'world', C.clinkDb - 9, { delay: 0.08, priority: 2 }, 1),
+      ];
+    // The Lamp pressed by a cage (r16): not like that. The cage rattles, three dull knocks of bars, no flame's answer.
+    case 'lureRefuse':
+      return [0, 1, 2].map((k) =>
+        at(
+          'clink',
+          'lantern',
+          C.clinkDb - 3 - k * 2,
+          { cents: -900 + k * 250, delay: k * 0.07, priority: 3 },
+          k,
+        ),
+      );
     // (The warning's deep slam from the den moved to `denStir`, round 13: the cage full.)
     // The boss's rams: the falling fourth in the bass (on the score bus, so it sits in the music).
     case 'enemyCharge':

@@ -198,9 +198,11 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
         out.push(blow('hitTick', e.x, ty, C.flameDb, { cents: C.flameCents + jitter('hitTick', 2) }, 1));
       else if (kind === 'pod')
         out.push(blow('hitTick', e.x, ty, C.flameDb - 2, { cents: 498 + jitter('hitTick', 2) }, 1));
-      else if (kind === 'bark' || kind === 'thorns')
+      else if (kind === 'bark' || kind === 'thorns') {
         out.push(blow('thock', e.x, ty, C.thockDb, { cents: jitter('thock', 2, 80) }, 1));
-      else if (kind === 'seedCase')
+        // (r16: rotten bark gives: a crunch under the knock, so it never sounds like a cut into a solid.)
+        if (kind === 'bark') out.push(blow('crunch', e.x, ty, C.thockDb - 3, { cents: -400 }, 2));
+      } else if (kind === 'seedCase')
         out.push(blow('clang', e.x, ty, C.clangDb - 3, { cents: 300 + jitter('clang', 2) }, 1));
       return out;
     }
@@ -282,7 +284,7 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       // flame still burning after the step (round 13: the gap's dark hooks were relit and put out again every frame,
       // five relights a frame before the chase: 259 swells in 13 s).
       if (!(snap.lures ?? []).some((l) => Math.abs(l.x - e.x) < 8 && Math.abs(l.y - e.y) < 8)) return [];
-      return [at('lantern', 'slowIn', e.x, e.y, A.slowDb - 6, { cents: 700, priority: 3 })];
+      return [at('lantern', 'slowIn', e.x, e.y, A.slowDb - 3, { cents: 700, priority: 3 })];
     case 'lureBeat':
       return [hero('wing', A.beatDb, { x: h.x, y: h.y })];
     case 'lureFree':

@@ -6,6 +6,7 @@
  * At most 2.5 s, and never over a fight (line-logic.ts: it waits for the fight's last creature).
  */
 import { Container, Text } from 'pixi.js';
+import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
 import { SAFE_H, SAFE_W } from '../contract';
 import { RELEASE, releaseGreat } from '../lantern/release';
@@ -30,6 +31,17 @@ export function itemLine(key: string): string {
   if (line) return line;
   const words = key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
+}
+
+/**
+ * A moon shard's line (the Canopy r16, first-timer ft15fix: "the shard just shows its name; I don't know what it does or
+ * if it counts toward anything"): how many she holds toward the next light, `per` making one.
+ */
+export function shardLine(held: number, per: number): string {
+  const n = held % per;
+  const words = ['None', 'One', 'Two', 'Three', 'Four', 'Five'];
+  if (n === 0) return `A moon shard. ${words[per] ?? per} of them: a new light kindles.`;
+  return `A moon shard: ${(words[n] ?? String(n)).toLowerCase()} of ${(words[per] ?? String(per)).toLowerCase()}. ${words[per] ?? per} kindle a new light.`;
 }
 
 /** Lines for story flags that close an area. */
@@ -86,7 +98,10 @@ export class ItemLine {
             : e.type === 'healthUp'
               ? 'healthUp'
               : '';
-      if (key) this.timer.show(itemLine(key));
+      if (key === 'moonShard') {
+        const held = sim.save.flags.filter((f) => f.startsWith('moonShard:')).length;
+        this.timer.show(shardLine(held, Math.max(1, Math.round(tuning.upgrades.moonShard.perLight))));
+      } else if (key) this.timer.show(itemLine(key));
       // A story beat that ends a demo area (the Downwood's valley).
       else if (e.type === 'flagSet' && FLAG_LINES[e.flag]) this.timer.show(FLAG_LINES[e.flag] as string);
       // A moonseed (the Downwood's keys): how many she holds now.

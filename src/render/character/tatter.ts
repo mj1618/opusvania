@@ -102,9 +102,11 @@ export const TATTER = {
   /**
    * Its want (`marks.tatter.want`, the hub's root shelf it cannot climb; wood.md rescope 7): it waits gazing
    * at it; when she first comes within `arrive` px it starts (a jolt), turns to her, then makes its one try
-   * at the shelf (the swarm's try, timed from her arrival by `tryAt` s) and fails.
+   * at the shelf (the swarm's try, timed from her arrival by `tryAt` s) and fails. (The Canopy r16: while she stays
+   * and it still wants it, it tries again every `again` s from `restart` on its clock: the hub's cage beside it,
+   * a first-timer sees someone reach for the cage and fail, then sees the cage.)
    */
-  want: { arrive: 420, tryAt: 0.9, gaze: 0.6 },
+  want: { arrive: 420, tryAt: 0.9, gaze: 0.6, again: 12.5, restart: 1.9 },
   /**
    * She rests at the patch beside it (`patchRest` within `near` px): it turns its head to her and lifts a
    * little, its wings stirring once, for `secs` (the first-timer: "the moth companion needs one reaction").
@@ -423,6 +425,8 @@ export class Tatter {
     if (want && this.wantT < 0 && her && Math.hypot(her.cx - this.x, her.feetY - this.y) < T.want.arrive)
       this.wantT = 0;
     else if (this.wantT >= 0) this.wantT += dt;
+    if (want && this.answerT < 0 && this.wantT + T.want.tryAt > T.want.again)
+      this.wantT = T.want.restart - T.want.tryAt;
     if (this.tryT >= 0) this.tryT += dt;
     const t =
       this.tryT >= 0

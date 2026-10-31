@@ -10,6 +10,7 @@
  * State comes from `sim.pickups.drops` every frame (a load or a state jump just shows them lying
  * there); `glintsDrop` and `dropWake` only start the two moments. Render time only.
  */
+import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import { type GlintBatch, K_FLARE, K_GLINT, K_SPARK, K_STAR } from '../pickups/batch';
 import { smooth } from './logic';
@@ -76,6 +77,13 @@ interface Knot {
 }
 
 const LONG = 1e6;
+/**
+ * The huddle shown as she fades (the Canopy r16, first-timer ft15fix: "the counter says 0 where it said 5; I don't
+ * know why it dropped"): the sim leaves its cluster only as she re-forms, when the view is already at her patch, so the
+ * fall out of her was never seen. On `fade` a pending huddle falls out of her where she lies, in the picture; the
+ * cluster's `glintsDrop` takes its place (no second fall).
+ */
+const PENDING = -1;
 const GOLDEN = 2.39996;
 
 export class DropsView {
@@ -110,8 +118,40 @@ export class DropsView {
     const drops = sim.pickups.drops ?? [];
     const knots = this.knots;
     for (const e of sim.events) {
-      if (e.type === 'glintsDrop') {
-        knots.set(e.id, { age: 0, wake: -1, n: e.value, first: 0, gap: 0, x: e.x, y: e.y, seen: true });
+      if (e.type === 'fade' && !sim.scene.glow && sim.pickups.count > 0) {
+        const n = Math.floor(sim.pickups.count * tuning.health.fadeDrop + 1e-6);
+        const p = sim.player;
+        // (Settled onto what is under her, as the sim will settle it.)
+        const feet = p.y + p.h;
+        let floor = sim.scene.height;
+        for (const q of sim.scene.solids)
+          if (q.y >= feet - 4 && q.y < floor && p.x < q.x + q.w && q.x < p.x + p.w) floor = q.y;
+        for (const q of sim.scene.oneWays)
+          if (q.y >= feet - 4 && q.y < floor && p.x < q.x + q.w && q.x < p.x + p.w) floor = q.y;
+        if (n > 0)
+          knots.set(PENDING, {
+            age: 0,
+            wake: -1,
+            n,
+            first: 0,
+            gap: 0,
+            x: p.x + p.w / 2,
+            y: floor - p.h / 2,
+            seen: true,
+          });
+      } else if (e.type === 'glintsDrop') {
+        const was = knots.get(PENDING);
+        knots.delete(PENDING);
+        knots.set(e.id, {
+          age: was ? Math.max(was.age, D.quiet) : 0,
+          wake: -1,
+          n: e.value,
+          first: 0,
+          gap: 0,
+          x: e.x,
+          y: e.y,
+          seen: true,
+        });
       } else if (e.type === 'dropWake') {
         const k = knots.get(e.id) ?? {
           age: LONG,
@@ -130,7 +170,7 @@ export class DropsView {
         knots.set(e.id, k);
       }
     }
-    for (const k of knots.values()) k.seen = false;
+    for (const [id, k] of knots) if (id !== PENDING) k.seen = false;
     for (const d of drops) {
       let k = knots.get(d.id);
       if (!k) {
@@ -151,7 +191,9 @@ export class DropsView {
       k.age += dt;
       if (k.wake >= 0) k.wake += dt;
       const last = k.first + Math.max(0, k.n - 1) * k.gap;
-      // Gone from the state: forget it, unless its last glints are still in the air.
+      // Gone from the state: forget it, unless its last glints are still in the air. (A pending huddle: once its
+      // cluster is in the state, or after a while if none came.)
+      if (id === PENDING && k.age > 6) k.seen = false;
       if (!k.seen && (k.wake < 0 || k.wake > last + 0.2)) {
         knots.delete(id);
         continue;
