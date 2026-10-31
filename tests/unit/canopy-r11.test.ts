@@ -17,7 +17,6 @@ import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
 import { createState, newSave, placePlayer, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
-import { gateShut } from '../../src/sim/kit';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';

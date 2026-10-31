@@ -91,6 +91,8 @@ export const ENEMIES = z
           kind: z.literal('juvenileBurrback'),
           radius: int.min(40).max(2000).optional(),
           fenced: z.boolean().optional(),
+          // (The Canopy r18: it sleeps at its spot until she is down near it, and wakes harmless: `asleep`.)
+          asleep: z.boolean().optional(),
         })
         .strict(),
       z
@@ -100,6 +102,8 @@ export const ENEMIES = z
           radius: int.min(0).max(400).optional(),
           sight: int.min(60).max(900).optional(),
           dives: int.min(1).max(9).optional(),
+          // (The Canopy r18: its first tell this life is this many times as long: `firstTell`.)
+          firstTell: z.number().min(1).max(3).optional(),
         })
         .strict(),
       z

@@ -83,6 +83,11 @@ export interface KitState {
   kinSit: KinSitState;
   /** The Canopy r15 (src/sim/quiet.ts): the quiet moment now (render fades the HUD and the prompts). */
   quiet: QuietState;
+  /**
+   * The Canopy r18: frames she has pushed a shut side shortcut from the side that does not open it (0 = not now). Its
+   * `shortcutShut` comes as the push starts (her key already held as she runs into it too) and every 45 frames after.
+   */
+  shutPush: number;
 }
 
 /** A gate stands (a solid) with these flags: until its `flag`, and an arena's door only once `shut` is set. */
@@ -196,6 +201,7 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     escape: createEscape(scene),
     kinSit: createKinSit(scene, save),
     quiet: createQuiet(),
+    shutPush: 0,
   };
 }
 
@@ -220,6 +226,7 @@ export function cloneKit(k: KitState): KitState {
     escape: cloneEscape(k.escape),
     kinSit: { ...k.kinSit },
     quiet: { ...k.quiet },
+    shutPush: k.shutPush,
   };
 }
 

@@ -1378,8 +1378,8 @@ export const burrback: KindRules = {
     e.fromY = Math.round(spawn.y);
     e.targetX = spawn.taproot ? spawn.taproot[0] : -1;
     e.targetY = spawn.taproot ? spawn.taproot[1] : -1;
-    // (The old burrback sleeps in its den until she comes down to it.)
-    if (rowOf(t, e).asleep) {
+    // (The old burrback sleeps in its den until she comes down to it; a spawn may ask it too: the Canopy r18.)
+    if (rowOf(t, e).asleep || spawn.asleep === true) {
       e.mode = 'sleep';
       e.dozing = true;
     }
@@ -1403,7 +1403,7 @@ export const burrback: KindRules = {
     return 'sleep';
   },
 
-  update(e, _index, info) {
+  update(e, index, info) {
     const { scene, events, stir } = info;
     const B = rowOf(info.t, e);
     const p = info.state.player;
@@ -1435,7 +1435,7 @@ export const burrback: KindRules = {
     if (e.mode === 'sleep') {
       e.vx = 0;
       e.dozing = true;
-      if (B.asleep && !e.dispersed && wakes(e, info, B)) {
+      if ((B.asleep || scene.enemies?.[index]?.asleep === true) && !e.dispersed && wakes(e, info, B)) {
         const n = frames(B.wakeFrames, 1);
         setMode(e, 'wake', n);
         e.dozing = false;
@@ -1517,6 +1517,30 @@ export const burrback: KindRules = {
     if (e.phase > 0) {
       const r = phaseStep(e, info, B);
       if (r !== null) return r;
+    }
+    // (The Canopy r18: one placed asleep sleeps again where it stands once she has been off its ground, or far along
+    // it, for `sleepAgainFrames`: she never comes back up onto its floor (the giant's lip) to find it awake.)
+    if (scene.enemies?.[index]?.asleep === true && !e.dispersed) {
+      const near =
+        Math.abs(p.x + p.w / 2 - (e.x + e.w / 2)) <= 2 * B.wakePx &&
+        e.y + e.h - (p.y + p.h) <= B.sleepAgainAbovePx &&
+        p.y + p.h - (e.y + e.h) <= B.strikeAbovePx &&
+        p.hp > 0 &&
+        p.faded <= 0;
+      e.lost = near ? 0 : e.lost + 1;
+      if (
+        free &&
+        e.roused === 0 &&
+        e.stirred === 0 &&
+        e.tuck === 0 &&
+        e.lost >= frames(B.sleepAgainFrames, 1)
+      ) {
+        setMode(e, 'sleep', 0);
+        e.vx = 0;
+        e.dozing = true;
+        e.lost = 0;
+        return false;
+      }
     }
     // Dispersed and out of any fight: back to sleep.
     if (e.dispersed && free && e.roused === 0 && e.stirred === 0 && e.tuck === 0) {
