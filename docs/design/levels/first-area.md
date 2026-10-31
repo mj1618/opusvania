@@ -1,4 +1,4 @@
-# The Canopy: a first area built to the reference numbers (v10, 2026-10-31)
+# The Canopy: a first area built to the reference numbers (v11, 2026-10-31)
 
 The question: the test grove is dense and fun at 4 screens; does that scale to a whole first area? The method: map the
 reference games' first areas to scale (`docs/design/reference-levels/`), take their numbers as targets, build to
@@ -224,6 +224,68 @@ the render builder's.
     hatch now has `art.pieces`).
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
+
+## v11: staging, three directed moments and the ending (review `reviews/canopy-r10.md`, 7.5/10)
+Round 10's step back: the premise works as a mechanic, but nothing is directed. v11 directs the first release, the
+firefly hanging a cage, and ends the area on a great cage. The level / sim side (#1, #2, #3, #4, #5, #10); the render
+builder drew the look (the release, the firefly as a creature, the boss's intro, the HUD) from the hooks in
+`memory/canopy.md` ("The premise, staged").
+- **#1, the great cage.** `cn-den:trap-den`, 120 moths, hung from the den's roof over the arena's middle (1,856 x 760),
+  the old burrback asleep under it. While it lives the blade glances off the bars (`Lure.guard: cn-den-down`,
+  `lureGuarded`); down, three up cuts from a running jump off either shelf's inner end free it: a held beat
+  (`Lure.hold` 90: she stands, nothing hurts her), the area's biggest cloud, and the cage's `sets` (`cn-den-freed`)
+  opens **the den's roof** (`den-roof`, over the arena's east end). The arena's east wall is the climb to it (its foot
+  refuses the claws, as v10's gate there did), then a passage east under the den's roof onto **the way out's
+  clifftop**: the valley vista first (trigger `out-vista` -> `marks.stage.vista`, a 3 s look over the valley, the moon
+  and the mountain), the kin waiting there. v10's east root gate and corridor are gone; the way out's chimney is the
+  way down to the ledge's secret and back up. The arena's lock lets go with the release. Proofs: with the boss down
+  and the cage not freed the den holds (`not: out, place:roof`); freed, `out` and `place:roof`. **Played**: the route
+  plan beats the old burrback (55.7 s, 1 hit), cuts the cage in 3 tries, climbs out through the roof and reaches
+  the vista **22 s after the last hit**, then glides over the valley to `cn-area-end`.
+- **#2, the hub's cage.** `trap-crossing` moved under the landing limb (6,300 x 1,400, 200 over the floor), in the
+  drop's frame. A cage's catch is `lures.trapRadius` 64 (a flame's 20): a standing up cut reaches 228 px over her
+  feet. The first cut on any cage lets one moth out (`lureHit.escape`). A cage's break is a 14-frame hitstop
+  (`trapSnuffHitstop`) **with the world held** (every creature's hitstop too; render: the Grove's wave lurched). The
+  first-timer cut it at 27.7 s, at the landing ("a swarm of moths flew free around me. Felt nice").
+- **#2, the warning's cage** is not there in the fight (v10: the reviewer freed it by accident under a lampwing): the
+  firefly hangs it once the warning is cleared (`after: cn-warn-hung`), over the root knuckle before the den's mouth
+  (7,552 x 1,420), cut standing on the knuckle.
+- **#3, the firefly.** The gap's pass starts on her first fling off the chain (`FireflyPass.onFling`; the landing
+  trigger is gone): the firefly comes out of the roost's mouth and relights the lamp she just left, in her frame
+  (it relights a smouldering lamp now), then the others, then flees down to the fork; in the route plan she
+  re-flings two of the relit lamps. **The second sighting** (`firefly-warn`, `onFlag: cn-tunnel-clear`): out of the
+  tube's east shaft, it hangs the warning's cage (`hang {point, frames, sets}`, `fireflyHang`) and flees through the
+  den's mouth; her input is held 1.5 s (`hold`), and `look` is the camera hook. **A third** (`firefly-den`): landing on
+  the den's balcony, it circles the great cage and goes up through the roof's gate.
+- **#4, the hub's landing view.** A camera zone `landing` (zoom 0.9) frames the landing limb, the cage under it, the
+  kin on the floor below looking up at the cage (`marks.tatter`, `want` the cage) and the sky, until she first walks
+  off the landing (`cn-hub-left`; ending it on the release dropped the view mid-ease); then the kin is back by its
+  light. The clump under the gap's drop has a stepped root crown (no straight band) and its east face runs down to a
+  root foot 192 over the bank's floor, lit by a springboard (`wick-clump`): `place:clump-top` in one climb. **Not
+  done**: a way up into the gap from the hub. The gap's opening over the clump stays arrival only: the far floor
+  behind it is the glide's prize (the far seed), and a claw route up would hand it out without the glide.
+- **#5, `firsttimer --world canopy`** plays a world from its start as the game (`?world=<id>&fresh`, R to its last
+  save). A first-timer agent played 6.5 game minutes (playtest-reports/canopy-r11-firsttimer): the hatch, the hub's
+  cage at once, ~2 game minutes stuck at the fallen giant's notch (a short hop gets through, a full jump bonks the
+  hanging trunk; "a one-tile gap I couldn't see"), the claws ("a real reward"), four deaths at the upper limbs' gap
+  (it never found how the lamp throws there: "I can't read where I'm meant to hold"), then the fork and the Grove.
+  It read "30 / 60" as moths of 60, never knew what the star counter (glints) counts, never knowingly saw the firefly
+  (it never flung the gap's chain) and never reached the boss.
+- **#10, the old burrback's wake** (sim): 1.5 s on her drop into the arena (`wakeFrames` 90): it rises facing the way
+  it slept, turns to her in the last half second (`wakeTurnFrames` 30, `enemyTurn` cause `wake`), harmless, then
+  hunts. Deterministic. The route plan's fight: down in 55.7 s, 1 hit.
+- **Checks.** `canopy-r11.test.ts` (16): the hub's cage in the landing's frame at 16:9 / 16:10 / 21:9 with the kin;
+  a standing up cut frees it in three, the first lets a moth out, the hitstop; the ±64 catch; the world held through
+  a cage's break in the Grove's wave; the warning's cage absent in the fight, hung by the firefly (input held 90),
+  hung even if the pass is cut short, cut from the knuckle; the gap's pass on a real fling relighting that lamp in
+  frame; the great cage guarded, then freed from the shelf (120 moths, the held beat, the roof open); the den's
+  firefly; the wake. Proofs: every claim in all 27 rooms holds (v11 adds the clump, the den's two locks, the way
+  out from the clifftop, the warning's cage spot). `canopy-furniture.ts --check --rooms --route`: round 9's bar met.
+  `route-video.ts plan` (v8): the whole area, every cage cut, both sightings, the boss, the roof, the vista: 0 legs
+  failed, 6.3 min of play.
+- **Bots** (playtest-reports/canopy-r11, on 9b2f08d, bugs only): all three cut the hub's cage on the way (30 moths),
+  none softlocked; none got past the west (5 rooms in 25 min): each lost 100-160 s at a time in the well's gallery and
+  bottom, and 5-7 hits on the upper limbs' thorns (`thorn-g1`), the same gap that killed the first-timer four times.
 
 ## v10: the premise in play and the first lesson (review `reviews/canopy-r9.md`, 7/10)
 Round 9's verdict: every measured bar is met and the score has plateaued, because nothing in play is about anything.
