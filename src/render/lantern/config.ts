@@ -82,6 +82,8 @@ export const TRAP = {
   bars: 9,
   cageW: 1.25,
   cageH: 1.45,
+  /** Ripped down onto the floor (the Keeper's P3): turned onto its flank this far (rad). */
+  flank: 1.35,
   bar: 0xffc878,
   glow: 0xffa850,
   /** Dead moths on the ground under it, and their pale-brown wings. */

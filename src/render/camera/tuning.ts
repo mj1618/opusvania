@@ -243,6 +243,11 @@ export const PREMISE_CAM = {
   firefly: { pan: 0.4, max: 340, in: 0.3, hold: 1.6, out: 0.9 },
   /** The old burrback's wake (`enemyWake`, 1.5 s): the view pushes in about it and toward it, then lets go. */
   wake: { zoom: 1.08, pan: 0.3, in: 0.5, hold: 1.0, out: 0.9 },
+  /**
+   * The Keeper's snap in the intro (`enemyFeed`, canopy review r12 #4: at the balcony's 0.72 it was 11% of the
+   * frame): the view pushes in to zoom `to` about the snap and `pan` toward it, holds while it eats and sinks back.
+   */
+  snap: { to: 1.08, pan: 0.45, lift: 120, in: 0.28, hold: 1.3, out: 1.2 },
   /** A pass's own framing (`FireflyPass.look`): frames to ease in / out inside it, seconds out if the pass ends first. */
   look: { ease: 30, out: 0.8 },
 };

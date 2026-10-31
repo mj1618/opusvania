@@ -36,16 +36,19 @@ export const VISTA_RIVER = {
   ] as const,
   den: [420, 300] as const,
   /** Moths in a stream (at a full count) and in the river, their size (px), speed (share of the path a second). */
-  stream: 46,
-  river: 160,
-  size: [3, 5.5] as const,
+  // (Canopy review r12 #5: 160 at 3-5.5 px read as a dozen pale specks. Thicker, bigger, a glow along it, and a floor
+  // on the density whatever the count: `floor` of the full river at the least.)
+  stream: 70,
+  river: 340,
+  size: [4, 7.5] as const,
+  floor: 0.6,
   speed: [0.05, 0.09] as const,
   /** The count (`save.moths`) that fills the river: under it, fewer moths. */
   full: 220,
   color: 0xe8eef8,
   warm: 0xf4e2c0,
   /** The glide's river: moths, half thickness (px), speed (px/s), size (px), share drawn in front of her. */
-  glide: { n: 150, half: 170, speed: 360, size: [7, 13] as const, front: 0.4 },
+  glide: { n: 300, half: 190, speed: 360, size: [9, 16] as const, front: 0.4, floor: 0.75 },
 };
 
 export class VistaRiver {
@@ -115,7 +118,7 @@ export class VistaRiver {
   private drawFar(clock: number, cam: CameraView, freed: number): void {
     const V = VISTA_RIVER;
     const g = this.far;
-    const dens = Math.min(1, 0.35 + (0.65 * freed) / V.full);
+    const dens = Math.min(1, V.floor + ((1 - V.floor) * freed) / V.full);
     const snuffed = this.snuffed;
     // The streams: the hub's (one per freed trap there or that roosts there) and the den's.
     const sources: Array<readonly [number, number]> = [];
@@ -175,6 +178,8 @@ export class VistaRiver {
       const side = (hash01('vrs', k) - 0.5) * 70 * (1 - 0.7 * u);
       const s = (V.size[0] + (V.size[1] - V.size[0]) * hash01('vrz', k)) * (1 - 0.45 * u);
       const fade = Math.min(1, (1 - u) * 5);
+      // Its scale dust: a soft light along the band, so the river has a shape and not only specks.
+      if (k % 8 === 0) this.glowFar.add(x, y + side * 0.5, 46 * (1 - 0.5 * u), 0xcfe0ff, 0.07 * fade);
       moth(
         g,
         x,
@@ -203,7 +208,7 @@ export class VistaRiver {
     const len = Math.hypot(dx, dy);
     const ux = dx / len;
     const uy = dy / len;
-    const n = Math.round(G.n * Math.min(1, 0.4 + (0.6 * freed) / VISTA_RIVER.full) * k);
+    const n = Math.round(G.n * Math.min(1, G.floor + ((1 - G.floor) * freed) / VISTA_RIVER.full) * k);
     const halfW = cam.w / 2 / cam.zoom + 80;
     for (let i = 0; i < n; i++) {
       const h = hash01('gl', i);

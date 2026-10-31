@@ -133,7 +133,9 @@ export const SWARM = {
    * Moonlight on the moon-side half of the wings as the beat turns them to it (`gain`, `floor` when
    * edge-on; away from the moon only: backlit they stay silhouettes), and the moon-side edge (`rim`).
    */
-  sheen: { gain: 0.16, floor: 0.2, rim: 0.45 },
+  // (Canopy review r12 #5: at 0.16 / 0.45 the river over the hatch read as black birds. Moonlit wings: a strong
+  // moon-side rim and sheen, and `catch`: the wings' flicker of moonlight at the bottom of each beat.)
+  sheen: { gain: 0.5, floor: 0.3, rim: 0.85, catch: 0.85 },
   /**
    * The river's haze (shader.ts HAZE_*): scale dust stirred by the wings, as bright and wide as the moths
    * are thick there (feed with gaps x density-wave compression ^ `contrast` / the neck), clumpy and
@@ -159,7 +161,7 @@ export const SWARM = {
       blur: 0,
       haze: 0,
       alpha: 0.92,
-      rim: 0,
+      rim: 0.6,
       peak: 1,
       tail: 1,
       detail: false,

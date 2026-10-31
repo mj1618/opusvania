@@ -9,6 +9,8 @@
  *   firefly  a sighting (`fireflyStart`): the view leans toward the firefly over 0.3 s and follows it a while; a pass
  *            with its own framing (`look`, the level's) frames that point with her instead.
  *   wake     the old burrback's wake (`enemyWake`): the view pushes in about it while it rises.
+ *   snap     the Keeper's intro (`enemyFeed`, canopy review r12 #4): from the balcony's wide frame the view pushes in
+ *            to `snap.to` about the snap, so the heave out of the dark fills a third of the frame, then lets go.
  *
  * Numbers: `PREMISE_CAM` (camera/tuning.ts). Render time only; reads the sim, writes nothing.
  */
@@ -36,7 +38,8 @@ export class PremiseCamera {
   y = 0;
   zoom = 1;
   /** The release under way: the cage, seconds since, the great cage or not. */
-  private rel: { x: number; y: number; t: number; great: boolean; wake: boolean } | null = null;
+  private rel: { x: number; y: number; t: number; great: boolean; wake: boolean; snap?: boolean } | null =
+    null;
   /** The firefly's sighting: seconds since (null: none). */
   private ff: number | null = null;
   /** The lean last aimed at the firefly (kept as it eases back after its pass ends). */
@@ -67,6 +70,8 @@ export class PremiseCamera {
       // The old burrback's wake: the same push, about the boss.
       else if (e.type === 'enemyWake' && e.kind === 'oldBurrback')
         this.rel = { x: e.x, y: e.y, t: -dt, great: false, wake: true };
+      else if (e.type === 'enemyFeed')
+        this.rel = { x: e.x, y: e.y, t: -dt, great: false, wake: false, snap: true };
       else if (e.type === 'fireflyStart') this.ff = -dt;
       // Each lamp it relights leans the view again (or holds the lean on).
       else if (e.type === 'fireflyRelight')
@@ -79,11 +84,14 @@ export class PremiseCamera {
     const r = this.rel;
     if (r) {
       r.t += dt;
-      const C: { zoom: number; pan: number; in: number; hold: number; out: number; lift?: number } = r.wake
-        ? PREMISE_CAM.wake
-        : r.great
-          ? PREMISE_CAM.great
-          : PREMISE_CAM.release;
+      const S = PREMISE_CAM.snap;
+      const C: { zoom: number; pan: number; in: number; hold: number; out: number; lift?: number } = r.snap
+        ? { ...S, zoom: Math.max(1, S.to / Math.max(0.1, follow.zoom)) }
+        : r.wake
+          ? PREMISE_CAM.wake
+          : r.great
+            ? PREMISE_CAM.great
+            : PREMISE_CAM.release;
       const k = envelope(r.t, C.in, C.hold, C.out);
       if (r.t > C.in + C.hold + C.out) this.rel = null;
       // Zoom about the cage: the cage stays where it is on screen while the frame closes on it (or opens round it).

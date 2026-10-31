@@ -29,7 +29,8 @@ import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
 import type { LightRegistry, PointLight } from '../lights';
 import type { SceneContext } from '../scene/index';
-import { type DenColumn, denColumnsOf, interiorPlan } from '../scene/lib/interior';
+import { type LarderRoot, oldCage, wingPts } from '../scene/lib/den-larder';
+import { type DenColumn, denColumnsOf, interiorPlan, larderRootsOf } from '../scene/lib/interior';
 import { mix } from '../scene/lib/look';
 import { LOOK } from '../scene/lib/room-look';
 import { hash01 } from './config';
@@ -44,14 +45,39 @@ export const KEEPER = {
    * The shadows: how far behind its caster the back is (shadow = P + (P - L) * k), how dark by phase (hung, swinging,
    * fallen), the penumbra's spread (x the caster's width), and how far from the light a caster still throws one.
    */
-  shadow: { k: 0.55, alpha: [0.3, 0.62, 0.55] as const, soft: 0.6, reach: 1900, color: 0x0a0604 },
+  shadow: {
+    k: 0.55,
+    alpha: [0.3, 0.62, 0.55] as const,
+    soft: 0.6,
+    reach: 1900,
+    color: 0x0a0604,
+    /** The larder's roots (den-larder.ts): a rib lies on the wall (its shadow stays close), a hanging root swings. */
+    rib: 0.12,
+    hang: 0.4,
+  },
+  /**
+   * The floor's litter (canopy review r12 #3, story litter): a drift of dead wings under the cage (`wings` of them in
+   * `spread` px either side, up to `mound` px deep at its middle), gnawed husks along the floor, an old cage on its
+   * side by each wall. Colours: the wings' ash and dark, the husks.
+   */
+  litter: {
+    wings: 170,
+    spread: 420,
+    mound: 14,
+    ash: 0x7c6e5e,
+    dark: 0x2e241c,
+    husks: 7,
+    husk: 0x241a14,
+    huskLit: 0x6a5240,
+  },
   /**
    * The dark outside the light (P2 / P3): behind the playfield and over it (so she, the Keeper and the floor fall
    * into it too, less), the hole's radius round the cage (px; fallen: wider than tall, from the floor), in / out (s).
    */
   dark: { back: 0.62, front: 0.3, r: 720, fallen: [1100, 820] as const, in: 1.2, out: 2.5, color: 0x050208 },
   /** The falling moth: its size (px half span), pale; the tell's flutter (px), the saved moths' orbit (px). */
-  moth: { size: 9, color: 0xe8e0cc, tell: 26, saved: [46, 30] as const, savedMax: 14 },
+  // (Review r12 #10: at 9 px it was a fleck easy to miss against the lit cage: 15, and a pale trail behind its fall.)
+  moth: { size: 15, color: 0xe8e0cc, tell: 26, saved: [46, 30] as const, savedMax: 14, trail: 5 },
   /** P3's low cloud: drawn moths at most, its ellipse round the fallen cage (px), how low over the floor. */
   low: { max: 90, rx: 520, ry: 110, over: 110, size: [6, 10] as const, color: 0xf0d8b0 },
   /** The column: moths drawn, seconds to rise, its width (px), where it goes once through the gate (up the shaft). */
@@ -180,6 +206,8 @@ export class KeeperStage {
   private readonly cage: number;
   private readonly lure: Lure;
   private readonly columns: DenColumn[];
+  private readonly roots: LarderRoot[];
+  private readonly litter = new Graphics({ label: 'keeper-litter' });
   /** Shadow casters that are the room's own ledges and narrow solids in the arena. */
   private readonly ledges: Array<{ x: number; y: number; w: number; h: number }> = [];
   private readonly shadows = new Graphics();
@@ -224,6 +252,7 @@ export class KeeperStage {
     this.lure = (scene.lures ?? [])[cage] as Lure;
     const plan = interiorPlan(scene, LOOK.seed);
     this.columns = plan ? denColumnsOf(plan, LOOK.seed + 5) : [];
+    this.roots = plan ? larderRootsOf(plan, LOOK.seed + 5) : [];
     // The ledges she fights round (one-ways) and the narrow solids standing in the den's air (the taproot).
     for (const o of scene.oneWays) this.ledges.push({ x: o.x, y: o.y, w: o.w, h: 44 });
     for (const s of scene.solids)
@@ -237,6 +266,8 @@ export class KeeperStage {
     for (const s of scene.solids)
       if (this.lure.x >= s.x && this.lure.x <= s.x + s.w && s.y > this.lure.y && s.y < fy) fy = s.y;
     this.floorY = fy;
+    this.drawLitter(scene.width);
+    ctx.layers.get('pickupsBack').addChild(this.litter);
     const back = ctx.layers.get('airBack');
     back.addChild(this.darkBack.container, this.pool.container, this.shadows);
     ctx.layers.air.addChild(
@@ -247,6 +278,63 @@ export class KeeperStage {
     );
     lights.set('keeper-cage', this.lightCage);
     lights.set('keeper-moon', this.lightMoon);
+  }
+
+  /**
+   * The floor's story (`KEEPER.litter`): what it ate and dropped. Drawn once, on the walked line in front of the
+   * bake; never higher than a moth's wing pile (a background shape must not read as a ledge).
+   */
+  private drawLitter(roomW: number): void {
+    const T = KEEPER.litter;
+    const g = this.litter;
+    const fy = this.floorY + 3;
+    const cx = this.lure.x;
+    // The drift: densest under the cage's rest, a low mound of wings, the dark ones under, the ash ones on top.
+    for (let pass = 0; pass < 2; pass++)
+      for (let i = 0; i < T.wings; i++) {
+        const h = hash01(`lw${pass}`, i);
+        const gauss = (hash01('lg1', i + pass * 999) + hash01('lg2', i) + hash01('lg3', i + pass)) / 3 - 0.5;
+        const x = cx + gauss * 2 * T.spread * 1.6;
+        const m = Math.max(0, 1 - Math.abs(x - cx) / T.spread);
+        const y = fy - T.mound * m * m * (3 - 2 * m) * (0.3 + 0.7 * hash01('lm', i)) + 2;
+        const l = 6 + 9 * hash01('ll', i + pass * 7);
+        const a = h * Math.PI * 2;
+        const col = pass === 0 ? T.dark : mix(T.ash, T.dark, 0.5 * hash01('lc', i));
+        g.poly(wingPts(x, y, l, a, hash01('lf', i) < 0.5 ? 1 : -1)).fill({
+          color: col,
+          alpha: pass === 0 ? 0.9 : 0.85,
+        });
+      }
+    // Gnawed husks: a moth's body, hollowed, broken at one end, lying along the floor.
+    for (let i = 0; i < T.husks; i++) {
+      const u = hash01('hk', i);
+      const x = Math.min(roomW - 200, Math.max(200, cx + (u - 0.5) * 2200));
+      const len = 18 + 14 * hash01('hl', i);
+      const a = (hash01('ha', i) - 0.5) * 0.5;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const pts: number[] = [];
+      for (let q = 0; q <= 10; q++) {
+        const t = q / 10;
+        const half = len * 0.22 * Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 0.7;
+        pts.push(x + (t - 0.5) * len * ca + half * sa, fy - half - 1 + (t - 0.5) * len * sa);
+      }
+      for (let q = 10; q >= 0; q--) {
+        const t = q / 10;
+        pts.push(x + (t - 0.5) * len * ca, fy + 1 + (t - 0.5) * len * sa);
+      }
+      g.poly(pts).fill({ color: T.husk, alpha: 0.95 });
+      // Its segments, a dull rim, the bitten end open.
+      for (let q = 1; q < 4; q++) {
+        const sx = x + (q / 4 - 0.5) * len * ca;
+        g.rect(sx - 0.6, fy - len * 0.2, 1.2, len * 0.18).fill({ color: T.huskLit, alpha: 0.5 });
+      }
+      g.circle(x + 0.5 * len * ca, fy - 2, len * 0.12).fill({ color: 0x080504, alpha: 0.9 });
+    }
+    // An old cage on its side by each wall, half in the floor.
+    const C = { col: 0x2a1c12, dark: 0x0e0907, lit: 0x9a744e };
+    oldCage(g, cx - 760, fy - 26, 120, 1.45, 0.42, C, 71);
+    oldCage(g, cx + 640, fy - 22, 100, -1.75, 0.5, C, 73);
   }
 
   /** The great cage's lure id (lamps.ts hands its release's moths to the column). */
@@ -423,7 +511,7 @@ export class KeeperStage {
   private drawShadows(L: { x: number; y: number }, sim: SimView, alpha: number): void {
     const S = KEEPER.shadow;
     const g = this.shadows;
-    const k = S.k;
+    let k = S.k;
     const P = (x: number, y: number): [number, number] => [x + (x - L.x) * k, y + (y - L.y) * k];
     const near = (x: number, y: number): number => Math.max(0, 1 - Math.hypot(x - L.x, y - L.y) / S.reach);
     // A band from a to b, `w` wide at a and `w1` at b, in three soft layers (the penumbra, then the core).
@@ -475,6 +563,26 @@ export class KeeperStage {
       band(c.x + c.lean * 0.3, c.top - 20, midX, midY, c.w * 1.4, c.w * 0.7, a);
       band(midX, midY, c.x, c.y, c.w * 0.7, c.w * 1.3, a);
     }
+    // The larder's roots: a rib lies on the wall, so its shadow is a near twin sliding along beside it; a hanging
+    // root is out in the air and its shadow swings wide across the wall.
+    for (const rt of this.roots) {
+      k = rt.kind === 'rib' ? S.rib : S.hang;
+      const n = rt.pts.length / 2;
+      for (let j = 0; j + 2 < n; j += 2) {
+        const ax = rt.pts[j * 2] as number;
+        const ay = rt.pts[j * 2 + 1] as number;
+        const bx = rt.pts[Math.min(n - 1, j + 2) * 2] as number;
+        const by = rt.pts[Math.min(n - 1, j + 2) * 2 + 1] as number;
+        const t0 = j / (n - 1);
+        const t1 = Math.min(1, (j + 2) / (n - 1));
+        const wAt = (t: number): number =>
+          rt.kind === 'rib'
+            ? Math.max(rt.w1, rt.w0 * (1 - t) ** 0.6)
+            : Math.max(rt.w1, rt.w0 * (1 - t) ** 0.8);
+        band(ax, ay, bx, by, wAt(t0), wAt(t1), alpha * near((ax + bx) / 2, (ay + by) / 2) * 0.9);
+      }
+    }
+    k = S.k;
     for (const r of this.ledges) {
       const cx = r.x + r.w / 2;
       const cy = r.y + r.h / 2;
@@ -535,6 +643,14 @@ export class KeeperStage {
           : st === 2
             ? 0.3
             : Math.abs(Math.sin(clock * 22));
+      // Falling: a trail of paler, smaller ghosts up its spiral, so the eye finds it against the cage.
+      if (st === 2)
+        for (let k = 1; k <= M.trail; k++) {
+          const tk = Math.max(0, t - k * 0.05);
+          const gx = (kb.mothX ?? L.x) + Math.sin(tk * 9 + 1) * (14 + 10 * Math.min(1, tk));
+          const gy = y - k * 0.05 * 60 * 3.2;
+          this.glowFront.add(gx, gy, 16 - k * 2, 0xfff4dc, 0.16 * (1 - k / (M.trail + 1)));
+        }
       moth(g, x, y, M.size, flap, Math.sin(clock * 2.3) > 0 ? 1 : -1, M.color, 0.95);
       this.glowFront.add(x, y, 30, 0xfff0d0, st === 3 ? 0.12 : 0.22);
     }

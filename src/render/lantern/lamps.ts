@@ -658,7 +658,7 @@ export class Lamps {
         ribs(back, x, y, s * 1.04, squash, 2, 2);
         back.stroke({ color: LR.lamp.rib, width: 1.6, alpha: 0.35 });
         sepals(back, x, y - s * 1.25 * squash * 0.45, s);
-        if (info.trap) this.cage(i, x, y, s, hp, clock, back, glow);
+        if (info.trap) this.cage(i, x, y, s, hp, clock, back, glow, down ? TRAP.flank : 0);
         mid.add(x, y + s * 0.12, s * 0.5 * flick, LR.lamp.core, 0.55 * flick, s * 0.62 * flick);
         // The halo (bloom carries it further).
         glow.add(x, y, s * 2.4 * flick, LR.lamp.halo, 0.3);
@@ -730,29 +730,54 @@ export class Lamps {
     clock: number,
     g: Graphics,
     glow: GlowPool,
+    /** On the floor (the Keeper's P3, canopy review r12 #4): turned onto its flank by this much, the bars on the
+     *  spill side (up, once it lies) bent open and snapped, the rest crushed flatter against the floor. */
+    flank = 0,
   ): void {
     const T = TRAP;
     const hpMax = Math.max(1, Math.round(tuning.lures.trapHp));
+    const ca = Math.cos(flank);
+    const sa = Math.sin(flank);
+    // The cage's own frame (dx across, dy down) turned onto its flank about the flame.
+    const R = (dx: number, dy: number): [number, number] => [x + dx * ca - dy * sa, y + dx * sa + dy * ca];
     // (Review r10 #3: one bar a cut, and one moth out through it; the rest burst on the last.)
     const broken = Math.min(T.bars, Math.max(0, hpMax - hp));
     const shake = this.fx.some((f) => f.kind === 'crack' && f.i === i) ? Math.sin(clock * 60) * 3 : 0;
     const rx = s * T.cageW;
     const ry = s * T.cageH;
-    const top = y - ry * 0.95;
-    const bot = y + ry * 0.9;
-    const breath = 1 + 0.03 * Math.sin(clock * 2.1 + i);
+    const top = -ry * 0.95;
+    const bot = ry * 0.9;
+    const down = flank !== 0;
+    // (Fallen, it no longer turns: the bars lie where they broke.)
+    const breath = down ? 1 : 1 + 0.03 * Math.sin(clock * 2.1 + i);
+    const spin = down ? 0.4 : clock * 0.25 + i;
     for (let k = 0; k < T.bars; k++) {
       // Bars at their angle round the cage (front ones brighter); the broken ones are the last ones round.
       if (k >= T.bars - broken) continue;
-      const a = (k / T.bars) * Math.PI * 2 + clock * 0.25 + i;
-      const f = Math.sin(a);
+      const a = (k / T.bars) * Math.PI * 2 + spin;
+      let f = Math.sin(a);
       const front = 0.5 + 0.5 * Math.cos(a);
-      const bx = x + f * rx * breath + shake;
-      g.moveTo(x + shake * 0.5, top).bezierCurveTo(bx, top + ry * 0.25, bx, bot - ry * 0.3, x, bot);
+      // On its flank: the bars on the up side (`f` < 0 once turned) wrenched open, outward and snapped short; the
+      // floor side flattened.
+      const open = down && f * Math.sign(flank) < -0.2;
+      if (down && !open) f *= 0.8;
+      const bx = f * rx * breath * (open ? 1.7 : 1) + shake;
+      const end = open ? 0.55 + 0.25 * hash01(`cb${i}`, k) : 1;
+      const [x0, y0] = R(shake * 0.5, top);
+      const [c1x, c1y] = R(bx, top + ry * 0.25);
+      const [c2x, c2y] = R(bx * (open ? 1.25 : 1), top + (bot - top) * end - ry * 0.3 * end);
+      const [ex, ey] = open ? R(bx * 1.35, top + (bot - top) * end) : R(0, bot);
+      g.moveTo(x0, y0).bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
       g.stroke({ color: T.bar, width: 1 + 1.2 * front, alpha: 0.2 + 0.45 * front });
     }
-    g.ellipse(x, top, rx * 0.22, rx * 0.07).stroke({ color: T.bar, width: 1.6, alpha: 0.55 });
-    g.circle(x, bot, 3).fill({ color: T.bar, alpha: 0.6 });
+    const [tx, ty] = R(0, top);
+    g.ellipse(tx, ty, rx * 0.22 * (down ? 0.5 : 1), rx * 0.07 * (down ? 3 : 1)).stroke({
+      color: T.bar,
+      width: 1.6,
+      alpha: 0.55,
+    });
+    const [kx, ky] = R(0, bot);
+    g.circle(kx, ky, 3).fill({ color: T.bar, alpha: 0.6 });
     glow.add(x, y, Math.max(rx, ry) * 1.3, T.glow, 0.12 + 0.03 * Math.sin(clock * 2.1 + i));
   }
 

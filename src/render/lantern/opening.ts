@@ -3,10 +3,11 @@
  * `marks.stage.open` and `marks.stage.lights`). What the camera (camera/open-cam.ts), the black (room-fade.ts), the
  * river (swarm/: its tail leaves at `hatchTail`) and the kin (character/tatter.ts) do not:
  *
- *   shadows   before any moth is seen, the swarm's shadows ripple over the bark and the cocoons: it is passing between
- *             the moon and the branch. Dark moth-shaped flecks sweep east across the branch in flocks, more and
- *             closer with every press, gone soon after the breakout (the river is in the sky then).
- *   title     LAMPFALL fades in under the moon `titleAfter` frames after the hatch, as the river's tail crosses it.
+ *   title     LAMPFALL fades in under the moon `titleAfter` frames after the hatch, as the river's tail crosses it, in
+ *             screen space: a player who breaks out and runs still sees it (canopy review r12 #6).
+ *
+ * (The swarm's shadows over the branch before the hatch were cut in r13: they read as dark birds in the sky, not
+ * shadows on the bark: review r12 #5.)
  *   valley    the valley's false lights far below the promise lip (`stage.lights`, at the far plane's parallax), each
  *             with a spinning knot of moths round it; while the river still flows, a stream peels off it and pours
  *             down into them. The knots stay: the moths there are caught.
@@ -18,25 +19,12 @@ import type { CameraView, SimView } from '../contract';
 import type { SceneContext } from '../scene/index';
 import type { LayerTree } from '../scene/layer-tree';
 import { mix } from '../scene/lib/look';
-import { moonShown } from '../scene/lib/moon-vistas';
 import { LOOK } from '../scene/lib/room-look';
 import { hash01 } from './config';
 import { GlowPool } from './glow';
 import { moth } from './lamps';
 
 export const OPENING = {
-  /** The flecks: how many in a flock, flocks over the branch at once, their size (px), speed (px/s), darkness. */
-  shadow: {
-    flock: 26,
-    flocks: [1.2, 2.6, 3.6] as const,
-    size: [16, 34] as const,
-    speed: [260, 420] as const,
-    alpha: [0.12, 0.18, 0.24] as const,
-    color: 0x02040a,
-    /** The band over the branch they cross (px over / under the hatch point), how long after the hatch they last (s). */
-    band: [-175, -55] as const,
-    after: 2.4,
-  },
   /** The title: size (safe px), letter spacing, alpha, its fade (s: in, hold, out), gap under the moon's disc. */
   title: { size: 76, spacing: 26, alpha: 0.86, in: 1.6, hold: 3.6, out: 2.2, under: 64, color: 0xdfe6f2 },
   /** The valley: the far plane's parallax, each light's glow and its knot (moths, orbit px, size px). */
@@ -67,7 +55,6 @@ interface Open {
 export class Opening {
   private readonly open: Open;
   private readonly lights: { x: number; y: number; w: number; h: number; count: number } | null;
-  private readonly hatchAt: { x: number; y: number } | null;
   private readonly front = new Graphics();
   private readonly far = new Graphics();
   private readonly farGlow = new GlowPool('opening-far-glow');
@@ -75,7 +62,6 @@ export class Opening {
   private readonly titleBox = new Container({ label: 'opening-title' });
   /** Render seconds since the `hatch` event (-1 = not yet: shut in). */
   private since = -1;
-  private presses = 0;
   private readonly layers: LayerTree;
   /** The promise lip's camera (`marks.camera` promise): where the valley is framed from. */
   private readonly lip: { x: number; y: number };
@@ -94,7 +80,6 @@ export class Opening {
     };
     this.open = st.open ?? {};
     this.lights = st.lights ?? null;
-    this.hatchAt = ctx.scene.hatch ? { x: ctx.scene.hatch.x, y: ctx.scene.hatch.y } : null;
     this.layers = ctx.layers;
     const marks = ctx.scene.marks as { camera?: Array<{ id: string; x: number; y: number }> } | undefined;
     const pm = marks?.camera?.find((c) => c.id === 'promise');
@@ -125,61 +110,19 @@ export class Opening {
     const sets = sim.scene.hatch?.sets;
     for (const e of sim.events) {
       if (e.type === 'hatch') this.since = 0;
-      else if (e.type === 'hatchStir') this.presses = e.presses;
       else if (e.type === 'spawn') {
-        this.presses = 0;
         this.since = sets && sim.save.flags.includes(sets) ? 99 : -1;
       }
     }
     if (this.since >= 0) this.since += dt;
     // A teleport or a load past the hatching: it is over.
     if (this.since < 0 && sets && sim.save.flags.includes(sets)) this.since = 99;
-    const hatch = this.hatchAt ? { done: this.since >= 0, presses: this.presses } : null;
     this.front.clear();
     this.far.clear();
     this.farGlow.begin();
-    if (this.hatchAt) this.drawShadows(clock, hatch);
     this.drawTitle(cam, sim.scene.id);
     if (this.lights) this.drawValley(clock, cam);
     this.farGlow.end();
-  }
-
-  /** The swarm's shadows sweeping over the branch and the cocoons, before the river is seen. */
-  private drawShadows(clock: number, hatch: { done: boolean; presses: number } | null): void {
-    const S = OPENING.shadow;
-    const at = this.hatchAt as { x: number; y: number };
-    const shut = !!hatch && !hatch.done;
-    const fade = shut ? 1 : this.since >= 0 ? Math.max(0, 1 - this.since / S.after) : 0;
-    if (fade <= 0) return;
-    const step = Math.min(2, hatch?.presses ?? 2);
-    const flocks = S.flocks[step] as number;
-    const alpha = (S.alpha[step] as number) * fade;
-    const g = this.front;
-    // Each flock is a loose drift of flecks crossing east over 1700 px; flocks start one after another.
-    const span = 1900;
-    const nF = Math.ceil(flocks);
-    for (let f = 0; f < nF; f++) {
-      const per = 1 / flocks;
-      const speed = S.speed[0] + (S.speed[1] - S.speed[0]) * hash01('fl', f);
-      const u = (clock * speed) / span + f * per + hash01('fo', f);
-      const k = Math.floor(u);
-      const fx = at.x - span / 2 + (u - k) * span;
-      const fy = at.y + S.band[0] + (S.band[1] - S.band[0]) * hash01('fy', f * 31 + k);
-      const flockK = f < flocks ? 1 : flocks - Math.floor(flocks);
-      for (let i = 0; i < S.flock; i++) {
-        const h = hash01(`fk${f}`, i + k * 97);
-        const dx = (hash01(`fx${f}`, i + k * 97) - 0.5) * 520;
-        const dy = (h - 0.5) * 200 + Math.sin(clock * 3 + i) * 12;
-        const s = S.size[0] + (S.size[1] - S.size[0]) * hash01(`fs${f}`, i);
-        const flap = Math.abs(Math.sin(clock * (9 + 5 * h) + i));
-        // A shadow is soft and stretched along the flight: wings as a smeared pair, darker at the core.
-        const x = fx + dx;
-        const y = fy + dy;
-        const w = s * (0.6 + 0.6 * flap);
-        g.ellipse(x, y, w * 1.6, s * 0.55).fill({ color: S.color, alpha: alpha * 0.45 * flockK });
-        g.ellipse(x, y, w, s * 0.32).fill({ color: S.color, alpha: alpha * 0.6 * flockK });
-      }
-    }
   }
 
   /** LAMPFALL under the moon, `titleAfter` frames after the hatch (screen space, carried in the air layer). */
@@ -205,8 +148,10 @@ export class Opening {
     const sy = m.y + (m.r ?? 88) + T.under;
     this.titleBox.position.set(cam.x + (sx - 960) / cam.zoom, cam.y + (sy - 540) / cam.zoom);
     this.titleBox.scale.set(1 / cam.zoom);
-    // (It goes with the moon: where the canopy closes over the disc, the title is gone too.)
-    t.alpha = T.alpha * k * moonShown(room, cam.x, cam.y);
+    // (Canopy review r12 #6: it went with the moon's disc, and a player who ran east at once never saw it. The moon
+    // keeps its place on screen; so does the title, whether or not the canopy has closed over the disc.)
+    void room;
+    t.alpha = T.alpha * k;
   }
 
   /** The valley's false lights far below, each with its knot of moths, and the pour off the river into them. */

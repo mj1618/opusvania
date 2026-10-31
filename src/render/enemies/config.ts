@@ -704,6 +704,16 @@ export const LAMP = {
  * moves (memory/creatures.md round 5/6) and what makes it read as a boss (canopy review r2 #3).
  */
 export const BOSS = {
+  /**
+   * The Keeper drawn bigger than its sim box (canopy review r12 #4: "draw the body 1.3x, so the dome's spines and legs
+   * reach out past it"): the dome is still the only part that hurts. Only in a room whose boss is the `keeper`.
+   */
+  drawK: 1.3,
+  /**
+   * Its tall rear (review r12 #4: "a boss pose, not a beetle's"): the rear's lean (rad) for the big one, lifted about
+   * its hind end so the front half stands up ~3x her height, eyes over the den's shelves.
+   */
+  rearTall: 0.88,
   /** Its brace and ram pitch, against the burrback's: at 4.4x a full pitch drives the snout through the floor. */
   pitchK: 0.45,
   /** The rear (the slam's tell): how far back it lifts (rad) and the shiver as it holds. The slam: front thrown down. */
@@ -764,13 +774,14 @@ export const BOSS = {
    * `shed` of them lift off and drift down.
    */
   crust: {
-    n: 64,
-    len: [1.7, 3.1] as const,
-    wing: 0x75685a,
+    // (Review r12 #4: 64 at 9-16 px were pale specks at play zoom. 18 wings at 20-40 px read as wings.)
+    n: 18,
+    len: [3.4, 6.6] as const,
+    wing: 0x84765f,
     wingDark: 0x2a221d,
     vein: 0x120d0b,
-    alpha: 0.82,
-    shed: 14,
+    alpha: 0.9,
+    shed: 6,
   },
   /** The intro's snap (`enemyFeed`): seconds to heave up, eyes open until, and back down by `len`. */
   snap: { rise: 0.18, eyes: 0.9, len: 1.8 },
