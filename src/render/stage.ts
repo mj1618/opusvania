@@ -356,12 +356,22 @@ export class RenderStage {
     // The kick and the shake: render-side offsets, the follow camera never sees them.
     const kx = this.kick.x + this.shake.x;
     const ky = this.kick.y + this.shake.y;
+    // (The premise's beats lean toward things near the room's edge, the den's mouth: they never take the view past
+    // the room's edge further than the follow camera already has.)
+    const zoom = base.zoom * gc.zoom * sc.zoom * pc.zoom;
+    const inRoom = (from: number, off: number, half: number, size: number): number => {
+      const lo = Math.min(from, half);
+      const hi = Math.max(from, size - half);
+      return Math.min(hi, Math.max(lo, from + off)) - from;
+    };
+    const vx0 = base.x + kx + gc.x + rs.x + this.beats.x + sc.x;
+    const vy0 = base.y + ky + gc.y + rs.y + this.beats.y + sc.y;
     const view: CameraView = o
       ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom, w: vs.w, h: vs.h }
       : {
-          x: base.x + kx + gc.x + rs.x + this.beats.x + sc.x + pc.x,
-          y: base.y + ky + gc.y + rs.y + this.beats.y + sc.y + pc.y,
-          zoom: base.zoom * gc.zoom * sc.zoom * pc.zoom,
+          x: vx0 + inRoom(vx0, pc.x, vs.w / 2 / zoom, this.game.scene.width),
+          y: vy0 + inRoom(vy0, pc.y, vs.h / 2 / zoom, this.game.scene.height),
+          zoom,
           w: vs.w,
           h: vs.h,
         };
