@@ -170,3 +170,75 @@ export class FlyerVoice {
     aim(this.hawkPan.pan, L.hawkerPan, when, 0.1);
   }
 }
+
+/**
+ * The escape's collapse front (the Canopy r14, moment 7: `state.kit.escape.front`): the earth falling in under her and
+ * rising after her. A wide body of falling earth (brown noise under a low-pass that opens the nearer it is), a tumble
+ * of clods (a band that climbs as the front rises, beaten unevenly) and grit hissing over it; panned where it is.
+ */
+export class CollapseVoice {
+  private readonly gain: GainNode;
+  private readonly pan: StereoPannerNode;
+  private readonly body: Band;
+  private readonly tumble: Band;
+
+  constructor(graph: AudioGraph, baked: Baked) {
+    const ctx = graph.ctx;
+    const [bl, br] = baked.loops.brown as [Float32Array, Float32Array];
+    const [pl, pr] = baked.loops.pink as [Float32Array, Float32Array];
+    const bus = graph.buses.creatures;
+    this.gain = silent(graph);
+    this.pan = new StereoPannerNode(ctx);
+    this.body = band(graph, bl, 1.7, [
+      ['lowpass', 160, 0.7],
+      ['highpass', 30, 0.7],
+    ]);
+    const wide = band(graph, br, 4.1, [
+      ['lowpass', 120, 0.7],
+      ['highpass', 30, 0.7],
+    ]);
+    this.tumble = band(graph, pl, 2.3, [
+      ['bandpass', 380, 0.9],
+      ['lowpass', 1400, 0.7],
+    ]);
+    const grit = band(graph, pr, 6.7, [
+      ['bandpass', 2600, 1.2],
+      ['lowpass', 5200, 0.7],
+    ]);
+    // Clods tumbling: the band beaten by two slow, unrelated waves (never a steady pulse).
+    const am = new GainNode(ctx, { gain: 0.55 });
+    for (const [hz, g] of [
+      [2.3, 0.22],
+      [3.7, 0.18],
+      [9.1, 0.1],
+    ] as const) {
+      const o = new OscillatorNode(ctx, { type: 'sine', frequency: hz });
+      o.connect(new GainNode(ctx, { gain: g })).connect(am.gain);
+      o.start(0);
+    }
+    this.body.out.connect(new GainNode(ctx, { gain: 0.75 })).connect(this.gain);
+    const l = new StereoPannerNode(ctx, { pan: -0.6 });
+    const r = new StereoPannerNode(ctx, { pan: 0.6 });
+    wide.out
+      .connect(new GainNode(ctx, { gain: 0.45 }))
+      .connect(l)
+      .connect(this.gain);
+    this.tumble.out
+      .connect(am)
+      .connect(new GainNode(ctx, { gain: 0.5 }))
+      .connect(r)
+      .connect(this.gain);
+    grit.out.connect(new GainNode(ctx, { gain: 0.12 })).connect(this.gain);
+    this.gain.connect(this.pan).connect(bus.in);
+    this.pan.connect(bus.room);
+  }
+
+  apply(L: Layers, when: number, tau: number): void {
+    aim(this.gain.gain, L.collapse, when, tau * 2);
+    aim(this.pan.pan, L.collapsePan, when, 0.3);
+    const lp = this.body.filters[0] as BiquadFilterNode;
+    aim(lp.frequency, L.collapseHz, when, 0.25);
+    const bp = this.tumble.filters[0] as BiquadFilterNode;
+    aim(bp.frequency, 300 + 2.2 * L.collapseHz, when, 0.4);
+  }
+}

@@ -8,7 +8,7 @@ import { AudioGraph } from './graph';
 import type { AudioCam, Cue, Layers } from './router';
 import { AUDIO, type BusId } from './tuning';
 import { BowlVoice } from './voices/bowl';
-import { EarthVoice, FlyerVoice, RiverVoice, ValleyVoice } from './voices/canopy';
+import { CollapseVoice, EarthVoice, FlyerVoice, RiverVoice, ValleyVoice } from './voices/canopy';
 import { ChordVoice } from './voices/chord';
 import { GlassAirVoice, PoolVoice, SteamVoice } from './voices/forest';
 import { LampVoice } from './voices/lamp';
@@ -36,6 +36,7 @@ const LAZY: Array<{ need: (L: Layers) => boolean; make: (g: AudioGraph, b: Baked
   { need: (L) => L.river > 1e-5, make: (g, b) => new RiverVoice(g, b) },
   { need: (L) => L.valley > 1e-5, make: (g) => new ValleyVoice(g) },
   { need: (L) => L.lampwing > 1e-5 || L.hawker > 1e-5, make: (g) => new FlyerVoice(g) },
+  { need: (L) => L.collapse > 1e-5, make: (g, b) => new CollapseVoice(g, b) },
 ];
 
 export class AudioEngine {

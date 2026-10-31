@@ -67,6 +67,12 @@ export const MUSIC_SOUNDS = {
   clink: 3,
   gateThud: 3,
   gateGroan: 2,
+  // The Canopy r14: the Keeper's rage (a roar: it has a mouth), its sweep's tell (claws raked back, a hiss), the
+  // escape's roots snapping, rocks landing.
+  roar: 2,
+  sweepTell: 2,
+  rootSnap: 3,
+  rockLand: 3,
 } as const;
 export type MusicSoundId = keyof typeof MUSIC_SOUNDS;
 
@@ -83,6 +89,7 @@ export const MUSIC_SLOW: Partial<Record<MusicSoundId, number>> = {
   trickle: 2,
   gateThud: 2,
   gateGroan: 2,
+  roar: 2,
 };
 /** Glass rings above the roll-off. */
 export const MUSIC_GLASS: readonly MusicSoundId[] = ['celesta', 'glass', 'fireflyBlink'];
@@ -599,5 +606,164 @@ export const MUSIC_RECIPES: Record<MusicSoundId, Recipe> = {
     normalize([sift], 0.25);
     mixInto(x, sift);
     return [shape(x, sr, arEnv(0.08, d - 0.5, 0.15, d))];
+  },
+  /**
+   * The Keeper's rage (P1's beat, `keeperRage rear`): it has a mouth, so it roars. A sharp in-breath, then a growl:
+   * pink noise through two formants opening (F1 280 -> 520 Hz, F2 700 -> 1150) beaten at ~31 Hz (a throat's
+   * roughness), over a sub falling 78 -> 52 Hz, its shell creaking; saturated. ~1.5 s, the last of it the breath out.
+   */
+  roar(sr, r) {
+    const d = 1.55;
+    const n = len(sr, d);
+    const inb = pink(n, r);
+    biquad(inb, sr, 'bandpass', (i) => exp(500, 1300, i / sr / 0.22), 2.5);
+    shape(inb, sr, (t) => (t < 0.24 ? (t / 0.24) ** 2 : Math.max(0, 1 - (t - 0.24) / 0.05)));
+    const src = pink(n, r);
+    const k = (i: number) => Math.min(1, Math.max(0, (i / sr - 0.25) / 0.6));
+    const f1 = biquad(src.slice(), sr, 'bandpass', (i) => exp(280, 520, k(i)), 2.2);
+    const f2 = biquad(src.slice(), sr, 'bandpass', (i) => exp(700, 1150, k(i)), 3.5);
+    normalize([f1]);
+    normalize([f2]);
+    mixInto(f1, f2, 0.55);
+    const rate = 29 + r() * 5;
+    const sub = new Float32Array(n);
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      ph += (2 * Math.PI * exp(78, 52, (t - 0.25) / 1.1)) / sr;
+      // A throat's roughness: the growl beats, unevenly.
+      const rough = 0.6 + 0.4 * Math.sin(2 * Math.PI * rate * t + 1.5 * Math.sin(2 * Math.PI * 3.1 * t));
+      f1[i] = (f1[i] as number) * rough;
+      sub[i] = (Math.sin(ph) + 0.35 * Math.sin(2 * ph + 0.4)) * rough;
+    }
+    const growlEnv = arEnv(0.12, 0.55, 0.35, d - 0.22);
+    shape(f1, sr, (t) => (t < 0.22 ? 0 : growlEnv(t - 0.22)));
+    shape(sub, sr, (t) => (t < 0.22 ? 0 : growlEnv(t - 0.22)));
+    normalize([sub], 0.7);
+    const x = new Float32Array(n);
+    mixInto(x, normalize([inb], 0.35)[0] as Float32Array);
+    mixInto(x, f1, 0.8);
+    mixInto(x, sub, 0.9);
+    // Its plates grinding as it rears.
+    for (let g = 0; g < 18; g++) {
+      const t = 0.3 + 0.9 * r();
+      const f = 180 + 260 * r();
+      modes(x, sr, [{ f, tau: 0.012, amp: 0.25 * r(), ph: r() }], at(sr, t), 0.001);
+    }
+    biquad(x, sr, 'lowpass', 3200);
+    normalize([x]);
+    for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.6);
+    return [normalize([shape(x, sr, arEnv(0.002, 0, 1e3, d))])[0] as Float32Array];
+  },
+  /**
+   * P3's sweep tell (review r13: "unlike eating"): nothing wet and nothing low. Its claws raked back over the stone,
+   * scratch after scratch coming faster (110 -> 30 ms apart, each a bright rasp 1.6-4.2 kHz), under a hiss drawn in
+   * through its teeth rising (a band 1.8 -> 4.6 kHz) and swelling to the end: danger, held, about to fall. 0.8 s.
+   */
+  sweepTell(sr, r) {
+    const d = 0.8;
+    const n = len(sr, d + 0.08);
+    const x = new Float32Array(n);
+    let t = 0.01;
+    while (t < d) {
+      const k = t / d;
+      const g = white(len(sr, 0.04), r);
+      const f = 1600 + 2600 * r() * (0.5 + 0.5 * k);
+      biquad(g, sr, 'bandpass', f, 3);
+      shape(g, sr, arEnv(0.002, 0.008, 0.01, 0.04));
+      mixInto(x, g, (0.35 + 0.65 * k) * (0.7 + 0.3 * r()), at(sr, t));
+      t += exp(0.11, 0.03, k) * (0.8 + 0.4 * r());
+    }
+    const hiss = pink(n, r);
+    biquad(hiss, sr, 'bandpass', (i) => exp(1800, 4600, i / sr / d), 2);
+    biquad(hiss, sr, 'lowpass', 6500);
+    shape(hiss, sr, (tt) => (tt < d ? (tt / d) ** 1.6 : Math.max(0, 1 - (tt - d) / 0.06)));
+    normalize([x]);
+    normalize([hiss], 0.6);
+    mixInto(x, hiss);
+    biquad(x, sr, 'lowpass', 6500);
+    return [normalize([x])[0] as Float32Array];
+  },
+  /**
+   * A root snapping in the roof (the escape's rock tells and the collapse): a dry crack (a click and a wood body,
+   * modes 230 / 540 / 1.1 kHz with a little give), splinters after it, and grit loosening. 0.6 s.
+   */
+  rootSnap(sr, r) {
+    const d = 0.6;
+    const n = len(sr, d);
+    const x = new Float32Array(n);
+    const f = 210 + 60 * r();
+    modes(
+      x,
+      sr,
+      [
+        { f, tau: 0.05, amp: 1, ph: r() },
+        { f: f * 2.37, tau: 0.03, amp: 0.7, ph: r() },
+        { f: f * 4.9, tau: 0.012, amp: 0.4, ph: r() },
+      ],
+      0,
+      0.0006,
+    );
+    const crack = white(len(sr, 0.03), r);
+    biquad(crack, sr, 'highpass', 900);
+    biquad(crack, sr, 'lowpass', 6000);
+    shape(crack, sr, arEnv(0.0005, 0.002, 0.005, 0.03));
+    mixInto(x, normalize([crack], 0.9)[0] as Float32Array);
+    for (let g = 0; g < 9; g++) {
+      const t = 0.02 + 0.2 * r() ** 1.5;
+      modes(x, sr, [{ f: 700 + 1800 * r(), tau: 0.006, amp: 0.3 * r(), ph: r() }], at(sr, t), 0.0004);
+    }
+    const sift = pink(n, r);
+    biquad(sift, sr, 'bandpass', 1100, 0.9);
+    shape(sift, sr, (t) => Math.max(0, Math.min(1, (t - 0.05) / 0.1)) * Math.exp(-t / 0.25) * 0.25);
+    mixInto(x, sift);
+    biquad(x, sr, 'lowpass', 6500);
+    for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.3);
+    return [normalize([shape(x, sr, arEnv(0.0005, 0, 1e3, d))])[0] as Float32Array];
+  },
+  /**
+   * A rock landing (the escape): stone, not wood or shell. A heavy low body (52-140 Hz), stone knocks (inharmonic
+   * 380-1200 Hz, short), a spray of gravel bunched at the front and the dust after it. 1.3 s.
+   */
+  rockLand(sr, r) {
+    const d = 1.3;
+    const n = len(sr, d);
+    const x = new Float32Array(n);
+    modes(x, sr, [
+      { f: 52 + r() * 6, tau: 0.16, amp: 1, ph: r() },
+      { f: 88 + r() * 8, tau: 0.11, amp: 0.7, ph: r() },
+      { f: 141 + r() * 12, tau: 0.06, amp: 0.45, ph: r() },
+    ]);
+    const knock = new Float32Array(n);
+    for (const ratio of [1, 1.58, 2.31, 3.06]) {
+      const f = (380 + 120 * r()) * ratio;
+      modes(knock, sr, [{ f, tau: 0.018 / Math.sqrt(ratio), amp: 0.5 / ratio ** 0.4, ph: r() }], 0, 0.0005);
+    }
+    const thumpN = white(len(sr, 0.15), r);
+    biquad(thumpN, sr, 'lowpass', 260);
+    biquad(thumpN, sr, 'lowpass', 260);
+    shape(thumpN, sr, arEnv(0.002, 0.01, 0.04, 0.15));
+    const gravel = new Float32Array(n);
+    for (let g = 0; g < 46; g++) {
+      const t = 0.01 + 0.8 * r() ** 2.2;
+      modes(
+        gravel,
+        sr,
+        [{ f: 600 + 2800 * r(), tau: 0.004, amp: 0.3 + 0.7 * r(), ph: r() }],
+        at(sr, t),
+        0.0003,
+      );
+    }
+    const dust = pink(n, r);
+    biquad(dust, sr, 'bandpass', 700, 0.7);
+    shape(dust, sr, (t) => Math.min(1, t / 0.05) * Math.exp(-t / 0.45));
+    normalize([x]);
+    mixInto(x, normalize([knock], 0.55)[0] as Float32Array);
+    mixInto(x, normalize([thumpN], 0.8)[0] as Float32Array);
+    mixInto(x, normalize([gravel], 0.3)[0] as Float32Array);
+    mixInto(x, normalize([dust], 0.18)[0] as Float32Array);
+    biquad(x, sr, 'lowpass', 6000);
+    for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.5);
+    return [normalize([shape(x, sr, arEnv(0.001, 0, 1e3, d))])[0] as Float32Array];
   },
 };

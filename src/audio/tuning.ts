@@ -420,6 +420,13 @@ export const AUDIO = {
     duetBeat: 42,
     duetDuckDb: -22,
     duetDb: -5,
+    /**
+     * Round 14. The column (the great cage let go: the motif carried home) and the escape's drive: frames per beat
+     * (150 bpm, a 16th = 0.1 s). The escape's high cluster comes in when the front is nearer than this under her (px).
+     */
+    columnBeat: 24,
+    escapeBeat: 24,
+    escapeNearPx: 380,
   },
   /** The Canopy's world (route-canopy.ts): levels (dB peaks; layers RMS). */
   canopy: {
@@ -460,6 +467,23 @@ export const AUDIO = {
     streamDb: -48,
     /** The kin's wings opening as it sits by her (moment 3). */
     kinWingDb: -30,
+    /**
+     * Round 14. The Keeper: its roar on P1's rage beat, its sweep's tell (claws raked, a hiss). The escape: a root
+     * snapping over a rock's tell, the grit trickling to its drop, its fall and landing, a checkpoint's chime, her wings
+     * caught back (a chase's or the escape's return), the collapse front (RMS dB at its nearest; near within
+     * `collapseNearPx` of her feet, gone quiet `collapseFarPx` further).
+     */
+    roarDb: -14,
+    sweepTellDb: -16,
+    rootSnapDb: -20,
+    rockTrickleDb: -27,
+    rockFallDb: -24,
+    rockLandDb: -17,
+    checkpointDb: -27,
+    backWingDb: -30,
+    collapseDb: -27,
+    collapseNearPx: 180,
+    collapseFarPx: 700,
   },
   /** Held moments (the fling's aim, a story hold, a fade): the world bed ducks by up to this (dB). */
   duckDb: -10,
