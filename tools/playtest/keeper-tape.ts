@@ -15,7 +15,8 @@ import { withShortcuts } from '../../src/sim/world';
 import { fightTactics } from './fight';
 import type { Line } from './lines';
 
-const num = (k: string, d: number) => Number(process.argv.find((a) => a.startsWith(`--${k}=`))?.split('=')[1] ?? d);
+const num = (k: string, d: number) =>
+  Number(process.argv.find((a) => a.startsWith(`--${k}=`))?.split('=')[1] ?? d);
 const lag = num('lag', 15);
 const pre = num('pre', 30);
 const t = cloneTuning(defaultTuning);
@@ -52,7 +53,10 @@ for (let f = 0; f < 9000; f++) {
   seen.push(cloneState(s));
   while (seen.length > lag + 1) seen.shift();
   if (!line || k > 900) {
-    line = fightTactics(den, i, 1, lag).find((q) => q.name === 'the den')?.make() ?? null;
+    line =
+      fightTactics(den, i, 1, lag)
+        .find((q) => q.name === 'the den')
+        ?.make() ?? null;
     k = 0;
   }
   const m = line ? line.act(seen[0] ?? s, k++, prev) : 0;
