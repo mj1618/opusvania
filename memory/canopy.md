@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v16, 2026-11-01)
+# The Canopy: the first area built to the reference numbers (v17, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,49 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v17 (round 17, 2026-11-01): the first fling and what still gave no answer (first-timers ft16a-c)
+- **The harness hid the Lamp's prompt**: `openGame` adds `?manual`, which turns `Prompts` off, so no first-timer
+  before r17 saw the V cap by the first flame (players do). tools/playtest/firsttimer.ts sets `__prompts.enabled`
+  at start. The brief names `B` as the Lamp ("the game shows it as V").
+- **A safe first flame** (`wick-path`, `PATH_WICK` 2,640 x 590, 265 over S3, lesson, aim up-right, relight 90): a
+  standing jump on S3 finds it; a miss lands on S3 or the trunk's step east of it (no void under it); a fling with
+  nothing held, right or up-right lands on S4 or S5 (tests/unit/canopy-r17.test.ts). Not over S2 -> S3's gap: the
+  lesson's drift would slow a jump and drop her in. Lower than 590 a right fling hits S4's west face.
+- **A springboard wants her** (src/render/lantern/lamps.ts `READY`): within 3.2 fling radii a burning non-trap lamp
+  leans toward her on its thread (12 px), brightens and its halo grows; in reach a ring breathes out of it every
+  0.7 s. The hum already swelled with distance (audio router), nothing added there.
+- **The cocoon**: once it listens (frame 210) any fresh press breaks it; a press made in the black breaks it
+  `hatch.pressedAfter` (45) frames into the close frame. The 3 s of black stays (r12's opening): agents still say
+  "black screen, didn't know to press".
+- **The hub's first cage opens on the second cut** (`Lure.cuts`, schema `cuts`, render's bars read it): ft17c cut it
+  twice, saw it swing and drop a bar, and left it for good (0 cages in 4.4 min). Other cages keep `trapHp` 3.
+- **False ways**: the hub's roost (`roost-crossing`) moved from the high block's claw face (a lit line up the cliff:
+  "the moths looked like the way") to under the landing limb over the cage (5,840 x 1,236, 400 x 96). The
+  lampoak's unlit seed sockets (`after` lamps never lit or put out) draw as small closed buds, no thread or lace
+  ("cages up the trunk").
+- **Answers**: a shut root door knocked (push or cut) flares for `KIT.doorKnock` 1.6 s: light from beyond between
+  the roots and rings on the opening side's knots, drawn in `front` (in `back` the room's tint ate it); the seed
+  door's sockets ring out one after another when cut at, or on any slash made standing on it (a floor gives no
+  `slashTerrain`); the Crossing's west exit into the giant glows warm (`doorWarm` landmark, acts.ts `drawDoors`;
+  ft17b stopped 230 px short of it, "a dead end"); the high chamber's rotten wall (`high-wall`) is a `teach` wall
+  (pale from both sides: ft16c / ft17d dropped in from the limbs' vent and read a closed pocket).
+- **The giant's juvenile**: both ends of its top are arrivals (the door, the climb's lip) and `ENEMY_SPAWN_CLEAR`
+  wants 300 px from the spawn (3,136): at the west end ft17d topped out onto it, so it is back near r16's spot
+  (2,836, walk 2,796-2,876, back to the door). Not solved; a fix is an `arrive` from the far end, or another floor.
+- **First-timers** (from the hatch, fresh save; flame seen -> first fling / first cage / Grove; harness's longest
+  no-progress stretch, then the agent's own "stuck"):
+  | run | build | fling | cage | Grove | lost (harness / own) |
+  |---|---|---|---|---|---|
+  | ft17a | 2b0580b | 11.3 -> 14.1 s | 0:27 | 4:15 | 0 / ~45 s (the well's climb) |
+  | ft17b | 86a922b | 10.3 -> 11.7 s | 0:21 | 4:20 | 12 / ~70 s (missed the west exit, went east to the gates) |
+  | ft17c | 86a922b | 9.5 -> 14.2 s | none (2 cuts) | 4:25 | 10 / ~60 s (well -> giant, back) |
+  | ft17d | 407bf08 | 12.3 -> 13.4 s | 0:25 (2 cuts) | 5:23 | 16 / ~150 s (well -> limbs -> vent chamber loop) |
+  r16: 6-10 falls, 25-30 s, before the first fling. Still confusing: what aims a fling (learned at 49 s and 4:29),
+  the black opening, the well's root doors (ft17a, ft17d: "nothing at all", even with the flare), the giant's
+  `rot-door` (ft17d cut the cover under it 15+ times), the glint count dropping at a door, the well's burrback's
+  open window, the lampwing's tell. Journals: playtest-reports/2026-10-31T18-31-03-firsttimer-ft17a, *19-03-51-*17b,
+  *19-03-57-*17c, *19-32-30-*17d.
 
 ## v16 (round 16, 2026-11-01): the first ten minutes (first-timer ft15fix stuck 5 of 7 min)
 Teach through the world, no text: every try at a thing that cannot act yet answers.

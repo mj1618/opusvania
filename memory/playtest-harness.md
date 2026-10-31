@@ -61,13 +61,16 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
   where anything answers (another tool's server, even a 404) is not free.
 - **Events are read by identity, not by frame** (live.ts `fresh`): `{R}` and a reload reset the frame count, and a
   frame-window cursor re-read the whole log (round 2: ~1,100 duplicate screenshots and nonsense totals).
+- **It shows the key prompts a player sees** (since the Canopy r17): `openGame` boots `?manual`, which turns the
+  HUD's `Prompts` off, so before r17 no first-timer ever saw the Lamp's V cap by the first flame; `start` sets
+  `__prompts.enabled = true` (nothing learned is stored under `?manual`, so every session starts untaught).
 - **The brief must name the Lamp**: the burst language's `B` is the Lamp (the prompts show "V"); the r11 Canopy
   first-timer was told and still never found the fling's aim at the limbs (4 deaths at one gap), and spent ~2 game
   minutes at the trunk's notch. It ran 6.5 game minutes in ~2.5 h of its own time (486 tool calls): budget for that.
 **Brief to paste to the sub-agent:**
 > You are playing Lampfall for the first time. Know nothing about it beyond what you see. Run `npm run firsttimer --
 > start --name <you>` from the repo root and pass `--name <you>` to every command after it; then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s;
-> moves `R L U D`, `J` jump, `X` dash, `A` cut, `.` wait, a number of frames after each, `+` to combine, and `{Tab}`
+> moves `R L U D`, `J` jump, `X` dash, `A` cut, `B` the Lamp (the game's key cap shows it as V), `.` wait, a number of frames after each, `+` to combine, and `{Tab}`
 > for the map, `{R}` to restart), Read what happened and the screenshots. Every minute or at any moment that matters,
 > `note` what you think, in the first person and plainly: what you think you should do ("I think the moths want me to
 > follow them"), when you are lost ("I'm lost: I've walked this branch three times", `--mood lost`), stuck, a hit that
