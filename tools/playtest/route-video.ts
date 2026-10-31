@@ -53,6 +53,12 @@
  * is then cut exactly as the pictures were (a skipped still stretch is skipped in the sound, with a 5 ms cross-fade),
  * so sound is on the frame: picture i, at i/30 s, shows frame kept[i] and plays the sound from kept[i]/60. raw.mp4
  * and the captioned mp4 carry AAC; audio.wav is kept. Without `--audio` nothing changes (silent, as before).
+ *
+ * v10 (2026-10-31, video v15): the r15 moments played, not passed by: the crown's sit (she stands by the kin's spot
+ * and waits out its beats, so the answer is hers) and the gap's chase flown (a `chase` leg: chase-probe.ts's line,
+ * each hook pressed 10 frames after it is in reach, a breath at the rests). `render` never cuts a designed still
+ * moment (a quiet moment, the sit's beats, a held story beat, the boss's end: the last hit's silence). The escape,
+ * the chase, the sit and the column are kept as events and captioned (their captions existed but were never kept).
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -126,7 +132,12 @@ type Leg =
    * A cage cut open (v8): she walks under lure `lure` (or to `run[0]`, then runs to `run[1]` and jumps toward it) and
    * up-cuts until it is out.
    */
-  | { name: string; kind: 'cage'; lure: string; run?: [number, number]; optional?: boolean };
+  | { name: string; kind: 'cage'; lure: string; run?: [number, number]; optional?: boolean }
+  /**
+   * v12: the gap's chase flown (chase-probe.ts's line): from the shelf, into the trigger (the alarm), under hook-1,
+   * then fling by fling, each pressed `beat` frames after the next hook comes into reach, a breath at the rests.
+   */
+  | { name: string; kind: 'chase'; beat: number; rest: number };
 
 const taken = (id: string) => (s: GameState) => s.save.taken.includes(id);
 /** A pickup of the room she is in has been touched (its timer runs: woken, flying to her or taken). */
@@ -310,9 +321,27 @@ export const ROUTE: Leg[] = [
   { name: 'cn-bower: a rest', kind: 'script', script: 'U4 .40' },
   { name: 'cn-bower: the kin climb to the crown', kind: 'exit', exit: 'crown', max: 12000 },
   { name: 'cn-crown: the glide', kind: 'goal', test: owns('glide'), max: 12000 },
+  // v12 (r15): moonlight for two: she stands still by the kin's spot (`sits[0]` 2000, 1024, r 160) for its `frames`,
+  // then waits out the sit's beats (come .. lean: 720 frames) standing there, so the answer (her wings) is hers.
+  {
+    name: 'cn-crown: by the kin',
+    kind: 'goal',
+    test: (s) => s.room === 'cn-crown' && s.player.grounded && near(2000, 1024, 110)(s),
+    max: 12000,
+  },
+  { name: 'cn-crown: the sit', kind: 'script', script: '.960' },
   { name: 'cn-crown: back down', kind: 'exit', exit: 'bower', max: 12000 },
   { name: 'cn-bower: west to the gap', kind: 'exit', exit: 'gap', max: 12000 },
   { name: 'cn-gap: the glide to the far seed', kind: 'goal', test: flag('seeds:3'), max: 12000 },
+  // v12 (r15): the chase, flown: onto the shelf east of the firefly's trigger (chase-probe.ts's start), then the seven
+  // hooks into the roost's mouth, pressed 10 frames after each comes into reach, a breath at the two rests.
+  {
+    name: 'cn-gap: onto the shelf by the firefly',
+    kind: 'goal',
+    test: (s) => s.room === 'cn-gap' && s.player.grounded && near(4300, 1344, 40)(s),
+    max: 16000,
+  },
+  { name: 'cn-gap: the chase', kind: 'chase', beat: 10, rest: 40 },
   // The roost hidden in the hanging root clump (its glints; the shelf's lamps fling into its mouth).
   {
     name: "cn-gap: the roost's glints",
@@ -786,6 +815,55 @@ class Driver {
       : `still caged after ${tries} tries (${at})`;
   }
 
+  /**
+   * The gap's chase (v12; chase-probe.ts's line, from the shelf at 4300, 1344): into the trigger and a beat (the
+   * alarm), under hook-1, jump into its reach, then each hook: aim and press, let go, steer until the next is in reach,
+   * `beat` frames more while it stays there (`rest` at the two rests: she hangs on the hook), then the call.
+   */
+  private chase(beat: number, rest: number): string {
+    const sc = this.game.scene;
+    const ix = (id: string) => (sc.lures ?? []).findIndex((l) => l.id === id);
+    const reach = () => flingTarget(this.s, this.game.scene, tuning);
+    const run = (m: number, n = 1) => {
+      for (let k = 0; k < n; k++) this.push(m);
+    };
+    const { jump: J, right: R, left: L, up: U, down: D, lamp: B } = ActionBit;
+    run(L, 40);
+    run(0, 40);
+    for (let k = 0; k < 120 && Math.abs(feet(this.s).x - 4150) > 12; k++) run(feet(this.s).x < 4150 ? R : L);
+    for (let n = 0; reach() !== ix('hook-1') && n < 40; n++) run(J);
+    const rests = new Set(['hook-3', 'hook-5']);
+    const plan: Array<[number, string]> = [
+      [U, 'hook-2'],
+      [U, 'hook-3'],
+      [L, 'hook-4'],
+      [D | L, 'hook-5'],
+      [D | R, 'hook-6'],
+      [D | L, 'hook-7'],
+      [L, ''],
+    ];
+    for (const [aim, next] of plan) {
+      run(aim | B, 4);
+      run(aim);
+      const got = () => reach() === ix(next);
+      for (let k = 0; k < 160 && (next === '' || !got()); k++) {
+        run(aim & (L | R));
+        if (next === '' && this.s.player.grounded && k > 4) break;
+      }
+      if (next === '') break;
+      const wait = rests.has(next) ? rest : beat;
+      for (let k = 0; k < wait && got(); k++) run(rests.has(next) ? 0 : aim & (L | R));
+    }
+    run(0, 420);
+    const nest = this.events.some(
+      ({ e }) => e.type === 'fireflyChase' && (e as { phase?: string }).phase === 'nest',
+    );
+    const backs = this.events.filter(
+      ({ e }) => e.type === 'fireflyChase' && (e as { phase?: string }).phase === 'back',
+    ).length;
+    return nest ? `into the nest${backs ? ` (${backs} falls)` : ''}` : `no nest (${backs} falls)`;
+  }
+
   leg(L: Leg): LegLog {
     const start = this.tape.length;
     const room = this.s.room;
@@ -805,6 +883,9 @@ class Driver {
     } else if (L.kind === 'settle') {
       this.settle();
       ok = true;
+    } else if (L.kind === 'chase') {
+      note = this.chase(L.beat, L.rest);
+      ok = note.startsWith('into');
     } else if (L.kind === 'cage') {
       note = this.cage(L.lure, L.run);
       ok = note.startsWith('freed') || L.optional === true;
@@ -901,6 +982,12 @@ const KEEP = new Set([
   'fireflyStart',
   'fireflyHang',
   'fireflyRelight',
+  // v12 (r15): the escape, the chase, the sit and the quiet moments (their captions were written, never kept).
+  'escapeStart',
+  'escapeEnd',
+  'fireflyChase',
+  'kinSit',
+  'quietMoment',
 ]);
 
 // ---- render
@@ -1052,15 +1139,23 @@ async function render(out: string): Promise<void> {
         const g = (window as unknown as { __game: { step(n: number): unknown; state(): GameState } }).__game;
         g.step(k);
         const s = g.state();
-        return { x: Math.round(s.player.x), y: Math.round(s.player.y), room: s.room, frame: s.frame };
-      }, n)) as { x: number; y: number; room: string };
+        // (v12: a designed still moment is never cut: a quiet moment (the column, the sit, the vista), the sit's
+        // beats, a held story beat, the boss's end (the last hit's silence, the death, the release).)
+        const kt = s.kit;
+        const hold =
+          !!kt.quiet?.why ||
+          (!!kt.kinSit?.phase && kt.kinSit.phase !== 'stay') ||
+          kt.story > 0 ||
+          s.boss?.stage === 'end';
+        return { x: Math.round(s.player.x), y: Math.round(s.player.y), room: s.room, frame: s.frame, hold };
+      }, n)) as { x: number; y: number; room: string; hold: boolean };
       done += n;
       if (audio && done >= chunkStart + AUDIO_CHUNK + AUDIO_POST)
         await renderChunk(chunkStart + AUDIO_CHUNK, false);
       const pos = `${st.room}:${st.x},${st.y}`;
       still = pos === lastPos ? still + n : 0;
       lastPos = pos;
-      if (still > stillMax && done > 600 && done < total - 300) continue;
+      if (still > stillMax && !st.hold && done > 600 && done < total - 300) continue;
       const shot = await canvas.screenshot({ type: 'jpeg', quality: 88 });
       writeFileSync(join(shots, `${String(captures++).padStart(6, '0')}.jpg`), shot);
       kept.push(done);
@@ -1301,7 +1396,11 @@ function eventText(e: SimEvent): string | null {
                     ? 'The valley of lamps, the moon, the mountain'
                     : null;
     case 'escapeStart':
-      return x.x === undefined ? null : 'The roof gives: out, ahead of it';
+      return x.x === undefined
+        ? null
+        : x.id === 'out-escape'
+          ? 'Down the shaft and up the chimney, the earth rising under her'
+          : 'The roof gives: out, ahead of it';
     case 'escapeEnd':
       return 'Out from under the den';
     case 'fireflyChase':
@@ -1310,6 +1409,10 @@ function eventText(e: SimEvent): string | null {
         : x.phase === 'nest'
           ? 'Into the nest'
           : null;
+    case 'kinSit':
+      return 'The kin comes to sit by her, under the moon';
+    case 'quietMoment':
+      return x.why === 'column' && x.on ? 'The freed moths rise in a column' : null;
     case 'fade':
       return 'She fades';
     default:
@@ -1474,7 +1577,7 @@ function finish(out: string): void {
     [
       `# ${args.title}`,
       '',
-      `\`${name}.mp4\`: ${mmss(end)}, 1280x720, 30 fps, real-time speed. Build ${build()}${args.layout ? ` (${args.layout})` : ''}, world \`canopy\` from a fresh save in \`cn-hatch\`; the follow camera at zoom 1, glints and HUD on. Played by a bot (tools/playtest/route-video.ts): one input tape, every ability, seed and flag earned in play, fights fought for real${warps.length ? ', except where marked' : ''}. Still stretches over 1.5 s are cut short.`,
+      `\`${name}.mp4\`: ${mmss(end)}, 1280x720, 30 fps, real-time speed. Build ${build()}${args.layout ? ` (${args.layout})` : ''}, world \`canopy\` from a fresh save in \`cn-hatch\`; the follow camera at zoom 1, glints and HUD on. Played by a bot (tools/playtest/route-video.ts): one input tape, every ability, seed and flag earned in play, fights fought for real${warps.length ? ', except where marked' : ''}. Still stretches over 1.5 s are cut short, except the designed ones (the quiet moments, the sit, the boss's end).`,
       ...(warps.length
         ? [
             '',

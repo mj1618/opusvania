@@ -14,7 +14,7 @@
 import { zoneWeights } from '../render/scene/lib/fx-zones';
 import { wind } from '../render/scene/lib/look';
 import { roostsLit } from '../sim/firefly';
-import { flameAt, lureRowNow } from '../sim/lures';
+import { chaseCatchAt, chaseRest, flameAt, lureRowNow } from '../sim/lures';
 import type { Scene, SceneTag } from '../sim/scene';
 import type { GameState, PlayerState } from '../sim/state';
 import type { Tuning } from '../sim/tuning';
@@ -62,6 +62,8 @@ export interface AudioSnap {
     stagger?: number;
     fling?: number;
     aim?: number;
+    /** r15: a chase's hook in reach, her flight eased (`player.catchK` 0..1). */
+    catchK?: number;
   };
   /**
    * Burning lamps (`scene.lures` with cuts left): flame centre, kind, how far it is heard (px), and `i`, its
@@ -123,7 +125,7 @@ export interface AudioSnap {
    */
   seen?: number;
   /** (r14: `hold` frames she drifts at a hook after a fall put her back, `kit.firefly.hold`.) */
-  chase?: { beat: number; lead: number; hold?: number };
+  chase?: { beat: number; lead: number; hold?: number; rest?: number };
   /**
    * The Canopy r14, the full escape (`state.kit.escape`): under way (`on` 1), the last checkpoint and how many there
    * are, the collapse front (`front`: its top y, or -1 while it is off; `gap`: px from her feet down to it), how far
@@ -140,6 +142,14 @@ export interface AudioSnap {
     x1: number;
   };
   fill?: { x: number; y: number; n: number; of: number; kind: string };
+  /**
+   * The Canopy r15. `waves`: the Keeper's slam waves (`EnemyState.wave` / `waveWait`): the slam's x, the floor's y,
+   * how far each front has run from it (px; 0 while the crack opens, `wait` frames to go). `quiet`: the quiet moment
+   * (`kit.quiet.why`: column, sit, vista; '' none). `kin`: the sit's beat (`kit.kinSit`) and frames into it.
+   */
+  waves?: Array<{ x: number; y: number; d: number; wait: number }>;
+  quiet?: string;
+  kin?: { phase: string; t: number; frames: number; her: number };
 }
 
 /** The save flags the score and the Canopy's sounds read (snap.flags). */
@@ -166,6 +176,23 @@ function fillOf(state: GameState, scene: Scene): AudioSnap['fill'] {
     return { x: l.x, y: l.y, n, of, kind: l.kind };
   }
   return undefined;
+}
+
+/** The Keeper's slam waves under way (the Canopy r15: the crack opening, then the fronts running), if any. */
+function wavesOf(state: GameState): AudioSnap['waves'] {
+  const out: NonNullable<AudioSnap['waves']> = [];
+  for (const e of state.enemies) {
+    if (e.gone || !(e.wave > 0 || e.waveWait > 0)) continue;
+    out.push({ x: Math.round(e.waveX), y: Math.round(e.fromY), d: e.wave, wait: e.waveWait });
+  }
+  return out.length ? out : undefined;
+}
+
+/** Is she drifting onto one of the chase's rests (r15: she hangs there, a breath, until she presses)? 1 / 0. */
+function restOf(state: GameState, scene: Scene, t: Tuning): number {
+  if (!(state.player.catchK > 0) || state.player.fling >= 0) return 0;
+  const i = chaseCatchAt(state, scene, t);
+  return i >= 0 && chaseRest(state, scene, i) ? 1 : 0;
 }
 
 /** The escape under way (the Canopy r14), if any. */
@@ -315,6 +342,7 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
       stagger: p.stagger,
       fling,
       aim: fling >= 0 ? Math.min(1, (fl.flingFrames ?? 0) / Math.max(1, cap)) : 0,
+      catchK: p.catchK ?? 0,
     },
     lights,
     lures,
@@ -340,10 +368,21 @@ export function snapOf(state: GameState, scene: Scene, t: Tuning): AudioSnap {
             beat: state.kit.firefly.beat,
             lead: Math.round(state.kit.firefly.d - state.kit.firefly.her),
             hold: state.kit.firefly.hold ?? 0,
+            rest: restOf(state, scene, t),
           }
         : undefined,
     escape: escapeOf(state, scene),
     fill: fillOf(state, scene),
+    waves: wavesOf(state),
+    quiet: state.kit?.quiet?.why ?? '',
+    kin: state.kit?.kinSit?.phase
+      ? {
+          phase: state.kit.kinSit.phase,
+          t: state.kit.kinSit.t,
+          frames: state.kit.kinSit.frames,
+          her: state.kit.kinSit.her,
+        }
+      : undefined,
     creatures: state.enemies
       .filter((e) => !e.gone)
       .map((e) => ({
@@ -612,10 +651,22 @@ export function sleepBreath(seed: number, frame: number, who: number): boolean {
  * down) lets a long out-breath settle.
  */
 export function creatureCues(prev: AudioSnap | null, snap: AudioSnap, ctx: RouteContext): Cue[] {
+  const out: Cue[] = [];
+  // r15: a chase's hook comes into reach and her flight eases: the air thickens round her (a soft slowing breath).
+  if (snap.chase && (snap.hero.catchK ?? 0) > 0 && !((prev?.hero.catchK ?? 0) > 0))
+    out.push(
+      cue('slowIn', 'hero', ctx, snap.frame, 140, {
+        x: snap.hero.x,
+        y: snap.hero.y,
+        db: AUDIO.canopy.catchAirDb,
+        cents: 500,
+        place: 'hero',
+        priority: 3,
+      }),
+    );
   const was = prev?.creatures;
   const now = snap.creatures;
-  if (!was || !now || was.length !== now.length) return [];
-  const out: Cue[] = [];
+  if (!was || !now || was.length !== now.length) return out;
   now.forEach((c, k) => {
     const p = was[k];
     if (!p || p.kind !== c.kind || !((p.aware ?? 0) > 0) || (c.aware ?? 0) > 0 || c.gift > 0 || c.down)

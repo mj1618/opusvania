@@ -7,6 +7,7 @@
  *  - While a fight is near (`fightNear`: a creature aware of her or arriving within `near` px, alive), a new line
  *    waits; one already up goes within `cut` s (and comes back after the fight if it was cut in its first half). It
  *    shows once the fight's last creature is down or gone (or she is away).
+ *  - A quiet moment (`quietNow`) keeps lines down the same way; a line it cuts comes back whole after it.
  */
 
 /** Seconds: fade in, hold, fade out (2.5 s in all), and how near a fight keeps lines down (px). */
@@ -40,6 +41,14 @@ export function fightNear(sim: FightView, near: number = LINE_TIME.near): boolea
   return false;
 }
 
+/**
+ * A quiet moment on (the sim's `kit.quiet.why`: the column, the kin's sit, the vista; the Canopy r15): text waits
+ * for it to end as for a fight (the glide's line came up over the sit's first beats).
+ */
+export function quietNow(sim: { kit: unknown }): boolean {
+  return ((sim.kit as { quiet?: { why?: string } } | undefined)?.quiet?.why ?? '') !== '';
+}
+
 export class LineTimer {
   /** The line up (or waiting), '' = none. */
   text = '';
@@ -60,26 +69,35 @@ export class LineTimer {
     this.text = text;
     this.t = -1;
     this.cutA = 0;
+    this.cutQuiet = false;
   }
 
   /** Forget it (a load). */
   clear(): void {
     this.t = 1e6;
     this.cutA = 0;
+    this.cutQuiet = false;
     this.holdT = 0;
   }
 
-  /** Advances `dt` s with a fight near or not; returns the line's alpha (0..1). */
-  update(dt: number, fightNow: boolean): number {
+  /** Cut by a quiet moment: it comes back whole after it, however far in it was (the moment took its words). */
+  private cutQuiet = false;
+
+  /**
+   * Advances `dt` s with a fight near or not (and a quiet moment on or not: it keeps lines down as a fight does, and
+   * a line it cuts comes back whole after it); returns the line's alpha (0..1).
+   */
+  update(dt: number, fightNow: boolean, quiet = false): number {
     const L = LINE_TIME;
-    const fight = fightNow || this.holdT > 0;
+    const fight = fightNow || quiet || this.holdT > 0;
     this.holdT = Math.max(0, this.holdT - dt);
     if (this.cutA > 0) {
       // A fight came while it was up: it goes over `cut` s, and comes back whole after the fight if it was cut in
       // its first half.
       this.cutA = Math.max(0, this.cutA - dt / L.cut);
       if (this.cutA > 0) return this.cutA;
-      this.t = this.t < L.in + L.hold / 2 ? -1 : 1e6;
+      this.t = this.t < L.in + L.hold / 2 || this.cutQuiet ? -1 : 1e6;
+      this.cutQuiet = false;
       return 0;
     }
     if (this.t < 0) {
@@ -87,6 +105,7 @@ export class LineTimer {
       this.t = 0;
     } else if (fight && this.alphaAt(this.t) > 0) {
       this.cutA = this.alphaAt(this.t);
+      this.cutQuiet = quiet && !fightNow;
       return this.cutA;
     }
     this.t += dt;

@@ -395,6 +395,15 @@ function tree(g: C2, x: number, y: number, s: number): void {
 }
 
 /** A den's mouth: a dark arch with a warm inner lip. */
+/** A gate stands (a solid) as the sim has it (src/sim/kit.ts `gateShut`; render reads, never imports the sim's step). */
+export function gateStanding(
+  g: { flag: string; shut?: string | undefined },
+  flags: readonly string[],
+): boolean {
+  if (flags.includes(g.flag)) return false;
+  return g.shut === undefined || flags.includes(g.shut);
+}
+
 function mouth(g: C2, x: number, y: number, s: number): void {
   g.beginPath();
   g.moveTo(x - s, y);
@@ -509,9 +518,10 @@ export function bakeMap(b: MapBakeInput): HTMLCanvasElement {
         g.lineTo(X(r, o.x + o.w), Y(r, o.y));
       }
       g.stroke();
-      // Gates still shut: a dark bar with a pale tick.
+      // Gates standing now: a dark bar. (As the sim stands them, `gateShut`: an arena's door or the den's rubble is
+      // open until its `shut` flag, and a gate whose `flag` is saved is open: the den's breach after the collapse.)
       for (const q of s.gates ?? [])
-        if (!save.flags.includes(q.flag)) {
+        if (gateStanding(q, save.flags)) {
           g.fillStyle = 'rgba(8, 6, 4, 0.9)';
           g.fillRect(X(r, q.x), Y(r, q.y), Math.max(2, q.w * f.k), Math.max(2, q.h * f.k));
         }

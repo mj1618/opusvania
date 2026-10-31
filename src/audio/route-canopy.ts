@@ -215,19 +215,19 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
         ),
         at('trickle', 'world', C.trickleDb + 8, { delay: 0.9, far: 0.3, priority: 2 }, 2),
       ];
-    // Moonlight for two (moment 3): the kin's wings open, two soft sheets of felt, the torn one catching short.
+    // Moonlight for two (moment 3; r15 acted beat by beat, `kinBeat`): it shuffles over to her, felt on bark.
     case 'kinSit':
-      return [
-        at('wingOpen', 'hero', C.kinWingDb, { place: 'hero', cents: -200, delay: 0.5, priority: 3 }),
+      return [0, 1, 2].map((k) =>
         at(
-          'wingOpen',
+          'pad',
           'hero',
-          C.kinWingDb - 2,
-          { place: 'hero', cents: 150, delay: 0.62, dur: 0.07, release: 0.04, priority: 3 },
-          1,
+          C.kinWingDb - 10 - k,
+          { place: 'hero', delay: 0.25 + k * 0.42, cents: 300 - 150 * k, priority: 2 },
+          k,
         ),
-        at('scrape', 'hero', C.kinWingDb - 6, { place: 'hero', delay: 0.7, priority: 2 }, 2),
-      ];
+      );
+    case 'kinBeat':
+      return kinBeat(q, at);
     // The arena's root gates: a heavy thud shutting her in; drawing back with a groan.
     case 'gateShut':
       return [
@@ -546,6 +546,32 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
           priority: 4,
         }),
       ];
+    // r15, the slam's wave (review r14 #2): the floor is still dangerous after the slam. The crack opens at its feet
+    // over the delay (splits coming faster, a groan swelling), then the fronts tear out of it (stone splitting, a low
+    // shove); each front is then heard where it runs (canopyAmbient), panned by its x.
+    case 'keeperWave': {
+      if (q.phase !== 'slam') return [];
+      const go = Math.max(0, q.frames ?? 12) / 60;
+      return [
+        at('fissure', 'creatures', C.fissureDb, { y: q.y, place: 'world', priority: 7 }),
+        at(
+          'rumble',
+          'creatures',
+          AUDIO.creatures.rumbleDb - 2,
+          { y: q.y, cents: -900, delay: go * 0.5, priority: 4 },
+          1,
+        ),
+        at('rockLand', 'creatures', C.rockLandDb - 3, { y: q.y, cents: -600, delay: go, priority: 6 }, 2),
+        at('rootSnap', 'creatures', C.rootSnapDb - 2, { y: q.y, cents: -900, delay: go, priority: 5 }, 3),
+      ];
+    }
+    // r15, the chase's catch: a press at a hook pulls her onto its flame (air drawn in, her wings snapping open on
+    // it); the score plays the hook's note (score.ts stings).
+    case 'flingStart': {
+      const l = ctx.scene.lures?.find((x) => x.id === q.id);
+      if (!snap.chase || !l?.hook) return [];
+      return [at('hookPull', 'hero', C.hookPullDb, { place: 'hero', x: h.x, y: h.y, priority: 6 })];
+    }
     // --- The escape (r14, moment 7; src/sim/escape.ts). Each rock's tell is heard where it will fall (placed in the
     // world, so panned by x): a root snapping in the roof, then grit trickling faster to the drop; the fall a swoop;
     // the landing stone. The front is a layer (canopyLayers). Checkpoints a soft chime in tune: safe here.
@@ -665,6 +691,56 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
   }
 }
 
+type At = (sound: Cue['sound'], bus: Cue['bus'], db: number, over?: Partial<Cue>, k?: number) => Cue;
+
+/**
+ * The kin's sit, beat by beat (r15, `kinBeat`; the duet's notes are score.ts's): its wings opening to the moon (one
+ * full, the torn one catching short), the torn wing's try (a strained flutter that cannot hold) and its fall (folding
+ * back half open, a soft drop), nothing through the held look, then Wing's answer (her wings opening once, only if
+ * she stood by it), both folding, and its lean against her.
+ */
+function kinBeat(q: Loose, at: At): Cue[] {
+  const C = AUDIO.canopy;
+  const hero = { place: 'hero' as const };
+  switch (q.phase) {
+    case 'open':
+      return [
+        at('wingOpen', 'hero', C.kinWingDb, { ...hero, cents: -200, delay: 0.1, priority: 3 }),
+        at(
+          'wingOpen',
+          'hero',
+          C.kinWingDb - 3,
+          { ...hero, cents: 150, delay: 0.24, dur: 0.07, release: 0.04, priority: 3 },
+          1,
+        ),
+      ];
+    case 'try':
+      return [at('kinTry', 'hero', C.kinTryDb, { ...hero, priority: 4 })];
+    case 'fail':
+      return [
+        at('wingFold', 'hero', C.kinWingDb - 1, { ...hero, cents: -500, priority: 4 }),
+        at('scrape', 'hero', C.kinWingDb - 8, { ...hero, delay: 0.12, cents: -300, priority: 2 }, 1),
+        at('pad', 'hero', C.kinWingDb - 6, { ...hero, delay: 0.2, cents: -200, priority: 2 }, 2),
+      ];
+    case 'answer':
+      return (q as { her?: number }).her
+        ? [
+            at('wingOpen', 'hero', C.kinWingDb + 3, { ...hero, cents: 100, delay: 0.05, priority: 4 }),
+            at('wing', 'hero', C.kinWingDb - 2, { ...hero, delay: 0.32, priority: 2 }, 1),
+          ]
+        : [];
+    case 'fold':
+      return [
+        at('wingFold', 'hero', C.kinWingDb - 2, { ...hero, cents: -200, priority: 3 }),
+        at('wingFold', 'hero', C.kinWingDb - 4, { ...hero, cents: -450, delay: 0.18, priority: 2 }, 1),
+      ];
+    case 'lean':
+      return [at('pad', 'hero', C.kinWingDb - 8, { ...hero, delay: 0.3, cents: -100, priority: 2 })];
+    default:
+      return [];
+  }
+}
+
 /** The index of the nearest length in `xs` to `s`. */
 function nearestS(xs: readonly number[], s: number): number {
   let best = 0;
@@ -724,6 +800,27 @@ export function canopyAmbient(snap: AudioSnap, cam: AudioCam, ctx: RouteContext)
         priority: 2,
       }),
     );
+  // r15, the slam's wave: each front heard where it runs along the floor (placed in the world: it travels and pans),
+  // a stretch of grinding earth every `waveEvery` frames, thinning as it runs out.
+  if (f % C.waveEvery === 0)
+    for (const [k, w] of (snap.waves ?? []).entries()) {
+      if (w.d <= 0) continue;
+      const fade = Math.min(1, w.d / C.waveFadePx);
+      for (const side of [-1, 1]) {
+        const x = w.x + side * w.d;
+        if (x < 0 || x > ctx.scene.width) continue;
+        out.push(
+          cue('waveGrit', 'creatures', ctx, f, 180 + k * 2 + (side > 0 ? 1 : 0), {
+            x,
+            y: w.y,
+            db: C.waveDb - C.waveFallDb * fade,
+            variant: (Math.floor(f / C.waveEvery) + (side > 0 ? 2 : 0)) % 4,
+            cents: (hash01(seed, f, k, side, salt('wave')) - 0.5) * 300,
+            priority: 4,
+          }),
+        );
+      }
+    }
   // Freed moths at their roosts: a soft stir of wings now and then near them.
   for (const [k, r] of (snap.roosts ?? []).entries()) {
     const near = 1 - Math.hypot(r.x - cam.x, r.y - cam.y) / C.roostPx;
@@ -802,6 +899,12 @@ export function canopyLayers(snap: AudioSnap, cam: AudioCam, clock: number, ctx:
     out.collapse = dbToGain(C.collapseDb) * (0.3 + 0.7 * near ** 1.4);
     out.collapseHz = 110 + 260 * near + 120 * es.rise;
     out.collapsePan = 0.35 * panOf((es.x0 + es.x1) / 2, cam);
+  } else if (es) {
+    // (r15: before the front, through the den's floor run, the corridor and down the shaft: the roof coming down
+    // behind her, far and dull, from the den's side.)
+    out.collapse = dbToGain(C.behindDb);
+    out.collapseHz = 95;
+    out.collapsePan = room === 'cn-den' ? -0.35 : -0.5;
   }
   const bed = bedOf(room);
   if (bed.earth !== undefined)

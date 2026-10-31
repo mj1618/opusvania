@@ -24,6 +24,22 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
 
+## v15 fixes (before Matt's play, 2026-10-31): no new features
+- **Never wedged in a gate** (src/sim/kit.ts): every step, a gate standing over her box pushes her clear (`gatePush`),
+  however she came there, not only as it shuts; `pushClear` keeps her inside the room (an open exit beside the gate
+  took her back out). ft15den's stuck was a test boot only: the den's one way in is the tunnel's lid (`den-lid`
+  covers the whole opening; the breach is shut until the collapse) and `cn-tunnel-clear` is never taken back by a fade
+  or re-arm, so no save, Continue or R reaches the den without it (tests/unit/canopy-r15-fixes.test.ts).
+- **The map's gates** (src/render/map/paint.ts `gateStanding` = sim `gateShut`): a `shut` gate (the den's rubble) is
+  open until its `shut` flag; it drew as a dark bar before the collapse. The breach drew right before and after (a
+  dark bar while shut, air once `cn-den-collapse` is saved: checked with a played collapse and escape).
+- **Checks**: solver all claims hold (2,577 s), climbs and the world check pass.
+- **First-timer ft15fix** (the real game from the hatch, fresh save, pinned 29914a1): 7 min, wall jump at 69 s, then
+  stuck ~5 min looping hub / trunk / well / limbs, 0 moths: the hub's cage ignored cuts and the Lamp ("no feedback"),
+  the hub's east wall "lets me cling but every kick drops me back", the trunk's map arrow down behind an unbreakable
+  column, the well's gates shut both sides, the well's moon shard not taken. Never reached the den. Level lane: the
+  way on from the hub with wall jump only is not found (journal: playtest-reports/2026-10-31T14-41-27-firsttimer-ft15fix).
+
 ## v15 (round 15, review canopy-r14.md): the contract
 Render and audio build against these; sim / content names only (render never writes them).
 - **The escape felt** (#1): the den's way out is **low and east, then the clifftop's chimney** (no more roof gate,

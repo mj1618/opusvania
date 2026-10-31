@@ -716,3 +716,30 @@ slam: the tell, the crack, the fronts), `r15-sit.mp4` (`npm run clip`, standing 
   front is a dark rubble mass whose rims are small; the kin sits crouched (its rig's tuck), so it is not her height;
   the hole is a dome-topped opening (it reads as a hole with sky, not yet as a roof torn by roots); the wave's fissures
   still read as a dashed line at 960 px.
+
+## Round 15 fixes (before Matt's play): glances, the wave's seam, the den's way out, quiet text, the kin standing
+Clips `clips/r15f-glance.mp4`, `r15f-slam.mp4`, `r15f-escape-den.mp4` (played, EscapePlan), `r15f-sit.mp4` (`npm run
+clip --pickups`); scratch `.scratch/r15-fix/` (`probe.mts`/`rec.mts` on 5212, `gate.js` `__glance(max, why)` cuts until
+a `keeperGlance` of that kind: P2's gate comes after ~190 tries; `glshots.sh`, `slam.sh`, `esc.sh`, `sit.sh`, `line.sh`
+logs the item line against `kit.quiet`, `recall.sh`).
+- **A glance rings** (keeper.ts `KEEPER.glance`, any `keeperGlance` why): a white-hot clang star along the blade's line
+  (0.13 s), 12 sparks thrown back the way the blade came, a ring; the rig's `shellFlash` (burrback.ts, `GLANCE_FLASH`
+  0.22 s) draws its whole outline pale and wide as a hit's first frames do, with no darkening; the gate's pale haze is
+  softer (it read as smoke). Before: a soft disc and floor sparks only, so ~15 gated cuts "showed no damage". Her
+  hitstop (5) and the shake's clang were already there; the clang's sound is audio's.
+- **The wave's seam** (keeper.ts `seam()`, `KEEPER.wave.seam`): one continuous split along the floor over the whole
+  reach (`keeperWave` x0..x1) with a halo band, glow every 48 px and light travelling outward on it: red and quickening
+  through the rear, hot and racing through the 12-frame delay (it used to show only a crack at its feet: the slam read
+  as over), and amber, dimmer, ahead of the running fronts (`waveReach`) so the fronts' hot lips stay the brightest;
+  dust kicked off it. Short fissures with gaps read as a dashed line at 960 px.
+- **The den's way out** (escape.ts `drawWayOut`, `ESCAPE.way`): once a `*-breach` gate's flag is saved, a cool mouth
+  glow in it, three shafts fanning back west along the floor, a point light for the rims, and the column's pool round
+  the path's start; `ESCAPE.dark` 0.5 -> 0.42. Checked at 16:9, 16:10, 21:9.
+- **Quiet text** (hud/line-logic.ts `quietNow`, `LineTimer.update(dt, fight, quiet)`): item lines wait out a quiet
+  moment (the HUD passes `quietK > 0.1` too, so a line never plays out while the HUD is still faded), and a line one
+  cuts comes back whole after it; prompts want no lesson while `kit.quiet` is on. The crown: the glide's line shows
+  ~2 s as she lands in the glade, is cut 8 frames into the sit, and comes back ~3 s after `stay`.
+- **The kin stands** (tatter.ts `TATTER.sit.stand/standStrain`): with its wings open its perch and strain (both
+  all-fours poses: STRAIN is "up on its forelegs", not upright) ease off, so it stands on its hind legs nearly her
+  height. Lowering perch alone changed nothing visible.
+- Seen, not touched: a white line from off-screen to her in probe frames is the teleport's streak (probes teleport).

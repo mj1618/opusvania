@@ -597,6 +597,9 @@ export class EnemyRenderer {
         const g = ev as unknown as { id: string; why: string };
         const i = this.byId.get(g.id);
         if (i !== undefined && g.why === 'gate') this.rigs[i]?.shrug();
+        // (Any glance, r15 fixes: the shell's outline flashes pale, so a cut never seems to vanish.)
+        const rig = i === undefined ? undefined : this.rigs[i];
+        if (rig) rig.shellFlash = 1;
       } else if ((ev.type as string) === 'keeperRage') {
         // P1's rage (review r13 #3): its burrs go up as it rears; dust off its whole width as it slams.
         const r = ev as unknown as { id: string; phase: string; x: number; y: number };

@@ -415,7 +415,8 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
           'glintNote',
           x,
           y,
-          R.chimeDb - c * 0.35,
+          // (r15: the great cage's count ticks with the HUD, which steps out of the column's quiet: they draw back.)
+          R.chimeDb - c * 0.35 + (great ? AUDIO.canopy.quietChimeDb : 0),
           {
             place: 'hero',
             delay: hold + (ticks[k] as number),

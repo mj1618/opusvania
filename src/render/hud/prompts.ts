@@ -33,6 +33,7 @@ import { flameAt, flingTarget } from '../../sim/lures';
 import type { GameState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
+import { quietNow } from './line-logic';
 import { hudLink } from './link';
 import { fadeStep, type Lesson, owns } from './prompt-logic';
 
@@ -419,7 +420,8 @@ export class Prompts {
     // Never a lesson for a move she does not own (r9: the glide's cap in the hatch, with nothing owned).
     const owned = sim.save.abilities;
     let want: Lesson | null = null;
-    if (this.enabled && hudLink.on) {
+    // (No lesson over a quiet moment: it waits for the sit, the column, the vista to end. r15's fixes.)
+    if (this.enabled && hudLink.on && !quietNow(sim)) {
       if (!this.taught.kick && owns(owned, 'kick') && this.slide >= P.slideFrames) want = 'kick';
       else if (flame >= 0 && this.inReach >= P.flingAfter) want = 'fling';
       else if (!this.taught.offer && !this.offerRest && free && giftReady(sim)) want = 'offer';

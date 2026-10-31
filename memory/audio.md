@@ -192,6 +192,11 @@ default**: no music in a room walked. Clips: `playtest-reports/canopy-audio-r1/`
   now switch the scene per room (`sceneOf`: materials, pools and lure kinds were the render-time room's before).
   Windows agree to -46..-56 dB where they overlap, except a bed whose noise phase hangs on when its engine was
   made (v12's first seam, in the fork: uncorrelated, so the 0.5 s cross-fade dips ~3 dB, not heard).
+  **v15 video** (route-video v10, 6:19, frozen `vite build` + `vite preview` on its own port, url `.../opusvania`):
+  -16.3 LUFS, -4.3 dBTP, 0 clipped; parts at crf 25 run ~0.2 MB/s, so <= ~85 s per part stays under 19 MB. The
+  still-cut used to chop the column, the sit and the last hit's silence (it cut any 1.5 s where her box did not
+  move): render now holds quiet moments, the sit, story holds and `boss.stage === 'end'`. The great cage's break
+  sounds ~0.35 s after its picture when cut inside the hush (`silenceFrames`): the hush wins, by design.
 - The hub's music is the cage's hum and the bed only (the director's plan, not the original brief's "theme at the hub").
 
 ## Round 13 (2026-10-31): loud enough, the Keeper retimed, the chase, the trap, the duet
@@ -299,3 +304,57 @@ Clips and numbers: `playtest-reports/canopy-audio-r14/README.md`. Tests: `tests/
 - **Weak still**: the roar and the rake are synthesis an agent cannot hear (Matt's ear); the escape's strings are the
   same wavetable section as the boss (it can sound like more boss music, not a new colour); the column's resolution
   comes 1.6 s in and the bot's quick cut can shorten the last hit's silence to ~1.9 s.
+
+## Round 15 (2026-10-31): the wave, the escape fitted to the new way out, the catch, the sit's beats, quiet moments
+Clips and numbers: `playtest-reports/canopy-audio-r15/README.md`. Tests: `tests/unit/audio-r15.test.ts`.
+- **The slam's wave** (`keeperWave slam`; snap `waves` from `EnemyState.wave / waveX / waveWait / fromY`): at the slam
+  `fissure` (the crack opening at its feet: splits coming faster over a swelling groan, 0.24 s = the 12-frame delay) and
+  a low rumble; at `frames` / 60 the fronts tear out (`rockLand` -600 + `rootSnap` -900); then each front is heard where
+  it runs: `waveGrit` (earth grinding, gravel, a shove; 0.16 s) every `waveEvery` 3 frames at x +- `wave` on the floor,
+  placed in the world (it travels and pans), 9 dB down over 1,400 px of run. The tell (`phase: tell`) adds nothing: the
+  rear's creak is route-play's.
+- **The escape** in three sections (score.ts `escSec`, each from its own bar 0, `escFrom`): `run` in cn-den (r14's
+  drive), `down` in cn-out before the front (no gallop: a D pedal ticking, a heartbeat drum, cellos sinking D C# C B,
+  D + E flat held, her motif falling away in the harp), `climb` once the front is on (an A pedal held to the clifftop;
+  her motif climbing in sequence A D E | F G A | B flat A G | A E; phrase 1 strings in octaves, 2 an octave up with felt
+  and the harp running, 3 the long chromatic climb A B flat C C# with everything up; the phrase is max(by `rise` past
+  `climbRise` [0.3, 0.62], by bars into the section / 4)). 'escape' is kept across the room change (r14 cut it). The
+  scream (Eb6 E6) only when the front creeps under `escapeNearPx` 222 (it keeps ~240 and creeps to 200 while she
+  lingers). The vista flag and `escapeEnd` land on the same frame at the chimney's mouth: `escaped` (3 bars: B flat,
+  C, D) then the vista's theme (`vistaAfter`), never cut. Human-paced tape (pauses at each stand): run 7.8 s, down
+  7.8 s, climb 10.7 s, escaped 4.8 s.
+- **The front's rumble** narrower: `collapseNearPx` 170, `collapseFarPx` 330 (r14's 700 kept it at ~full the whole
+  climb now the front holds ~240 under her); before the front (`escape` with `front` -1) the roof coming down behind
+  her, `behindDb` -36, dull (95 Hz), panned to the den's side.
+- **The catch** (`flingStart` on a `Lure.hook` while `snap.chase`): `hookPull` (air drawn in rising 350 -> 2.2 kHz over
+  0.26 s, her wings snapping open on the flame, a push) + the score's sting on the chase's 16th: the harp up D4 A4 E5
+  into the celesta's sharp note of the next chord tone (she meets its light). The air thickening as a hook comes into
+  reach: `slowIn` +500 cents at `catchAirDb` on `hero.catchK` rising from 0 (router `creatureCues`). **Rests**: snap
+  `chase.rest` (catchK > 0, the hook in reach is one of `chase.rests`): the bars play the waiting texture (the call
+  and the chord, no pulse) and on arrival a breath (D4 A4 E5 glass, in tune, and her harp's A).
+- **The sit's beats** (`kinBeat`; the duet's notes now come on the beats, `DUET_PHRASES`, the duet's 16th, `duetDb`
+  under): `come` her motif on harp over the glass chord, `look` the moon in celesta, `open` the kin's F E F (felt) and
+  its wings (wingOpen, the torn one cut short), `try` its reach for the A: a trem A5 35 cents flat straining + `kinTry`
+  (a torn membrane fluttering, swelling, twice catching), `fail` the A gone, E caught and struck again flat, a low thud,
+  wingFold -500 + scrape + pad, `turn` nothing but the air (a faint glass D A), `answer` (her 1) her motif rising
+  quickly as her wings open + the kin's A5 reached **in tune**, `fold` G F E, `lean` her E over its D. Unanswered (her
+  0): the kin's line alone, flat. `stay` ends the duet (notes ring). `kinSit` itself = three soft pads (it shuffles).
+- **Quiet moments** (snap `quiet` = `kit.quiet.why`): the bed ducks `quietBedDb` (column -8, sit -12, vista -6; the
+  duet's -22 still under it); a find's music (`grant`) never plays inside one: it waits (`grantWait`) and comes 60
+  frames after; a grant begun just before `kinSit` (the glide at the crown ~3.7 s before the sit) gives way and comes
+  back after the sit, with the HUD's line. No glade phrase in a quiet moment. The great cage's count chimes (they tick
+  with the HUD's count, which steps out of the column) sit `quietChimeDb` -6 back.
+- **Tapes**: a scratch copy of keeper-tape with `EscapePlan({careful, lag 15, delay 16})` and a pause of 150 + 25k
+  frames at each chimney stand, 40 at the pocket, 50 in the den; after `escapeEnd` keep the plan 35 frames (she is in
+  the air at the chimney's mouth: idle input drops her back down it) then idle. The chase: chase-probe `--beat=12` with
+  80 idle frames at hook-3 / hook-5 (she hangs). The sit: cn-crown at 1900,1024, kit wallJump, `.20 R50 .20 L40
+  .1250` (the grant at 31, kinSit at 254).
+- **Gotcha**: the other lane's WIP can sit in the shared tree; a scratch `git worktree add --detach <dir> HEAD` with my
+  src/audio copied in gives tapes and a frozen build against the committed sim.
+- **Levels**: the Keeper -> vista clip -13.8 LUFS / -4.5 (sections -12.7..-15.5), the slam close-up -14.6, the chase
+  -14.2, the sit -14.6 (mostly the grant's music around it). 0 clipped.
+- **Weak still**: the wave's fronts (`waveDb` -21, world-placed) sit under P3's dense score and the glue: an agent
+  cannot tell from the waveform that they read; if Matt can't hear them, raise `waveDb` / duck the score on the slam.
+  The climb's strings are still the boss's wavetable section. The duet's beats are short (0.6-2 s): phrases overlap
+  the next beat's by design, untested by a human ear.
+

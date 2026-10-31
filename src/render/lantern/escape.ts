@@ -73,8 +73,29 @@ export const ESCAPE = {
    * The den goes dark behind the play plane as the roof comes in (moments.md: "the cloud as the only light"): a dark
    * over the back, to `dark` alpha over `darkSecs`, so the moonlight, the cloud and the rims read.
    */
-  dark: 0.5,
+  dark: 0.42,
   darkSecs: 6,
+  /**
+   * The way out lit (r15 fixes: between the release and the breach the den was darkness and rocks, and a first-timer
+   * walked out by the balcony): moonlight pours in through a torn-open `*-breach` gate from the corridor beyond (its
+   * mouth `mouth` px, `mouthA`; shafts fanning `reach` px west along the floor; a point light for the rims), and the
+   * column's moonbeam spills a cool pool on the floor round its foot (`pool`, `poolA`) and a light on the rims. Eased in
+   * over `inSecs` from the collapse, kept after.
+   */
+  way: {
+    color: 0xcfe0ff,
+    mouth: 300,
+    mouthA: 0.5,
+    reach: 1100,
+    shaftA: 0.09,
+    light: 1100,
+    lightI: 0.7,
+    pool: 560,
+    poolA: 0.24,
+    poolLight: 900,
+    poolI: 0.45,
+    inSecs: 1.5,
+  },
 };
 
 interface Grain {
@@ -136,6 +157,9 @@ export class EscapeStage {
   private cloudT = 0;
   private readonly pathLen: number[] = [];
   private readonly light: PointLight = { x: 0, y: 0, radius: 0, color: ESCAPE.goal.color, intensity: 0 };
+  private readonly breachLight: PointLight = { x: 0, y: 0, radius: 0, color: ESCAPE.way.color, intensity: 0 };
+  private readonly poolLight: PointLight = { x: 0, y: 0, radius: 0, color: ESCAPE.way.color, intensity: 0 };
+  private wayK = 0;
 
   static for(ctx: SceneContext, lights: LightRegistry): EscapeStage | null {
     if (LOOK.kit !== 'wood') return null;
@@ -163,6 +187,8 @@ export class EscapeStage {
     this.root.addChild(this.front, this.glow.container);
     ctx.layers.air.addChild(this.root);
     lights.set('escape-goal', this.light);
+    lights.set('escape-breach', this.breachLight);
+    lights.set('escape-pool', this.poolLight);
   }
 
   private state(sim: SimView): EscapeView | null {
@@ -299,8 +325,66 @@ export class EscapeStage {
     this.light.intensity = 0.5 * near;
     if (near > 0)
       this.glowBack.add(end[0] - 260, end[1], ESCAPE.goal.r, ESCAPE.goal.color, ESCAPE.goal.a * near, 200);
+    this.drawWayOut(b, dt, clock, sim);
     this.glow.end();
     this.glowBack.end();
+  }
+
+  /**
+   * The way out lit (`ESCAPE.way`): once a `*-breach` gate has been torn open, moonlight from the corridor beyond pours
+   * in through it, shafts fanning back along the floor toward her, and the column's beam (the path's start) pools on
+   * the floor round its foot. Nothing in a room without a breach.
+   */
+  private drawWayOut(b: Graphics, dt: number, clock: number, sim: SimView): void {
+    const W = ESCAPE.way;
+    const g = (sim.scene.gates ?? []).find((q) => q.id.endsWith('-breach'));
+    const open = !!g && sim.save.flags.includes(g.flag);
+    this.wayK = open ? Math.min(1, this.wayK + dt / W.inSecs) : 0;
+    const k = this.wayK * this.wayK * (3 - 2 * this.wayK);
+    this.breachLight.intensity = 0;
+    this.poolLight.intensity = 0;
+    if (!g || k <= 0.003) return;
+    const floor = g.y + g.h;
+    const mx = g.x + g.w * 0.6;
+    const my = g.y + g.h * 0.55;
+    // West or east: the breach opens away from the den's middle.
+    const dir = g.x + g.w / 2 > sim.scene.width / 2 ? -1 : 1;
+    const breathe = 0.92 + 0.08 * Math.sin(clock * 0.9);
+    // The opening itself: the moonlit corridor beyond, bright.
+    this.glowBack.add(mx, my, W.mouth * 0.55, W.color, W.mouthA * k * breathe, W.mouth * 0.8);
+    this.glowBack.add(mx, my, W.mouth * 1.4, W.color, 0.3 * W.mouthA * k, W.mouth);
+    // Shafts fanning back along the floor from it (three of falling length: a soft-ended spill).
+    const x0 = dir < 0 ? g.x : g.x + g.w;
+    for (let i = 0; i < 3; i++) {
+      const len = W.reach * (0.45 + 0.28 * i) * (0.96 + 0.04 * Math.sin(clock * 0.7 + i));
+      const top = g.y + 24 + i * 30;
+      b.poly([x0, top, x0, floor, x0 + dir * len, floor, x0 + dir * len * 0.55, floor - 40 - 20 * i]).fill({
+        color: W.color,
+        alpha: W.shaftA * k,
+      });
+    }
+    this.glowBack.add(x0 + dir * W.reach * 0.35, floor - 16, W.reach * 0.5, W.color, 0.22 * k, 70);
+    this.breachLight.x = mx + dir * 140;
+    this.breachLight.y = my;
+    this.breachLight.radius = W.light;
+    this.breachLight.intensity = W.lightI * k;
+    // The column's beam spilling round its foot (the path's start: the fallen cage it rose off).
+    const start = this.E.path[0];
+    if (start) {
+      this.glowBack.add(start[0], floor - 30, W.pool, W.color, W.poolA * k, 110);
+      this.glowBack.add(
+        start[0] + dir * W.pool * 0.6,
+        floor - 12,
+        W.pool * 0.9,
+        W.color,
+        0.5 * W.poolA * k,
+        50,
+      );
+      this.poolLight.x = start[0];
+      this.poolLight.y = floor - 220;
+      this.poolLight.radius = W.poolLight;
+      this.poolLight.intensity = W.poolI * k;
+    }
   }
 
   /** Each rock: its tell (crack, grit, shaking clod, shadow), its fall, nothing once down (the heap is drawn). */
@@ -764,5 +848,7 @@ export class EscapeStage {
 
   destroy(): void {
     this.lights.remove('escape-goal');
+    this.lights.remove('escape-breach');
+    this.lights.remove('escape-pool');
   }
 }
