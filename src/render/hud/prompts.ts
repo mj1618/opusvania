@@ -110,7 +110,7 @@ const PALE_N = 0xe2ecf0;
 /** The keys of the offer (src/input/bindings.ts) and the letter on their cap. */
 const OFFER_KEYS: Record<string, string> = { KeyF: 'F' };
 /** The Lamp's keys (the fling, src/input/bindings.ts) and their letters. */
-const LAMP_KEYS: Record<string, string> = { KeyV: 'V', KeyI: 'I' };
+const LAMP_KEYS: Record<string, string> = { KeyV: 'V', KeyI: 'I', ShiftLeft: 'Shift', ShiftRight: 'Shift' };
 /** The flame's place this frame (scratch). */
 const FLAME = { x: 0, y: 0 };
 
@@ -496,7 +496,7 @@ export class Prompts {
       this.lesson === 'offer' ? this.offerKey : this.lesson === 'fling' ? this.lampKey : this.key;
     if (this.shownKey !== keyNow) {
       this.shownKey = keyNow;
-      const wide = keyNow === 'Space' ? P.cap * 2.3 : P.cap;
+      const wide = keyNow === 'Space' ? P.cap * 2.3 : LAMP_KEYS[keyNow] === 'Shift' ? P.cap * 2 : P.cap;
       let tex = this.caps.get(keyNow);
       if (!tex) {
         tex = paintCap(
@@ -514,7 +514,7 @@ export class Prompts {
         .lineTo(wide - 4, P.cap + 3.4)
         .stroke({ width: 1.1, color: PALE_N, alpha: 0.42, cap: 'round' });
     }
-    const wide = keyNow === 'Space' ? P.cap * 2.3 : P.cap;
+    const wide = keyNow === 'Space' ? P.cap * 2.3 : LAMP_KEYS[keyNow] === 'Shift' ? P.cap * 2 : P.cap;
     const fling = this.lesson === 'fling';
     const hold = this.lesson === 'glide' || fling;
     let down = 0;

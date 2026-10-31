@@ -13,12 +13,13 @@ export const DEFAULT_KEYS: KeyBindings = {
   up: ['ArrowUp', 'KeyW'],
   down: ['ArrowDown', 'KeyS'],
   jump: ['Space', 'KeyZ', 'KeyK'],
-  dash: ['KeyX', 'KeyL', 'ShiftLeft', 'ShiftRight'],
-  attack: ['KeyC', 'KeyJ'],
+  dash: ['KeyX', 'KeyL'],
+  // Ctrl and Shift on the pinky for the cut and the Lamp (a player's ask, 2026-10-31).
+  attack: ['KeyC', 'KeyJ', 'ControlLeft', 'ControlRight'],
   // Offer (give a glint, the test grove's only): F as the usual "use" key.
   offer: ['KeyF'],
   // Lamp (the fling): V beside the C of the cut on the left hand, I over J on the right.
-  lamp: ['KeyV', 'KeyI'],
+  lamp: ['KeyV', 'KeyI', 'ShiftLeft', 'ShiftRight'],
 };
 
 export const DEFAULT_PAD: PadBindings = {

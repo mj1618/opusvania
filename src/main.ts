@@ -48,7 +48,7 @@ function abilitiesParam(v: string | null): string[] | null {
  * paused; drive via __game.step), ?hitboxes,
  * ?nopickups (the scene without its glints, lumen pods, enemies, lanterns and heart, so without the HUD: clean plates
  * for the look tools), ?audio (sound on for review; ?audio=0 off).
- * Keys: arrows/WASD move, Z/Space/K jump, X/L/Shift dash, Down+Jump drops through branches,
+ * Keys: arrows/WASD move, Z/Space/K jump, X/L dash, C/J/Ctrl attack, V/I/Shift Lamp, Down+Jump drops through branches,
  * Tab map, F2 collision overlay, G greybox labels, ` tuning panel, R restart (the game: back to the last
  * save), M sound on / off (muted by default: src/audio),
  * Enter (or a double-click on the picture) full screen on / off.
