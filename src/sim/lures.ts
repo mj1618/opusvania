@@ -334,15 +334,25 @@ export function flingAim(
   out: { x: number; y: number },
 ): { x: number; y: number } {
   const hm = Math.sqrt(aimX * aimX + aimY * aimY);
+  const p = state.player;
+  const l = scene.lures?.[p.fling];
   if (hm > 0) {
     out.x = aimX / hm;
     out.y = aimY / hm;
+    // (The Canopy r19, review r18 #4: a chase hook with its own way (`hook` and `aim`) throws her its way when she holds
+    // one step of the stick off it: down-left held through the S from hook-6, the hand's natural hold, flung her
+    // down-left off hook-7 under the roost's mouth, 3 times of 3. The rest of the stick is hers.)
+    if (l?.hook && l.aim) {
+      const m = Math.sqrt(l.aim[0] * l.aim[0] + l.aim[1] * l.aim[1]);
+      if (m > 0 && (out.x * l.aim[0] + out.y * l.aim[1]) / m >= t.lures.hookSnapCos) {
+        out.x = l.aim[0] / m;
+        out.y = l.aim[1] / m;
+      }
+    }
     return out;
   }
   out.x = 0;
   out.y = -1;
-  const p = state.player;
-  const l = scene.lures?.[p.fling];
   if (!l) return out;
   // (A lamp's own aim with nothing held: the first fling's, up-right across its gap, the Canopy r10.)
   if (l.aim) {

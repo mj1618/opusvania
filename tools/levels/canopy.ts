@@ -247,6 +247,12 @@ interface Bite {
 }
 
 class Wood extends RoomBuilder {
+  /** A room's camera keeps `headroom: 0` (r19) whatever else it is given. */
+  override set(key: string, value: unknown): this {
+    if (key === 'camera') return super.set(key, { headroom: 0, ...(value as Json) });
+    return super.set(key, value);
+  }
+
   private n = 0;
   readonly W: number;
   readonly H: number;
@@ -301,7 +307,10 @@ class Wood extends RoomBuilder {
     this.set('marks', { trees: [], stretches: [], covers: [], landmarks: [], places: [], backs: [] });
     // (A room roofed in mass shows nothing over its top: no sky band above the view's edge.)
     // (Nor can she stand on it or fly out over a wall's top: the top edge is solid but for its exits, `roof`.)
-    if (o.back) this.back(0, 0, P.w, P.h).set('camera', { headroom: 0 }).set('roof', true);
+    if (o.back) this.back(0, 0, P.w, P.h).set('roof', true);
+    // (r19, review r18 #2: open rooms kept the default 120 px of headroom, and the view showed the room's top as a
+    // ruler line with sky over it: the chase's hook-3 at zoom 0.72, the Grove's door. No room's view passes its top.)
+    this.set('camera', { headroom: 0 });
     const exits = EXITS.get(id) ?? [];
     this.set('exits', exits);
     this.ex = new Map(exits.map((e) => [e.id, e]));
@@ -1807,6 +1816,9 @@ function limbs(): Json {
   r.lamp('wick-limb-2', 1640, 450);
   r.hoard('niche-', 1920, 220, 240, 40, 2);
   r.cover('niche-cover', 1664, 64, 640, 320);
+  // (r19, ft18b / ft18c: the bed under the gap was off the bottom of the frame from the limbs ("the screen was showing
+  // the branches, not the floor"): over the gap the view sits under her, so the bed is in the frame's lower part.)
+  r.set('camera', { zones: [{ id: 'gap-bed', x: 640, y: 256, w: 1600, h: 1024, zoom: 1, below: 260 }] });
   r.cover('vent-cover', 2304, 1280, 896, 256);
   r.place('west', 200, 768);
   r.place('east', 3000, 576);
@@ -2765,8 +2777,16 @@ function gap(): Json {
   // 450-600 px of path ahead of her, never back, never escaping; fallen behind (the glide's low line, a fall), it
   // waits at its next stop flashing. In the nest it waits at the shaft's top for her, calls once up at the sky, and
   // is gone up the shaft. The flag keeps r10's name (the route plan reads it).
+  // (r19, review r18 #4: hook-7 throws her its way, west into the roost's mouth, for a held left or a held diagonal
+  // beside it: the down-left a hand keeps from hook-6 missed the mouth 3 times of 3. `lures.hookSnapCos`.)
   for (const [id, x, y] of GAP_HOOKS)
-    r.lamp(id, x, y, { after: `cn-gap-${id}`, relight: SPRING_RELIGHT, moths: 0, hook: true });
+    r.lamp(id, x, y, {
+      after: `cn-gap-${id}`,
+      relight: SPRING_RELIGHT,
+      moths: 0,
+      hook: true,
+      ...(id === 'hook-7' ? { aim: [-1, 0] } : {}),
+    });
   r.set('fireflies', [
     {
       id: 'firefly-gap',
@@ -3539,10 +3559,9 @@ const OUT_REST_W = 832;
 /** The clifftop (raised from 640 in r4: a higher glide to the door). */
 const TOP = 384;
 /** The chimney's strips ([id, face, y0, y1]): one a leg, on the face she must not take (tools/levels/climbs.ts). */
-const OUT_THORNS: Array<[string, 'w' | 'e', number, number]> = [
-  ['thorn-o2', 'e', 880, 984],
-  ['thorn-o3', 'w', 384, 448],
-];
+// (r19, review r18 #6: the east face's strip at 880-984 (`thorn-o2`) is where the escape kicks off rest W with the earth
+// under her: the builders' escape plan took it 8 times live and faded. The escape's danger is the earth: it went.)
+const OUT_THORNS: Array<[string, 'w' | 'e', number, number]> = [['thorn-o3', 'w', 384, 448]];
 
 function out(): Json {
   const r = new Wood('cn-out', 'The way on', [300, 1344], 7504, {

@@ -503,6 +503,11 @@ export const defaultTuning = withVariants({
     /** While caught, the throw's predicted flight (`player.lureArc`): a point every `arcEvery` frames, up to `arcFrames`. */
     arcEvery: 3,
     arcFrames: 60,
+    /**
+     * A chase hook with its own `aim` takes a held direction this near it (cosine; 0.7 = one 8-way step, 45°) as its
+     * aim (the Canopy r19: the hand's held diagonal at hook-7).
+     */
+    hookSnapCos: 0.7,
     /** Half the size of the flame's box the blade has to touch. */
     flameRadius: 20,
     /**
