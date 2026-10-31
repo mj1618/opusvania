@@ -545,3 +545,58 @@ Scratch tools (not in the repo): `.scratch/r12-render/probe.mts` (a `?manual` pa
   is pale specks at play zoom more than wings; mid-roll the body is a slab on edge; the fallen cage stands upright
   (no bent bars, not on its flank); the moss's stipple is lost under ~2 px in the bake (cushions read, marks do not);
   the hub's roosts do not go empty with a few scales (`roostsLeft`).
+
+## Round 13: the den, the river, the middle (review r12 #3-#7, #10; canopy-moments.md moments 3, 4, 5)
+Clips `clips/r13-keeper-intro.mp4`, `r13-keeper-p1|p2|p3.mp4`, `r13-keeper-death.mp4`, `r13-hatch-river.mp4`,
+`r13-vista.mp4` (960x540); sheets in `shots/canopy-r13-render/` (`den-before-after.png`: intro / floor / P2 / P3, r12
+left; `phases-sheet.png`, `intro-sheet.png`, `death-hatch-sheet.png`, `vista-sheet.png`; `after-16x10/`, `after-21x9/`).
+Scratch tools `.scratch/r13-render/` (probe / rec take `PORT`, `den-shots.sh <dir> W H`, `chase.js` walks her along the
+gap's path so the chase advances, `deathrec.js`).
+- **Private worktree dev loop**: while the sim lane's work in the shared tree did not compile, a detached worktree at
+  HEAD in the scratchpad (its `node_modules` is a tracked symlink, so it just works), `rsync src/render/` into it, vite on
+  5215. Switch back to 5212 once the sim lane commits.
+- **The larder** (scene/lib/den-larder.ts, `InteriorPlan.larder` = a den whose boss is the `keeper`): the deep back is
+  faint folds (no far rank); the mid plane is the wall: drape-like folds of earth (a lit tongue, a dark crease), stones
+  and clustered pebbles, root hair, three **cells** (arched niches, moths wrapped in silk hung on threads and stacked
+  on the sill) and two **old cages** half buried (`oldCage`, also used on the floor and in the nest, `heap` off when
+  hung). Near (baked): **ribs** lying down the wall and thick **hanging roots** (`larderRoots`, pure; `larderRootsOf`
+  seeds them as paintNearBacks does). keeper.ts throws the cage's shadows from them (`shadow.rib` 0.12: a rib's shadow
+  slides beside it; `shadow.hang` 0.4: swings wide). The floor's **litter** (`KEEPER.litter`: a mound of dead wings
+  under the cage, gnawed husks, an old cage on its side by each wall) is a Graphics in `pickupsBack`, drawn once.
+  Gotchas: den-planes.test fails on any translucent mid shape over 300 px wide (now: and 24 px tall: a sill's line of
+  light is not a sheet); the first wrapped moths (long, pale, pointed) read as leaves: short fat cocoons with a dark edge
+  and visible wrap lines.
+- **The Keeper**: `BOSS.drawK` 1.3 over its box (only where the room's boss is `keeper`); `BOSS.rearTall` 0.88 for the big
+  rear, lifted about its hind end (`rearUp` in drawBurrback: the turned shell's low corner on the floor, not the spent
+  sit's formula, which sank the rear 10 rig px); the coat is 18 wings 20-40 px with a vein each (`crust`); the fallen
+  cage lies on its flank, the up-side bars wrenched open and snapped (lamps.ts `cage(..., flank)`, `TRAP.flank`);
+  the intro's snap pushes the view to `PREMISE_CAM.snap.to` 1.08 (from the balcony's 0.72); the falling moth is 15 px
+  with a trail of glows; `keeperGlance` flashes amber where the blade met the dome; `keeperSweep` an arc of dust.
+- **The moonbeam** (keeper.ts `KEEPER.moon`): three nested additive bands (a hard core) when it falls far, glow only
+  when it lands on the rubble just under the gate (a short hard band read as a lampshade); a pool where it lands, a
+  wash down the rubble it lights, 60 lit motes, the column's moths silvered inside it. **The rubble** (kit.ts
+  `rubbleHeap`): all rubble gates as one heap, risers slumped into diagonals, clods only in the outer band, a dusty
+  walked lip per step, moonlit (cool caps) once the roof's gate is open. Per-gate clod piles read as black balloons.
+- **The river** (swarm/shader.ts): `sheen.catch` = the wings are moonlit membrane (half lit at rest, full at the
+  bottom of each beat), never on the disc; a far moth (no `detail`) lights whole (as a speck its body is all there is).
+  `sheen.gain/rim` up; far layer `rim` 0.6. The vista's river (vista-river.ts): 340 moths 4-7.5 px, a glow along it,
+  `floor` 0.6 / glide `floor` 0.75 of the density whatever the count. The swarm's sky shadows are **cut** (opening.ts).
+  LAMPFALL is in screen space and no longer fades with the disc (`moonShown`): runners see it.
+- **The chase** (acts.ts, moment 4): a `chase` pass is drawn at `kit.firefly.px/py -> x/y` (keyed to her progress), not
+  `fireflyAt`; trail 30 points; `fireflyChase start|wait` = alarm bursts (`alarmHz`), held while `beat` 3; `call` =
+  three short one long with its light thrown up the shaft; `fireflyKindle` = a thread + a flare. premise-cam leans on
+  kindles too, holds the lean and zooms 0.9 (`chaseZoom`) while `beat` 1-4. **The nest** (lantern/nest.ts): the pocket
+  from the chase's `end` and the path's last point; empty cages on threads up the shaft, stripped glow-caps, a coil of
+  silk, in `goal` (behind the roost's cover, which lifts); lit cold-gold while the firefly is inside (`beat` >= 4),
+  dim after `fireflyHide`.
+- **The trap** (lantern/trap-stream.ts, moment 5): `marks.stage.stream` moths along the tunnel's high air, **kept
+  under the roof** (the mark's line runs inside the wood: `under` 330 below the solid it is in); drawn in `air` (in
+  `goal` the light mask took them to dark specks); each `trapFill` swerves one out and spirals it into the cage; the
+  cage's cloud = `lures.fill / moths` (lamps.ts); `denStir` = 0.3 trauma (shake.ts `denStir`) and dust off the mouth.
+- **The duet** (character/tatter.ts `TATTER.sit`, cast.ts on `kinSit` within 500 px): shuffle to her side, turn to
+  the moon, wings held open (`spreadK`: `wings.goodOpen/tornOpen`, the good span 1.4x; the beat's angles alone barely
+  showed), fold, lean (`mesh.rotation` toward her) while she stays.
+- Weak still: the cells and cages are small at play zoom (the wall reads as folds and ribs more than as a larder); the
+  rear shows the pale belly plate as a white slab; the tunnel's stream is at the frame's top edge in the default
+  framing (its mark lies in the roof); the kin's open wings are grey on the moon's pale disc (little contrast); the
+  vista glide's moths include thin dark dashes (edge-on moths in `goal`).

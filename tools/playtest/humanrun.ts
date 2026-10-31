@@ -550,6 +550,12 @@ async function den(): Promise<void> {
     for (const seed of seeds) {
       const human = (SKILL_NAMES as readonly string[]).includes(skill) ? (skill as Skill) : undefined;
       const unroll: Record<string, number> = {};
+      // (The Keeper, r13: where each try ended and what hurt her, by phase.)
+      let lock = -1;
+      let lastTry = 0;
+      let frame = 0;
+      const fadesAt: number[] = [];
+      const hurtBy: Record<string, number> = {};
       const r = runHeadless({
         room,
         persona: human ? `human-${human}` : skill,
@@ -560,7 +566,22 @@ async function den(): Promise<void> {
         giveUp: 200,
         abilities: ['glide'],
         at: { x: Number(args.at ?? 3744), y: (base.patches?.[0]?.y as number | undefined) ?? 2112 },
-        onStep: (_s, _m, _p, ev) => {
+        onStep: (s, _m, _p, ev) => {
+          frame++;
+          const b = (s as { boss?: { phase: number; sweepHit: number } | null }).boss;
+          for (const e of ev) {
+            if (e.type === 'bossLock') lock = frame;
+            if (e.type === 'bossDefeat' && lock >= 0) lastTry = frame - lock;
+            if (e.type === 'fade') fadesAt.push(b?.phase ?? 0);
+            if (e.type === 'hurt') {
+              const k = (
+                s as { enemies: Array<{ id: string; mode: string; waveHit: boolean }> }
+              ).enemies.find((q) => q.id === 'old-burr');
+              const why = b && b.sweepHit > 0 ? 'claws' : k?.waveHit ? 'wave' : (k?.mode ?? '?');
+              const key = `P${b?.phase ?? 0}:${why}`;
+              hurtBy[key] = (hurtBy[key] ?? 0) + 1;
+            }
+          }
           for (const e of ev)
             if ((e.type as string) === 'enemyUnroll') {
               const how = String((e as unknown as { how?: string }).how);
@@ -575,7 +596,7 @@ async function den(): Promise<void> {
       if (kill) wins++;
       const enc = Object.values(t.encounters).find((e) => e.kind === 'oldBurrback');
       console.log(
-        `${skill.padEnd(11)} s${seed}: ${kill ? `down in ${mmss(kill.f)}` : `not down (${t.outcome} after ${mmss(t.frames)})`}, ${t.deaths.length} fades, ${enc?.hits ?? 0} hits, slams ${t.events.enemySlam ?? 0}, unrolled ${JSON.stringify(unroll)}, taproot ${t.events.enemyTaproot ?? 0}, den lamp catches ${t.lureCatches['wick-den'] ?? 0}`,
+        `${skill.padEnd(11)} s${seed}: ${kill ? `down in ${mmss(kill.f)}` : `not down (${t.outcome} after ${mmss(t.frames)})`}, ${t.deaths.length} fades, ${enc?.hits ?? 0} hits, slams ${t.events.enemySlam ?? 0}, unrolled ${JSON.stringify(unroll)}, taproot ${t.events.enemyTaproot ?? 0}, den lamp catches ${t.lureCatches['wick-den'] ?? 0}${lastTry > 0 ? `; the winning try ${(lastTry / 60).toFixed(0)} s` : ''}${fadesAt.length ? `; fades in P${fadesAt.join(',P')}` : ''}; hurt by ${JSON.stringify(hurtBy)}`,
       );
     }
   console.log(`${wins} of ${skills.length * seeds.length} down`);

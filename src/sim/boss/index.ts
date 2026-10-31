@@ -109,6 +109,10 @@ function freshBoss(spec: BossSpec): BossState {
     intro: 0,
     sweepCd: 0,
     collapse: -1,
+    drops: 0,
+    sweeps: 0,
+    glanceSeq: -1,
+    sweepHit: 0,
   };
 }
 

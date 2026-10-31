@@ -639,7 +639,8 @@
           "zooms": [1.5, 1.25, 1],
           "title": "LAMPFALL",
           "titleAfter": 150,
-          "hatchTail": 480
+          "hatchTail": 1800,
+          "tailFlag": "cn-promise"
         },
         "lights": {
           "x": 4200,
@@ -791,6 +792,16 @@
         "lesson": true,
         "aim": [1, -1],
         "moths": 0
+      }
+    ],
+    "triggers": [
+      {
+        "id": "promise",
+        "x": 2816,
+        "y": 560,
+        "w": 480,
+        "h": 420,
+        "sets": "cn-promise"
       }
     ],
     "pickups": [],
@@ -9978,7 +9989,20 @@
           "y": 1792
         }
       ],
-      "backs": []
+      "backs": [],
+      "tatter": {
+        "x": 1904,
+        "y": 1024,
+        "facing": -1,
+        "when": "cn-crown-wings",
+        "until": "cn-firefly-gap",
+        "sit": {
+          "x": 2000,
+          "y": 1024,
+          "r": 160,
+          "frames": 120
+        }
+      }
     },
     "exits": [
       {
@@ -9996,6 +10020,27 @@
         "w": 400,
         "h": 224,
         "ability": "glide"
+      }
+    ],
+    "triggers": [
+      {
+        "id": "glade-wings",
+        "x": 1980,
+        "y": 800,
+        "w": 400,
+        "h": 224,
+        "sets": "cn-crown-wings"
+      }
+    ],
+    "sits": [
+      {
+        "id": "kin-sit",
+        "x": 2000,
+        "y": 1024,
+        "r": 160,
+        "frames": 120,
+        "when": "cn-crown-wings",
+        "sets": "cn-kin-sat"
       }
     ],
     "shots": {
@@ -10024,7 +10069,21 @@
         "from": "in",
         "to": "glade-glide"
       }
-    ]
+    ],
+    "camera": {
+      "zones": [
+        {
+          "id": "crown-sit",
+          "x": 1640,
+          "y": 464,
+          "w": 720,
+          "h": 624,
+          "zoom": 0.85,
+          "after": "cn-kin-sat",
+          "until": "cn-firefly-gap"
+        }
+      ]
+    }
   },
   {
     "id": "cn-attic",
@@ -10557,6 +10616,60 @@
         "y": 1580,
         "relight": 900,
         "moths": 0
+      },
+      {
+        "id": "hook-1",
+        "kind": "wick",
+        "x": 4150,
+        "y": 1080,
+        "after": "cn-gap-hook-1",
+        "relight": 240,
+        "moths": 0
+      },
+      {
+        "id": "hook-2",
+        "kind": "wick",
+        "x": 4150,
+        "y": 760,
+        "after": "cn-gap-hook-2",
+        "relight": 240,
+        "moths": 0
+      },
+      {
+        "id": "hook-3",
+        "kind": "wick",
+        "x": 4150,
+        "y": 450,
+        "after": "cn-gap-hook-3",
+        "relight": 240,
+        "moths": 0
+      },
+      {
+        "id": "hook-4",
+        "kind": "wick",
+        "x": 3780,
+        "y": 470,
+        "after": "cn-gap-hook-4",
+        "relight": 240,
+        "moths": 0
+      },
+      {
+        "id": "hook-5",
+        "kind": "wick",
+        "x": 3460,
+        "y": 680,
+        "after": "cn-gap-hook-5",
+        "relight": 240,
+        "moths": 0
+      },
+      {
+        "id": "hook-6",
+        "kind": "wick",
+        "x": 3810,
+        "y": 880,
+        "after": "cn-gap-hook-6",
+        "relight": 240,
+        "moths": 0
       }
     ],
     "marks": {
@@ -10651,22 +10764,60 @@
       {
         "id": "firefly-gap",
         "flag": "cn-firefly-gap",
-        "onFling": ["wick-gap-1", "wick-gap-2", "wick-gap-3"],
+        "trigger": {
+          "x": 3456,
+          "y": 1088,
+          "w": 704,
+          "h": 256
+        },
         "path": [
-          [3040, 1150],
+          [4150, 1050],
+          [4150, 740],
+          [4150, 430],
+          [3780, 450],
+          [3460, 660],
+          [3810, 860],
           [3400, 1400],
-          [3250, 1450],
-          [2800, 1570],
-          [2620, 1780],
-          [2900, 1930],
-          [3180, 1900],
-          [3330, 2060],
-          [3330, 2330]
+          [3210, 1140]
         ],
-        "frames": 300,
-        "relights": ["wick-gap-1", "wick-gap-2", "wick-gap-3"]
+        "frames": 360,
+        "relights": ["wick-gap-1"],
+        "chase": {
+          "lead": [450, 600],
+          "kindles": ["hook-1", "hook-2", "hook-3", "hook-4", "hook-5", "hook-6"],
+          "waits": [1, 4, 6],
+          "end": [3040, 120],
+          "needs": "glide"
+        },
+        "look": {
+          "x": 3900,
+          "y": 880,
+          "zoom": 0.85,
+          "from": 0,
+          "to": 90
+        }
       }
     ],
+    "camera": {
+      "zones": [
+        {
+          "id": "chase",
+          "x": 3328,
+          "y": 0,
+          "w": 1024,
+          "h": 1344,
+          "zoom": 0.8,
+          "bounds": {
+            "x": 2752,
+            "y": 0,
+            "w": 1600,
+            "h": 1600
+          },
+          "after": "cn-firefly-gap",
+          "until": "cn-firefly-gap-done"
+        }
+      ]
+    },
     "shots": {
       "wide": [
         {
@@ -11683,7 +11834,10 @@
         "y": 1420,
         "trap": true,
         "moths": 40,
-        "after": "cn-warn-hung"
+        "after": "cn-warn-hung",
+        "fills": {
+          "frames": 180
+        }
       }
     ],
     "marks": {
@@ -11797,7 +11951,14 @@
           "w": 8000,
           "h": 2176
         }
-      ]
+      ],
+      "stage": {
+        "stream": {
+          "points": [[6720, 1090], [7140, 1230], [7560, 1310], [8000, 1230]],
+          "count": 40,
+          "captured": "trap-warn"
+        }
+      }
     },
     "camera": {
       "headroom": 0,
@@ -12761,7 +12922,7 @@
         "y": 1344,
         "facing": -1,
         "radius": 1300,
-        "hp": 10,
+        "hp": 16,
         "sets": "cn-den-down",
         "taproot": [2944, 3040],
         "snuffs": "wick-taproot"

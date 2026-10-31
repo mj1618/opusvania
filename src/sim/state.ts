@@ -409,6 +409,13 @@ export interface LuresState {
    */
   grace: number[];
   /**
+   * The Canopy r13, moment 5 (`Lure.fills`): the moths in a cage that is filling now (`trapFill`), -1 = not one (a
+   * plain lure, or a cage already full when she came in); it stays at its `moths` once full. `fillT`: frames since it
+   * lit. Absent in old states (none fill).
+   */
+  fill?: number[];
+  fillT?: number[];
+  /**
    * Lures a boss drives (memory/bosses.md), per `scene.lures` index; absent in rooms without one.
    * `row`: the tuning row it pulls by now ('' = its scene kind's: a great lamp's heart reaches further
    * in the last phase); `dx`, `dy`: where its flame is now from its scene point (the heart lowers);
@@ -734,6 +741,11 @@ export interface EnemyState {
   feedX: number;
   blind: number;
   seekX: number;
+  /**
+   * The Keeper's phase gate (r13): while > 0 its health does not go below this (a cut at it glances,
+   * `keeperGlance gate`): the phase is not done with her yet (P1's moths, P2's time, P3's sweeps). 0 = none.
+   */
+  gate: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */
@@ -1056,6 +1068,14 @@ export interface BossState {
   sweepCd: number;
   /** The ending's collapse (the fallback): frames since the great release, -1 = not yet. */
   collapse: number;
+  /**
+   * The Canopy r13: moths dropped this phase (P1's gate wants `p1Drops`), sweeps made (P3's gate wants `p3Sweeps`),
+   * the last slash a glance was told for (`keeperGlance`), and frames the sweep's claws are live.
+   */
+  drops: number;
+  sweeps: number;
+  glanceSeq: number;
+  sweepHit: number;
 }
 
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */
@@ -1158,6 +1178,7 @@ export function cloneState(s: GameState): GameState {
       grace: s.lures.grace.slice(),
       ember: s.lures.ember.slice(),
       burn: s.lures.burn.slice(),
+      ...(s.lures.fill ? { fill: s.lures.fill.slice(), fillT: (s.lures.fillT ?? []).slice() } : {}),
       ...(s.lures.live
         ? {
             live: {

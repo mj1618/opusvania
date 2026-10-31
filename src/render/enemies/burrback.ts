@@ -848,8 +848,9 @@ export class BurrRig {
       const u = sat(this.mf / Math.max(1, e.modeFrames + e.timer));
       crouchT = -0.4;
       tuckT = 0.3;
-      leanT =
-        -this.d * (BOSS.rearLean * (0.55 + 0.45 * u)) + BOSS.rearShake * u * Math.sin(clock * 48 + this.seed);
+      // (The big one stands tall: canopy review r12 #4. `drawBurrback` lifts it about its hind end.)
+      const lean = this.big ? BOSS.rearTall : BOSS.rearLean;
+      leanT = -this.d * (lean * (0.55 + 0.45 * u)) + BOSS.rearShake * u * Math.sin(clock * 48 + this.seed);
       backT = -this.d * 4 * u;
       bristleT = 1;
     } else if (mode === 'slam') {
@@ -1423,6 +1424,27 @@ function drawCrust(p: Painter, d: number, rimH: number, whole: number, gone: num
       );
     };
     one(w.a, 1);
+    // A vein down it from the root (what makes a pale shape a wing at play zoom).
+    {
+      const ca = Math.cos(w.a);
+      const sa = Math.sin(w.a);
+      const q = (u: number, v: number, j: number): void => {
+        const lx = cx + u * ca - v * sa;
+        const ly = cy + u * sa + v * ca;
+        p.px[j] = bx(lx, ly);
+        p.py[j] = by(lx, ly);
+      };
+      q(L * 0.05, 0, 0);
+      q(L * 0.5, L * 0.03, 1);
+      q(L * 0.88, L * 0.02, 2);
+      q(L * 0.5, L * 0.07, 3);
+      p.shape(
+        4,
+        bx(cx + L * 0.45 * ca, cy + L * 0.45 * sa),
+        by(cx + L * 0.45 * ca, cy + L * 0.45 * sa),
+        SH_CRUST_ROOT,
+      );
+    }
     if (w.pair) {
       one(w.a + Math.PI * 0.62, -1);
       // The body between them, a dark husk.
@@ -1586,9 +1608,17 @@ export function drawBurrback(
   const sitUp =
     spentK *
     Math.max(0, tipA * lerp(B.halfWide, B.halfLen, ad) * 0.92 - (1 - Math.cos(rig.rock.x)) * -pivot - rimH);
+  // The big one's tall rear (canopy review r12 #4): lifted about its hind end, the way a spent one sits up, so the
+  // back of the rim stays on the floor and the front half stands up into the light.
+  const rearUp =
+    rig.big && !dead
+      ? rig.rearK *
+        // (Its whole hind end on the floor, not the rim let sink as a spent one's: the low corner of the turned shell.)
+        Math.max(0, tipA * lerp(B.halfWide, B.halfLen, ad) - (1 - Math.cos(rig.rock.x)) * -pivot)
+      : 0;
   // (The top rings: a fast small up-and-down that dies away.)
-  const oy = rig.y - hop - sitUp + ringTop * K.bounce * ringW;
-  setBody(ox - sgn0 * sitUp * 0.35, oy, sx, sy, rot, pivot);
+  const oy = rig.y - hop - sitUp - rearUp + ringTop * K.bounce * ringW;
+  setBody(ox - sgn0 * (sitUp + rearUp) * 0.35, oy, sx, sy, rot, pivot);
   // The brow plate: out and down as far as the ground lets it (the pitch has dropped the front already).
   const guard = rig.guard.x * (1 - deadK);
   const aEff = lerp(B.halfWide, B.halfLen, ad);

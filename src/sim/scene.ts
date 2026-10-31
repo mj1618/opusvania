@@ -12,6 +12,7 @@ import type {
   MothStone,
   Roost,
   SeedCase,
+  Sit,
   Swing,
   Thorns,
 } from './kit-data';
@@ -299,6 +300,12 @@ export interface Lure {
   hold?: number;
   /** The moths it holds, if not its kind's (the cache's firefly-lamp: the level's biggest release). */
   moths?: number;
+  /**
+   * The Canopy r13, moment 5 (a trap hung empty): from the frame it lights (`after`) its moths come in one by one over
+   * `frames` (`trapFill`, `state.lures.fill`); the blade glances off it (`lureGuarded`) until it is full, then
+   * `denStir`.
+   */
+  fills?: { frames: number };
   /** A moonwick that burns this many frames once kindled, if not `moonwick.burn` (the vault's: a shorter clock). */
   burn?: number;
 }
@@ -529,6 +536,8 @@ export interface Scene {
   fireflies?: FireflyPass[];
   /** Where freed moths gather in this room, one rect per trap lamp freed anywhere (src/sim/firefly.ts). */
   roosts?: Roost[];
+  /** The Canopy r13, moment 3: where she may sit with the kin (src/sim/firefly.ts `updateSits`). */
+  sits?: Sit[];
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
    * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).

@@ -260,7 +260,7 @@ uniform vec4 uSky;
 uniform vec4 uRim;
 uniform vec4 uMembrane;
 uniform vec4 uGlint;
-uniform vec4 uSheen;    // wing sheen toward the moon: gain, floor (share lit when edge-on); rim strength, unused
+uniform vec4 uSheen;    // wing sheen toward the moon: gain, floor (share lit when edge-on); rim strength, wing-catch gain
 
 // Exact distance to a convex quad (iq's polygon), negative inside.
 float sdQuad(vec2 p, vec2 v0, vec2 v1, vec2 v2, vec2 v3) {
@@ -378,6 +378,13 @@ void main(void) {
   float away = (1.0 - halo) * (1.0 - halo);
   col = mix(col, uRim.rgb, clamp(lit * uSheen.x * uMoon.z * away * (1.0 - 0.5 * haze), 0.0, 1.0));
   col = mix(col, uRim.rgb, clamp(rim * rimK, 0.0, 1.0));
+  // The wing-catch (canopy review r12 #5: the river read as black birds): moonlight caught on the wings at the
+  // bottom of each beat, a pale flicker down the whole river. Never on the disc (there they are its silhouettes).
+  // The wings themselves are moonlit membrane (half lit at rest), the body stays dark.
+  float catchK = smoothstep(0.45, 1.0, vSheen);
+  // (A far moth is a speck: all of it catches the light, or it reads as a bird.)
+  float wingLit = mix(0.5, 1.0, catchK * catchK) * mix(0.8, wm, vLook.w) * uSheen.w;
+  col = mix(col, uRim.rgb, clamp(wingLit * (1.0 - disc) * (1.0 - 0.5 * haze), 0.0, 1.0));
   col = mix(col, uGlint.rgb, clamp(vFlap.z * wm * (1.0 - disc), 0.0, 1.0));
   float A = a * vFlap.w;
   o = vec4(col * A, A);

@@ -30,10 +30,22 @@ export interface FireflyState {
   /** Where it is now (world px, the light's centre). */
   x: number;
   y: number;
+  /**
+   * The Canopy r13, a chase (`FireflyPass.chase`; render reads `x`, `y`, and `px`, `py` a step ago, since a chase is
+   * not a function of the frame): `beat` 0 perched (hanging its light at the path's start, she not yet seen), 1 the
+   * alarm, 2 flying, 3 waiting for her at a stop, 4 into the nest (to the shaft's top), 5 the call, -1 none. `t`
+   * frames in the beat; `d` px along the path; `her` her progress along it (px).
+   */
+  beat: number;
+  t: number;
+  d: number;
+  her: number;
+  px: number;
+  py: number;
 }
 
 export function createFirefly(): FireflyState {
-  return { pass: -1, frame: 0, x: 0, y: 0 };
+  return { pass: -1, frame: 0, x: 0, y: 0, beat: -1, t: 0, d: 0, her: 0, px: 0, py: 0 };
 }
 
 /** The point `d` px along `path` (into `out`). */
@@ -100,6 +112,231 @@ export function fireflyAt(f: FireflyPass, frame: number, out: { x: number; y: nu
   return out;
 }
 
+/** Her progress along a path: the arc length of the nearest point on it to (`x`, `y`), and its distance (into `out`). */
+function project(
+  path: ReadonlyArray<readonly [number, number]>,
+  x: number,
+  y: number,
+  out: { d: number; dist: number },
+  lo = 0,
+  hi = Number.POSITIVE_INFINITY,
+): void {
+  let best = Number.POSITIVE_INFINITY;
+  let at = 0;
+  let run = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1] as readonly [number, number];
+    const b = path[i] as readonly [number, number];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const ll = dx * dx + dy * dy;
+    const len = Math.sqrt(ll);
+    // (Only the stretch of path between `lo` and `hi` (arc px): an S crosses itself, and her nearest point must be
+    // the stretch she is on, not one further on that passes by her.)
+    const k0 = len > 0 ? Math.max(0, Math.min(1, (lo - run) / len)) : 0;
+    const k1 = len > 0 ? Math.max(0, Math.min(1, (hi - run) / len)) : 1;
+    if (run > hi || run + len < lo) {
+      run += len;
+      continue;
+    }
+    const kk = ll > 0 ? ((x - a[0]) * dx + (y - a[1]) * dy) / ll : 0;
+    const k = Math.max(k0, Math.min(k1, kk));
+    const qx = a[0] + dx * k - x;
+    const qy = a[1] + dy * k - y;
+    const q = qx * qx + qy * qy;
+    if (q < best) {
+      best = q;
+      at = run + len * k;
+    }
+    run += len;
+  }
+  out.d = at;
+  out.dist = Math.sqrt(best);
+}
+
+const PJ = { d: 0, dist: 0 };
+
+/** The arc length of path point `n` (its stops, `chase.waits`). */
+function pointD(path: ReadonlyArray<readonly [number, number]>, n: number): number {
+  return pathLength(path.slice(0, Math.max(1, Math.min(path.length, n + 1))));
+}
+
+/** Can a chase start in this room now (its flag not saved, the ability it needs owned)? */
+function chaseReady(state: GameState, f: FireflyPass): boolean {
+  if (!f.chase || state.save.flags.includes(`${f.flag}-done`)) return false;
+  const need = f.chase.needs;
+  return !need || (state.save.abilities as readonly string[]).includes(need);
+}
+
+/** Lights chase hook `id` (its `after` flag saved, burning now): `fireflyKindle`. */
+function kindle(
+  state: GameState,
+  scene: Scene,
+  f: FireflyPass,
+  id: string,
+  t: Tuning,
+  events: SimEvent[],
+): void {
+  const lures = scene.lures ?? [];
+  const i = lures.findIndex((l) => l.id === id);
+  const l = lures[i];
+  if (!l) return;
+  const flag = l.after;
+  if (flag && !state.save.flags.includes(flag)) {
+    state.save.flags.push(flag);
+    events.push({ type: 'flagSet', flag, by: f.id, x: l.x, y: l.y });
+  }
+  const s = state.lures;
+  s.ember[i] = 0;
+  s.hp[i] = lureHpMax(l, t);
+  s.out[i] = 0;
+  events.push({ type: 'fireflyKindle', id: f.id, lure: l.id, x: l.x, y: l.y });
+}
+
+/** Is chase hook `id` dark (never yet kindled)? */
+function dark(state: GameState, scene: Scene, id: string): boolean {
+  const l = (scene.lures ?? []).find((q) => q.id === id);
+  return !!l?.after && !state.save.flags.includes(l.after);
+}
+
+/**
+ * One step of a chase (the Canopy r13, moment 4): perched until she is in its `trigger` (or its other starts), then
+ * the alarm, then it keeps `lead` ahead of her progress along `path` (never back), kindling its hooks as it passes,
+ * waiting at its stops for one who fell behind; at the path's end it dives into the nest, waits at the shaft's top
+ * for her, calls, and is gone. Deterministic: a pure function of the state and her moves.
+ */
+function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, events: SimEvent[]): void {
+  const ff = state.kit.firefly;
+  const c = f.chase;
+  if (!c) return;
+  const K = t.kit.firefly;
+  const p = state.player;
+  const path = f.path;
+  const total = pathLength(path);
+  const say = (phase: 'start' | 'wait' | 'go' | 'nest' | 'call' | 'gone') =>
+    events.push({ type: 'fireflyChase', id: f.id, phase, x: Math.round(ff.x), y: Math.round(ff.y) });
+  ff.px = ff.x;
+  ff.py = ff.y;
+  ff.t++;
+  // Perched: its light hung at the path's start, its back to her, until it sees her.
+  if (ff.beat === 0) {
+    fireflyAt(f, 0, AT);
+    ff.x = AT.x;
+    ff.y = AT.y;
+    if (!starts(state, scene, f)) return;
+    state.save.flags.push(f.flag);
+    events.push({ type: 'fireflyStart', id: f.id, x: AT.x, y: AT.y, frames: f.frames });
+    events.push({ type: 'flagSet', flag: f.flag, by: f.id, x: AT.x, y: AT.y });
+    ff.beat = 1;
+    ff.t = 0;
+    ff.d = 0;
+    say('start');
+    return;
+  }
+  if (ff.beat === 1) {
+    if (ff.t < Math.round(K.alarmFrames)) return;
+    ff.beat = 2;
+    ff.t = 0;
+  }
+  // Her progress: the nearest point of the stretch of path behind the firefly, while she is near it (a fall to the
+  // floor keeps the last).
+  project(path, p.x + p.w / 2, p.y + p.h / 2, PJ, ff.her - K.nearPx, ff.d + 1);
+  if (PJ.dist <= K.nearPx && p.faded === 0) ff.her = PJ.d;
+  if (ff.beat === 2 || ff.beat === 3) {
+    // Its goal: its lead ahead of her, but never past a stop she is not yet near.
+    let goal = Math.min(total, ff.her + c.lead[1]);
+    let stop = -1;
+    for (const w of c.waits) {
+      const wd = pointD(path, w);
+      if (wd >= ff.d - 1 && ff.her < wd - c.lead[0]) {
+        stop = wd;
+        break;
+      }
+    }
+    if (stop >= 0) goal = Math.min(goal, stop);
+    const gap = goal - ff.d;
+    const hurry = ff.d - ff.her < c.lead[0] ? K.chaseHurry : 0;
+    const v = gap > 0 ? Math.min(K.chaseMax, gap * K.chaseEase + hurry, gap) : 0;
+    ff.d += v;
+    // (Held a beat where its lead runs out, it waits there flashing; on again once its goal is well ahead.)
+    const held = gap <= 0.5 && ff.d < total - 0.5;
+    if (ff.beat === 2) {
+      ff.t = held ? ff.t : 0;
+      if (held && ff.t >= Math.round(K.waitAfter)) {
+        ff.beat = 3;
+        ff.t = 0;
+        say('wait');
+      }
+    } else if (gap > K.goPx) {
+      ff.beat = 2;
+      ff.t = 0;
+      say('go');
+    }
+    along(path, ff.d, AT);
+    ff.x = AT.x;
+    ff.y = AT.y;
+    // The hooks it passes catch fire.
+    const R = K.relightPx;
+    for (const id of c.kindles) {
+      const l = (scene.lures ?? []).find((q) => q.id === id);
+      if (!l || !dark(state, scene, id)) continue;
+      if ((l.x - ff.x) * (l.x - ff.x) + (l.y - ff.y) * (l.y - ff.y) <= R * R)
+        kindle(state, scene, f, id, t, events);
+    }
+    // (And the chain's lamps it passes burn again if she put them out before: its line is always lit ahead of her.)
+    const lures = scene.lures ?? [];
+    for (const id of f.relights ?? []) {
+      const i = lures.findIndex((q) => q.id === id);
+      const l = lures[i];
+      if (!l || (state.lures.hp[i] ?? 0) > 0 || state.lures.ember[i]) continue;
+      if ((l.x - ff.x) * (l.x - ff.x) + (l.y - ff.y) * (l.y - ff.y) > R * R) continue;
+      state.lures.hp[i] = lureHpMax(l, t);
+      state.lures.out[i] = 0;
+      events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
+      events.push({ type: 'fireflyRelight', id: f.id, lure: l.id, x: l.x, y: l.y });
+    }
+    if (ff.d >= total - 0.5) {
+      ff.beat = 4;
+      ff.t = 0;
+      say('nest');
+    }
+    return;
+  }
+  // Into the nest: to the shaft's top, then it waits for her there.
+  if (ff.beat === 4) {
+    const dx = c.end[0] - ff.x;
+    const dy = c.end[1] - ff.y;
+    const dd = Math.sqrt(dx * dx + dy * dy);
+    if (dd > K.nestSpeed) {
+      ff.x += (dx / dd) * K.nestSpeed;
+      ff.y += (dy / dd) * K.nestSpeed;
+      return;
+    }
+    ff.x = c.end[0];
+    ff.y = c.end[1];
+    // (She is in the nest (near its mouth, the path's end): it calls.)
+    const mouth = path[path.length - 1] as readonly [number, number];
+    const hx = p.x + p.w / 2 - mouth[0];
+    const hy = p.y + p.h / 2 - mouth[1];
+    if (hx * hx + hy * hy > K.callPx * K.callPx && ff.t < Math.round(K.callWait)) return;
+    ff.beat = 5;
+    ff.t = 0;
+    say('call');
+    return;
+  }
+  // The call: one slow, long flash up at the sky. Nothing answers. Up the shaft and gone.
+  if (ff.beat === 5 && ff.t >= Math.round(K.callFrames)) {
+    const done = `${f.flag}-done`;
+    if (!state.save.flags.includes(done)) state.save.flags.push(done);
+    say('gone');
+    events.push({ type: 'fireflyHide', id: f.id, x: Math.round(ff.x), y: Math.round(ff.y) });
+    events.push({ type: 'fireflyEnd', id: f.id, x: Math.round(ff.x), y: Math.round(ff.y) });
+    ff.pass = -1;
+    ff.beat = -1;
+    ff.frame = 0;
+  }
+}
+
 /** Does pass `f` start this step (its flag not saved, none under way)? */
 function starts(state: GameState, scene: Scene, f: FireflyPass): boolean {
   if (state.save.flags.includes(f.flag)) return false;
@@ -129,13 +366,60 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
   const p = state.player;
   // (A pass cut short before its stop, by a fade or leaving the room: the cage it was carrying is hung all the same.)
   for (let i = 0; i < list.length; i++) {
+    // (A chase over (or its end reached by a later entry): every hook it would have kindled burns from now on.)
+    const ch = list[i]?.chase;
+    if (ch && ff.pass !== i && state.save.flags.includes(`${(list[i] as FireflyPass).flag}-done`))
+      for (const id of ch.kindles) {
+        const l = (scene.lures ?? []).find((q) => q.id === id);
+        if (l?.after && !state.save.flags.includes(l.after)) state.save.flags.push(l.after);
+      }
     const sets = list[i]?.hang?.sets;
     if (!sets || ff.pass === i || state.save.flags.includes(sets)) continue;
     if (state.save.flags.includes((list[i] as FireflyPass).flag)) state.save.flags.push(sets);
   }
+  // (A chase, the Canopy r13: it perches at its start as soon as it may run, before she sees it.)
   if (ff.pass < 0) {
     for (let i = 0; i < list.length; i++) {
       const f = list[i] as FireflyPass;
+      if (!chaseReady(state, f)) continue;
+      ff.pass = i;
+      ff.frame = 0;
+      ff.beat = 0;
+      ff.t = 0;
+      ff.d = 0;
+      ff.her = 0;
+      fireflyAt(f, 0, AT);
+      // (A chase she left before its end (a fall down the drop, a fade): it waits for her at its last stop.)
+      const c = f.chase;
+      if (c && state.save.flags.includes(f.flag)) {
+        const last = c.waits.length > 0 ? (c.waits[c.waits.length - 1] as number) : 0;
+        ff.d = pointD(f.path, last);
+        ff.her = 0;
+        ff.beat = 3;
+        along(f.path, ff.d, AT);
+        // (The hooks behind that stop burn.)
+        for (const id of c.kindles) {
+          const l = (scene.lures ?? []).find((q) => q.id === id);
+          if (l?.after && !state.save.flags.includes(l.after)) state.save.flags.push(l.after);
+        }
+      }
+      ff.x = ff.px = AT.x;
+      ff.y = ff.py = AT.y;
+      // (Its first hook is the light it is hanging: lit already.)
+      const first = f.chase?.kindles[0];
+      if (first && dark(state, scene, first)) kindle(state, scene, f, first, t, events);
+      break;
+    }
+  }
+  if (ff.pass >= 0 && list[ff.pass]?.chase) {
+    ff.frame++;
+    chaseStep(state, scene, list[ff.pass] as FireflyPass, t, events);
+    return;
+  }
+  if (ff.pass < 0) {
+    for (let i = 0; i < list.length; i++) {
+      const f = list[i] as FireflyPass;
+      if (f.chase) continue;
       if (!starts(state, scene, f)) continue;
       state.save.flags.push(f.flag);
       ff.pass = i;
@@ -206,6 +490,36 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
     ff.pass = -1;
     ff.frame = 0;
   }
+}
+
+/**
+ * The Canopy r13, moment 3 (`scene.sits`): she stands still (grounded, no input) within `r` of a sit once its `when` is
+ * saved: after `frames`, `kinSit` and `sets` saved (once). The sim never moves the kin: render plays the walk-over.
+ */
+export function updateSits(state: GameState, scene: Scene, events: SimEvent[]): void {
+  const sits = scene.sits;
+  if (!sits || sits.length === 0) return;
+  const kit = state.kit;
+  const p = state.player;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  const still = p.grounded && p.hp > 0 && p.faded === 0 && p.vx === 0 && state.prevInput === 0;
+  let any = false;
+  for (const s of sits) {
+    if (state.save.flags.includes(s.sets)) continue;
+    if (s.when && !state.save.flags.includes(s.when)) continue;
+    const dx = fx - s.x;
+    const dy = fy - s.y;
+    if (!still || dx * dx + dy * dy > s.r * s.r) continue;
+    any = true;
+    if (++kit.sitStill < s.frames) continue;
+    state.save.flags.push(s.sets);
+    events.push({ type: 'kinSit', id: s.id, x: Math.round(fx), y: Math.round(fy) });
+    events.push({ type: 'flagSet', flag: s.sets, by: s.id, x: Math.round(fx), y: Math.round(fy) });
+    kit.sitStill = 0;
+    return;
+  }
+  if (!any) kit.sitStill = 0;
 }
 
 /** Is roost `r` lit (its trap lamp freed, its moths not yet gone on: `leaves`)? */

@@ -42,7 +42,10 @@ const AIMS: Array<[string, number]> = [
   ['DL', D | L],
 ];
 for (const [name, aim] of AIMS) {
-  const s = createState(1, t, scene, [], C, newSave(C));
+  const save = newSave(C);
+  // (`--flag=<f>`: story flags saved first, e.g. the chase's hooks, `cn-gap-hook-1`, r13.)
+  for (const a of process.argv) if (a.startsWith('--flag=')) save.flags.push(a.slice(7));
+  const s = createState(1, t, scene, [], C, save);
   s.player.dj = 0;
   placePlayer(s, Number(xs), Number(ys), t, withShortcuts(scene, s.save), []);
   s.player.dj = 0;

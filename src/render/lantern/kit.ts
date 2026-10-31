@@ -406,6 +406,9 @@ export class Kit {
     }
 
     // Gates: silk curtains and seals; open, they fall away.
+    // (The den's rubble steps are drawn together as one heap after the loop.)
+    const heap: Array<{ x: number; y: number; w: number; h: number; fall: number; id: string }> = [];
+    let heapLit = false;
     (S.gates ?? []).forEach((g, i) => {
       const open = (sim.kit.gates[i] ?? 0) > 0;
       const t = this.opening.get(i);
@@ -431,8 +434,12 @@ export class Kit {
       // (The den's ending, the Canopy r12: the taproot is a gate the collapse opens; standing, the bake's column is it
       // (pf-mass `paintTaproot`). The rubble is the collapse's slope: earth and broken roots, not a lattice.)
       if (wood && g.id === 'taproot') return;
-      if (wood && g.id.startsWith('rubble')) this.rubble(back, g.x, g.y, g.w, g.h, fall, g.id);
-      else if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      if (wood && g.id.startsWith('rubble')) {
+        // (Moonlit once the roof's shaft is open: canopy review r12 #3, "a moonlit rubble face".)
+        const roof = (S.gates ?? []).findIndex((q) => q.id.endsWith('roof'));
+        heapLit = roof >= 0 && (sim.kit.gates[roof] ?? 0) > 0;
+        heap.push({ x: g.x, y: g.y, w: g.w, h: g.h, fall, id: g.id });
+      } else if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (wood) this.rootMat(back, glow, g.x + kx, g.y, g.w, g.h, clock, 1 - fall, g.id);
       else this.seal(back, g.x, g.y, g.w, g.h, clock, fall, g.id);
@@ -467,6 +474,7 @@ export class Kit {
         }
       }
     });
+    if (heap.length) this.rubbleHeap(back, heap, heapLit);
 
     // The Downwood's marks: the great lamp's warm glow rising through a grate or a shaft (`glow`), and the lightning
     // split down the Split Oak (`scar`): a jagged seam of moonlight with a charred lip.
@@ -1118,40 +1126,97 @@ export class Kit {
    * The collapse's rubble (the Canopy r12, moment 7's slope): a heap of earth clods and broken roots filling the gate's
    * rect, its top lumpy and dusted pale (it is walked), dropping in from above as it shuts (`fall` 1 -> 0).
    */
-  private rubble(g: Graphics, x: number, y: number, w: number, h: number, fall: number, id: string): void {
-    const drop = fall * fall * 260;
-    const a = 1 - fall;
-    const earth = 0x120d0a;
-    const n = Math.max(6, Math.round((w * h) / 2600));
-    // The heap's body, clods overlapping, larger low down; it spills past its rect a little.
-    for (let k = 0; k < n; k++) {
-      const u = hash01(id, k * 3);
-      const v = hash01(id, k * 3 + 1);
-      const r = 26 + 34 * hash01(id, k * 3 + 2) * (0.6 + 0.6 * v);
-      const cx = x - 10 + u * (w + 20);
-      const cy = y + 18 + v * (h - 10) - drop;
-      g.ellipse(cx, cy, r, r * 0.72).fill({ color: mix(earth, 0x2a2018, 0.4 * (1 - v)), alpha: a });
+  /**
+   * The collapse's rubble (the Canopy r12 moment 7's slope, redrawn r13): the rubble gates' steps as ONE heap of earth,
+   * never their boxes: a near-black body whose risers slump into diagonals, clods only in its outer band, broken roots
+   * out of it, a dusty walked lip on each step (moonlit once the roof's shaft is open). Each step drops in from above
+   * as it shuts (`fall` 1 -> 0).
+   */
+  private rubbleHeap(
+    g: Graphics,
+    steps: Array<{ x: number; y: number; w: number; h: number; fall: number; id: string }>,
+    lit: boolean,
+  ): void {
+    const S = [...steps].sort((p, q) => p.x - q.x);
+    const id = S[0]?.id ?? 'rubble';
+    const h1 = (k: number): number => hash01(id, k);
+    const drop = (st: { fall: number }): number => st.fall * st.fall * 260;
+    const bottom = Math.max(...S.map((st) => st.y + st.h)) + 12;
+    // The outline: up the first step's slumped west foot, then each top, each riser leaning back into the step below.
+    const surf: number[] = [];
+    let k = 0;
+    const first = S[0] as (typeof S)[number];
+    surf.push(first.x - 70, bottom - 12);
+    S.forEach((st, i) => {
+      const top = st.y - drop(st);
+      const prevTop = i === 0 ? bottom - 12 : (S[i - 1] as (typeof S)[number]).y - drop(S[i - 1] as never);
+      // The riser: from the step below's top a little before this one, bulging, up to this top.
+      const r0x = st.x - (i === 0 ? 60 : 20);
+      for (let q = 1; q <= 4; q++) {
+        const v = q / 4;
+        surf.push(
+          r0x + (st.x + 10 - r0x) * v + Math.sin(Math.PI * v) * -10 + (h1(k++) - 0.5) * 8,
+          prevTop + (top - prevTop) * v,
+        );
+      }
+      const n = Math.max(3, Math.round(st.w / 24));
+      for (let q = 1; q <= n; q++)
+        surf.push(st.x + 10 + ((st.w - 10) * q) / n, top + 2 + (h1(k++) - 0.5) * 9);
+    });
+    const last = S[S.length - 1] as (typeof S)[number];
+    const body = [...surf, last.x + last.w + 4, bottom, first.x - 70, bottom];
+    const a = Math.max(...S.map((st) => 1 - st.fall));
+    if (a <= 0.01) return;
+    g.poly(body).fill({ color: 0x0b0806, alpha: a });
+    // Clods along the outer band (just inside the surface), earth tones, overlapping; lit shoulders.
+    const nP = surf.length / 2;
+    for (let q = 0; q < nP - 1; q++) {
+      const x0 = surf[q * 2] as number;
+      const y0 = surf[q * 2 + 1] as number;
+      const x1 = surf[q * 2 + 2] as number;
+      const y1 = surf[q * 2 + 3] as number;
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      for (let t = 0; t < len; t += 16) {
+        const u = t / Math.max(1, len);
+        const r = 7 + 9 * h1(1000 + q * 31 + t);
+        const cx = x0 + (x1 - x0) * u + 4;
+        const cy = y0 + (y1 - y0) * u + r * 0.7 + 3;
+        g.ellipse(cx, cy, r, r * 0.66).fill({
+          color: mix(0x14100c, 0x2c2219, h1(2000 + q * 7 + t)),
+          alpha: a,
+        });
+        g.ellipse(cx - r * 0.25, cy - r * 0.32, r * 0.5, r * 0.16).fill({
+          color: lit ? 0x8ea4c4 : 0x3a2e22,
+          alpha: (lit ? 0.45 : 0.6) * a,
+        });
+        // A few deeper in, darker (the band fades into the core).
+        if (h1(3000 + q * 13 + t) < 0.4)
+          g.ellipse(cx + 6, cy + r * 1.4, r * 0.8, r * 0.5).fill({ color: 0x120e0a, alpha: a });
+      }
     }
-    // Broken roots sticking out of it, splintered ends lit.
-    for (let k = 0; k < 3; k++) {
-      const u = hash01(id, 50 + k);
-      const ang = (hash01(id, 60 + k) - 0.5) * 1.6 - Math.PI / 2;
-      const bx0 = x + u * w;
-      const by0 = y + 20 + hash01(id, 70 + k) * h * 0.6 - drop;
-      const len = 40 + 60 * hash01(id, 80 + k);
+    // Broken roots out of the heap, splintered ends lit.
+    S.forEach((st, i) => {
+      if (i % 2) return;
+      const ang = -Math.PI * (0.62 + 0.25 * h1(400 + i));
+      const bx0 = st.x + 20 + 40 * h1(410 + i);
+      const by0 = st.y - drop(st) + 40 + 30 * h1(420 + i);
+      const len = 50 + 50 * h1(430 + i);
       const ex = bx0 + Math.cos(ang) * len;
       const ey = by0 + Math.sin(ang) * len;
-      g.moveTo(bx0, by0).lineTo(ex, ey).stroke({ color: 0x241a12, width: 9, cap: 'round', alpha: a });
-      g.circle(ex, ey, 3.5).fill({ color: 0x8a7458, alpha: 0.8 * a });
-    }
-    // Its top: a lumpy crust dusted pale (the walk's lip), the clods catching the moon.
-    for (let k = 0; k < Math.max(3, Math.round(w / 34)); k++) {
-      const cx = x + 6 + (k + hash01(id, 100 + k) * 0.6) * 34;
-      if (cx > x + w) break;
-      const r = 14 + 10 * hash01(id, 110 + k);
-      g.ellipse(cx, y + 6 - drop, r, r * 0.55).fill({ color: 0x1c1510, alpha: a });
-      g.ellipse(cx - r * 0.2, y - drop, r * 0.7, r * 0.22).fill({ color: 0x6a5c4c, alpha: 0.55 * a });
-    }
+      g.moveTo(bx0, by0).lineTo(ex, ey).stroke({ color: 0x241a12, width: 8, cap: 'round', alpha: a });
+      g.circle(ex, ey, 3).fill({ color: lit ? 0xb8cce6 : 0x8a7458, alpha: 0.8 * a });
+    });
+    // The walked lips: dust along each top (moonlit once the shaft is open).
+    S.forEach((st, i) => {
+      const top = st.y - drop(st);
+      const lip: number[] = [];
+      const n = Math.max(3, Math.round(st.w / 20));
+      for (let q = 0; q <= n; q++)
+        lip.push(st.x + 6 + ((st.w - 6) * q) / n, top - 1 + (h1(500 + i * 40 + q) - 0.5) * 6);
+      for (let q = n; q >= 0; q--)
+        lip.push(st.x + 6 + ((st.w - 6) * q) / n, top + 6 + 3 * h1(600 + i * 40 + q));
+      g.poly(lip).fill({ color: lit ? 0xb4c6e0 : 0x6a5c4c, alpha: (lit ? 0.7 : 0.5) * (1 - st.fall) });
+    });
   }
 
   private rootGate(

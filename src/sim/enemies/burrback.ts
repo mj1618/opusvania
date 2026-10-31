@@ -397,12 +397,14 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
 }
 
 /** The brace begins (`windup`, `enemyWindup`): facing as it is. */
-function startBrace(e: EnemyState, info: StepInfo, B: Row): void {
-  e.chargeLeft = frames(e.phase === 3 ? B.p3ChargePx : B.chargePx, 1);
-  let n = tellFrames(e, B);
+function startBrace(e: EnemyState, info: StepInfo, B: Row, tell = -1, px = -1): void {
+  // (The Keeper's P3 rams are its own, the Canopy r13: shorter.)
+  const p3Px = e.keep > 0 ? info.t.keeper.p3ChargePx : B.p3ChargePx;
+  e.chargeLeft = frames(px >= 0 ? px : e.phase === 3 ? p3Px : B.chargePx, 1);
+  let n = tell >= 0 ? frames(tell, 1) : tellFrames(e, B);
   // (Round 6: braced closer than `strikeMinPx` (no room behind it to back off), the tell is longer by what the
   // ram would have taken to cover the difference: never less time to answer than from `strikeMinPx`.)
-  if (B.strikeMinPx > 0) {
+  if (B.strikeMinPx > 0 && tell < 0) {
     const p = info.state.player;
     const gap = Math.abs(p.x + p.w / 2 - (e.x + e.w / 2)) - (p.w + e.w) / 2;
     if (gap < B.strikeMinPx) n += frames((B.strikeMinPx - Math.max(0, gap)) / Math.max(1, B.chargeSpeed));
@@ -563,14 +565,23 @@ function desperate(e: EnemyState, info: StepInfo, B: Row, cause: string): void {
   // (A ram that hit her ends the run of rams: it rests, as after the last. So does one that ended under a
   // ledge: no ram after ram into a corner.)
   const roofed = lowCeiling(info.scene, e.x, e.y, e.w, e.h, B.strikeHeadroomPx);
-  e.streak = cause === 'touch' || roofed ? B.p3Streak : e.streak + 1;
-  if (e.streak < B.p3Streak) {
+  // (The Keeper's come in pairs, the Canopy r13.)
+  const run = e.keep > 0 ? info.t.keeper.p3Streak : B.p3Streak;
+  e.streak = cause === 'touch' || roofed ? run : e.streak + 1;
+  if (e.streak < run) {
     e.timer = 1;
     e.strikeCd = 1;
   } else {
     e.streak = 0;
     e.timer = frames(B.p3RestFrames, 1);
     e.strikeCd = e.timer + 1;
+    // (The Keeper, the Canopy r13: after its pair it stands winded, open: the pair's answer.)
+    if (e.keep > 0) {
+      e.stunned = true;
+      e.taken = 0;
+      e.timer = frames(info.t.keeper.p3PairRest, 1);
+      e.strikeCd = e.timer + 1;
+    }
   }
 }
 
@@ -808,6 +819,33 @@ export function keeperPhase(e: EnemyState, info: StepInfo, n: number): void {
   if (e.mode === 'dead') return;
   e.stunned = false;
   toPhase(e, info, B, n);
+}
+
+/**
+ * The Keeper rams on its boss's word (the Canopy r13): P2's lunge when the light finds her, P3's turn on her for a cut
+ * on its cage. Facing `dir`, a `tell`-frame brace, then a ram of `px` (the usual `enemyWindup` / `enemyCharge`).
+ */
+export function keeperRam(e: EnemyState, info: StepInfo, dir: number, tell: number, px: number): void {
+  const B = rowOf(info.t, e);
+  e.feedX = -1;
+  e.seekX = -1;
+  e.stunned = false;
+  e.knockVx = 0;
+  e.strikeCd = 0;
+  if (dir !== e.facing) {
+    e.facing = dir < 0 ? -1 : 1;
+    info.events.push({
+      type: 'enemyTurn',
+      id: e.id,
+      kind: e.kind,
+      x: e.x + e.w / 2,
+      y: e.y + e.h / 2,
+      dir: e.facing,
+      cause: 'hunt',
+      frames: 0,
+    });
+  }
+  startBrace(e, info, B, tell, px);
 }
 
 /**
@@ -1830,6 +1868,10 @@ export const burrback: KindRules = {
     if (rowOf(t, e).pogoShell) {
       // The old burrback: braced, only a pogo lands (one a brace); a wall stun opens the shell; any
       // other time everything glances (a down cut still bounces her).
+      // (The Keeper, the Canopy r13: at its phase's gate every blow glances; in P2's light it shrugs off every cut
+      // but its eat's: only the dark lets her hurt it.)
+      if (e.keep > 0 && e.gate > 0 && e.hp <= e.gate) return true;
+      if (e.keep > 0 && e.phase === 2 && e.blind === 0 && e.mode !== 'eat') return true;
       if (e.stunned) return false;
       // (The Keeper blind in P2's dark: a cut from behind it lands.)
       if (e.keep > 0 && e.blind > 0 && dir !== 'down' && (px - (e.x + e.w / 2)) * e.facing < 0) return false;

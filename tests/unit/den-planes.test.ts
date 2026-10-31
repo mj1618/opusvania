@@ -62,7 +62,8 @@ describe('the den planes', () => {
       if (!plan) return;
       const mid: Shape[] = [];
       drawMidBack(recorder(mid), plan, 7, 200, 0x0a0806);
-      const wide = mid.filter((s) => s.w > 300);
+      // (A line of light along a sill is not a sheet: the rule is for shapes over 300 px wide and 24 px tall.)
+      const wide = mid.filter((s) => s.w > 300 && s.h > 24);
       // The banks: wide and whole.
       expect(wide.length).toBeGreaterThan(0);
       for (const s of wide)

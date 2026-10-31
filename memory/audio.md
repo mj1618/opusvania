@@ -184,6 +184,14 @@ default**: no music in a room walked. Clips: `playtest-reports/canopy-audio-r1/`
   the score's timeline) and `tools/audio/route-clips.ts --dir <route dir> --clip name:from:to` (mp4s with sound from a
   route-video tape; `--wav --stems` for the score / bed / rest alone). Plan the tape with `route-video.ts plan`, and
   build a frozen copy for the page (the level lane's WIP broke both the dev server and vitest mid-round).
+  **A whole playthrough with sound** (2026-10-31, video v12): `route-video.ts plan --out <dir>`, then `render --out
+  <dir> --url http://localhost:<port> --audio` (adds `?audio`, records the director's tape from step 1, renders it in
+  2-minute windows with `__game.audio.render({ from, to })`, cross-fades them and cuts the sound where the still
+  stretches were cut: sound within a sim frame of the picture). raw.mp4 and `<name>.mp4` carry AAC, `audio.wav` the
+  track. The whole Canopy (6 min of sim) renders in ~15-25 min under load; the windows add seconds. Offline renders
+  now switch the scene per room (`sceneOf`: materials, pools and lure kinds were the render-time room's before).
+  Windows agree to -46..-56 dB where they overlap, except a bed whose noise phase hangs on when its engine was
+  made (v12's first seam, in the fork: uncorrelated, so the 0.5 s cross-fade dips ~3 dB, not heard).
 - **Not yet** (round 13 in the plan): the chase cue, the capture (wings falling into the hum's beat: `trapFill`), the
   crown's duet (`kinSit`), the collapse's escape; the hub's music is the cage's hum and the bed only (the director's
   plan, not the original brief's "theme at the hub").

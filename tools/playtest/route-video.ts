@@ -44,6 +44,15 @@
  * warning's (hung by the firefly once the warning is cleared) from the knuckle under it, the great cage over the
  * old burrback from a jump off the west shelf; both firefly sightings (the gap's on the chain's first fling, the
  * warning's), and the den's way out up through its roof to the clifftop's vista.
+ *
+ * v9 (2026-10-31, video v12): `render --audio` records the game's sound (src/audio, memory/audio.md) with the
+ * picture: the page (`?audio`) records the audio director's tape from the first step, and every `AUDIO_CHUNK` sim
+ * frames renders a window of it offline (`__game.audio.render({ from, to })`: the steps before the window run the
+ * conductor silently, so the score and the creatures' memory carry over; `AUDIO_WARM` audible frames before it fill
+ * the reverb and held notes). The windows are cross-faded into one sim-time track (frame f's sound at f/60 s), which
+ * is then cut exactly as the pictures were (a skipped still stretch is skipped in the sound, with a 5 ms cross-fade),
+ * so sound is on the frame: picture i, at i/30 s, shows frame kept[i] and plays the sound from kept[i]/60. raw.mp4
+ * and the captioned mp4 carry AAC; audio.wav is kept. Without `--audio` nothing changes (silent, as before).
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -77,6 +86,8 @@ const { values: args, positionals } = parseArgs({
     crf: { type: 'string', default: '25' },
     title: { type: 'string', default: 'The Canopy: a complete playthrough (review video)' },
     layout: { type: 'string' },
+    /** render: record the game's sound too (v9). */
+    audio: { type: 'boolean', default: false },
   },
 });
 
@@ -970,22 +981,49 @@ async function render(out: string): Promise<void> {
   const browser = await launch();
   let captures = 0;
   const kept: number[] = []; // sim frame of each capture
+  const audio = !!args.audio;
+  const url0 = args.url ?? 'http://localhost:5230';
+  // (`?manual` keeps the sound off; `?audio` asks for it. The offline render needs no live context either way.)
+  const url = !audio ? url0 : url0.includes('?') ? `${url0}&audio` : `${url0.replace(/\/?$/, '/')}?audio`;
+  const audioDir = join(out, '.audio');
+  const chunks: AudioChunk[] = [];
+  if (audio) {
+    rmSync(audioDir, { recursive: true, force: true });
+    mkdirSync(audioDir, { recursive: true });
+  }
   try {
-    const page = await openGame(
-      browser,
-      args.url ?? 'http://localhost:5230',
-      { width: w, height: h },
-      1,
-      true,
-      START,
-    );
+    const page = await openGame(browser, url, { width: w, height: h }, 1, true, START);
     page.setDefaultTimeout(0);
     await page.evaluate(
       // (v7: the key prompts on, as a first-timer sees them: `?manual` turns them off for captures.)
-      `(() => { const g = window.__game; g.cam(null); g.debug.labels?.(false); const pr = window.__prompts; if (pr) { pr.enabled = true; pr.reset(); } g.load(); g.input(${JSON.stringify(tape)}); })()`,
+      `(() => { const g = window.__game; g.cam(null); g.debug.labels?.(false); const pr = window.__prompts; if (pr) { pr.enabled = true; pr.reset(); } g.load(); g.input(${JSON.stringify(tape)}); ${audio ? 'g.audio.record(true);' : ''} })()`,
     );
-    const canvas = page.locator('#game');
     let done = 0;
+    let chunkStart = 0;
+    /** Renders the sound of sim frames [chunkStart, end) (plus its warm-up and overlap) to a WAV. */
+    const renderChunk = async (end: number, last: boolean) => {
+      const from = Math.max(0, chunkStart - AUDIO_WARM);
+      const to = last ? done : end + AUDIO_POST;
+      const r = (await page.evaluate(
+        (o) =>
+          (
+            window as unknown as { __game: { audio: { render(o: unknown): Promise<unknown> } } }
+          ).__game.audio.render(o),
+        { from, to, offset: 0, tail: last ? 1.5 : 0.5, sampleRate: AUDIO_SR },
+      )) as {
+        wavBase64: string;
+        renderMs: number;
+        stats: { peakDb: number; rmsDb: number; clipped: number };
+      };
+      const file = join(audioDir, `${String(chunks.length).padStart(3, '0')}.wav`);
+      writeFileSync(file, Buffer.from(r.wavBase64, 'base64'));
+      chunks.push({ file, from, start: chunkStart, end: last ? Number.POSITIVE_INFINITY : end });
+      console.log(
+        `  sound ${(chunkStart / 3600).toFixed(1)}-${(end / 3600).toFixed(1)} min: peak ${r.stats.peakDb.toFixed(1)} dBFS, rms ${r.stats.rmsDb.toFixed(1)} dBFS, ${r.stats.clipped} clipped (rendered in ${(r.renderMs / 1000).toFixed(1)} s)`,
+      );
+      chunkStart = end;
+    };
+    const canvas = page.locator('#game');
     let still = 0;
     let lastPos = '';
     const t0 = Date.now();
@@ -1021,6 +1059,8 @@ async function render(out: string): Promise<void> {
         return { x: Math.round(s.player.x), y: Math.round(s.player.y), room: s.room, frame: s.frame };
       }, n)) as { x: number; y: number; room: string };
       done += n;
+      if (audio && done >= chunkStart + AUDIO_CHUNK + AUDIO_POST)
+        await renderChunk(chunkStart + AUDIO_CHUNK, false);
       const pos = `${st.room}:${st.x},${st.y}`;
       still = pos === lastPos ? still + n : 0;
       lastPos = pos;
@@ -1033,6 +1073,7 @@ async function render(out: string): Promise<void> {
           `  ${(done / 3600).toFixed(1)} of ${(masks.length / 3600).toFixed(1)} min (${((Date.now() - t0) / 1000).toFixed(0)} s)`,
         );
     }
+    if (audio) await renderChunk(done, true);
     const hash = String(await page.evaluate('window.__game.hash()'));
     const legs = JSON.parse(readFileSync(join(out, 'legs.json'), 'utf8')) as { hash: string };
     console.log(`replay ${hash === legs.hash ? 'matches' : `DIFFERS (${hash} vs ${legs.hash})`} the plan`);
@@ -1040,11 +1081,15 @@ async function render(out: string): Promise<void> {
     await browser.close();
   }
   writeFileSync(join(out, 'kept.json'), JSON.stringify(kept));
+  const wav = join(out, 'audio.wav');
+  if (audio) spliceAudio(chunks, kept, wav);
+  else rmSync(wav, { force: true });
   ffmpeg([
     '-framerate',
     '30',
     '-i',
     join(shots, '%06d.jpg'),
+    ...(audio ? ['-i', wav, '-c:a', 'aac', '-b:a', '160k', '-shortest'] : []),
     '-c:v',
     'libx264',
     '-pix_fmt',
@@ -1056,6 +1101,96 @@ async function render(out: string): Promise<void> {
     join(out, 'raw.mp4'),
   ]);
   console.log(`raw.mp4: ${captures} pictures (${(captures / 30 / 60).toFixed(1)} min)`);
+}
+
+// ---- the sound (render --audio)
+
+const AUDIO_SR = 48000;
+/** Sim frames of sound rendered at a time (the page's offline render of a window of the tape). */
+const AUDIO_CHUNK = 7200;
+/** Audible frames rendered before a window (reverb, held notes, the score's bar) and after it (the overlap). */
+const AUDIO_WARM = 600;
+const AUDIO_POST = 90;
+/** The cross-fade between windows (samples each side of the seam) and at a cut still stretch (samples). */
+const AUDIO_SEAM = AUDIO_SR / 4;
+const AUDIO_SPLICE = AUDIO_SR / 200;
+/** Samples per sim frame. */
+const SPF = AUDIO_SR / 60;
+
+type AudioChunk = { file: string; from: number; start: number; end: number };
+
+/**
+ * One track in sim time from the windows (frame f's sound at f / 60 s: a window from step `from` starts at frame
+ * from + 1), then cut as the pictures were: picture i plays frames [kept[i], kept[i] + 2) of it.
+ */
+function spliceAudio(chunks: AudioChunk[], kept: number[], path: string): void {
+  const read = (f: string) => {
+    const b = readFileSync(f);
+    return new Int16Array(b.buffer, b.byteOffset + 44, (b.length - 44) >> 1);
+  };
+  const datas = chunks.map((c) => read(c.file));
+  const startOf = (c: AudioChunk) => (c.from + 1) * SPF;
+  const len = Math.max(...chunks.map((c, k) => startOf(c) + ((datas[k] as Int16Array).length >> 1)));
+  const full = new Int16Array(len * 2);
+  chunks.forEach((c, k) => {
+    const d = datas[k] as Int16Array;
+    const s0 = startOf(c);
+    const a = c.start * SPF;
+    const b = c.end * SPF;
+    const first = k === 0;
+    const last = k === chunks.length - 1;
+    for (let i = 0; i < d.length >> 1; i++) {
+      const at = s0 + i;
+      // Weight: up across the seam at its start, down across the seam at its end.
+      let wt = 1;
+      if (!first) wt = Math.min(wt, Math.max(0, Math.min(1, (at - (a - AUDIO_SEAM)) / (2 * AUDIO_SEAM))));
+      if (!last) wt = Math.min(wt, Math.max(0, Math.min(1, (b + AUDIO_SEAM - at) / (2 * AUDIO_SEAM))));
+      if (wt <= 0) continue;
+      for (let ch = 0; ch < 2; ch++) {
+        const v = (full[at * 2 + ch] as number) + (d[i * 2 + ch] as number) * wt;
+        full[at * 2 + ch] = Math.max(-32768, Math.min(32767, Math.round(v)));
+      }
+    }
+  });
+  const per = AUDIO_SR / 30;
+  const outS = new Int16Array(kept.length * per * 2);
+  const at = (s: number, ch: number) => (s >= 0 && s < len ? (full[s * 2 + ch] as number) : 0);
+  let cuts = 0;
+  kept.forEach((f, i) => {
+    const src = f * SPF;
+    const prev = i > 0 ? (kept[i - 1] as number) * SPF + per : src;
+    const seam = prev !== src;
+    if (seam) cuts++;
+    for (let n = 0; n < per; n++)
+      for (let ch = 0; ch < 2; ch++) {
+        let v = at(src + n, ch);
+        // A cut (a skipped still stretch): cross-fade from where the sound would have gone on.
+        if (seam && n < AUDIO_SPLICE) {
+          const u = n / AUDIO_SPLICE;
+          v = v * u + at(prev + n, ch) * (1 - u);
+        }
+        outS[(i * per + n) * 2 + ch] = Math.round(v);
+      }
+  });
+  const hdr = Buffer.alloc(44);
+  const bytes = outS.length * 2;
+  hdr.write('RIFF', 0);
+  hdr.writeUInt32LE(36 + bytes, 4);
+  hdr.write('WAVE', 8);
+  hdr.write('fmt ', 12);
+  hdr.writeUInt32LE(16, 16);
+  hdr.writeUInt16LE(1, 20);
+  hdr.writeUInt16LE(2, 22);
+  hdr.writeUInt32LE(AUDIO_SR, 24);
+  hdr.writeUInt32LE(AUDIO_SR * 4, 28);
+  hdr.writeUInt16LE(4, 32);
+  hdr.writeUInt16LE(16, 34);
+  hdr.write('data', 36);
+  hdr.writeUInt32LE(bytes, 40);
+  writeFileSync(path, Buffer.concat([hdr, Buffer.from(outS.buffer, outS.byteOffset, bytes)]));
+  console.log(
+    `audio.wav: ${(kept.length / 30 / 60).toFixed(1)} min from ${chunks.length} windows, ${cuts} cuts (still stretches)`,
+  );
 }
 
 // ---- finish: captions and chapters
@@ -1289,6 +1424,13 @@ function finish(out: string): void {
     join(out, 'raw.mp4'),
     '-vf',
     `ass=${join(out, 'captions.ass')}`,
+    // (The sound, if raw.mp4 has it (render --audio), goes through as it is.)
+    '-map',
+    '0:v',
+    '-map',
+    '0:a?',
+    '-c:a',
+    'copy',
     '-c:v',
     'libx264',
     '-preset',

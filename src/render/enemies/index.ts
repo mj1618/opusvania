@@ -883,7 +883,9 @@ export class EnemyRenderer {
       const kindScale = BEETLE_SCALE[e.kind] ?? 1;
       // (Canopy review r9 #6: in the den's umber the beetles were 25-35 px of dark on dark at play zoom. Drawn a
       // little bigger there, backlit; the sim's box is unchanged.)
-      const scale = den && kindScale <= 2 ? kindScale * DEN_READ.scale : kindScale;
+      // (The Keeper is drawn past its box: canopy review r12 #4.)
+      const keeperK = e.kind === 'oldBurrback' && sim.scene.boss?.kind === 'keeper' ? BOSS.drawK : 1;
+      const scale = den && kindScale <= 2 ? kindScale * DEN_READ.scale : kindScale * keeperK;
       const small = scale !== 1;
       // (A carrier in its crack is no one's: not drawn.)
       if (e.kind === 'carrier' && e.mode === 'under') continue;

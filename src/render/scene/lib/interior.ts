@@ -13,6 +13,7 @@
  *   ceiling, and drifting spores where a screen-sized cell would otherwise have none.
  */
 import type { Room } from '../../../scene/room';
+import { drawLarderDeep, drawLarderMid, type LarderRoot, larderRoots, paintLarderRoots } from './den-larder';
 import { type Look, lookOf } from './looks';
 import { BRANCH, strand } from './pf-branch';
 import { exposedSides, type MassRect } from './pf-mass';
@@ -206,6 +207,8 @@ export interface InteriorPlan {
   edges: BackEdges[];
   lights: Glow[];
   masses: MassRect[];
+  /** The Keeper's den (a den with the `keeper` boss): its back is a larder wall (den-larder.ts), not banks. */
+  larder: boolean;
 }
 
 const massOf = (s: { tag: string }): boolean => s.tag === 'root' || s.tag === 'ground';
@@ -451,7 +454,8 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
       sealed.some((q) => l.x > q.x - 24 && l.x < q.x + q.w + 24 && y > q.y && y < q.y + q.h),
     );
   };
-  return { look, mat, tone, backs, edges, lights: lights.filter((l) => !sealedHit(l)), masses };
+  const larder = look === 'den' && (room as { boss?: { kind?: string } }).boss?.kind === 'keeper';
+  return { look, mat, tone, backs, edges, lights: lights.filter((l) => !sealedHit(l)), masses, larder };
 }
 
 /** How far into the back the torn edge reaches at (x, y): 0 at a free edge, 1 deep inside or along a closed edge. */
@@ -641,6 +645,8 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
     if (plan.look === 'den') {
       denColumns(p, plan, b, e, seed + i * 13);
       denNear(p, plan, b, e, seed + i * 11);
+      if (plan.larder && i === 0)
+        paintLarderRoots(p, larderRootsOf(plan, seed), plan.tone, BRANCH.backH, seed);
     }
   });
 }
@@ -1029,6 +1035,17 @@ export function denColumnsIn(plan: InteriorPlan, b: Rect, e: BackEdges, seed: nu
     }
   }
   return out;
+}
+
+/**
+ * The Keeper's larder's ribs and hanging roots on its near wall (den-larder.ts `larderRoots`, seeded as
+ * `paintNearBacks` seeds them: `nearSeed`); lantern/keeper.ts throws the cage's shadows from them.
+ */
+export function larderRootsOf(plan: InteriorPlan, nearSeed: number): LarderRoot[] {
+  const b0 = plan.backs[0];
+  if (!plan.larder || !b0) return [];
+  const cols = denColumnsOf(plan, nearSeed).map((c) => c.x);
+  return larderRoots(plan.masses, b0, cols, nearSeed + 71);
 }
 
 /** Every root column of a den plan's near plane (all its backs, as `paintNearBacks` seeds them: `nearSeed`). */
@@ -1773,7 +1790,8 @@ export function drawDeepBack(
     } else if (plan.look === 'den') {
       // Depth in the haze (canopy review r9 #6: "one flat brown plane with darker ovals"): two ranks of earth banks as
       // silhouettes, the far one pale in the fog, the near one darker with burrow mouths in it, haze between them.
-      denBanks(g, b, b0, T, seed + i * 53);
+      if (plan.larder) drawLarderDeep(g, b, b0, T, seed + i * 53);
+      else denBanks(g, b, b0, T, seed + i * 53);
       // Lit from below: the fungus on the floor throws a cold glow up the earth; dark roots hang into it from the roof.
       softGrad(
         g,
@@ -2124,7 +2142,10 @@ export function drawMidBack(
       // (crescents read as arcs), no arching roots, nothing round floating free.
       const fung = mixC(lit, DEN_FUNGUS, 0.45);
       const bank = mixC(col, dark, 0.25);
-      for (let k = 0; k < 2; k++) {
+      // The Keeper's den: a larder wall (den-larder.ts), not banks (canopy review r12 #3).
+      if (plan.larder)
+        drawLarderMid(g, plan.masses, b, b0, { col, dark, lit, fung, grain: T.grain }, seed + 7);
+      for (let k = 0; !plan.larder && k < 2; k++) {
         const crest = b0.y + b0.h * (k === 0 ? 0.5 : 0.68);
         const scale = k === 0 ? 620 : 420;
         const top: number[] = [];

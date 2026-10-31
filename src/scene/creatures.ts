@@ -38,7 +38,7 @@ const base = {
   x: int,
   y: int,
   facing,
-  hp: int.min(1).max(12).optional(),
+  hp: int.min(1).max(20).optional(),
   guards,
   senses,
   /** A story flag set when it dies (src/sim/kit.ts: the old burrback's root gate). */

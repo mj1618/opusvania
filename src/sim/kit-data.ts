@@ -194,6 +194,38 @@ export interface FireflyPass {
    * `zoom` if given (render eases in and out).
    */
   look?: { x: number; y: number; zoom?: number; from: number; to: number };
+  /**
+   * The Canopy r13, moment 4: a chase instead of a timed pass (`frames` is then only the flight's pace at its
+   * slowest). Once started it stays `lead` [min, max] px of path ahead of her nearest point on `path` (never back,
+   * never escaping: the swarm-spline trick): at most `max` ahead it flies on, under `min` it hurries. Each hook of
+   * `kindles` (dark `after` lamps, lit by `kit.firefly` passing within `relightPx`) catches fire as it passes
+   * (`fireflyKindle`; a springboard from then on: the chase's flag lights them). `waits`: path points where it
+   * hovers (flashing, `fireflyChase wait`) until she is back within `lead[1]` of it. `end`: the nest's shaft top: the
+   * path's last point is the roost's mouth (`nest`), then a call (`kit.firefly.callFrames`) and up the shaft
+   * (`fireflyHide`). `needs`: an ability she must own for it to start (the glide: before it the hooks stay dark).
+   */
+  chase?: {
+    lead: [number, number];
+    kindles: string[];
+    waits: number[];
+    end: [number, number];
+    needs?: string;
+  };
+}
+
+/**
+ * The Canopy r13, moment 3: a place to sit with the kin (`marks.tatter.sit` is render's copy). Once `when` is saved
+ * (absent: always), her feet within `r` px of (`x`, `y`), standing still (grounded, no input) `frames` frames: `kinSit`,
+ * and `sets` saved (once).
+ */
+export interface Sit {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+  frames: number;
+  when?: string;
+  sets: string;
 }
 
 /**

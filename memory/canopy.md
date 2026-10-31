@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v12, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v13, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,67 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v13 (round 13, review canopy-r12.md): the contract (landed in c932ad7)
+Render and audio build against these; sim / content names only (render never writes them).
+- **Moment 4, the chase** (`cn-gap:firefly-gap`, a `FireflyPass.chase {lead, kindles, waits, end, needs}`): events
+  `fireflyChase {id, phase: start | wait | go | nest | call | gone, x, y}`, `fireflyKindle {id, lure, x, y}`,
+  `fireflyHide {id, x, y}` (+ `fireflyStart` / `fireflyEnd`). State `kit.firefly {pass, x, y, px, py, beat (0 perched,
+  1 alarm, 2 flying, 3 waiting, 4 to the shaft, 5 the call, -1 none), t, d, her}`: a chase is not a function of the
+  frame, so draw `x, y` (interpolate from `px, py`), not `fireflyAt`. Hooks `hook-1..6` are `after` lamps (dark until
+  kindled: their flag `cn-gap-hook-n`). Camera zone `chase` (after `cn-firefly-gap`, until `cn-firefly-gap-done`).
+- **Moment 5, the trap is set** (`cn-tunnel:trap-warn`, `Lure.fills {frames: 180}`): `trapFill {lure, n, of, x, y}`
+  one per moth, `state.lures.fill[i]` (moths in it now; -1 = not filling), `denStir {lure, x, y}` when full (the slam
+  moves here from beat 2's start). `marks.stage.stream {points, count 40, captured: 'trap-warn'}` is the far stream
+  (its points 330 px lower since render's ask: y 1,090-1,310 under the roof, which is at 776; render drops its
+  stopgap offset).
+- **Moment 3, moonlight for two** (`cn-crown`): `scene.sits[0]` (sim) = `marks.tatter.sit {x 2000, y 1024, r 160,
+  frames 120}`; `kinSit {id, x, y}` + flag `cn-kin-sat`; the kin `when: cn-crown-wings` (a trigger over the glade),
+  `until: cn-firefly-gap`; zone `crown-sit` (zoom 0.85, **`after: cn-kin-sat`**: a new CameraZone field render's
+  zones.ts must honour, `until: cn-firefly-gap`).
+- **The opening's river** (review r12 #6): `marks.stage.open.tailFlag: 'cn-promise'` (trigger `promise` over the
+  promise zone) and `hatchTail` 1800 (the latest).
+- **The Keeper**: `keeperGlance {id, x, y, hitX, hitY, why: lit | gate}` (with the `enemyBlock`), `keeperLunge {id,
+  x, y, dir, frames, px}`, `keeperGuard {id, x, y, dir}`, `cageGuard {lure, x, y, on}`, `keeperSweep {id, x0, x1, y,
+  frames}` (its claws: `boss.hit*`), boss `drops`, `sweeps`, `sweepHit`; `EnemyState.gate`.
+
+### v13 as built (round 13, the level/sim lane)
+- **The Keeper's length and bite** (`t.keeper`, src/sim/boss/keeper.ts, burrback.ts's `keeperRam`): 16 hp (the den's
+  spawn; the schema's spawn `hp` max is 20 now), P2 at 10, P3 at 5. **Phase gates** (`EnemyState.gate`: its health
+  floors there, a cut glances, `keeperGlance gate`): P1 until `p1Drops` 2 moths have fallen (at the floor the next
+  drop comes in `gateSoon` 40), P2 until `p2MinFrames` 756 (three swings), P3 until `p3Sweeps` 3 (the next sweep
+  brought forward). P1's second moth falls between it and her (the ram's line). **P2**: lit, every cut but its eat's
+  glances (`keeperGlance lit`); the light finding her within `lungePx` 460 brings a lunge (`lungeTell` 24, 380 px; 18
+  was 3 frames for a 15-frame person). **P3**: the fallen cage guarded until the first sweep (`cageGuard`); a cut on
+  it turns the Keeper (`keeperGuard`, a ram at the cage's side after `guardTell` 24); sweeps eat 7, their tell 36,
+  their claws (`keeperSweep`, the boss blade box ±170 x 150 over the floor, 10 frames) hurt her in the cloud, open 90
+  after; rams 420 px in pairs (`p3Streak` 2), then an open rest (`p3PairRest` 64, stunned: the pair's answer).
+- **Measured**: `keeper-run.ts --lag=0|8|15` (the den plan deciding from a state that many frames old) 66-83 s, 0-1
+  hits; `humanplay -- den` 12 of 12 down in 53-79 s, 0-1 hits (the bots' bar of >= 2 hits a casual run is NOT met:
+  the look-ahead bots dodge everything once the den plan jumps the slam's wave); played live on the GPU page with a
+  15-frame lag (`keeper-live.ts`): see the last run in the round's report; first-timer ft13den (from the balcony):
+  won on its first try, ~100 s, 2 hits (the slam's floor wave unseen in the dark, a ram as it turned its back), then
+  ~70 s lost before it found the slope (nothing points at the cage after the kill).
+  Before the den plan learned to jump the wave and P3's pair rest opened, the bots faded 1-7 times, all in P3 (claws,
+  wave): P3's tells are what a slower player meets; render's wave line and the sweep's tell carry it.
+- **The chase** (`cn-gap`): six hooks on a rising column then a falling S (`GAP_HOOKS`), the firefly's `GAP_CHASE`
+  path; trigger the shelf west of 4,160 (she sees it perched first); stops at path points 1, 4, 6; `relights` the
+  chain's first lamp. Proven fling by fling (canopy-r13.test.ts, `tools/levels/chase-probe.ts --closest` = press as
+  each hook is nearest): the line holds for a press at the nearest point; pressed the instant a hook is in reach, or
+  8-12 frames late, it breaks at hook-4 / hook-6 and she lands on the shelf (safe: under the whole S) and the firefly
+  waits. Off hook-6 she meets the chain's first or second lamp; both fling up-west into the mouth. A chase cut short
+  (she left the room) resumes waiting at its last stop, its hooks lit; `cn-firefly-gap-done` after the call.
+- **Gotchas (r13)**: an S path crosses itself, so her progress projects only onto the stretch between her last
+  progress and the firefly (`project` lo / hi); an `after` springboard relights only on its flag's first lighting
+  (`out <= 1`), so its fling ember and `relight` work; `placePlayer` cancels a slash in progress (tests: place once,
+  then press); tools/playtest code imported in the page must not touch `process` (fight.ts `envFlag`).
+- **For route-video (not edited: the audio agent has it)**: the den plan's changes are in fight.ts, which route-video
+  uses, so its Keeper leg needs nothing; the gap's chase needs the glide (its goal reads `cn-firefly-gap`, set when she
+  lands on the shelf with wings); its caption for `fireflyStart firefly-gap` ("it relights the lamps behind her") is
+  stale: "The firefly bolts: its hooks catch fire".
+- Tools: `keeper-run.ts --lag=n` (and `hurtBy` by phase), `keeper-live.ts` (GPU page, real keys; `--url`, `--lag`,
+  `--out`), `keeper-tape.ts` / `chase-probe.ts` (clip tapes), `fling-probe.ts --flag=`, `humanplay -- den` prints the
+  winning try's length, fades by phase and what hurt.
 
 ## v12 (round 12, docs/design/levels/canopy-moments.md): the Keeper, the ending's fallback, the opening's hooks
 Names are the contract with render and audio (section 6 of the director's plan); render and audio never write them.
