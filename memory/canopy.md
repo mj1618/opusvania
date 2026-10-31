@@ -65,7 +65,8 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   the black opening, the well's root doors (ft17a, ft17d: "nothing at all", even with the flare), the giant's
   `rot-door` (ft17d cut the cover under it 15+ times), the glint count dropping at a door, the well's burrback's
   open window, the lampwing's tell. Journals: playtest-reports/2026-10-31T18-31-03-firsttimer-ft17a, *19-03-51-*17b,
-  *19-03-57-*17c, *19-32-30-*17d.
+  *19-03-57-*17c, *19-32-30-*17d. Checks: solver all claims hold (2,468 s; cn-trunk again on 47ebd06), climbs, world
+  check, `npm run check` (e2e `--workers=2`), look:check 357/357.
 
 ## v16 (round 16, 2026-11-01): the first ten minutes (first-timer ft15fix stuck 5 of 7 min)
 Teach through the world, no text: every try at a thing that cannot act yet answers.
