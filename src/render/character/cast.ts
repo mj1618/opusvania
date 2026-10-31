@@ -246,6 +246,19 @@ export class Cast {
         });
       if (c.climb) this.climb(c, dt, her);
       if (c.tryOn && events.some((e) => e.type === 'flagSet' && e.flag === c.tryOn)) t.tryT = 0;
+      // Moonlight for two (the Canopy r13, moment 3): she stood still near it long enough.
+      if (t.sitT === -1)
+        for (const e of events)
+          if (
+            (e.type as string) === 'kinSit' &&
+            Math.hypot(
+              (e as { x: number }).x - t.mesh.position.x,
+              (e as { y: number }).y - t.mesh.position.y,
+            ) < 500
+          ) {
+            t.sitT = 0;
+            t.sitAt = { x: (e as { x: number }).x, y: (e as { y: number }).y };
+          }
       // The cage it wants cut open (the Canopy r12, moment 2): its answer.
       const w = t.wants;
       if (

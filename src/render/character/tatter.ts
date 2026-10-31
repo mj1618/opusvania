@@ -24,6 +24,7 @@ import type { Room } from '../../scene/room';
 import { createPlayer } from '../../sim/player/player';
 import { tuning } from '../../sim/tuning';
 import type { PlayerView, RenderContext } from '../contract';
+import { LOOK } from '../scene/lib/room-look';
 import { SWARM_PASS, swarmPassFocus, swarmPassWeight } from '../swarm/timing';
 import { clamp, lerp, noise1, sat, smoothstep } from './math';
 import { drawMothWing, flapWind, TORN, WHOLE, type WingPose } from './tatter-wing';
@@ -60,7 +61,16 @@ export const TATTER = {
    * negative = raised): the good wing at rest and at the top of its try, the torn one drooping and how
    * little it lifts; spans in px (the torn one shorter).
    */
-  wings: { good: -0.85, goodTry: -1.45, torn: 0.34, tornTry: 0, goodSpan: 33, tornSpan: 25 },
+  wings: {
+    good: -0.85,
+    goodTry: -1.45,
+    torn: 0.34,
+    tornTry: 0,
+    goodSpan: 33,
+    tornSpan: 25,
+    goodOpen: -0.95,
+    tornOpen: -0.15,
+  },
   /** Its snapped antenna's length (of a whole one). */
   antenna: 0.5,
   /**
@@ -120,9 +130,19 @@ export const TATTER = {
     turnAt: 5.6,
     moth: 0xf2ead6,
   },
+  /**
+   * Moonlight for two (the Canopy r13, canopy-moments.md moment 3; `kinSit`): it shuffles over to sit `side` px beside
+   * her (over `walk` s, small steps), turns up to the moon (`lookAt`), opens its wings to it as she did (`openAt` ..
+   * `open` s, held; the torn one only half opens: the try's droop), folds them and leans against her (`leanAt`, `lean`
+   * rad toward her). If she goes (`leave` px), it stays, looking at the moon.
+   */
+  sit: { side: 62, walk: 2.4, lookAt: 2.6, openAt: 3.2, open: 3.4, leanAt: 7.2, lean: 0.16, leave: 360 },
 } as const;
 
 type Beat = 'away' | 'keep' | 'wait' | null;
+
+/** The moon's place on screen (`art.moon`, safe px) in this room, if it has one. */
+const LOOK_MOON_X = (): number | undefined => (LOOK.moon as { x: number } | undefined)?.x;
 
 /** Which of the kin's beats a mark plays: the `marks.notes` line beside it (the level's words for it). */
 function beatOf(room: Room, x: number, y: number): Beat {
@@ -180,6 +200,13 @@ export class Tatter {
   tryT = -1;
   /** Its answer to the cage it wants going out (`TATTER.answer`): seconds since (-1 = none). Set by `Cast`. */
   answerT = -1;
+  /** Moonlight for two (`TATTER.sit`): seconds since `kinSit` (-1 = none), where she sat. Set by `Cast`. */
+  sitT = -1;
+  sitAt: { x: number; y: number } | null = null;
+  private sitFrom = 0;
+  /** 0..1: its wings held open to the moon (the sit): spread out flat, not beating; the torn one only half. */
+  private spreadK = 0;
+  private leanK = 0;
   /** The cage (or anything) it wants, world px (null without a want). */
   get wants(): readonly [number, number] | null {
     return this.want;
@@ -422,6 +449,13 @@ export class Tatter {
       ly = lerp(ly, al.y, al.w);
       lw = lerp(lw, al.firm, al.w);
     }
+    // Moonlight for two: over to her, up at the moon, its wings, the lean.
+    const sl = this.sitLook(dt, her, headY);
+    if (sl) {
+      lx = lerp(lx, sl.x, sl.w);
+      ly = lerp(ly, sl.y, sl.w);
+      lw = lerp(lw, sl.firm, sl.w);
+    }
     // Looking down, the antennae droop with the head (a lowered chin alone lifts them into rods).
     rig.antExtra = 34 * sink;
     rig.antCurlExtra = 0.12 * sink;
@@ -462,11 +496,20 @@ export class Tatter {
       this.answerT >= A.wingsAt && this.answerT < A.wingsAt + A.wingsT
         ? Math.sin((Math.PI * (this.answerT - A.wingsAt)) / A.wingsT) ** 2
         : 0;
+    // Its wings to the moon (the sit): open, held a breath, folded.
+    const S = T.sit;
+    const su = this.sitT >= 0 ? (this.sitT - S.openAt) / S.open : -1;
+    const sw2 = su > 0 && su < 1 ? smoothstep(0, 0.22, su) * (1 - smoothstep(0.8, 1, su)) : 0;
     rig.tryWings = Math.max(
       tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171)),
       T.rest.wings * rk * Math.sin(Math.PI * Math.min(1, this.restT / 1.2)) ** 2,
       aw,
+      sw2 * (0.92 + 0.08 * Math.sin(clock * 1.3)),
     );
+    if (sw2 > 0) rig.strain = Math.max(rig.strain, 0.7 * sw2);
+    this.spreadK = sw2;
+    // (Leaning against her, it sits low.)
+    if (this.leanK > 0) rig.perch = Math.min(1, rig.perch + 0.25 * this.leanK);
     // (Up off its heels as it watches the cloud and opens its wings.)
     if (this.answerT >= 0 && this.answerT < A.turnAt)
       rig.strain = Math.max(
@@ -485,7 +528,7 @@ export class Tatter {
     this.sec.hold[this.torn] = TATTER.hold;
     this.sec.splay[this.torn] = TATTER.splay;
     this.sec.droop[this.torn] =
-      TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * Math.max(tw, aw));
+      TATTER.droop * (1 + 0.06 * noise1(clock * 0.7, 181)) * (1 - 0.45 * Math.max(tw, aw, sw2));
     rig.update(dt, clock, this.me, []);
     const fresh = !this.started;
     if (fresh) this.sec.reset();
@@ -593,6 +636,63 @@ export class Tatter {
       return { x: her.cx, y: her.feetY - 50, firm: 1, w: 1 - sat((t - A.turnAt - 2) / 1) };
     if (t > A.turnAt + 4) this.answerT = -2;
     return null;
+  }
+
+  /**
+   * The sit (`TATTER.sit`): steps its `me` over to her side, and says where it looks (her, then the moon); sets the
+   * lean. If she leaves, the lean goes and it stays looking at the moon.
+   */
+  private sitLook(
+    dt: number,
+    her: PlayerView | null,
+    headY: number,
+  ): { x: number; y: number; firm: number; w: number } | null {
+    if (this.sitT < 0 || !this.sitAt) {
+      this.mesh.rotation = 0;
+      return null;
+    }
+    const S = TATTER.sit;
+    if (this.sitT === 0) this.sitFrom = this.me.cx;
+    this.sitT += dt;
+    const t = this.sitT;
+    const me = this.me as { -readonly [K in keyof PlayerView]: PlayerView[K] };
+    // Its side of her: the side it came from.
+    const side = this.sitFrom >= this.sitAt.x ? 1 : -1;
+    const tx = this.sitAt.x + side * S.side;
+    // The shuffle: small steps, a stop between, there by `walk`.
+    if (t < S.walk) {
+      const u = t / S.walk;
+      const target = lerp(this.sitFrom, tx, smoothstep(0, 1, u));
+      const ph = (u * 5) % 1;
+      const step = (target - me.cx) * Math.min(1, dt * 14) * (0.3 + 0.7 * Math.sin(Math.PI * ph) ** 2);
+      me.cx += step;
+      me.x += step;
+      me.grounded = true;
+      me.vx = step / Math.max(1e-3, dt * 60);
+      this.facing = tx >= this.sitFrom ? 1 : -1;
+      me.facing = this.facing as -1 | 1;
+    }
+    const moonDir = (LOOK_MOON_X() ?? 960) < 960 ? -1 : 1;
+    const gone = !her || Math.hypot(her.cx - me.cx, her.feetY - me.feetY) > S.leave;
+    if (t >= S.lookAt) {
+      this.facing = moonDir;
+      me.facing = moonDir as -1 | 1;
+    }
+    // The lean: against her once its wings are folded, while she stays.
+    const leanOn = t >= S.leanAt && !gone ? 1 : 0;
+    this.leanK += (leanOn - this.leanK) * Math.min(1, dt * (leanOn ? 1.2 : 2));
+    const toHer = her ? (her.cx >= me.cx ? 1 : -1) : 0;
+    this.mesh.rotation = toHer * S.lean * this.leanK;
+    if (t < S.lookAt && her) return { x: her.cx, y: her.feetY - 50, firm: 1, w: Math.min(1, t / 0.3) };
+    // Up at the moon (a little down at her as it leans).
+    const mx = me.cx + moonDir * 600;
+    const my = headY - 520;
+    return {
+      x: lerp(mx, her?.cx ?? mx, 0.25 * this.leanK),
+      y: lerp(my, (her?.feetY ?? my) - 60, 0.3 * this.leanK),
+      firm: 1,
+      w: 1,
+    };
   }
 
   /** The freed moth that comes down onto its head, sits opening and closing its wings, and goes. */
@@ -720,7 +820,10 @@ export class Tatter {
     good.x = rx + back * 1.5;
     good.y = ry - 1;
     good.ang = this.angFor(W.good + (W.goodTry - W.good) * tryK * (0.65 + 0.35 * beat), back);
-    good.span = W.goodSpan;
+    // Held open to the moon (the sit): out flat and still, the span a little longer for it.
+    const sp = this.spreadK;
+    good.ang = good.ang + (this.angFor(W.goodOpen, back) - good.ang) * sp;
+    good.span = W.goodSpan * (1 + 0.4 * sp);
     good.lead = back > 0 ? -1 : 1;
     const torn = this.tornPose;
     const tremble = 0.5 + 0.5 * Math.max(0, noise1(clock * 1.3, 191));
@@ -733,7 +836,8 @@ export class Tatter {
         (W.tornTry - W.torn) * tryK * (0.5 + 0.5 * beat),
       back,
     );
-    torn.span = W.tornSpan;
+    torn.ang = torn.ang + (this.angFor(W.tornOpen, back) - torn.ang) * sp;
+    torn.span = W.tornSpan * (1 + 0.15 * sp);
     torn.lead = back > 0 ? -1 : 1;
     const fw = flapWind(this.x, clock);
     p.outline = 1.2;
