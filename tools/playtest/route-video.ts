@@ -41,7 +41,7 @@
  * v8 (2026-10-31, the v11 layout, review r10's staging): every cage cut open (a `cage` leg: a small closed loop that
  * walks under the cage, or to a run-up, and cuts until it is out: the explorer's node key keeps a cage's cuts as one
  * state, so it never chains three): the hub's under the landing limb first, the Grove's after the wave, the
- * warning's (hung by the firefly once the warning is cleared) from the ledge on the lintel, the great cage over the
+ * warning's (hung by the firefly once the warning is cleared) from the knuckle under it, the great cage over the
  * old burrback from a jump off the west shelf; both firefly sightings (the gap's on the chain's first fling, the
  * warning's), and the den's way out up through its roof to the clifftop's vista.
  */
@@ -315,17 +315,14 @@ export const ROUTE: Leg[] = [
   {
     name: "cn-gap: the three lamps' chain down to the pod garden",
     kind: 'goal',
-    test: (s) => {
-      // (Down there by the chain: the third lamp flung, so out, not a drop from the roost.)
-      const k = (getRoom('cn-gap').lures ?? []).findIndex((l) => l.id === 'wick-gap-3');
-      return (
-        s.room === 'cn-gap' &&
-        s.player.grounded &&
-        feet(s).y >= 1990 &&
-        Math.abs(feet(s).x - 2944) < 400 &&
-        (s.lures.hp[k] ?? 1) <= 0
-      );
-    },
+    // (Down there by the chain, flung: v8 (the v11 layout) reads the firefly's flag, which only a fling off the chain
+    // sets; the third lamp out was the test, but the firefly relights it behind her now.)
+    test: (s) =>
+      s.room === 'cn-gap' &&
+      s.player.grounded &&
+      feet(s).y >= 1990 &&
+      Math.abs(feet(s).x - 2944) < 400 &&
+      s.save.flags.includes('cn-firefly-gap'),
     max: 16000,
     optional: true,
   },
@@ -349,10 +346,15 @@ export const ROUTE: Leg[] = [
     seconds: 240,
     until: flag('cn-tunnel-clear'),
   },
-  // v8: the firefly's second sighting (her input held while it comes out of the tube's shaft and hangs a cage over
-  // the den's mouth), then the cage, cut from the ledge on the lintel.
+  // v8: the firefly's second sighting (her input held while it comes out of the tube's shaft and hangs a cage before
+  // the den's mouth), then the cage, cut standing on the root knuckle under it.
   { name: 'cn-tunnel: the firefly hangs a cage over the mouth', kind: 'script', script: '.240' },
-  { name: "cn-tunnel: up onto the mouth's lintel", kind: 'goal', test: near(7872, 1408, 50), max: 16000 },
+  {
+    name: 'cn-tunnel: onto the knuckle under the cage',
+    kind: 'goal',
+    test: near(7552, 1632, 50),
+    max: 16000,
+  },
   { name: "cn-tunnel: the warning's cage cut open", kind: 'cage', lure: 'trap-warn' },
   { name: 'cn-tunnel: down through the lid to the den', kind: 'exit', exit: 'den', max: 16000 },
   {
@@ -741,8 +743,18 @@ class Driver {
       for (let w = 0; w < 8; w++) this.push(0);
     };
     let tries = 0;
+    let runY = 0;
     for (; tries < 12 && (this.s.lures.hp[k] ?? 0) > 0; tries++) {
       if (run) {
+        // (Back onto the run-up's ground first: a missed jump falls to the floor under it.)
+        const y0 = feet(this.s).y;
+        if (tries === 0) runY = y0;
+        const at = (q: GameState) =>
+          q.player.grounded && Math.abs(feet(q).x - run[0]) < 60 && Math.abs(feet(q).y - runY) < 8;
+        if (tries > 0 && !at(this.s)) {
+          const r = this.search(undefined, at, 6000);
+          if (r.tape) this.play(r.tape);
+        }
         walkTo(run[0]);
         const d = run[1] > run[0] ? Rb : Lb;
         for (let w = 0; w < 60 && Math.sign(run[1] - feet(this.s).x) === (d === Rb ? 1 : -1); w++)
@@ -760,7 +772,10 @@ class Driver {
     }
     for (let w = 0; w < 400 && this.s.kit.story > 0; w++) this.push(0);
     for (let w = 0; w < 60; w++) this.push(0);
-    return (this.s.lures.hp[k] ?? 0) <= 0 ? `freed in ${tries} tries` : `still caged after ${tries} tries`;
+    const at = `at ${Math.round(feet(this.s).x)}, ${Math.round(feet(this.s).y)}`;
+    return (this.s.lures.hp[k] ?? 0) <= 0
+      ? `freed in ${tries} tries`
+      : `still caged after ${tries} tries (${at})`;
   }
 
   leg(L: Leg): LegLog {

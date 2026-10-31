@@ -463,6 +463,9 @@ export function slashLures(
       continue;
     }
     res.snuffs++;
+    // (A cage breaking holds the world with her, the Canopy r11: every creature waits out the beat too, not only her,
+    // so nothing jumps forward when it lets go (the Grove's wave). +1: the creatures still step this frame.)
+    if (l.trap) for (const e of state.enemies) e.hitstop = Math.max(e.hitstop, stop + 1);
     snuffLure(state, scene, i, t, events, dir === 'fwd' ? (facing < 0 ? -1 : 1) : facing < 0 ? -1 : 1, dir);
   }
   return res;

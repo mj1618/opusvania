@@ -1426,7 +1426,7 @@
         "y": 1600,
         "facing": 1,
         "want": [6300, 1400],
-        "until": "cn-hub-freed"
+        "until": "cn-hub-left"
       },
       "stage": {
         "tatters": [
@@ -1435,7 +1435,7 @@
             "y": 1600,
             "facing": 1,
             "want": [5440, 1600],
-            "when": "cn-hub-freed"
+            "when": "cn-hub-left"
           }
         ]
       },
@@ -1578,7 +1578,7 @@
             "w": 2240,
             "h": 1280
           },
-          "until": "cn-hub-freed",
+          "until": "cn-hub-left",
           "frames": 45
         }
       ]
@@ -1607,6 +1607,24 @@
         "y": 640,
         "w": 512,
         "h": 320
+      }
+    ],
+    "triggers": [
+      {
+        "id": "left-west",
+        "x": 5376,
+        "y": 0,
+        "w": 128,
+        "h": 1600,
+        "sets": "cn-hub-left"
+      },
+      {
+        "id": "left-east",
+        "x": 7424,
+        "y": 0,
+        "w": 128,
+        "h": 1344,
+        "sets": "cn-hub-left"
       }
     ],
     "mothStones": [
@@ -10583,12 +10601,6 @@
     "fireflies": [
       {
         "id": "firefly-gap",
-        "trigger": {
-          "x": 2688,
-          "y": 1856,
-          "w": 768,
-          "h": 384
-        },
         "flag": "cn-firefly-gap",
         "onFling": ["wick-gap-1", "wick-gap-2", "wick-gap-3"],
         "path": [
@@ -11618,8 +11630,8 @@
       {
         "id": "trap-warn",
         "kind": "wick",
-        "x": 7872,
-        "y": 1200,
+        "x": 7552,
+        "y": 1420,
         "trap": true,
         "moths": 40,
         "after": "cn-warn-hung"
@@ -11715,8 +11727,8 @@
         },
         {
           "id": "cage",
-          "x": 7872,
-          "y": 1408
+          "x": 7552,
+          "y": 1632
         },
         {
           "id": "tube",
@@ -11854,7 +11866,7 @@
         "id": "firefly-warn",
         "onFlag": "cn-tunnel-clear",
         "flag": "cn-firefly-warn",
-        "path": [[7744, 980], [7800, 1110], [7872, 1176], [7904, 1460], [7936, 1700], [7992, 1760]],
+        "path": [[7744, 980], [7660, 1200], [7552, 1396], [7720, 1620], [7900, 1740], [7992, 1760]],
         "frames": 140,
         "hang": {
           "point": 2,
@@ -11863,8 +11875,8 @@
         },
         "hold": 90,
         "look": {
-          "x": 7800,
-          "y": 1460,
+          "x": 7600,
+          "y": 1500,
           "zoom": 1,
           "from": 0,
           "to": 150
@@ -12822,7 +12834,8 @@
           "y": 320,
           "w": 2944,
           "h": 1152,
-          "lock": true
+          "lock": true,
+          "until": "cn-den-freed"
         }
       ]
     },

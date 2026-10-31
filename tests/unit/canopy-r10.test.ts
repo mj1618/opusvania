@@ -128,13 +128,13 @@ describe('the first fling (r10, review r9 #1)', () => {
   });
 });
 
-// (r11: the warning's cage is hung by the firefly once the warning is cleared, over the den's mouth: cut from the ledge
-// on the lintel, 1,408.)
+// (r11: the warning's cage is hung by the firefly once the warning is cleared, before the den's mouth: cut standing on
+// the root knuckle under it, 1,632.)
 const WARN_FLAGS = ['cn-tunnel-clear', 'cn-firefly-warn', 'cn-warn-hung'];
 const TRAPS: Array<[string, string, number, string[]?]> = [
   ['cn-hub', 'trap-crossing', 1600],
   ['cn-grove', 'trap-grove', 1600],
-  ['cn-tunnel', 'trap-warn', 1408, WARN_FLAGS],
+  ['cn-tunnel', 'trap-warn', 1632, WARN_FLAGS],
 ];
 
 describe('the premise: trap lamps (r10, review r9 #2)', () => {
@@ -237,16 +237,18 @@ describe("the hub's map station opens on her first pass (r10, review r9 #9)", ()
 });
 
 describe("the firefly's pass at the gap (r10, review r9 #2)", () => {
-  it('landing below the chain starts it once; it relights the lamps she flung and is gone in 4 s', () => {
+  // (r11: it starts on her first fling off the chain, not a landing below it.)
+  it('her first fling off the chain starts it once; it relights the lamps she flung and is gone in 5 s', () => {
     const scene = getRoom('cn-gap');
     const s = at('cn-gap', 2944, 2048 - 64);
     const ids = ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'];
     const ks = ids.map((id) => (scene.lures ?? []).findIndex((l) => l.id === id));
-    // (As if the chain had been flung: all three out.)
+    // (As if the chain had been flung: all three out, the first smouldering behind her.)
     for (const k of ks) {
       s.lures.hp[k] = 0;
       s.lures.out[k] = 1;
     }
+    s.lures.ember[ks[0] as number] = 1;
     const ev = run(s, 0, 330);
     const start = ev.filter((e) => e.type === 'fireflyStart');
     expect(start.length).toBe(1);
@@ -257,8 +259,8 @@ describe("the firefly's pass at the gap (r10, review r9 #2)", () => {
     expect(s.kit.firefly.pass).toBe(-1);
     for (const k of ks) expect(s.lures.hp[k]).toBeGreaterThan(0);
     expect(s.save.flags).toContain('cn-firefly-gap');
-    // Once: back in the trigger, nothing.
-    placePlayer(s, 3100, 2016, t, withShortcuts(scene, s.save), []);
+    // Once: another fling, nothing.
+    s.lures.ember[ks[1] as number] = 1;
     expect(run(s, 0, 60).some((e) => e.type === 'fireflyStart')).toBe(false);
   });
 });
@@ -269,10 +271,14 @@ describe("the firefly's pass stays in her frame (r10, render's note)", () => {
     [1920, 1200],
     [2560, 1080],
   ] as const)
-    it(`landing in the pod garden, it is in the view 2.5 s or more at ${vw}x${vh}, and leaves by the drop ahead of her`, () => {
+    it(`down the chain into the pod garden, it is in the view 2.5 s or more at ${vw}x${vh}, and leaves by the drop ahead of her`, () => {
       for (const x of [2800, 3000, 3200]) {
         const scene = getRoom('cn-gap');
         const s = at('cn-gap', x, 2048 - 64);
+        // (r11: down the chain into the garden: the first lamp still smoulders behind her, the pass under way.)
+        const k1 = (scene.lures ?? []).findIndex((l) => l.id === 'wick-gap-1');
+        s.lures.hp[k1] = 0;
+        s.lures.ember[k1] = 1;
         const ct = cameraFor(scene);
         const cam = createCamera(s, scene, ct, vw, vh);
         let seen = 0;

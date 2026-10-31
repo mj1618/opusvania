@@ -85,7 +85,7 @@ describe("the hub's cage (r11, review r10 #3 / #4)", () => {
           Math.abs(px - v.x) < w / 2 - m && Math.abs(py - v.y) < h / 2 - m;
         expect(inView(l?.x ?? 0, l?.y ?? 0, 60), `cage from ${x}`).toBe(true);
         const kin = (scene.marks as { tatter?: { x: number; y: number; until?: string } }).tatter;
-        expect(kin?.until).toBe('cn-hub-freed');
+        expect(kin?.until).toBe('cn-hub-left');
         expect(inView(kin?.x ?? 0, (kin?.y ?? 0) - 40, 20), `kin from ${x}`).toBe(true);
       }
     });
@@ -102,6 +102,8 @@ describe("the hub's cage (r11, review r10 #3 / #4)", () => {
     expect(snuff?.trap).toBe(true);
     expect(s.save.moths).toBe(30);
     expect(s.save.flags).toContain('cn-hub-freed');
+    // (The landing's frame and the kin wait until she walks off the landing, not the release.)
+    expect(s.save.flags).not.toContain('cn-hub-left');
     // (The trap's snuff stops for a beat: a longer hitstop than a lamp's.)
     const last = ev.filter((e) => e.type === 'slashHit' && e.target.kind === 'lure').pop() as Of<'slashHit'>;
     expect(last.hitstop).toBe(t.lures.trapSnuffHitstop);
@@ -121,31 +123,43 @@ describe("the hub's cage (r11, review r10 #3 / #4)", () => {
   });
 });
 
+describe('a cage breaking holds the world (r11, render: creatures jumped forward after the hitstop)', () => {
+  it("in the Grove's wave, every creature stands still while she does", () => {
+    const k = lureIx('cn-grove', 'trap-grove');
+    const l = getRoom('cn-grove').lures?.[k];
+    const s = at('cn-grove', l?.x ?? 0, 1600, CG, ['cn-grove-wave']);
+    run(s, 0, 90);
+    let snuffAt = -1;
+    let pos = '';
+    const where = () => s.enemies.map((e) => `${e.x},${e.y}`).join(' ');
+    for (let f = 0; f < 400 && snuffAt < 0; f++) {
+      s.player.invuln = 60;
+      const ev = run(s, f % 31 === 0 ? U | A : U);
+      if (ev.some((e) => e.type === 'lureSnuff' && e.id === 'trap-grove')) {
+        snuffAt = f;
+        pos = where();
+      }
+    }
+    expect(snuffAt).toBeGreaterThanOrEqual(0);
+    expect(s.player.hitstop).toBeGreaterThan(0);
+    for (let n = 0; s.player.hitstop > 0 && n < 30; n++) {
+      run(s, 0);
+      expect(where()).toBe(pos);
+    }
+  });
+});
+
 describe("the warning's cage, hung by the firefly (r11, review r10 #3 / #4)", () => {
   const scene = getRoom('cn-tunnel');
   const k = lureIx('cn-tunnel', 'trap-warn');
   const l = scene.lures?.[k];
 
-  it('is not there in the fight: no jump and up cut along the floor touches it', () => {
+  it('is not there in the fight', () => {
     const s = at('cn-tunnel', 7400, 1856);
     s.enemies.length = 0;
     run(s, 0, 10);
     expect(s.lures.hp[k]).toBe(0);
-    // ...and lit, still out of every jump's up cut from the warning's floor.
-    for (let x = 6960; x <= 7900; x += 40) {
-      const q = at('cn-tunnel', x, 1856, CG, ['cn-warn-hung']);
-      q.enemies.length = 0;
-      run(q, 0, 8);
-      expect(q.lures.hp[k]).toBe(t.lures.trapHp);
-      const ev: SimEvent[] = [];
-      run(q, J, 10, ev);
-      run(q, J | U | A, 1, ev);
-      run(q, J | U, 20, ev);
-      expect(
-        ev.some((e) => e.type === 'lureHit' && e.id === 'trap-warn'),
-        `from ${x}`,
-      ).toBe(false);
-    }
+    expect(l?.after).toBe('cn-warn-hung');
   });
 
   it('the warning cleared, the firefly comes, hangs it over the mouth (input held 1.5 s), and flees into the den', () => {
@@ -178,8 +192,8 @@ describe("the warning's cage, hung by the firefly (r11, review r10 #3 / #4)", ()
     expect(s.lures.hp[k]).toBe(t.lures.trapHp);
   });
 
-  it('is cut out from the ledge on the lintel, standing, in three', () => {
-    const s = at('cn-tunnel', l?.x ?? 0, 1408, CG, ['cn-tunnel-clear', 'cn-firefly-warn', 'cn-warn-hung']);
+  it('is cut out standing on the knuckle under it, in three', () => {
+    const s = at('cn-tunnel', l?.x ?? 0, 1632, CG, ['cn-tunnel-clear', 'cn-firefly-warn', 'cn-warn-hung']);
     s.enemies.length = 0;
     run(s, 0, 20);
     expect(s.player.grounded).toBe(true);

@@ -1244,8 +1244,8 @@ function hub(): Json {
         bounds: { x: 0, y: 0, w: 8000, h: 1600 + 240 },
         frames: 45,
       },
-      // (r11, review r10 #4 / #6: the landing composed. From the drop's landing to the floor under it, until the cage is
-      // freed, the view pulls back to 0.9 over a frame that holds the landing limb, the cage under it with its moths,
+      // (r11, review r10 #4 / #6: the landing composed. From the drop's landing to the floor under it, until she has
+      // first walked off it, the view pulls back to 0.9 over a frame that holds the landing limb, the cage under it with its moths,
       // the kin on the floor below looking up at it, and the sky over the lampoak.)
       {
         id: 'landing',
@@ -1255,7 +1255,9 @@ function hub(): Json {
         h: 1600,
         zoom: 0.9,
         bounds: { x: 5200, y: 480, w: 2240, h: 1280 },
-        until: 'cn-hub-freed',
+        // (Until she first walks off the landing (`cn-hub-left`), not the cage's snuff: ending on the release dropped
+        // the view ~250 px in the middle of its ease, render's note.)
+        until: 'cn-hub-left',
         frames: 45,
       },
     ],
@@ -1282,6 +1284,9 @@ function hub(): Json {
     { id: 'roost-warn', lure: `cn-tunnel:${WARN_TRAP}`, x: 6144, y: 640, w: 512, h: 320 },
   ]);
   r.place('trap', HUB_CAGE[0], 1600);
+  // (r11: off the landing either way, the first time: its frame lets go, and the kin goes back to its light.)
+  r.add('triggers', { id: 'left-west', x: 5376, y: 0, w: 128, h: 1600, sets: 'cn-hub-left' });
+  r.add('triggers', { id: 'left-east', x: 7424, y: 0, w: 128, h: 1344, sets: 'cn-hub-left' });
   // (r11: the clump's crown under the gap's drop, up its lit east face.)
   r.place('clump-top', 7424, 352);
   // (r7, review r6 #7: each pocket pays one thing that matters: the bank the heart's map, the high chamber a moon
@@ -1296,10 +1301,11 @@ function hub(): Json {
   r.place('trader', 3240, 1600, 'a clear spot for a trader beside the save (review r6 #7)');
   r.set('marks', {
     ...(r.data.marks as Json),
-    // (r11, review r10 #4: until the cage is freed the kin waits under it, on the floor below the landing, looking up
-    // at the moths: the drop's frame holds the cage, the kin and the sky. Freed, it is back by its light.)
-    tatter: { x: 5780, y: 1600, facing: 1, want: HUB_CAGE, until: 'cn-hub-freed' },
-    stage: { tatters: [{ x: 2780, y: 1600, facing: 1, want: [1920 + HX, 1600], when: 'cn-hub-freed' }] },
+    // (r11, review r10 #4: on her first landing the kin waits under the cage, on the floor below the landing, looking
+    // up at the moths: the drop's frame holds the cage, the kin and the sky. Once she has walked off the landing it is
+    // back by its light, out of her sight.)
+    tatter: { x: 5780, y: 1600, facing: 1, want: HUB_CAGE, until: 'cn-hub-left' },
+    stage: { tatters: [{ x: 2780, y: 1600, facing: 1, want: [1920 + HX, 1600], when: 'cn-hub-left' }] },
     // (r8: the kin in three places, wordless: here it watches her and turns away; in the bower's chamber it keeps a
     // light; at the way out it waits, after the den.)
     notes: [
@@ -2564,11 +2570,12 @@ function gap(): Json {
   r.set('fireflies', [
     {
       id: 'firefly-gap',
-      trigger: { x: 2688, y: 1856, w: 3456 - 2688, h: 2240 - 1856 },
       flag: 'cn-firefly-gap',
       // (r11, review r10 #4: the reviewer came down the chain's far side with every lamp lit, and the pass relit
-      // nothing. It starts on her first fling off the chain too: the lamp she left smoulders, and the firefly comes
-      // out of the roost's mouth and lights it again in front of her, then the next, then flees ahead down the drop.)
+      // nothing. It starts on her first fling off the chain instead of a landing below it: the lamp she left
+      // smoulders, and the firefly comes out of the roost's mouth and lights it again in front of her, then the next,
+      // then flees ahead down the drop. (A landing first, kept as a second trigger, spent it on nothing in the route
+      // plan: the glide to the far seed and the roost come before the chain.))
       onFling: ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'],
       path: [
         [3040, 1150],
@@ -2662,8 +2669,12 @@ const MOUTH_X = 7808;
 const LID_X = 7936;
 /** The den's warning's floor. */
 const WARN_FLOOR = 1856;
-/** The warning's cage (r11): hung by the firefly over the den's mouth, cut from the ledge on the lintel (1,408). */
-const WARN_CAGE: [number, number] = [7872, 1200];
+/**
+ * The warning's cage (r11): hung by the firefly once the warning is cleared, over the root knuckle before the den's
+ * mouth (cut standing on it, 1,632). (First hung over the lintel at 7,872: 128 px from the room's edge, the sighting
+ * fell in the frame's corner: render's note.)
+ */
+const WARN_CAGE: [number, number] = [7552, 1420];
 /** The knuckles over it (x, top). */
 const TUNNEL_KNUCKLES: Array<[number, number]> = [
   [1408, 1664],
@@ -2828,11 +2839,11 @@ function tunnel(): Json {
   r.lamp('wick-warn-1', PIT_E + 140, WARN_FLOOR - 220);
   // (r11, review r10 #3 / #4: v10's cage hung over the fight's floor, in the up-cut line at a lampwing: the reviewer
   // freed it by accident and never saw it. Now the firefly hangs it once the warning is cleared (the second
-  // sighting), over the den's mouth on the lintel: cut from the ledge on the lintel (a standing up cut), out of every
-  // line of the fight, and not there while the fight is on.)
+  // sighting), over the knuckle before the den's mouth: cut standing on the knuckle, and not there while the fight is
+  // on.)
   r.lamp(WARN_TRAP, WARN_CAGE[0], WARN_CAGE[1], { trap: true, moths: 40, after: 'cn-warn-hung' });
   // The firefly's second sighting (r11, review r10 #4: "the cause is shown"): the step beat 2 is down (the lid opens),
-  // it comes down out of the tube's east shaft, hangs the cage over the mouth (it lights: `cn-warn-hung`) and holds
+  // it comes down out of the tube's east shaft, hangs the cage before the mouth (it lights: `cn-warn-hung`) and holds
   // there a beat, then flees down through the mouth into the den, ahead of her. Her input is held while it comes and
   // hangs the cage (1.5 s); render frames it with her (`look`).
   r.set('fireflies', [
@@ -2842,16 +2853,16 @@ function tunnel(): Json {
       flag: 'cn-firefly-warn',
       path: [
         [7744, 980],
-        [7800, 1110],
+        [7660, 1200],
         [WARN_CAGE[0], WARN_CAGE[1] - 24],
-        [7904, 1460],
-        [7936, 1700],
+        [7720, 1620],
+        [7900, 1740],
         [7992, 1760],
       ],
       frames: 140,
       hang: { point: 2, frames: 75, sets: 'cn-warn-hung' },
       hold: 90,
-      look: { x: 7800, y: 1460, zoom: 1, from: 0, to: 150 },
+      look: { x: 7600, y: 1500, zoom: 1, from: 0, to: 150 },
     },
   ]);
   // A re-form point on the floor (r10, review r9 #3: faded in the warning she came back west of the pit, behind the
@@ -2895,7 +2906,7 @@ function tunnel(): Json {
   r.place('east', PIT_E + 512, WARN_FLOOR);
   r.place('mouth', 7900, WARN_FLOOR);
   r.place('ledge', 7904, 1408);
-  r.place('cage', 7872, 1408);
+  r.place('cage', WARN_CAGE[0], WARN_FLOOR - 224);
   r.place('tube', 3200 + TX, 896);
   r.place('pile', 800, 1856);
   r.shotStops([
@@ -3095,7 +3106,9 @@ function den(): Json {
   ]);
   r.set('camera', {
     headroom: 0,
-    zones: [{ id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true }],
+    // (r11: the arena's lock lets go with the great cage's release, so the view follows her up the roof's shaft and
+    // along the passage to the clifftop: locked, the passage was out of frame.)
+    zones: [{ id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true, until: 'cn-den-freed' }],
   });
   r.landmark('arena', 'arena', 1900, 1344);
   r.landmark('roof', 'gate', (ROOF_X[0] + ROOF_X[1]) / 2, 448);
