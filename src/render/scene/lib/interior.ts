@@ -29,6 +29,8 @@ export const INTERIOR = {
   midParallax: 0.93,
   midValue: 0.45,
   midCover: 0.32,
+  /** A shaft's knothole stands no nearer than this over the walk under it (px; r19: one over a pit read as a pod). */
+  knotFloor: 240,
   /** Spacing of the lights along exposed tops, faces and undersides (px), and the fallback cell. */
   mossEvery: 640,
   // (Review r6 #5: at 560 px apart the face fungi read as a dotted line of LEDs: fewer, each a clump.)
@@ -917,6 +919,12 @@ function shaftNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: nu
     if (tornK(b, e, x, y) < 0.4 || inSolid(plan.masses, x, y)) continue;
     const rx = range(r, 16, 30);
     const ry = rx * range(r, 1.6, 2.4);
+    // (The Canopy r19, ft18a: a knothole standing just over the well's thorn pit, lit by the moonbeam, read as "a
+    // glassy pod, solid": none within `knotFloor` px over the walk under it.)
+    const floorUnder = plan.masses.some(
+      (m) => x >= m.x && x <= m.x + m.w && m.y >= y && m.y - (y + ry) < INTERIOR.knotFloor,
+    );
+    if (floorUnder) continue;
     p.solid(
       chaikin(blob(x, y, rx + 8, ry + 10, seed + k, 0.25, 14), 2),
       T.near,
