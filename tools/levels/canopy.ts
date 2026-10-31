@@ -2994,11 +2994,12 @@ function tunnel(): Json {
     stage: {
       ...(((r.data.marks as Json).stage as Json | undefined) ?? {}),
       stream: {
+        // (Under the tunnel's roof: at first it ran inside the rock, at the top edge of the frame; 330 px lower.)
         points: [
-          [6720, 760],
-          [7140, 900],
-          [7560, 980],
-          [8000, 900],
+          [6720, 1090],
+          [7140, 1230],
+          [7560, 1310],
+          [8000, 1230],
         ],
         count: 40,
         captured: WARN_TRAP,

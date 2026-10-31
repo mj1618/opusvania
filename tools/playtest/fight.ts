@@ -20,6 +20,11 @@ const D = ActionBit.down;
 const J = ActionBit.jump;
 const A = ActionBit.attack;
 
+/** A debug switch from the environment (Node only: the page has no `process`, keeper-live.ts runs this there). */
+function envFlag(k: string): boolean {
+  return typeof process !== 'undefined' && !!process.env?.[k];
+}
+
 /** Creatures a fight is about (not silk, not dead, not asleep). */
 export function hostile(e: EnemyState): boolean {
   if (e.gone || e.mode === 'dead' || e.kind === 'web') return false;
@@ -219,7 +224,7 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
           const eta = (dist - 70) / Math.max(1, Math.abs(e.vx)) - lead;
           // The den's lamp (a few tries a fight): wait under it; as the ball comes, up into it (caught, out of
           // its way), then the throw aimed onto it and a cut as she flies (the throw-cut unrolls it).
-          if (lamp && lampTries < 3 && !process.env.DEN_NO_LAMP) {
+          if (lamp && lampTries < 3 && !envFlag('DEN_NO_LAMP')) {
             const ldx = lamp.x - px;
             if (coming && eta < 22 && Math.abs(ldx) < 50) {
               lampTries++;
@@ -249,7 +254,7 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
         // solid shelves roof the floor, and a ram pulls up at a roof's mouth, so one drawn in the middle never
         // reaches the root: wait by it until the creature walks into the strip between the east shelf and it.)
         const root = e0(scene, i)?.taproot;
-        if (e.phase >= 3 && root && (process.env.DEN_HOLD ? true : k - rootWait < 150)) {
+        if (e.phase >= 3 && root && (envFlag('DEN_HOLD') ? true : k - rootWait < 150)) {
           const side = Math.sign(c.x - (root[0] + root[1]) / 2) || -1;
           const spot = side < 0 ? root[0] - 110 : root[1] + 110;
           if (Math.abs(spot - px) > 30) return dirBit(Math.sign(spot - px));

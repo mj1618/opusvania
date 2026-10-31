@@ -361,6 +361,18 @@ const CLAIMS: Claim[] = [
     not: ['hub', 'cn-gap:seed-far', 'place:far'],
     max: 9000,
   },
+  // (r13, moment 4: the chase. Its hooks lit (the chase run), the high line: from the shelf up the hooks and down the S
+  // into the roost (fling by fling in tests/unit/canopy-r13.test.ts); the low line (no hooks) reaches it too.)
+  {
+    room: 'cn-gap',
+    from: [4000, 1344],
+    kit: [C, G],
+    flags: ['cn-firefly-gap', ...[1, 2, 3, 4, 5, 6].map((n) => `cn-gap-hook-${n}`)],
+    lit: true,
+    reach: ['place:roost', 'cn-gap:roost-1', 'place:floor', 'fork', 'bower', 'sky'],
+    max: 9000,
+  },
+  { room: 'cn-gap', from: [4000, 1344], kit: [C, G], reach: ['place:roost', 'sky'], max: 9000 },
   { room: 'cn-sky', from: [1248, 960], kit: [C], reach: ['gap', 'cn-sky:eyes-hollow'] },
   // Deep: the tunnel (back up the door's shaft with the claws; the pit only with the glide; the shortcut to the
   // cellar from its block), the burrow, the den (the gate opens on the old burrback's death), the way out (the

@@ -82,6 +82,9 @@ describe('lures: scene data', () => {
       grace: [],
       ember: [],
       burn: [],
+      // (The Canopy r13: cages that fill while she watches, `Lure.fills`.)
+      fill: [],
+      fillT: [],
     });
     s.run('R60 R+J20 R40');
     expect(s.state.player.pullX).toBe(0);

@@ -34,7 +34,9 @@ Render and audio build against these; sim / content names only (render never wri
   kindled: their flag `cn-gap-hook-n`). Camera zone `chase` (after `cn-firefly-gap`, until `cn-firefly-gap-done`).
 - **Moment 5, the trap is set** (`cn-tunnel:trap-warn`, `Lure.fills {frames: 180}`): `trapFill {lure, n, of, x, y}`
   one per moth, `state.lures.fill[i]` (moths in it now; -1 = not filling), `denStir {lure, x, y}` when full (the slam
-  moves here from beat 2's start). `marks.stage.stream {points, count 40, captured: 'trap-warn'}` is the far stream.
+  moves here from beat 2's start). `marks.stage.stream {points, count 40, captured: 'trap-warn'}` is the far stream
+  (its points 330 px lower since render's ask: y 1,090-1,310 under the roof, which is at 776; render drops its
+  stopgap offset).
 - **Moment 3, moonlight for two** (`cn-crown`): `scene.sits[0]` (sim) = `marks.tatter.sit {x 2000, y 1024, r 160,
   frames 120}`; `kinSit {id, x, y}` + flag `cn-kin-sat`; the kin `when: cn-crown-wings` (a trigger over the glade),
   `until: cn-firefly-gap`; zone `crown-sit` (zoom 0.85, **`after: cn-kin-sat`**: a new CameraZone field render's
