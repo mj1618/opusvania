@@ -168,11 +168,32 @@ export interface Moonseed {
  */
 export interface FireflyPass {
   id: string;
-  trigger: { x: number; y: number; w: number; h: number };
+  /** Her box centre in it, grounded, starts the pass (a landing). Optional since r11 (`onFling`, `onFlag`). */
+  trigger?: { x: number; y: number; w: number; h: number };
   flag: string;
   path: Array<[number, number]>;
+  /** Frames the flight takes (a `hang` adds its own). */
   frames: number;
   relights?: string[];
+  /**
+   * (The Canopy r11, review r10 #4.) Started by her first fling off one of these lamps (that lamp smoulders: the
+   * firefly relights it, embers or out, in front of her).
+   */
+  onFling?: string[];
+  /** Started the step this story flag is in the save (the warning cleared: the second sighting). */
+  onFlag?: string;
+  /**
+   * A stop: reaching path point `point` it holds there `frames` frames (hanging a cage), and saves `sets` as it
+   * arrives (a lamp with `after: sets` lights then: the cage it hung). `fireflyHang` at the start of the stop.
+   */
+  hang?: { point: number; frames: number; sets?: string };
+  /** A held beat on its start (input held this many frames, at most `kit.storyHoldMax`; nothing hurts her). */
+  hold?: number;
+  /**
+   * A camera hook for render (sim never reads it): from frame `from` to `to` of the pass, frame (x, y) with her, at
+   * `zoom` if given (render eases in and out).
+   */
+  look?: { x: number; y: number; zoom?: number; from: number; to: number };
 }
 
 /**

@@ -145,7 +145,9 @@ const LINKS: Link[] = [
   { a: 'cn-tunnel', b: 'cn-burrow', at: 3328, span: 192 },
   // (r8, review r7 #7: the nest's shaft from the tunnel's west hall.)
   { a: 'cn-tunnel', b: 'cn-burrow', at: -384, span: 192, ida: 'nest', idb: 'hall' },
-  { a: 'cn-den', b: 'cn-out', at: 6976 },
+  // (r11, review r10 #1: the den's way out is up through its roof onto the way out's clifftop, the valley vista first;
+  // v10's was a root gate in its east wall to the chimney's foot.)
+  { a: 'cn-den', b: 'cn-out', at: 6016 },
   { a: 'cn-out', b: 'cn-ledge', at: 7936 },
 ];
 
@@ -1141,6 +1143,8 @@ function hatch(): Json {
 const HX = 3520;
 /** The three trap lamps (r10, review r9 #2): the hub's, the Grove's west, the den's warning's. */
 const HUB_TRAP = 'trap-crossing';
+/** The hub's cage (r11): under the landing limb, in the drop's frame. */
+const HUB_CAGE: [number, number] = [6300, 1400];
 const GROVE_TRAP = 'trap-grove';
 const WARN_TRAP = 'trap-warn';
 
@@ -1185,10 +1189,16 @@ function hub(): Json {
   r.sealed(128, 2048, 960, 2176);
   r.back(0, 1600, 8000, 2304);
   r.fill();
-  r.mass(3456 + HX, 384, 896, 64);
+  // (r11, review r10 #4 / #6: the clump read as a framed box with a straight band along its top. Its crown steps up in
+  // root tiers to a hump under the gap's drop, and its east face runs down to a root foot 192 over the bank's floor: a
+  // claw face up it from the floor, lit by a lamp by its shoulder.)
+  r.mass(3456 + HX, 416, 896, 32);
+  r.mass(3456 + HX + 128, 384, 640, 32);
+  r.mass(3456 + HX + 256, 352, 384, 32);
   r.mass(3456 + HX, 640, 64, 448);
   r.mass(3520 + HX, 896, 768, 64);
   r.mass(4288 + HX, 448, 64, 448);
+  r.mass(4288 + HX, 896, 64, 256);
   r.oneWay(3904 + HX, 704, 160, 'branch');
   // The glide shelf (a shown lock, review r5 #9): off the high block's top only wings reach it, 1,280 px across the
   // clearing; sheer underneath, no claws on it.
@@ -1234,6 +1244,22 @@ function hub(): Json {
         bounds: { x: 0, y: 0, w: 8000, h: 1600 + 240 },
         frames: 45,
       },
+      // (r11, review r10 #4 / #6: the landing composed. From the drop's landing to the floor under it, until she has
+      // first walked off it, the view pulls back to 0.9 over a frame that holds the landing limb, the cage under it with its moths,
+      // the kin on the floor below looking up at it, and the sky over the lampoak.)
+      {
+        id: 'landing',
+        x: 5600,
+        y: 0,
+        w: 1760,
+        h: 1600,
+        zoom: 0.9,
+        bounds: { x: 5200, y: 480, w: 2240, h: 1280 },
+        // (Until she first walks off the landing (`cn-hub-left`), not the cage's snuff: ending on the release dropped
+        // the view ~250 px in the middle of its ease, render's note.)
+        until: 'cn-hub-left',
+        frames: 45,
+      },
     ],
   });
   // A lamp on the lampoak for each seed held: the hub changes on every return.
@@ -1242,17 +1268,27 @@ function hub(): Json {
   r.lamp('socket-3', 3020 + HX, 640, { after: 'seeds:3' });
   // The way west: a lamp in the giant's mouth (warm light under the block, seen from the clearing's west end).
   r.lamp('wick-mouth', 520, 1790);
+  // (r11, review r10 #6: the clump's east face lit, a claw route from the bank's floor to its crown.)
+  r.lamp('wick-clump', 7944, 720);
   // The premise (r10, review r9 #2): the first trap lamp, a cage of moths hung over the root floor west of the seed
   // door, the first thing she meets walking west from the drop. Three cuts free it for good; its moths settle on the
   // high block's claw face (the shard chamber's way up, lit), the Grove's over the kin's lamp, the warning's in the
   // lampoak's crown over the drop: the hub changes with each lamp freed (`roosts`, render draws them).
-  r.lamp(HUB_TRAP, 5200, 1380, { trap: true, moths: 30 });
+  // (r11, review r10 #3: the cage hangs under the landing limb, in the frame where she lands from the drop (v10's was
+  // 1,800 px west, out of it: holding right, the reviewer never saw it). 200 over the floor: a standing up cut reaches
+  // it (`lures.trapRadius`), the first cut lets one moth out. Freed, `cn-hub-freed`: the landing's frame lets go.)
+  r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, moths: 30, sets: 'cn-hub-freed' });
   r.set('roosts', [
     { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 1024, y: 1088, w: 128, h: 448 },
     { id: 'roost-grove', lure: `cn-grove:${GROVE_TRAP}`, x: 2560, y: 1344, w: 320, h: 192 },
     { id: 'roost-warn', lure: `cn-tunnel:${WARN_TRAP}`, x: 6144, y: 640, w: 512, h: 320 },
   ]);
-  r.place('trap', 5200, 1600);
+  r.place('trap', HUB_CAGE[0], 1600);
+  // (r11: off the landing either way, the first time: its frame lets go, and the kin goes back to its light.)
+  r.add('triggers', { id: 'left-west', x: 5376, y: 0, w: 128, h: 1600, sets: 'cn-hub-left' });
+  r.add('triggers', { id: 'left-east', x: 7424, y: 0, w: 128, h: 1344, sets: 'cn-hub-left' });
+  // (r11: the clump's crown under the gap's drop, up its lit east face.)
+  r.place('clump-top', 7424, 352);
   // (r7, review r6 #7: each pocket pays one thing that matters: the bank the heart's map, the high chamber a moon
   // shard, the wings' shelf a great.)
   r.stone('stone-heart', 3800 + HX, 896, 'cn-heart');
@@ -1265,7 +1301,11 @@ function hub(): Json {
   r.place('trader', 3240, 1600, 'a clear spot for a trader beside the save (review r6 #7)');
   r.set('marks', {
     ...(r.data.marks as Json),
-    tatter: { x: 2780, y: 1600, facing: 1, want: [1920 + HX, 1600] },
+    // (r11, review r10 #4: on her first landing the kin waits under the cage, on the floor below the landing, looking
+    // up at the moths: the drop's frame holds the cage, the kin and the sky. Once she has walked off the landing it is
+    // back by its light, out of her sight.)
+    tatter: { x: 5780, y: 1600, facing: 1, want: HUB_CAGE, until: 'cn-hub-left' },
+    stage: { tatters: [{ x: 2780, y: 1600, facing: 1, want: [1920 + HX, 1600], when: 'cn-hub-left' }] },
     // (r8: the kin in three places, wordless: here it watches her and turns away; in the bower's chamber it keeps a
     // light; at the way out it waits, after the den.)
     notes: [
@@ -2530,8 +2570,13 @@ function gap(): Json {
   r.set('fireflies', [
     {
       id: 'firefly-gap',
-      trigger: { x: 2688, y: 1856, w: 3456 - 2688, h: 2240 - 1856 },
       flag: 'cn-firefly-gap',
+      // (r11, review r10 #4: the reviewer came down the chain's far side with every lamp lit, and the pass relit
+      // nothing. It starts on her first fling off the chain instead of a landing below it: the lamp she left
+      // smoulders, and the firefly comes out of the roost's mouth and lights it again in front of her, then the next,
+      // then flees ahead down the drop. (A landing first, kept as a second trigger, spent it on nothing in the route
+      // plan: the glide to the far seed and the roost come before the chain.))
+      onFling: ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'],
       path: [
         [3040, 1150],
         [3400, 1400],
@@ -2624,6 +2669,12 @@ const MOUTH_X = 7808;
 const LID_X = 7936;
 /** The den's warning's floor. */
 const WARN_FLOOR = 1856;
+/**
+ * The warning's cage (r11): hung by the firefly once the warning is cleared, over the root knuckle before the den's
+ * mouth (cut standing on it, 1,632). (First hung over the lintel at 7,872: 128 px from the room's edge, the sighting
+ * fell in the frame's corner: render's note.)
+ */
+const WARN_CAGE: [number, number] = [7552, 1420];
 /** The knuckles over it (x, top). */
 const TUNNEL_KNUCKLES: Array<[number, number]> = [
   [1408, 1664],
@@ -2786,7 +2837,34 @@ function tunnel(): Json {
   r.pod('pod-warn', 7300, WARN_FLOOR, 1200, 'sit');
   r.oneWay(LID_X - 448, WARN_FLOOR - 224, 128, 'branch');
   r.lamp('wick-warn-1', PIT_E + 140, WARN_FLOOR - 220);
-  r.lamp(WARN_TRAP, MOUTH_X - 64, WARN_FLOOR - 206, { trap: true, moths: 40 });
+  // (r11, review r10 #3 / #4: v10's cage hung over the fight's floor, in the up-cut line at a lampwing: the reviewer
+  // freed it by accident and never saw it. Now the firefly hangs it once the warning is cleared (the second
+  // sighting), over the knuckle before the den's mouth: cut standing on the knuckle, and not there while the fight is
+  // on.)
+  r.lamp(WARN_TRAP, WARN_CAGE[0], WARN_CAGE[1], { trap: true, moths: 40, after: 'cn-warn-hung' });
+  // The firefly's second sighting (r11, review r10 #4: "the cause is shown"): the step beat 2 is down (the lid opens),
+  // it comes down out of the tube's east shaft, hangs the cage before the mouth (it lights: `cn-warn-hung`) and holds
+  // there a beat, then flees down through the mouth into the den, ahead of her. Her input is held while it comes and
+  // hangs the cage (1.5 s); render frames it with her (`look`).
+  r.set('fireflies', [
+    {
+      id: 'firefly-warn',
+      onFlag: 'cn-tunnel-clear',
+      flag: 'cn-firefly-warn',
+      path: [
+        [7744, 980],
+        [7660, 1200],
+        [WARN_CAGE[0], WARN_CAGE[1] - 24],
+        [7720, 1620],
+        [7900, 1740],
+        [7992, 1760],
+      ],
+      frames: 140,
+      hang: { point: 2, frames: 75, sets: 'cn-warn-hung' },
+      hold: 90,
+      look: { x: 7600, y: 1500, zoom: 1, from: 0, to: 150 },
+    },
+  ]);
   // A re-form point on the floor (r10, review r9 #3: faded in the warning she came back west of the pit, behind the
   // glide and the hawker): a mark patch at the pit's far lip, marked anywhere on the floor (`area`), never a rest.
   r.patch('p-warn', PIT_E + 128, WARN_FLOOR, {
@@ -2828,6 +2906,7 @@ function tunnel(): Json {
   r.place('east', PIT_E + 512, WARN_FLOOR);
   r.place('mouth', 7900, WARN_FLOOR);
   r.place('ledge', 7904, 1408);
+  r.place('cage', WARN_CAGE[0], WARN_FLOOR - 224);
   r.place('tube', 3200 + TX, 896);
   r.place('pile', 800, 1856);
   r.shotStops([
@@ -2918,6 +2997,11 @@ function burrow(): Json {
 
 /** The den's balcony floor (r10: the tunnel's warning floor, world 5,952, through the mouth). */
 const DEN_IN = 320;
+/** The great cage (r11, review r10 #1): over the arena's middle, between the two shelves, cut from a jump off either. */
+const DEN_CAGE: [number, number] = [1856, 760];
+/** The roof's way out (r11): a shaft up the arena's east end, its root gate the cage's, a passage east under the roof. */
+const ROOF_X: [number, number] = [3072, 3264];
+const ROOF_PASS = 384;
 
 function den(): Json {
   const r = new Wood('cn-den', 'The burrow under the roots', [300, DEN_IN], 7503, {
@@ -2928,11 +3012,21 @@ function den(): Json {
   // (r10: in at the tunnel's warning floor through the den's mouth: the balcony 192 higher than v9's.)
   r.cave(0, DEN_IN - 256, 640, DEN_IN, { ceil: 0, w: 0, e: 0, corner: 0 });
   // The arena: 2688 wide (a 21:9 view sees wall to wall), 896 tall, its roof bitten.
-  r.cave(576, 448, 3264, 1344, { ceil: 96, w: 0, e: 0, corner: 128, skip: [[2816, 3136]] });
+  r.cave(576, 448, 3264, 1344, { ceil: 96, w: 0, e: 0, corner: 128, skip: [[2816, 3264]] });
   // The balcony's lip into the arena (the bitten corner sealed it off in v3: a softlock found on video).
   r.hole(576, DEN_IN - 256, 832, 512);
-  r.gate('root-gate', 3264, 1088, 128, 256, 'cn-den-down');
-  r.hole(3392, 1088, 3840, 1344);
+  // The way out (r11, review r10 #1: the area ends on its premise): the great cage's root gate in the arena's roof
+  // over its east end, shut until the cage is freed (`cn-den-freed`, the cage's `sets`); over it a shaft and a passage
+  // east under the den's roof to the clifftop of the way out, the valley vista its first stop (v10: a root gate in
+  // the east wall on the old burrback's death, to the foot of the way out's chimney). The arena's east wall runs
+  // floor to roof, a claw face up to the gate.
+  r.gate('den-roof', ROOF_X[0], 384, ROOF_X[1] - ROOF_X[0], 64, 'cn-den-freed');
+  r.hole(ROOF_X[0], 128, ROOF_X[1], 384);
+  r.hole(ROOF_X[0], 128, 3840, ROOF_PASS);
+  // (The bitten corner under the gate is cut back, so the east wall is plumb from the floor to the gate; its foot is a
+  // rect of its own that refuses the claws, as v10's root gate there did: the fight's floor is unchanged.)
+  r.air(ROOF_X[0], 448, ROOF_X[1], 640);
+  r.air(ROOF_X[1], 1152, ROOF_X[1] + 64, 1344);
   // (r9, review r8 #2: the mass more than 256 px from the air is sealed air with the back behind it.)
   r.sealDeep();
   r.fill();
@@ -2953,8 +3047,23 @@ function den(): Json {
   r.oneWay(1152, 1088, 384, 'branch');
   r.oneWay(2176, 1088, 384, 'branch');
   r.mass(2944, 448, 96, 808, false);
+  // (r11: the arena's east wall is the climb to the roof's gate; its foot refuses the claws as v10's root gate there
+  // did, so the fight's floor is unchanged: the face starts 192 over the floor.)
+  r.mass(ROOF_X[1], 1152, 64, 192, false);
   // A lamp over the taproot: its third phase plants it there and the lamp goes out (`snuffs`): the den darkens.
   r.lamp('wick-taproot', 2860, 640);
+  // The great cage (r11, review r10 #1: "the first boss should be the first big lamp"): 120 moths in a cage three
+  // times a trap's size, hung from the roof over the arena's middle, the old burrback asleep under it, its keeper.
+  // While it lives the blade glances off the bars (`guard`); down, three cuts from a jump off a shelf free the area's
+  // biggest cloud, she stands a beat while it bursts out (`hold`), and the roof's gate opens over the arena's east end
+  // (`sets`): moonlight down the shaft, the way out.
+  r.lamp('trap-den', DEN_CAGE[0], DEN_CAGE[1], {
+    trap: true,
+    moths: 120,
+    guard: 'cn-den-down',
+    sets: 'cn-den-freed',
+    hold: 90,
+  });
   r.patch('p-den', 300, DEN_IN);
   r.lamp('wick-den', 380, DEN_IN - 132);
   r.enemy({
@@ -2968,28 +3077,62 @@ function den(): Json {
     taproot: [2944, 3040],
     snuffs: 'wick-taproot',
   });
+  // The firefly's third sighting (r11, review r10 #4: it fled into the den from the warning): as she lands on the
+  // balcony the first time it is over the arena, circles the great cage it hung (the old burrback asleep under it),
+  // and goes up through the roof's gate where the way out will be. No control taken.
+  r.set('fireflies', [
+    {
+      id: 'firefly-den',
+      trigger: { x: 0, y: DEN_IN - 256, w: 640, h: 256 },
+      flag: 'cn-firefly-den',
+      path: [
+        [700, 420],
+        [1300, 560],
+        [DEN_CAGE[0] - 120, DEN_CAGE[1] - 40],
+        [DEN_CAGE[0], DEN_CAGE[1] - 120],
+        [DEN_CAGE[0] + 120, DEN_CAGE[1] - 40],
+        [DEN_CAGE[0] + 100, DEN_CAGE[1] + 90],
+        [DEN_CAGE[0] - 100, DEN_CAGE[1] + 90],
+        [DEN_CAGE[0] - 120, DEN_CAGE[1] - 40],
+        [DEN_CAGE[0], DEN_CAGE[1] - 120],
+        [2600, 560],
+        [3168, 440],
+        [3168, 200],
+      ],
+      frames: 300,
+      hang: { point: 3, frames: 40 },
+      look: { x: 1500, y: 760, zoom: 0.85, from: 0, to: 200 },
+    },
+  ]);
   r.set('camera', {
     headroom: 0,
-    zones: [{ id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true }],
+    // (r11: the arena's lock lets go with the great cage's release, so the view follows her up the roof's shaft and
+    // along the passage to the clifftop: locked, the passage was out of frame.)
+    zones: [{ id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true, until: 'cn-den-freed' }],
   });
   r.landmark('arena', 'arena', 1900, 1344);
-  r.landmark('root-gate', 'gate', 3328, 1344);
+  r.landmark('roof', 'gate', (ROOF_X[0] + ROOF_X[1]) / 2, 448);
   r.place('balcony', 300, DEN_IN);
   r.place('floor', 1700, 1344);
-  r.place('door', 3700, 1344);
+  r.place('shelf-w', 1440, 1088);
+  r.place('roof', 3500, ROOF_PASS);
   r.shotStops([
     ['balcony', 400, DEN_IN],
     ['reveal', 700, 704],
     ['floor', 1700, 1344],
+    ['cage', DEN_CAGE[0], 1088],
     ['taproot', 2800, 1344],
-    ['gate', 3400, 1344],
+    ['roof', 3168, 700],
+    ['pass', 3500, ROOF_PASS],
   ]);
   r.route('tunnel', 'balcony');
   r.route('balcony', 'p-den');
   r.route('balcony', 'floor', { oneWay: true });
-  // (The gate opens on the old burrback's death: an enemy's `sets` the world check cannot see, so no flag here.)
-  r.route('floor', 'door');
-  r.route('door', 'out');
+  // (The roof opens on the great cage's release, after the old burrback's death: flags the world check cannot see.)
+  r.route('floor', 'roof', { needs: [C] });
+  r.route('roof', 'floor', { oneWay: true });
+  r.route('roof', 'out');
+  r.route('out', 'roof');
   return r.finish();
 }
 
@@ -3012,8 +3155,10 @@ function out(): Json {
   const r = new Wood('cn-out', 'The way on', [300, 1344], 7504, {
     art: { anchorY: 1000, moon: { x: 1450, y: 360, r: 200 }, afterglow: { x: 2600, y: 900, strength: 1 } },
   });
-  // In from the den, then down a root shaft and along a low passage to the chimney's floor (the chimney's west face
-  // stays whole down to the passage's mouth: a fall off leg 2 meets a face, not an opening).
+  // (r11, review r10 #1: in from the den's roof onto the clifftop, the valley vista the first thing she sees; the
+  // chimney is the way down to the ledge's secret now, and back up.) A pocket off the chimney's foot (v10's way in
+  // from the den), down a root shaft and along a low passage to the chimney's floor (the chimney's west face stays
+  // whole down to the passage's mouth: a fall off leg 2 meets a face, not an opening).
   r.cave(0, 1088, 640, 1344, { ceil: 64, w: 0, e: 0, corner: 0 });
   r.hole(512, 1216, 704, 1856);
   r.hole(704, 1600, 896, 1856);
@@ -3067,6 +3212,10 @@ function out(): Json {
   r.lamp('wick-valley-3', 2960, 2060);
   r.set('camera', { zones: [{ id: 'valley', x: 1792, y: 0, w: 2048, h: 1600, zoom: 0.85 }] });
   r.add('triggers', { id: 'way-on', x: 3328, y: 800, w: 160, h: 288, sets: 'cn-area-end' });
+  // The ending's view (r11, review r10 #1): out of the den's roof onto the clifftop, the camera takes the valley, the
+  // moon and the mountain for 3 s (`marks.stage.vista` on `cn-out-vista`; she keeps control), where every moth she
+  // freed streams off toward the moon (render).
+  r.add('triggers', { id: 'out-vista', x: 64, y: 0, w: 512, h: TOP, sets: 'cn-out-vista' });
   r.landmark('vista', 'vista', 1700, TOP);
   r.landmark('valley', 'valley', 1792, 640, 2048, 1600);
   r.landmark('mountain', 'mountain', 2900, 420);
@@ -3074,6 +3223,7 @@ function out(): Json {
   r.cover('ledge-cover', 1280, OUT_FLOOR - 256, 512, 448, 'ledge-wall');
   r.cover('ledge-cover-2', 0, 1984, 1792, 384, 'ledge-wall');
   r.place('in', 300, 1344);
+  r.place('arrive', 200, TOP);
   r.place('foot', 1088, OUT_FLOOR);
   r.place('restE', 1400, OUT_REST);
   r.place('restW', 760, OUT_REST_W);
@@ -3082,6 +3232,7 @@ function out(): Json {
   r.set('marks', {
     ...(r.data.marks as Json),
     tatter: { x: 1700, y: TOP, facing: 1, when: 'cn-den-down' },
+    stage: { vista: { flag: 'cn-out-vista', x: 2300, y: 760, zoom: 0.7, hold: 3 } },
     notes: [
       {
         x: 1700,
@@ -3102,8 +3253,10 @@ function out(): Json {
     ['valley', 2500, 1000],
     ['door', 3400, 1088],
   ]);
-  r.route('den', 'in');
+  r.route('den', 'top');
+  r.route('top', 'den');
   r.route('in', 'foot');
+  r.route('foot', 'in', { needs: [C] });
   r.route('foot', 'top', { needs: [C] });
   r.route('top', 'foot', { oneWay: true });
   r.route('top', 'p-out');

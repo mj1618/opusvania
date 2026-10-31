@@ -78,6 +78,43 @@ const C = {
   star: v3(0),
 };
 
+/**
+ * The old burrback's own colours (`BOSS.look`, the Canopy r11) in place of the burrback's while it is drawn; `false`
+ * puts the burrback's back. The zone colours (edge, crest, spots) become the boss's in all three zones.
+ */
+export function bossColors(on: boolean): void {
+  if (!on) {
+    loadColors();
+    return;
+  }
+  const L = BOSS.look;
+  const set = (o: V3, hex: number): void => {
+    const c = v3(hex);
+    o[0] = c[0];
+    o[1] = c[1];
+    o[2] = c[2];
+  };
+  set(C.shellTop, L.shellTop);
+  set(C.shellLow, L.shellLow);
+  set(C.sheen, L.sheen);
+  set(C.seam, L.seam);
+  set(C.legNear, L.legNear);
+  set(C.legFar, L.legFar);
+  set(C.plateIn, L.plateIn);
+  set(C.head, L.head);
+  set(C.headLow, L.headLow);
+  set(C.eye, L.eye);
+  set(C.eyeGlow, L.eyeGlow);
+  set(C.feeler, L.feeler);
+  set(C.fringeTop, L.fringeTop);
+  set(C.fringeTip, L.fringeTip);
+  for (let i = 0; i < 3; i++) {
+    set(C.edge[i]!, L.edge);
+    set(C.crest[i]!, L.crest);
+    set(C.spot[i]!, L.spot);
+  }
+}
+
 export function loadColors(): void {
   const k = BURR.color;
   const set = (o: V3, hex: number): void => {
@@ -300,6 +337,8 @@ export class BurrRig {
   private lastBossMode = '';
   /** Set for the one update its slam lands (the renderer throws the dust and the floor wave's crack). */
   slamNew = false;
+  /** The old burrback's wake (the Canopy r11): set the frame its eyes open, for the renderer's dust off its back. */
+  wakeNew = false;
   waveT = 0;
   /** 0..1: rearing (the slam's tell): its lights go to the ram's red as in a brace. */
   rearK = 0;
@@ -522,8 +561,12 @@ export class BurrRig {
     {
       const Z = B.doze;
       // The sim's rule (`e.dozing`: an unseen burrback near her stops and sleeps where it stands).
+      // (The old burrback's wake keeps its lids down for its first frames: it stirs before it looks.)
+      const stirring = this.big && e.mode === 'wake' && this.mf < BOSS.wake.eyes;
       const doze =
-        calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep') ? 1 : 0;
+        calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep' || stirring)
+          ? 1
+          : 0;
       this.dozeK += (doze - this.dozeK) * approach(doze ? Z.in : Z.out, dt);
     }
 
@@ -797,6 +840,17 @@ export class BurrRig {
       leanT = this.d * BOSS.slamLean;
       squashT = 0.12;
       bristleT = -0.4;
+    } else if (mode === 'wake' && this.big) {
+      // The old burrback's wake (1.5 s on her drop, the Canopy r11): it stirs with its eyes shut, opens them (red), heaves
+      // itself up off the floor shaking, its burrs rising, and turns to her (the sim turns it for the last half second).
+      const W = BOSS.wake;
+      const u = sat((this.mf - W.eyes) / Math.max(1, W.rise - W.eyes));
+      const e2 = u * u * (3 - 2 * u);
+      crouchT = 0.95 * (1 - e2);
+      tuckT = 1 - 0.8 * e2;
+      bristleT = 0.2 + 1.1 * e2;
+      if (u > 0 && u < 1) leanT += W.shake * Math.sin(clock * 38 + this.seed) * Math.sin(Math.PI * u);
+      if (this.mf >= W.eyes && this.mf - dt * 60 < W.eyes) this.wakeNew = true;
     } else if (mode === 'wake') {
       crouchT = 0.5;
       tuckT = 0.5;
@@ -1972,6 +2026,10 @@ export function drawBurrback(
         if (spentK > 0.001) br += (R.dim * (0.75 + 0.25 * Math.sin(clock * 2.6 + i)) - br) * spentK;
         if (rig.cdK > 0) br *= 0.3 + 0.7 * sat((1 - rig.cdK) * 4.6 - (3 - i));
         if (wakeU < 1) br *= 0.12 + 0.88 * sat((wakeU - 0.4) * 8 - i);
+        // The old burrback asleep: its row dark; waking, they come on one by one after its eyes (the Canopy r11).
+        if (rig.big && e.mode === 'sleep') br *= 0.08;
+        else if (rig.big && e.mode === 'wake')
+          br *= 0.08 + 0.92 * sat((rig.mf - BOSS.wake.eyes) / 7 - i * 0.9);
         // Curled: the row goes out (the one slit at its front is all the light left).
         br *= 1 - (1 - Cu.lights) * ball;
         // Hurt badly: they flicker. Dying: they gutter out one after another.

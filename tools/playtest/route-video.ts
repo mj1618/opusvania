@@ -37,6 +37,13 @@
  * v7 (2026-10-31, video v9): a rest at the hub's map station (the kin's lamp, `p-crossing`) after the high chamber,
  * captioned with the map and the hung moth-stones; a fight never picks a tactic whose look-ahead cuts a lamp down with
  * the blade (out for good in the save: the ambush lampwing's dives cut the hollow lamp, the shard's only way up).
+ *
+ * v8 (2026-10-31, the v11 layout, review r10's staging): every cage cut open (a `cage` leg: a small closed loop that
+ * walks under the cage, or to a run-up, and cuts until it is out: the explorer's node key keeps a cage's cuts as one
+ * state, so it never chains three): the hub's under the landing limb first, the Grove's after the wave, the
+ * warning's (hung by the firefly once the warning is cleared) from the knuckle under it, the great cage over the
+ * old burrback from a jump off the west shelf; both firefly sightings (the gap's on the chain's first fling, the
+ * warning's), and the den's way out up through its roof to the clifftop's vista.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -103,7 +110,12 @@ type Leg =
   | { name: string; kind: 'warp'; x: number; y: number; why: string }
   /** A harness edit of a save flag (the debug API's `flag(name)`), only where play cannot go on: captioned. */
   | { name: string; kind: 'flag'; flag: string; why: string }
-  | { name: string; kind: 'settle' };
+  | { name: string; kind: 'settle' }
+  /**
+   * A cage cut open (v8): she walks under lure `lure` (or to `run[0]`, then runs to `run[1]` and jumps toward it) and
+   * up-cuts until it is out.
+   */
+  | { name: string; kind: 'cage'; lure: string; run?: [number, number]; optional?: boolean };
 
 const taken = (id: string) => (s: GameState) => s.save.taken.includes(id);
 /** A pickup of the room she is in has been touched (its timer runs: woken, flying to her or taken). */
@@ -138,6 +150,9 @@ export const ROUTE: Leg[] = [
   // The hatch: the cocoon listens after the fade up; three presses break it.
   { name: 'cn-hatch: the hatching', kind: 'script', script: '.170 J2 .10 J2 .10 J2 .10 J2 .90' },
   { name: 'cn-hatch: down to the drop', kind: 'exit', exit: 'drop', max: 12000 },
+  // v8 (the v11 layout): the first release, in the landing's frame: the cage under the landing limb, cut standing.
+  { name: 'cn-hub: under the cage', kind: 'goal', test: near(6300, 1600, 60), max: 9000 },
+  { name: 'cn-hub: the cage cut open (the first release)', kind: 'cage', lure: 'trap-crossing' },
   // The Crossing (8,000 wide since v6) reads west: the root floor through the moonlit clearing to the giant's mouth.
   { name: 'cn-hub: the lit way west', kind: 'exit', exit: 'trunk', max: 20000 },
   { name: 'cn-trunk: the rotten wall', kind: 'goal', test: opened('giant-wall'), max: 12000 },
@@ -259,6 +274,9 @@ export const ROUTE: Leg[] = [
     seconds: 240,
     until: flag('cn-grove-clear'),
   },
+  // v8: the pit's west lamp is a cage (cut standing from the floor under it).
+  { name: "cn-grove: under the pit's cage", kind: 'goal', test: near(1760, 1600, 60), max: 12000 },
+  { name: "cn-grove: the pit's cage cut open", kind: 'cage', lure: 'trap-grove' },
   {
     name: "cn-grove: the pit's rotten wall",
     kind: 'goal',
@@ -297,17 +315,14 @@ export const ROUTE: Leg[] = [
   {
     name: "cn-gap: the three lamps' chain down to the pod garden",
     kind: 'goal',
-    test: (s) => {
-      // (Down there by the chain: the third lamp flung, so out, not a drop from the roost.)
-      const k = (getRoom('cn-gap').lures ?? []).findIndex((l) => l.id === 'wick-gap-3');
-      return (
-        s.room === 'cn-gap' &&
-        s.player.grounded &&
-        feet(s).y >= 1990 &&
-        Math.abs(feet(s).x - 2944) < 400 &&
-        (s.lures.hp[k] ?? 1) <= 0
-      );
-    },
+    // (Down there by the chain, flung: v8 (the v11 layout) reads the firefly's flag, which only a fling off the chain
+    // sets; the third lamp out was the test, but the firefly relights it behind her now.)
+    test: (s) =>
+      s.room === 'cn-gap' &&
+      s.player.grounded &&
+      feet(s).y >= 1990 &&
+      Math.abs(feet(s).x - 2944) < 400 &&
+      s.save.flags.includes('cn-firefly-gap'),
     max: 16000,
     optional: true,
   },
@@ -331,6 +346,16 @@ export const ROUTE: Leg[] = [
     seconds: 240,
     until: flag('cn-tunnel-clear'),
   },
+  // v8: the firefly's second sighting (her input held while it comes out of the tube's shaft and hangs a cage before
+  // the den's mouth), then the cage, cut standing on the root knuckle under it.
+  { name: 'cn-tunnel: the firefly hangs a cage over the mouth', kind: 'script', script: '.240' },
+  {
+    name: 'cn-tunnel: onto the knuckle under the cage',
+    kind: 'goal',
+    test: near(7552, 1632, 50),
+    max: 16000,
+  },
+  { name: "cn-tunnel: the warning's cage cut open", kind: 'cage', lure: 'trap-warn' },
   { name: 'cn-tunnel: down through the lid to the den', kind: 'exit', exit: 'den', max: 16000 },
   {
     name: 'cn-den: down into the arena',
@@ -339,8 +364,14 @@ export const ROUTE: Leg[] = [
     max: 9000,
   },
   { name: 'cn-den: the old burrback', kind: 'fight', ids: ['old-burr'], seconds: 300 },
-  { name: 'cn-den: out through the root gate', kind: 'exit', exit: 'out', max: 12000 },
-  // The ledge after the boss: a rotten wall in the way out's foot, a great in the room behind it.
+  // v8: the great cage it kept, from a running jump off the west shelf's east end; the roof's gate opens over the
+  // arena's east end, and the way out is up through it onto the clifftop (the vista).
+  { name: 'cn-den: onto the west shelf', kind: 'goal', test: near(1440, 1088, 60), max: 12000 },
+  { name: 'cn-den: the great cage cut open', kind: 'cage', lure: 'trap-den', run: [1440, 1520] },
+  { name: 'cn-den: up through the roof', kind: 'exit', exit: 'out', max: 16000 },
+  { name: 'cn-out: the vista', kind: 'script', script: '.200' },
+  // The ledge after the boss: down the chimney, a rotten wall in the way out's foot, a great in the room behind it.
+  { name: 'cn-out: down the chimney', kind: 'goal', test: near(1088, 1856, 200), max: 12000, optional: true },
   { name: 'cn-out: the rotten wall to the ledge', kind: 'exit', exit: 'ledge', max: 12000, optional: true },
   {
     name: 'cn-ledge: the great',
@@ -350,8 +381,14 @@ export const ROUTE: Leg[] = [
     optional: true,
   },
   { name: 'cn-ledge: back out', kind: 'exit', exit: 'out', max: 12000, optional: true },
-  // The way out: the chimney's three legs, its rotten plug cut from a cling, the clifftop, the glide over the valley.
-  { name: 'cn-out: the plug and the chimney', kind: 'goal', test: opened('out-plug'), max: 16000 },
+  // The way back up: the chimney's three legs, its rotten plug cut from a cling, the clifftop, the glide over the valley.
+  {
+    name: 'cn-out: the plug and the chimney',
+    kind: 'goal',
+    test: opened('out-plug'),
+    max: 16000,
+    optional: true,
+  },
   {
     name: 'cn-out: up to the clifftop',
     kind: 'goal',
@@ -687,6 +724,60 @@ class Driver {
     return best;
   }
 
+  /**
+   * A cage cut open (v8): under it (or from the run-up `run`: walk to run[0], run to run[1], jump toward it), up cuts
+   * until it is out (or 12 tries). The held release (a cage's `hold`) is waited out.
+   */
+  private cage(id: string, run?: [number, number]): string {
+    const sc = this.game.scene;
+    const k = (sc.lures ?? []).findIndex((l) => l.id === id);
+    const l = sc.lures?.[k];
+    if (!l) return `no ${id} in ${sc.id}`;
+    const { left: Lb, right: Rb, jump: Jb, up: Ub, attack: Ab } = ActionBit;
+    const walkTo = (x: number) => {
+      for (let w = 0; w < 300; w++) {
+        const fx = feet(this.s).x;
+        if (Math.abs(fx - x) < 6 || !this.s.player.grounded) break;
+        this.push(fx < x ? Rb : Lb);
+      }
+      for (let w = 0; w < 8; w++) this.push(0);
+    };
+    let tries = 0;
+    let runY = 0;
+    for (; tries < 12 && (this.s.lures.hp[k] ?? 0) > 0; tries++) {
+      if (run) {
+        // (Back onto the run-up's ground first: a missed jump falls to the floor under it.)
+        const y0 = feet(this.s).y;
+        if (tries === 0) runY = y0;
+        const at = (q: GameState) =>
+          q.player.grounded && Math.abs(feet(q).x - run[0]) < 60 && Math.abs(feet(q).y - runY) < 8;
+        if (tries > 0 && !at(this.s)) {
+          const r = this.search(undefined, at, 6000);
+          if (r.tape) this.play(r.tape);
+        }
+        walkTo(run[0]);
+        const d = run[1] > run[0] ? Rb : Lb;
+        for (let w = 0; w < 60 && Math.sign(run[1] - feet(this.s).x) === (d === Rb ? 1 : -1); w++)
+          this.push(d);
+        for (let w = 0; w < 20; w++) this.push(Jb | d);
+        this.push(Jb | Ub | Ab);
+        for (let w = 0; w < 16; w++) this.push(Jb | Ub);
+        for (let w = 0; w < 50; w++) this.push(0);
+      } else {
+        walkTo(l.x);
+        this.push(Ub | Ab);
+        for (let w = 0; w < 24; w++) this.push(Ub);
+        for (let w = 0; w < 6; w++) this.push(0);
+      }
+    }
+    for (let w = 0; w < 400 && this.s.kit.story > 0; w++) this.push(0);
+    for (let w = 0; w < 60; w++) this.push(0);
+    const at = `at ${Math.round(feet(this.s).x)}, ${Math.round(feet(this.s).y)}`;
+    return (this.s.lures.hp[k] ?? 0) <= 0
+      ? `freed in ${tries} tries`
+      : `still caged after ${tries} tries (${at})`;
+  }
+
   leg(L: Leg): LegLog {
     const start = this.tape.length;
     const room = this.s.room;
@@ -706,6 +797,9 @@ class Driver {
     } else if (L.kind === 'settle') {
       this.settle();
       ok = true;
+    } else if (L.kind === 'cage') {
+      note = this.cage(L.lure, L.run);
+      ok = note.startsWith('freed') || L.optional === true;
     } else if (L.kind === 'fight') {
       note = this.fight(L.ids, (L.seconds ?? 120) * 60, L.until);
       // (An optional fight that runs out of time leaves the creature be: the route goes on.)
@@ -796,6 +890,9 @@ const KEEP = new Set([
   'enemyPhase',
   'lureSnuff',
   'fling',
+  'fireflyStart',
+  'fireflyHang',
+  'fireflyRelight',
 ]);
 
 // ---- render
@@ -1018,7 +1115,21 @@ function eventText(e: SimEvent): string | null {
     case 'stoneHung':
       return "A moth-stone hung on the kin's lamp";
     case 'lureSnuff':
-      return x.id === 'wick-taproot' ? "The den's lamp goes out" : null;
+      return x.id === 'wick-taproot'
+        ? "The den's lamp goes out"
+        : x.trap
+          ? `A cage cut open: ${x.moths} moths freed (${x.total} in all)`
+          : null;
+    case 'fireflyStart':
+      return x.id === 'firefly-gap'
+        ? 'The firefly: it relights the lamps behind her'
+        : x.id === 'firefly-warn'
+          ? 'The firefly, at the den'
+          : x.id === 'firefly-den'
+            ? 'The firefly, over the great cage'
+            : null;
+    case 'fireflyHang':
+      return x.lure ? 'It hangs a cage over the mouth, and flees into the den' : null;
     case 'stoneRead':
       return 'Moth-stone: the map is drawn';
     case 'enemyDie':
@@ -1036,8 +1147,8 @@ function eventText(e: SimEvent): string | null {
     case 'gateOpen':
       return x.id === 'seed-door'
         ? 'The seed door opens'
-        : x.id === 'root-gate'
-          ? 'The root gate opens'
+        : x.id === 'den-roof'
+          ? "The great cage is out: the den's roof opens"
           : null;
     case 'shortcutOpen':
       return 'A shortcut opens';
@@ -1054,7 +1165,9 @@ function eventText(e: SimEvent): string | null {
                 ? "The den's warning: the arena shuts"
                 : x.flag === 'cn-tunnel-clear'
                   ? "The warning is down: the den's lid opens"
-                  : null;
+                  : x.flag === 'cn-out-vista'
+                    ? 'The valley of lamps, the moon, the mountain'
+                    : null;
     case 'fade':
       return 'She fades';
     default:

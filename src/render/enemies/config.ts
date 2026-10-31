@@ -728,6 +728,33 @@ export const BOSS = {
   /** Hit flash on the big body: how white, how long (s). */
   flash: 0.85,
   flashLen: 0.12,
+  /**
+   * Its look (the Canopy r11, review r10 #9: "a pale shrimp in a workshop"): the darkest shape in its room (shell luma
+   * <= 30), its plates rimmed by the great cage's warm light from above (`edge`), its crown and burrs dark bronze, not
+   * bone (`crest`), its eyes and the lights along its flank the only red. Swapped in for its draw (burrback.ts
+   * `bossColors`).
+   */
+  look: {
+    shellTop: 0x1c1416,
+    shellLow: 0x070405,
+    sheen: 0x2c2226,
+    seam: 0x030202,
+    legNear: 0x1a1214,
+    legFar: 0x0b0708,
+    plateIn: 0x3a2a26,
+    head: 0x1e1517,
+    headLow: 0x0c0809,
+    eye: 0xff4a2a,
+    eyeGlow: 0xff2a14,
+    feeler: 0x140c0e,
+    fringeTop: 0x120d0c,
+    fringeTip: 0x2a201a,
+    edge: 0xffb46a,
+    crest: 0x5a3c28,
+    spot: 0xff3420,
+  },
+  /** The wake (1.5 s on her drop into the arena, the sim's `wake`): eyes open by this frame, risen by this one. */
+  wake: { eyes: 18, rise: 60, shake: 0.06, dust: 10 },
 } as const;
 
 /**

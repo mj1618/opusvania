@@ -3,10 +3,12 @@
  * in screen space, centred in the 16:9 safe area's lower part, so no window shape and no camera position
  * cuts it off (the curious first-timer read "Hold jump to glide" clipped off the left edge when it hung
  * over her in the world). Fades in, holds, fades out; a new grant replaces it. Every room, every view shape.
+ * At most 2.5 s, and never over a fight (line-logic.ts: it waits for the fight's last creature).
  */
 import { Container, Text } from 'pixi.js';
 import type { SimView } from '../contract';
 import { SAFE_H, SAFE_W } from '../contract';
+import { fightNear, LineTimer } from './line-logic';
 
 /** What each grant says. Glide: the hold has to last into the fall (a held jump only opens the wings once she drops). */
 export const ITEM_LINES: Record<string, string> = {
@@ -39,13 +41,13 @@ export function seedLine(count: number): string {
   return `A moonseed. ${count === 1 ? 'One' : count === 2 ? 'Two' : count === 3 ? 'Three' : count === 4 ? 'Four' : 'Five'} held.`;
 }
 
-/** Seconds and placement (safe-area units: y as a share of its height). */
-export const ITEM_LINE = { in: 0.35, hold: 5, out: 0.9, y: 0.8, size: 30, maxW: 0.8, alpha: 0.92 };
+/** Placement (safe-area units: y as a share of its height); its timing is `LINE_TIME` (line-logic.ts). */
+export const ITEM_LINE = { y: 0.8, size: 30, maxW: 0.8, alpha: 0.92 };
 
 export class ItemLine {
   readonly root = new Container({ label: 'hud-item-line' });
   private readonly text: Text;
-  private t = 1e6;
+  private readonly timer = new LineTimer();
 
   constructor(family: string) {
     this.text = new Text({
@@ -82,31 +84,16 @@ export class ItemLine {
             : e.type === 'healthUp'
               ? 'healthUp'
               : '';
-      if (key) {
-        this.text.text = itemLine(key);
-        this.t = 0;
-      } else if (e.type === 'flagSet' && FLAG_LINES[e.flag]) {
-        // A story beat that ends a demo area (the Downwood's valley).
-        this.text.text = FLAG_LINES[e.flag] as string;
-        this.t = 0;
-      } else if (e.type === 'seedTaken') {
-        // A moonseed (the Downwood's keys): how many she holds now.
-        this.text.text = seedLine(e.count);
-        this.t = 0;
-      } else if (e.type === 'roomEnter' && e.from === 'load') this.t = 1e6;
+      if (key) this.timer.show(itemLine(key));
+      // A story beat that ends a demo area (the Downwood's valley).
+      else if (e.type === 'flagSet' && FLAG_LINES[e.flag]) this.timer.show(FLAG_LINES[e.flag] as string);
+      // A moonseed (the Downwood's keys): how many she holds now.
+      else if (e.type === 'seedTaken') this.timer.show(seedLine(e.count));
+      else if (e.type === 'roomEnter' && e.from === 'load') this.timer.clear();
     }
-    this.t += dt;
-    const L = ITEM_LINE;
-    const t = this.t;
-    const a =
-      t < L.in
-        ? t / L.in
-        : t < L.in + L.hold
-          ? 1
-          : t < L.in + L.hold + L.out
-            ? 1 - (t - L.in - L.hold) / L.out
-            : 0;
+    const a = this.timer.update(dt, fightNear(sim));
+    if (this.text.text !== this.timer.text) this.text.text = this.timer.text;
     this.root.visible = a > 0.003;
-    this.root.alpha = L.alpha * a;
+    this.root.alpha = ITEM_LINE.alpha * a;
   }
 }

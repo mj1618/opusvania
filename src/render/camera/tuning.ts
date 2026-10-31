@@ -222,6 +222,25 @@ export const cameraTuning = {
 export type CameraTuning = typeof cameraTuning;
 
 /**
+ * The premise's camera beats (the Canopy r11, review r10 #2 / #4; camera/premise-cam.ts). Render-side offsets on the
+ * follow view like the kick: she keeps control.
+ *  - `release`: a trap's snuff eases the view `zoom` in about the cage (the cage keeps its place on screen, the frame
+ *    tightens round it) and `pan` of the way toward it, over `in` s once the hold lets go, holds `hold` s, back over
+ *    `out` s. `great`: the great cage pulls out instead (zoom < 1) and leans up with the stream (`lift` px).
+ *  - `firefly`: a sighting (`fireflyStart`) leans the view toward the firefly by `pan` of the way (at most `max` px)
+ *    over `in` s, follows it `hold` s, back over `out` s; a pass with its own `look` frames that point with her.
+ */
+export const PREMISE_CAM = {
+  release: { zoom: 1.06, pan: 0.12, in: 0.4, hold: 0.55, out: 1.0 },
+  great: { zoom: 0.88, pan: 0.3, lift: 260, in: 0.9, hold: 3.6, out: 1.8 },
+  firefly: { pan: 0.4, max: 340, in: 0.3, hold: 1.6, out: 0.9 },
+  /** The old burrback's wake (`enemyWake`, 1.5 s): the view pushes in about it and toward it, then lets go. */
+  wake: { zoom: 1.08, pan: 0.3, in: 0.5, hold: 1.0, out: 0.9 },
+  /** A pass's own framing (`FireflyPass.look`): frames to ease in / out inside it, seconds out if the pass ends first. */
+  look: { ease: 30, out: 0.8 },
+};
+
+/**
  * The follow camera's tuning for a room: `cameraTuning` with the room's own framing (`room.camera`:
  * `anchorY`, `lookaheadX`, `leadFrames`, `fallLookahead`, `smoothYFall`, `smoothYFastFall`, `realFallPx`,
  * `targetSmoothY`) on top. A room that sets none (the test

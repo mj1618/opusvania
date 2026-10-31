@@ -68,11 +68,30 @@ export const KIT_FIELDS = {
       z
         .object({
           id,
-          trigger: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+          trigger: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
           flag: id,
           path: z.array(z.tuple([int, int])).min(2),
           frames: int.min(30).max(1200),
           relights: z.array(id).optional(),
+          // The Canopy r11: started by her first fling off one of these lamps, or by a story flag; a stop that hangs
+          // a cage (`sets` lights an `after` lamp), a held beat on its start, a camera hook for render.
+          onFling: z.array(id).optional(),
+          onFlag: id.optional(),
+          hang: z
+            .object({ point: int.min(0), frames: int.min(1).max(600), sets: id.optional() })
+            .strict()
+            .optional(),
+          hold: int.min(1).max(180).optional(),
+          look: z
+            .object({
+              x: int,
+              y: int,
+              zoom: z.number().positive().optional(),
+              from: int.min(0),
+              to: int.min(1),
+            })
+            .strict()
+            .optional(),
         })
         .strict(),
     )

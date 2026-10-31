@@ -12,7 +12,19 @@
  */
 
 import { parseInputScript } from '../../src/input/script';
-import { GAME_WORLD } from '../../src/scene/world';
+import { GAME_WORLD, getWorld } from '../../src/scene/world';
+import type { World } from '../../src/sim/world';
+
+/** The world the page plays (`?world=`, the Canopy r11's first-timer), else the game's. */
+function pageWorld(): World {
+  const id = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('world');
+  try {
+    return id ? getWorld(id) : GAME_WORLD;
+  } catch {
+    return GAME_WORLD;
+  }
+}
+
 import type { SimEvent } from '../../src/sim/events';
 import { ActionBit } from '../../src/sim/input';
 import type { Scene } from '../../src/sim/scene';
@@ -90,7 +102,7 @@ function regionOf(scene: Scene): (room: string) => string | undefined {
   return (room) =>
     room === scene.id
       ? (scene as { region?: string }).region
-      : (GAME_WORLD.rooms[room]?.scene as { region?: string } | undefined)?.region;
+      : (pageWorld().rooms[room]?.scene as { region?: string } | undefined)?.region;
 }
 
 /** Plays one run from a fresh `load()` and resolves with its trace. */
@@ -341,7 +353,7 @@ export function burst(script: string, dev = false): void {
   const g = window.__game;
   const steps = parseBurst(script, dev);
   const title = (room: string) =>
-    (GAME_WORLD.rooms[room]?.scene as { title?: string } | undefined)?.title ?? room;
+    (pageWorld().rooms[room]?.scene as { title?: string } | undefined)?.title ?? room;
   const b = { done: false, said: [] as string[], frames: 0 };
   bursting = b;
   let held = 0;

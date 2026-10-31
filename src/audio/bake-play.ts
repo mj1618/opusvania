@@ -10,7 +10,7 @@
  */
 import { at, click, exp, len, type Recipe, rubbed, swell } from './bake-lib';
 import { arEnv, biquad, mixInto, modes, normalize, pink, saturate, shape, white } from './dsp';
-import { LAMP_HZ } from './tuning';
+import { LAMP_HZ, PITCH } from './tuning';
 
 export const PLAY_SOUNDS = {
   // Her: soft steps, the wings opening and folding, the push off a wall.
@@ -37,6 +37,9 @@ export const PLAY_SOUNDS = {
   launch: 4,
   snuff: 3,
   mothRush: 2,
+  // A trap's release (the Canopy r11): the cage's bars snapping and falling, the swell under the stream.
+  cageBreak: 3,
+  releaseSwell: 2,
   // Creatures' tells and moves. `creak` / `rear` variants are lengths (the router picks by the tell's frames).
   creak: 4,
   rumble: 3,
@@ -539,6 +542,81 @@ export const PLAY_RECIPES: Record<PlaySoundId, Recipe> = {
     return blend([
       [tone, 0.8],
       [pff, 0.6],
+    ]);
+  },
+  /**
+   * A trap's cage breaking (the Canopy r11): its bars are brittle gold straws. A bright snap of many small inharmonic
+   * rings at once over a soft knock, a breath of air (the moths pouring out), then the bars landing one by one as a
+   * thinning patter of tinks. Nothing above ~6 kHz.
+   */
+  cageBreak(sr, r) {
+    const d = 1.6;
+    const n = len(sr, d);
+    const snap = new Float32Array(n);
+    for (let k = 0; k < 9; k++) {
+      const f = 1700 + 2600 * r();
+      modes(
+        snap,
+        sr,
+        [
+          { f, tau: 0.035 + 0.08 * r(), amp: 0.6 + 0.4 * r(), ph: r() },
+          { f: f * (2.31 + 0.2 * r()), tau: 0.02, amp: 0.2 },
+        ],
+        at(sr, 0.025 * r() ** 1.5),
+        0.0008,
+      );
+    }
+    mixInto(snap, click(sr, r, len(sr, 0.05), 5200, 0.004), 0.7);
+    const knock = new Float32Array(n);
+    modes(knock, sr, [
+      { f: 150, tau: 0.07, amp: 1 },
+      { f: 318, tau: 0.045, amp: 0.5 },
+    ]);
+    const tinks = new Float32Array(n);
+    for (let k = 0; k < 12; k++) {
+      const t = 0.32 + 1.05 * r() ** 0.9;
+      const f = 1500 + 1900 * r();
+      modes(
+        tinks,
+        sr,
+        [{ f, tau: 0.04 + 0.05 * r(), amp: (0.5 + 0.5 * r()) * (1 - 0.5 * (t - 0.3)) }],
+        at(sr, t),
+        0.001,
+      );
+    }
+    const air = swept(sr, r, 0.7, (t) => exp(600, 2100, t / 0.45), 0.8, swell(0.04, 0.35, 0.7), 'pink');
+    return blend([
+      [snap, 1],
+      [knock, 0.45],
+      [tinks, 0.35],
+      [air, 0.3],
+    ]);
+  },
+  /**
+   * Under the release's stream (the Canopy r11): the forest's chord (D4 A4 D5 E5, in tune: the false lights are the
+   * sharp ones) coming in one note after another, a breath of air rising through it, all fading as the moths go.
+   */
+  releaseSwell(sr, r) {
+    const d = 3.4;
+    const n = len(sr, d);
+    const chord = new Float32Array(n);
+    [-702, 0, 498, 702].forEach((c, k) => {
+      const f = PITCH.A4 * 2 ** (c / 1200);
+      const t0 = 0.12 + k * 0.32;
+      const env = swell(0.6, 1.3, d - t0);
+      let ph = r() * 6.28;
+      let ph2 = r() * 6.28;
+      for (let i = at(sr, t0); i < n; i++) {
+        const t = i / sr - t0;
+        ph += (2 * Math.PI * f) / sr;
+        ph2 += (2 * Math.PI * (f * 2.003 + 0.4)) / sr;
+        chord[i] = (chord[i] as number) + (Math.sin(ph) + 0.12 * Math.sin(ph2)) * env(t) * (1 - k * 0.12);
+      }
+    });
+    const air = swept(sr, r, d, (t) => exp(380, 1900, t / 2.6), 0.9, swell(0.9, 1.6, d), 'pink');
+    return blend([
+      [chord, 1],
+      [air, 0.45],
     ]);
   },
   /** The freed moths: a soft rising rush of many small wings, thinning out as they go (panned by the cue). */

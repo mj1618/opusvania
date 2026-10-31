@@ -25,7 +25,9 @@ STUDIO.md "Playtesting without Matt". Reports go to `playtest-reports/` (gitigno
 ## The first-timer agent (`npm run firsttimer`, tools/playtest/firsttimer.ts)
 A Claude sub-agent plays in the page with real keys, a burst at a time, the game paused between its turns. Commands
 (one per turn; a background server holds the browser):
-`start [--room wood-hatch] [--name s1] [--abilities glide]` (prints the session dir and a first screenshot),
+`start [--world canopy] [--room wood-hatch] [--name s1] [--abilities glide]` (prints the session dir and a first screenshot;
+`--world` plays that world from its start as the game: `?world=<id>&fresh`, autosave, R to its last save, the live
+page's titles from that world; the Canopy r11),
 `act "R60 R+J20 .30 {Tab}" [--every 2]` (real keys in real time; prints what happened in a player's words — hits,
 deaths, falls, rooms, abilities, catches, the map — where she is, and the screenshots: every 2 s and at those
 moments), `look`, `status`, `note "text" [--mood lost|stuck|unfair|fun|ok]`, `stop` (report.md + heatmaps + trace,
@@ -59,6 +61,9 @@ freezes the sim, the burst runs on the page clock), `{R}` restart, `{M}` sound, 
   where anything answers (another tool's server, even a 404) is not free.
 - **Events are read by identity, not by frame** (live.ts `fresh`): `{R}` and a reload reset the frame count, and a
   frame-window cursor re-read the whole log (round 2: ~1,100 duplicate screenshots and nonsense totals).
+- **The brief must name the Lamp**: the burst language's `B` is the Lamp (the prompts show "V"); the r11 Canopy
+  first-timer was told and still never found the fling's aim at the limbs (4 deaths at one gap), and spent ~2 game
+  minutes at the trunk's notch. It ran 6.5 game minutes in ~2.5 h of its own time (486 tool calls): budget for that.
 **Brief to paste to the sub-agent:**
 > You are playing Lampfall for the first time. Know nothing about it beyond what you see. Run `npm run firsttimer --
 > start --name <you>` from the repo root and pass `--name <you>` to every command after it; then loop: Read the newest screenshot, decide, `act` a short burst (0.5-4 s;

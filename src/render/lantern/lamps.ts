@@ -28,6 +28,15 @@ import { LOOK } from '../scene/lib/room-look';
 import { hash01, LR, ROOM_LAMPS, TRAP } from './config';
 import type { GlowPool } from './glow';
 import { MothClouds, mothCount } from './moths';
+import {
+  along,
+  pathLength,
+  RELEASE,
+  releaseDepart,
+  releaseDrawn,
+  releaseGreat,
+  releasePath,
+} from './release';
 
 const AT = { x: 0, y: 0 };
 
@@ -46,7 +55,7 @@ interface LampInfo {
 }
 
 interface Fx {
-  kind: 'snuff' | 'kindle' | 'fan' | 'refuse' | 'cold' | 'launch' | 'snap' | 'relight' | 'crack';
+  kind: 'snuff' | 'kindle' | 'fan' | 'refuse' | 'cold' | 'launch' | 'snap' | 'relight' | 'crack' | 'guard';
   x: number;
   y: number;
   t: number;
@@ -66,6 +75,41 @@ interface Freed {
   seed: number;
   /** A trap's moth (the Canopy r10): seconds it flies with her before it streams off toward the moon (0 = none). */
   follow: number;
+  /** A released moth (the Canopy r11, release.ts): its stream, when it leaves her, its orbit round her. */
+  rel?: {
+    s: Stream;
+    depart: number;
+    rx: number;
+    ry: number;
+    a0: number;
+    spin: number;
+    size: number;
+    dx: number;
+  };
+}
+
+/** A release's stream: the curve its moths follow toward the moon, fixed when the first one leaves her. */
+interface Stream {
+  moths: number;
+  side: number;
+  path: number[] | null;
+  len: number;
+  speed: number;
+}
+
+/** A cage bar bursting off a trap (release.ts): a bowed stroke flying out, turning and falling. */
+interface Bar {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+  vr: number;
+  len: number;
+  bow: number;
+  age: number;
+  /** The ground under the cage (null: none): a bar lands and lies there. */
+  floor: number | null;
 }
 
 interface Scrap {
@@ -187,10 +231,13 @@ export class Lamps {
   private readonly fx: Fx[] = [];
   private readonly freed: Freed[] = [];
   private readonly scraps: Scrap[] = [];
+  private readonly bars: Bar[] = [];
   /** Lamps flung from and smouldering (by index). */
   private readonly embers = new Set<number>();
   /** Seconds since a lamp went out here (by index), for the husk's settle. */
   private readonly outT = new Map<number, number>();
+  /** Cages the firefly just hung (`fireflyHang`, the Canopy r11): seconds since (by index). */
+  private readonly hung = new Map<number, number>();
   /** Moonwick kindle blooms: seconds since (by index). */
   private readonly lit = new Map<number, number>();
   /** Point light ids this module registered last frame. */
@@ -231,7 +278,11 @@ export class Lamps {
         floorY,
         tieY,
         standY: moonwick ? standY : null,
-        size: sizeOf(l) * (moonwick ? 1 : this.roomK.size),
+        // (The great cage, release.ts: a trap of `RELEASE.great` moths or more hangs at nearly three times the size.)
+        size:
+          sizeOf(l) *
+          (moonwick ? 1 : this.roomK.size) *
+          (l.trap && releaseGreat(l.moths ?? 0) && sizeOf(l) < 60 ? 2.6 : 1),
         moonwick,
         moths: moonwick
           ? 0
@@ -281,6 +332,7 @@ export class Lamps {
         this.fx.length = 0;
         this.freed.length = 0;
         this.scraps.length = 0;
+        this.bars.length = 0;
         this.embers.clear();
         this.outT.clear();
         this.lit.clear();
@@ -297,7 +349,23 @@ export class Lamps {
           break;
         }
         case 'lureHit':
-          if (this.info[i]?.trap) this.fx.push({ kind: 'crack', x: ev.x, y: ev.y, t: 0, life: 0.55, i });
+          if (this.info[i]?.trap) {
+            this.fx.push({ kind: 'crack', x: ev.x, y: ev.y, t: 0, life: 0.55, i });
+            // (Review r10 #3: teach the cut.) A bar breaks; on the first cut one moth gets out through the gap: it
+            // circles her and goes, the promise of what three cuts do (the sim's `escape`; read loosely).
+            const h = ev as { hpLeft?: number; hpMax?: number; escape?: number };
+            const first = h.escape !== undefined ? h.escape > 0 : (h.hpLeft ?? 0) === (h.hpMax ?? 0) - 1;
+            if (first) this.escape(ev.x, ev.y, `${ev.id}:${h.hpLeft ?? 0}`);
+          }
+          break;
+        case 'fireflyHang': {
+          const j = idx((ev as { lure?: string }).lure ?? '');
+          if (j >= 0) this.hung.set(j, 0);
+          break;
+        }
+        case 'lureGuarded':
+          // The great cage while its keeper lives: the blade glances off the bars (a hard flash, sparks thrown back).
+          this.fx.push({ kind: 'guard', x: ev.x, y: ev.y, t: 0, life: 0.4, i });
           break;
         case 'lureEmber':
           this.embers.add(i);
@@ -345,7 +413,8 @@ export class Lamps {
         ty = h.y;
       }
     }
-    const count = trap ? TRAP.freedDrawn : Math.min(LR.lamp.freedMax, Math.max(4, n));
+    if (trap) this.release(x, y, n, id, sim);
+    const count = trap ? 0 : Math.min(LR.lamp.freedMax, Math.max(4, n));
     for (let k = 0; k < count; k++) {
       const a = hash01(id, k) * Math.PI * 2;
       const sp = 120 + 260 * hash01(id, k + 99);
@@ -384,6 +453,86 @@ export class Lamps {
     }
   }
 
+  /**
+   * A trap's release (release.ts): the cage's bars burst out and fall, twice its moths pour out, swirl round her
+   * once and stream off toward the moon one after another.
+   */
+  private release(x: number, y: number, n: number, id: string, sim: SimView): void {
+    const R = RELEASE;
+    const great = releaseGreat(n);
+    const drawn = releaseDrawn(n);
+    const side = LOOK.moon ? Math.sign(LOOK.moon.x - 960) || 1 : -1;
+    const s: Stream = { moths: n, side, path: null, len: 1, speed: great ? R.speedGreat : R.speed };
+    const lures = sim.scene.lures ?? [];
+    const li = lures.findIndex((l) => l.id === id);
+    const scale = li >= 0 ? (this.info[li]?.size ?? 38) / 38 : 1;
+    for (let k = 0; k < drawn; k++) {
+      const a = hash01(id, k) * Math.PI * 2;
+      const sp = (160 + 320 * hash01(id, k + 99)) * (great ? 1.4 : 1);
+      const seed = hash01(id, k + 61);
+      this.freed.push({
+        x: x + Math.cos(a) * 12 * scale,
+        y: y + Math.sin(a) * 12 * scale,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 40,
+        // (They pour out over the first third of the burst, not all on one frame.)
+        age: -0.18 * hash01(id, k + 5),
+        life: 99,
+        tx: x,
+        ty: y,
+        seed,
+        follow: 0,
+        rel: {
+          s,
+          depart: releaseDepart(k, drawn, n),
+          rx: (70 + 120 * hash01(id, k + 7)) * (great ? 1.8 : 1),
+          ry: (40 + 80 * hash01(id, k + 8)) * (great ? 1.6 : 1),
+          a0: a,
+          spin: (hash01(id, k + 9) < 0.5 ? -1 : 1) * (0.85 + 0.3 * hash01(id, k + 10)),
+          size: R.size[0] + (R.size[1] - R.size[0]) * hash01(id, k + 11),
+          dx: (hash01(id, k + 12) - 0.5) * 2,
+        },
+      });
+    }
+    // The bars: every one left burst outward, turning, and falls.
+    const T = TRAP;
+    const cw = T.cageW * 38 * scale;
+    const ch = T.cageH * 38 * scale;
+    const nb = T.bars + (great ? 9 : 0);
+    for (let k = 0; k < nb; k++) {
+      const a = (k / nb) * Math.PI * 2 + hash01(id, k + 400);
+      const out = R.barOut[0] + (R.barOut[1] - R.barOut[0]) * hash01(id, k + 401);
+      this.bars.push({
+        x: x + Math.sin(a) * cw,
+        y: y + (hash01(id, k + 402) - 0.5) * ch * 0.6,
+        vx: Math.sin(a) * out * (great ? 1.3 : 1),
+        vy: -Math.abs(Math.cos(a)) * out * 0.6 - 120,
+        rot: (hash01(id, k + 403) - 0.5) * 0.6,
+        vr: (hash01(id, k + 404) - 0.5) * 9,
+        len: ch * (1.5 + 0.4 * hash01(id, k + 405)),
+        bow: cw * 0.35 * (hash01(id, k + 406) < 0.5 ? -1 : 1),
+        age: 0,
+        floor: li >= 0 ? (this.info[li]?.floorY ?? null) : null,
+      });
+    }
+  }
+
+  /** One moth out through a broken bar (a cut on a trap): it circles her a while, then goes to the moon. */
+  private escape(x: number, y: number, key: string): void {
+    this.freed.push({
+      x,
+      y,
+      vx: (hash01(key, 1) - 0.5) * 300,
+      vy: -160,
+      age: 0.05,
+      life: 2.6 + 4,
+      tx: x,
+      ty: y - 200,
+      seed: hash01(key, 2),
+      follow: 2.6,
+    });
+  }
+
   /** Draws every lamp: threads and housings in `back` (behind her), moths, sparks and the aim in `front`. */
   draw(
     dt: number,
@@ -401,6 +550,8 @@ export class Lamps {
     const f = sim.frame - 2 + sim.alpha;
     for (const [i, t] of this.outT) this.outT.set(i, t + dt);
     for (const [i, t] of this.lit) this.lit.set(i, t + dt);
+    for (const [i, t] of this.hung) if (t > 3) this.hung.delete(i);
+    for (const [i, t] of this.hung) this.hung.set(i, t + dt);
     const halfW = cam.w / 2 / cam.zoom + 200;
     const halfH = cam.h / 2 / cam.zoom + 200;
     const cands: Array<{ i: number; d: number; x: number; y: number; r: number; c: number; k: number }> = [];
@@ -414,8 +565,18 @@ export class Lamps {
       if (Math.abs(x - cam.x) > halfW + 400 || Math.abs(y - cam.y) > halfH + 400) continue;
       const hp = sim.lures.hp[i] ?? 0;
       const burning = hp > 0;
+      // A cage the firefly has not hung yet (`after` a flag not saved, never put out): nothing is there.
+      if (!burning && l.after && info.trap && !sim.save.snuffed.includes(`${sim.scene.id}:${l.id}`)) {
+        this.clouds.set(i, x, y, false, dt);
+        continue;
+      }
       if (!info.moonwick) this.clouds.set(i, x, y, burning && !this.embers.has(i), dt);
-      const s = info.size;
+      // Just hung: it grows into its size as the firefly lets it down (eased, a little overshoot).
+      const ht = this.hung.get(i);
+      const grow = ht === undefined ? 1 : Math.min(1, ht / 0.9);
+      const s =
+        info.size *
+        (ht === undefined ? 1 : 0.25 + 0.75 * (1 - (1 - grow) ** 3) + 0.06 * Math.sin(grow * Math.PI));
       const flick = 1 + 0.07 * Math.sin(clock * 9.1 + i * 1.7) + 0.05 * Math.sin(clock * 23.3 + i);
       if (info.moonwick) {
         this.drawWick(i, l, x, y, info, burning, clock, sim, back, glow, cands, cam);
@@ -550,7 +711,8 @@ export class Lamps {
   ): void {
     const T = TRAP;
     const hpMax = Math.max(1, Math.round(tuning.lures.trapHp));
-    const broken = Math.round(((hpMax - hp) / hpMax) * T.bars);
+    // (Review r10 #3: one bar a cut, and one moth out through it; the rest burst on the last.)
+    const broken = Math.min(T.bars, Math.max(0, hpMax - hp));
     const shake = this.fx.some((f) => f.kind === 'crack' && f.i === i) ? Math.sin(clock * 60) * 3 : 0;
     const rx = s * T.cageW;
     const ry = s * T.cageH;
@@ -860,6 +1022,16 @@ export class Lamps {
         glow.add(f.x, f.y, 60 + 90 * e, LR.aim.glow, 0.6 * (1 - u));
       } else if (f.kind === 'relight') {
         glow.add(f.x, f.y, 40 + 60 * e, LR.lamp.halo, 0.6 * (1 - u));
+      } else if (f.kind === 'guard') {
+        // A glance off the great cage's bars: a white-gold flash and sparks thrown back down.
+        glow.add(f.x, f.y, 40 + 40 * e, 0xfff0c8, 0.6 * (1 - u));
+        for (let k = 0; k < 7; k++) {
+          const a = Math.PI * (0.15 + 0.7 * hash01(`guard${f.i}${Math.round(f.x)}`, k));
+          const d = 16 + 90 * e;
+          front
+            .circle(f.x + Math.cos(a) * d * (k % 2 ? 1 : -1), f.y + Math.sin(a) * d * 0.6 + 60 * e * e, 2.2)
+            .fill({ color: 0xfff0c8, alpha: 1 - u });
+        }
       } else if (f.kind === 'crack') {
         // A cut on a trap: a flash, a few sparks off the broken bar.
         glow.add(f.x, f.y, 50 + 70 * e, TRAP.glow, 0.7 * (1 - u));
@@ -878,10 +1050,15 @@ export class Lamps {
     const p = sim.player;
     // Where the moon is, as a side of the sky (its view x in the room's look; the hatch's swarm went that way).
     const moonSide = LOOK.moon ? Math.sign(LOOK.moon.x - 960) || 1 : -1;
+    const P = { x: 0, y: 0, tx: 0, ty: 0 };
     for (let k = this.freed.length - 1; k >= 0; k--) {
       const m = this.freed[k] as Freed;
       m.age += dt;
       if (m.age < 0) continue;
+      if (m.rel) {
+        if (!this.released(m, dt, clock, front, glow, sim, P, k)) this.freed.splice(k, 1);
+        continue;
+      }
       if (m.age > m.life) {
         this.freed.splice(k, 1);
         continue;
@@ -922,6 +1099,7 @@ export class Lamps {
       // A trap's freed moths carry a little moonlight (cool, not the lamp's warmth) while they fly with her.
       else if (m.follow > 0) glow.add(m.x, m.y, 14, TRAP.freedGlow, 0.18 * fade);
     }
+    this.drawBars(dt, front, glow);
     for (let k = this.scraps.length - 1; k >= 0; k--) {
       const s = this.scraps[k] as Scrap;
       s.age += dt;
@@ -947,6 +1125,129 @@ export class Lamps {
           s.y - sn * s.s,
         ])
         .fill({ color: LR.lamp.husk, alpha: 0.85 * a });
+    }
+  }
+
+  /**
+   * A released moth (release.ts): out of the cage, once round her, then along the stream toward the moon. Returns
+   * false when it has gone (off the stream's far end).
+   */
+  private released(
+    m: Freed,
+    dt: number,
+    clock: number,
+    front: Graphics,
+    glow: GlowPool,
+    sim: SimView,
+    P: { x: number; y: number; tx: number; ty: number },
+    k: number,
+  ): boolean {
+    const R = RELEASE;
+    const r = m.rel as NonNullable<Freed['rel']>;
+    const p = sim.player;
+    const t = m.age;
+    let x: number;
+    let y: number;
+    if (t < r.depart) {
+      // Out of the cage (a burst slowing), then round her: each on its own ellipse, all turning one way or the
+      // other, lagging her moves.
+      const swirl = Math.max(0, t - R.burst * 0.6);
+      const a = r.a0 + r.spin * swirl * ((Math.PI * 2) / (R.circle + 0.4));
+      const ox = p.cx + Math.cos(a) * r.rx;
+      const oy = p.cy - 50 + Math.sin(a) * r.ry;
+      const pull = Math.min(1, Math.max(0, (t - R.burst * 0.35) / (R.burst * 1.2)));
+      const steer = pull * pull * (3 - 2 * pull);
+      m.vx *= Math.exp(-dt * 3.2);
+      m.vy *= Math.exp(-dt * 3.2);
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+      m.x += (ox - m.x) * Math.min(1, dt * 7 * steer);
+      m.y += (oy - m.y) * Math.min(1, dt * 7 * steer);
+      x = m.x;
+      y = m.y;
+    } else {
+      // The stream: fixed where she was when the first moth left, so its line stays put as she moves on.
+      const s = r.s;
+      if (!s.path) {
+        s.path = releasePath(p.cx, p.cy - 60, s.side, s.moths);
+        s.len = pathLength(s.path);
+      }
+      const u = ((t - r.depart) * s.speed) / s.len;
+      if (u > 1.6) return false;
+      along(s.path, u, P);
+      // Strays from the line a little, wider as it goes, weaving.
+      const off = r.dx * R.spread * (0.4 + u) + Math.sin(clock * 3 + m.seed * 30) * 14;
+      const sx = P.x - P.ty * off;
+      const sy = P.y + P.tx * off;
+      // Eases in from where it was circling.
+      const join = Math.min(1, (t - r.depart) / 0.45);
+      const j = join * join * (3 - 2 * join);
+      x = m.x + (sx - m.x) * j;
+      y = m.y + (sy - m.y) * j;
+      if (join >= 1) {
+        m.x = sx;
+        m.y = sy;
+      }
+      m.vx = P.tx * s.speed;
+      m.vy = P.ty * s.speed;
+    }
+    // Pale gold out of the cage, cool by the time it is on its way.
+    const cool = Math.min(1, Math.max(0, (t - R.burst) / (r.depart - R.burst + 0.6)));
+    const col = mix(R.warm, R.cool, cool);
+    const fade = Math.min(1, (t + 0.18) * 5);
+    const flap = Math.abs(Math.sin(clock * (24 + 10 * m.seed) + m.seed * 50));
+    const dir = t < r.depart ? (Math.sin(r.a0 + r.spin * t * 3.3) * r.spin >= 0 ? -1 : 1) : r.s.side;
+    moth(front, x, y, r.size, flap, dir, col, 0.95 * fade);
+    if (k % 3 === 0) glow.add(x, y, 16 + r.size, cool < 0.5 ? TRAP.glow : TRAP.freedGlow, 0.16 * fade);
+    return true;
+  }
+
+  /** The cage's bars bursting off (release.ts): bowed strokes flying out, turning, falling, dimming. */
+  private drawBars(dt: number, front: Graphics, glow: GlowPool): void {
+    const R = RELEASE;
+    for (let k = this.bars.length - 1; k >= 0; k--) {
+      const b = this.bars[k] as Bar;
+      b.age += dt;
+      if (b.age > R.barLife) {
+        this.bars.splice(k, 1);
+        continue;
+      }
+      b.vy += R.barFall * dt;
+      b.vx *= Math.exp(-dt * 1.2);
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.rot += b.vr * dt;
+      // Landed: it lies on the ground (turned flat, a little bounce lost), dimming there.
+      if (b.floor !== null && b.y >= b.floor - 3) {
+        b.y = b.floor - 3;
+        b.vy = 0;
+        b.vx *= Math.exp(-dt * 10);
+        b.vr = 0;
+        const flat = Math.round(b.rot / Math.PI - 0.5) * Math.PI + Math.PI / 2;
+        b.rot += (flat - b.rot) * Math.min(1, dt * 14);
+      }
+      const c = Math.cos(b.rot);
+      const sn = Math.sin(b.rot);
+      const hl = b.len / 2;
+      const P = (px: number, py: number): [number, number] => [
+        b.x + px * c - py * sn,
+        b.y + px * sn + py * c,
+      ];
+      const [ax, ay] = P(0, -hl);
+      const [mx, my] = P(b.bow, 0);
+      const [bx, by] = P(0, hl);
+      const a = 1 - (b.age / R.barLife) ** 2;
+      const hot = Math.max(0, 1 - b.age / 0.5);
+      front
+        .moveTo(ax, ay)
+        .quadraticCurveTo(mx, my, bx, by)
+        .stroke({
+          color: mix(TRAP.bar, 0xfff4dc, hot),
+          width: 2.2 + 1.2 * hot,
+          alpha: 0.9 * a,
+          cap: 'round',
+        });
+      if (hot > 0) glow.add(b.x, b.y, 30, TRAP.glow, 0.4 * hot);
     }
   }
 

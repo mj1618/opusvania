@@ -165,6 +165,9 @@ const SceneSchema = z
             trap: z.boolean().optional(),
             lesson: z.boolean().optional(),
             aim: z.tuple([int, int]).optional(),
+            // The Canopy r11: a cage its keeper guards (the blade glances off until the flag), a held beat on its snuff.
+            guard: z.string().min(1).optional(),
+            hold: int.min(1).max(600).optional(),
           })
           .strict(),
       )

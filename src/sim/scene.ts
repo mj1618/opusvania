@@ -287,6 +287,16 @@ export interface Lure {
   lit?: boolean;
   /** A lamp-held gate (Lanternroot): this story flag is set when it goes out (cut, flung or gusted). */
   sets?: string;
+  /**
+   * Guarded (the Canopy r11, review r10 #1: the great cage over the old burrback): until this story flag is in the
+   * save (its keeper's `sets`: the boss down), the blade glances off it (`lureGuarded`, no cut taken).
+   */
+  guard?: string;
+  /**
+   * A held beat on its snuff (the Canopy r11: the great cage's release): no input reaches her for this many frames
+   * (at most `kit.storyHoldMax`), nothing hurts her (`storyHold` / `storyHoldEnd`, id = the lure's).
+   */
+  hold?: number;
   /** The moths it holds, if not its kind's (the cache's firefly-lamp: the level's biggest release). */
   moths?: number;
   /** A moonwick that burns this many frames once kindled, if not `moonwick.burn` (the vault's: a shorter clock). */

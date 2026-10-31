@@ -57,6 +57,36 @@ export function h01(...v: number[]): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
+/**
+ * The world's tally of trap lamps (review r10 #8: on the map, not the HUD): moths freed of all the traps' moths and
+ * cages opened of all the cages, over every room of the world; null when it has no traps.
+ */
+export function mapTally(
+  rooms: ReadonlyArray<{
+    id: string;
+    scene: { lures?: ReadonlyArray<{ id: string; trap?: boolean; moths?: number }> };
+  }>,
+  snuffed: readonly string[],
+): string | null {
+  let cages = 0;
+  let open = 0;
+  let moths = 0;
+  let freed = 0;
+  for (const r of rooms)
+    for (const l of r.scene.lures ?? []) {
+      if (!isTrap(l)) continue;
+      const m = Math.max(0, Math.round(l.moths ?? 0));
+      cages++;
+      moths += m;
+      if (snuffed.includes(`${r.id}:${l.id}`)) {
+        open++;
+        freed += m;
+      }
+    }
+  if (cages === 0) return null;
+  return `${freed} of ${moths} moths · ${open} of ${cages} ${cages === 1 ? 'cage' : 'cages'}`;
+}
+
 /** A trap lamp (the premise, review r9 #2: `Lure.trap`): its snuff is kept and frees its moths. */
 export function isTrap(l: { trap?: boolean }): boolean {
   return l.trap === true;
@@ -389,6 +419,8 @@ export interface MapBakeInput {
   left: number;
   top: number;
   name: string;
+  /** The area's tally under its name (review r10 #8: moved off the HUD), e.g. "60 of 100 moths · 2 of 3 cages". */
+  tally?: string;
   /** Lamps she has not seen in each area a moth-stone drew: where to put the count (logical px). */
   unseen: Array<{ x: number; y: number; n: number }>;
 }
@@ -611,6 +643,11 @@ export function bakeMap(b: MapBakeInput): HTMLCanvasElement {
       g.moveTo(cx + d * (tw + 16), ty - 9);
       g.lineTo(cx + d * (tw + 96), ty - 9);
       g.stroke();
+    }
+    if (b.tally) {
+      g.font = `italic 400 19px ${INK.family}`;
+      g.globalAlpha = 0.7;
+      g.fillText(b.tally, cx, ty + 26);
     }
     g.globalAlpha = 1;
   }

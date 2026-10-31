@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v10, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v11, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -75,6 +75,69 @@ Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render 
   gone. Foreshadowing landmarks for render: `shell-land`, `shell-warn` (kind `shell`: a shed back the old burrback's
   size), `scrape-hump`, `scrape-mouth` (kind `scrape`: claw marks 4x a burrback's); beat 2's start (`flagSet
   cn-tunnel-beat2`) wants a deep slam from the den (render / audio, ~0.3 trauma).
+
+### The premise, staged (v11, review r10: three directed moments and the ending): what render reads
+Sim / content hooks for the three moments (the look is render's; names are stable).
+- **A cage's cut** (`Lure.trap`): the blade's catch on a cage is `lures.trapRadius` 64 (a flame's 20; an upgrade's
+  reach adds to both): a standing up cut reaches a cage 228 px over her feet. Every cut is a `lureHit` with `trap:
+  true`; the **first** (hp full) has `escape: 1`: one bar breaks and one moth gets out and circles her (nothing is
+  counted until the snuff). The breaking cut's `slashHit.hitstop` is `lures.trapSnuffHitstop` 14 (a lamp's 9), and
+  **the world holds with her**: every creature's `hitstop` is set to it + 1 (they still step that frame), so nothing
+  jumps forward when it lets go; the frame count runs on (render's ask: the Grove's wave lurched).
+- **A guarded cage** (`Lure.guard: flag`): until the flag is saved the blade glances off it: `lureGuarded {id, x, y,
+  dir}`, no cut taken (render: a clang, sparks off the bars).
+- **A held release** (`Lure.hold: frames`): its snuff holds her input that long (<= `kit.storyHoldMax`), nothing
+  hurts her: `storyHold {id: <lure id>, frames}` ... `storyHoldEnd`. A cage's `sets` flag is set as it goes out.
+- **The hub's cage** (`cn-hub:trap-crossing`) now hangs under the landing limb at 6,300 x 1,400, 200 over the floor,
+  `sets: 'cn-hub-freed'`. **Camera hook**: zone `landing` (5,600-7,360 x 0-1,600, zoom 0.9, bounds 5,200-7,440 x
+  480-1,760, `until: cn-hub-left`): the landing limb, the cage, the kin and the sky, until she first walks off the
+  landing (triggers `left-west` x 5,376 and `left-east` x 7,424 set `cn-hub-left`; ending on the release dropped the
+  view ~250 px mid-ease). **The kin** (`marks.tatter`) waits under it (5,780 x 1,600, `want` the cage, `until:
+  cn-hub-left`), then is back by its light (`marks.stage.tatters[0]`, `when: cn-hub-left`). Render: the moon at the
+  landing wants a `MOON_VISTAS` box there.
+- **The clump under the gap's drop** (hub 6,976-7,872 x 352-1,152): a stepped crown (352 / 384 / 416), its east face
+  down to a root foot 192 over the bank's floor, lit by a springboard `wick-clump` (7,944 x 720); `place:clump-top`.
+  The gap's opening over it stays arrival only (the far floor is the glide's prize).
+- **The firefly** (`scene.fireflies`, src/sim/firefly.ts; `state.kit.firefly = {pass, frame, x, y}`; `fireflyAt(f,
+  frame)` interpolates, stops included; `fireflyFrames(f)` = the whole pass): new fields `onFling` (starts on her
+  first fling off one of these lamps), `onFlag` (starts when the flag is saved), `hang {point, frames, sets?}` (a
+  stop at path point `point`: `fireflyHang {id, x, y, frames, lure?}` as it arrives, `sets` saved then, which lights
+  the `after` lamp of that flag = the cage it hangs; a pass cut short still hangs it), `hold` (her input held on its
+  start: `storyHold {id: <pass id>}`), **`look {x, y, zoom?, from, to}`: the camera hook** (frames of the pass; sim
+  never reads it: frame (x, y) with her, ease in and out). It now relights a lamp smouldering behind her chain too.
+  - `cn-gap:firefly-gap`: `onFling` the chain's lamps **only** (v10's landing trigger is gone: in the route plan the
+    far seed and the roost come first, and a landing spent the pass on nothing). Flung off the chain, the firefly comes
+    out of the roost's mouth and relights the lamp she just left (in her frame), then the next ones, then flees down
+    to the fork. A relit lamp in reach is flung again (the route plan re-flung two): the chain grows a beat. No
+    `look` (render's 0.3 s lean on each `fireflyRelight`). A player who never flings the chain never sees it here.
+  - `cn-tunnel:firefly-warn` (**the second sighting**): `onFlag: cn-tunnel-clear` (beat 2 down, the lid opens); out
+    of the tube's east shaft (7,744 x 980), **hangs `trap-warn`** at its point 2 (7,552 x 1,396) for 75 frames
+    (`cn-warn-hung`), then flees down through the mouth into the den (7,992 x 1,760). 140 frames of flight + 75 hung;
+    `hold` 90; `look {7,600, 1,500, zoom 1, 0-150}`. (First hung at 7,872, 128 px from the room's edge: the
+    sighting was in the frame's corner; now x 7,552 sits at <= 0.83 of the width at 21:9 with the view on the edge.)
+  - `cn-den:firefly-den` (a third): landing on the balcony the first time, it crosses the arena, circles the great
+    cage (stops 40 frames over it, point 3), and goes up through the roof's gate (3,168 x 200). 300 + 40 frames, no
+    hold; `look {1,500, 760, zoom 0.85, 0-200}`.
+- **The warning's cage** (`cn-tunnel:trap-warn`, 40 moths): `after: 'cn-warn-hung'`: **not there in the fight** (out,
+  drawn as nothing or an empty hook until the firefly hangs it), at 7,552 x 1,420 over the root knuckle before the
+  den's mouth, cut standing on the knuckle (1,632; `place:cage`) or from a jump off the floor. The hub's
+  `roost-warn` still names it.
+- **The great cage** (`cn-den:trap-den`, review r10 #1): 1,856 x 760 over the arena's middle (the roof 384 over
+  it), **120 moths**, drawn ~3x a trap, `guard: cn-den-down` (the old burrback's `sets`), `sets: cn-den-freed`,
+  `hold` 90. Cut from a running jump off either shelf's inner end (an up cut near the top). The old burrback sleeps
+  under it; `wick-taproot` is still phase 3's lamp (render may draw it as the cage's root).
+- **The den's way out is its roof**: the gate `den-roof` (3,072-3,264 x 384-448, `flag: cn-den-freed`) over the
+  arena's east end opens with the release (`gateOpen`: moonlight down the shaft); a shaft and a passage east
+  (3,072-3,840 x 128-384) to **the way out's clifftop** (link at world y 6,016: out-local 0, 128-384); the arena's
+  east wall is the claw face up to it (its foot, 1,152-1,344, refuses the claws as v10's root gate did). v10's east
+  root gate and corridor are gone. The arena's lock zone has `until: cn-den-freed`: locked, the shaft and the
+  passage were out of frame. **The vista**: the trigger `out-vista` (out 64-576 x 0-384) sets `cn-out-vista`;
+  **camera hook** `marks.stage.vista {flag: cn-out-vista, x 2,300, y 760, zoom 0.7, hold 3}` (StageCamera plays it;
+  she keeps control). The kin on the clifftop (`when: cn-den-down`). The moon's `MOON_VISTAS` box for cn-out starts
+  at x 1,792: she arrives at x 0-600 (render: widen it).
+- **The old burrback's wake** (review r10 #10): `oldBurrback.wakeFrames` 90 (`enemyWake.frames`), facing the way it
+  slept for the first 60, then `enemyTurn {cause: 'wake', frames: 30}` toward her (`wakeTurnFrames`), then it hunts.
+  Harmless all through. The arena's camera lock (`zones.arena`) is unchanged.
 
 ## v9b (round 9's weak list): the tunnel's glide, the hawker, the chain's press
 - **A glide lock wants a high take-off**: the glide gains ~2 px across for each px of drop, a jump ~0.4. v9's hump

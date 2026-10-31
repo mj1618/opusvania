@@ -126,3 +126,12 @@ Lantern bowls (notice A3, rubbed channel, kindle D3 blooming into A3 E4 B4 D4, r
 the pool, root steam and violet glass air, and giving (memory/giving.md): offer = rubbed glass A4, a creature's
 breath answers (exhale / settle), calm breaths slowing, sleep breaths, the carried chord (A4 E5 B5 D5 by seen
 level) and its catch, rest notes falling. Git history (e31bab6 .. 875ba79) has the prologue's score.
+
+## The release (the Canopy r11, route-play.ts `release`, still muted)
+A trap's `lureSnuff` (`trap`): `cageBreak` on the cut (in the hold: 9 brittle inharmonic rings 1.7-4.3 kHz in 25 ms
+over a 150 / 318 Hz knock, a pink breath 600 -> 2.1 kHz, 12 tinks of bars landing over 1.3 s), `releaseSwell` once the
+hold lets go (D4 A4 D5 E5 coming in 0.32 s apart, in tune, a rising air band 380 -> 1.9 kHz, 3.4 s), one `glintNote`
+per count tick (thinned to 16, the great cage 28), climbing `MOTH_CENTS` then up an octave, each 0.35 dB under the
+last, and a `mothRush` panned toward the moon as they leave her (two for the great cage, all an octave / 500 cents
+down). Timed by render/lantern/release.ts (audio reads it, render never imports audio). Levels `AUDIO.lamp.release`.
+The hub's release with the bed: -25.7 LUFS, -7.9 dBTP, 0 clipped (`clips/r11-release-hub-audio.mp4`).

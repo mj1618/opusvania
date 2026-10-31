@@ -5,7 +5,10 @@
  *    first pass in Ori). Her box centre in a pass's `trigger`, on the ground (she lands there), the first time (its
  *    `flag` not saved) saves the flag and starts it: the firefly flies the `path` at a steady speed over `frames` (`state.kit.firefly`: which pass,
  *    frames in, where it is now). Each lamp of `relights` it passes within `kit.firefly.relightPx` of while that lamp
- *    is out (not smouldering behind a chain) burns again. No control is taken from her; nothing it does hurts.
+ *    is out (or, since r11, smouldering behind her chain) burns again. No control is taken from her; nothing it does
+ *    hurts. Since r11 (review r10 #4) a pass may also start on her first fling off one of its lamps (`onFling`) or
+ *    on a story flag (`onFlag`), stop at a point to hang a cage (`hang`: its `sets` lights an `after` lamp), hold her
+ *    input a beat (`hold`), and carry a camera hook for render (`look`).
  *  - **Roosts** (`scene.roosts`): where the moths of a freed trap lamp (`room:id` in `save.snuffed`) gather in this
  *    room. `roostsLit` says which; render draws them settled.
  *
@@ -73,11 +76,49 @@ export function pathLength(path: ReadonlyArray<readonly [number, number]>): numb
 const AT = { x: 0, y: 0 };
 const FL = { x: 0, y: 0 };
 
+/** Frames into pass `f` it reaches its `hang` point (-1 = no hang). */
+export function fireflyHangAt(f: FireflyPass): number {
+  const h = f.hang;
+  if (!h) return -1;
+  const total = pathLength(f.path);
+  const to = pathLength(f.path.slice(0, Math.min(f.path.length, h.point + 1)));
+  return Math.round((f.frames * to) / Math.max(1, total));
+}
+
+/** A pass's whole length, frames: its flight and its stop. */
+export function fireflyFrames(f: FireflyPass): number {
+  return f.frames + (f.hang ? f.hang.frames : 0);
+}
+
 /** Where pass `f` is `frame` frames in (into `out`): render may call it with an interpolated frame. */
 export function fireflyAt(f: FireflyPass, frame: number, out: { x: number; y: number } = { x: 0, y: 0 }) {
-  const k = Math.max(0, Math.min(1, frame / Math.max(1, f.frames)));
+  // (A stop at its hang point: the flight's clock waits there.)
+  const ha = fireflyHangAt(f);
+  const fl = ha >= 0 && f.hang ? (frame <= ha ? frame : Math.max(ha, frame - f.hang.frames)) : frame;
+  const k = Math.max(0, Math.min(1, fl / Math.max(1, f.frames)));
   along(f.path, pathLength(f.path) * k, out);
   return out;
+}
+
+/** Does pass `f` start this step (its flag not saved, none under way)? */
+function starts(state: GameState, scene: Scene, f: FireflyPass): boolean {
+  if (state.save.flags.includes(f.flag)) return false;
+  const p = state.player;
+  if (p.faded > 0) return false;
+  // (Her first fling off one of its lamps: that lamp smoulders behind her now, the Canopy r11.)
+  if (f.onFling) {
+    const lures = scene.lures ?? [];
+    for (const id of f.onFling) {
+      const i = lures.findIndex((l) => l.id === id);
+      if (i >= 0 && state.lures.ember[i]) return true;
+    }
+  }
+  if (f.onFlag && state.save.flags.includes(f.onFlag)) return true;
+  const r = f.trigger;
+  if (!r || !p.grounded) return false;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  return cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
 }
 
 /** Starts a pass when she enters its trigger, moves the one under way, relights the lamps it passes. */
@@ -86,22 +127,32 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
   if (!list || list.length === 0) return;
   const ff = state.kit.firefly;
   const p = state.player;
-  if (ff.pass < 0 && p.faded === 0 && p.grounded) {
-    const cx = p.x + p.w / 2;
-    const cy = p.y + p.h / 2;
+  // (A pass cut short before its stop, by a fade or leaving the room: the cage it was carrying is hung all the same.)
+  for (let i = 0; i < list.length; i++) {
+    const sets = list[i]?.hang?.sets;
+    if (!sets || ff.pass === i || state.save.flags.includes(sets)) continue;
+    if (state.save.flags.includes((list[i] as FireflyPass).flag)) state.save.flags.push(sets);
+  }
+  if (ff.pass < 0) {
     for (let i = 0; i < list.length; i++) {
       const f = list[i] as FireflyPass;
-      const r = f.trigger;
-      if (cx < r.x || cx >= r.x + r.w || cy < r.y || cy >= r.y + r.h) continue;
-      if (state.save.flags.includes(f.flag)) continue;
+      if (!starts(state, scene, f)) continue;
       state.save.flags.push(f.flag);
       ff.pass = i;
       ff.frame = 0;
       fireflyAt(f, 0, AT);
       ff.x = AT.x;
       ff.y = AT.y;
-      events.push({ type: 'fireflyStart', id: f.id, x: AT.x, y: AT.y, frames: f.frames });
+      events.push({ type: 'fireflyStart', id: f.id, x: AT.x, y: AT.y, frames: fireflyFrames(f) });
       events.push({ type: 'flagSet', flag: f.flag, by: f.id, x: AT.x, y: AT.y });
+      // (A held beat: she stands and watches, the Canopy r11's second sighting; nothing hurts her.)
+      const hold = Math.min(Math.round(f.hold ?? 0), Math.round(t.kit.storyHoldMax));
+      if (hold > 0) {
+        state.kit.story = Math.max(state.kit.story, hold);
+        state.kit.storyBy = f.id;
+        p.invuln = Math.max(p.invuln, hold);
+        events.push({ type: 'storyHold', id: f.id, frames: hold, x: p.x + p.w / 2, y: p.y + p.h });
+      }
       break;
     }
   }
@@ -115,6 +166,23 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
   fireflyAt(f, ff.frame, AT);
   ff.x = AT.x;
   ff.y = AT.y;
+  // Its stop: it hangs a cage (`sets` lights the `after` lamp it names) and holds there.
+  if (f.hang && ff.frame === fireflyHangAt(f)) {
+    const sets = f.hang.sets;
+    const cage = sets ? (scene.lures ?? []).find((l) => l.after === sets) : undefined;
+    events.push({
+      type: 'fireflyHang',
+      id: f.id,
+      x: AT.x,
+      y: AT.y,
+      frames: f.hang.frames,
+      ...(cage ? { lure: cage.id } : {}),
+    });
+    if (sets && !state.save.flags.includes(sets)) {
+      state.save.flags.push(sets);
+      events.push({ type: 'flagSet', flag: sets, by: f.id, x: AT.x, y: AT.y });
+    }
+  }
   const lures = scene.lures ?? [];
   const R = t.kit.firefly.relightPx;
   for (const id of f.relights ?? []) {
@@ -122,15 +190,18 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
     const l = lures[i];
     if (!l || l.trap) continue;
     const s = state.lures;
-    if ((s.hp[i] ?? 0) > 0 || s.ember[i]) continue;
+    if ((s.hp[i] ?? 0) > 0) continue;
     const fl = flameAt(s, i, l, state.frame, t, FL);
     if ((fl.x - AT.x) * (fl.x - AT.x) + (fl.y - AT.y) * (fl.y - AT.y) > R * R) continue;
+    // (Smouldering behind her chain too, the Canopy r11: it relights the lamp she just flung, in front of her. The
+    // chain's other embers are hers to land.)
+    s.ember[i] = 0;
     s.hp[i] = lureHpMax(l, t);
     s.out[i] = 0;
     events.push({ type: 'lureRelight', id: l.id, x: fl.x, y: fl.y, by: 'firefly' });
     events.push({ type: 'fireflyRelight', id: f.id, lure: l.id, x: fl.x, y: fl.y });
   }
-  if (ff.frame >= f.frames) {
+  if (ff.frame >= fireflyFrames(f)) {
     events.push({ type: 'fireflyEnd', id: f.id, x: AT.x, y: AT.y });
     ff.pass = -1;
     ff.frame = 0;

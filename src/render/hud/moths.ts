@@ -1,19 +1,23 @@
 /**
  * The moths she has freed (`save.moths`), a small count in the top-left corner under her lights (the
- * curious first-timer: "freed moths change nothing I can see, and there's no counter"). On a snuff a few
- * small moths leave the flame's place on screen and fly into the count; each one that arrives ticks it up.
- * Once she has read an area's moth-stone, a second line under it: that area's lamps put out of all of them.
+ * curious first-timer: "freed moths change nothing I can see, and there's no counter"). On a trap's release the
+ * count ticks once per freed moth as they leave her for the moon (the timeline in lantern/release.ts); on any other
+ * snuff a few small moths leave the flame's place on screen and fly into the count.
  *
- * Shown on a snuff, a stone read and a rest, for a few seconds; otherwise away. Dark and small: pale moth
- * chevrons and thin serif digits, no box. Corner-anchored to the real view (any window shape); render
+ * The Canopy r11 (review r10 #8: "30 / 60" read as thirty of sixty moths): the number is the freed count alone. Under
+ * it a small lantern pip fills toward the next light the moths buy (`health.mothMilestones`), with no second number.
+ * The area's tally is the map's (render/map), not the HUD's.
+ *
+ * Shown on a snuff, a stone read and a rest, for a few seconds; otherwise away. Dark and small: a pale moth
+ * chevron and thin serif digits, no box. Corner-anchored to the real view (any window shape); render
  * time only, seeds from counts (no Math.random). Reads the save and events; changes nothing.
  */
 import { Container, Graphics, Text } from 'pixi.js';
-import { getRoom, WORLD } from '../../scene/index';
 import { mothMilestone } from '../../sim/index';
 import { tuning } from '../../sim/tuning';
 import { STAGE_BEATS } from '../camera/stage-cam';
 import type { CameraView, SimView, ViewSize } from '../contract';
+import { releaseTicks } from '../lantern/release';
 
 export const MOTHS_HUD = {
   /** The icon's centre from the view's top-left (logical px), and the gap to the number. */
@@ -28,9 +32,20 @@ export const MOTHS_HUD = {
   /** Moths that fly in on a snuff: at most this many (the rest tick at the end), first after `wait`, `every` apart. */
   fly: { max: 8, wait: 0.55, every: 0.11, secs: 1.15 },
   alpha: 0.85,
-  /** The next health milestone's bar under the count (plan r5 item 6: "40 / 60"): px long, a tick at its end. */
-  bar: 92,
+  /** The lantern pip under the count: its centre from the moth icon (px), its size, and its colours. */
+  pip: { dx: 2, dy: 34, w: 9, h: 13, ink: 0xdfe6f2, fill: 0xffb85a, core: 0xffe2a8 },
 };
+
+/** The count as text: the freed moths alone, never "x / y" (review r10 #8). */
+export function countText(moths: number): string {
+  return String(Math.max(0, Math.round(moths)));
+}
+
+/** How full the lantern pip is: the share of the way from the last light the moths bought to the next (1 = none left). */
+export function pipFill(moths: number, prev: number, next: number): number {
+  if (next <= 0) return 1;
+  return Math.min(1, Math.max(0, (moths - prev) / Math.max(1, next - prev)));
+}
 
 interface Flyer {
   x0: number;
@@ -52,27 +67,22 @@ export class MothCount {
   readonly root = new Container({ label: 'hud-moths' });
   private readonly g = new Graphics();
   private readonly num: Text;
-  private readonly lamps: Text;
-  /** " / 60": the next milestone, dimmer. */
-  private readonly next: Text;
   private shown = -1;
+  /** A release's ticks still to come: seconds until each (render time). */
+  private readonly ticks: number[] = [];
+  /** The pip's flash when a light is bought (1 -> 0). */
+  private bought = 0;
   private hold = 0;
   private alpha = 0;
   private pop = 0;
   private readonly flyers: Flyer[] = [];
   private seed = 0;
-  private areaKey = '';
-  private area: { out: number; total: number; freed: number; moths: number } | null = null;
 
   constructor(family: string) {
     const style = { fontFamily: family, fontSize: MOTHS_HUD.font, fill: 0xdfe6f2 };
     this.num = new Text({ text: '0', style, resolution: 2 });
     this.num.anchor.set(0, 0.5);
-    this.lamps = new Text({ text: '', style: { ...style, fontSize: 18, fill: 0xb8c2d6 }, resolution: 2 });
-    this.lamps.anchor.set(0, 0.5);
-    this.next = new Text({ text: '', style: { ...style, fontSize: 20, fill: 0x9aa6bc }, resolution: 2 });
-    this.next.anchor.set(0, 0.5);
-    this.root.addChild(this.g, this.num, this.next, this.lamps);
+    this.root.addChild(this.g, this.num);
     this.root.visible = false;
   }
 
@@ -84,11 +94,17 @@ export class MothCount {
     if (this.shown < 0 || this.shown > target + this.inFlight()) {
       this.shown = target;
       this.flyers.length = 0;
+      this.ticks.length = 0;
     }
     const ix = view.left + M.x;
     const iy = view.top + M.y + below;
     for (const e of sim.events) {
-      if (e.type === 'lureSnuff' && e.moths > 0) {
+      if (e.type === 'lureSnuff' && e.moths > 0 && (e as { trap?: boolean }).trap) {
+        // A trap's release: one tick per moth as they leave her (release.ts).
+        for (const t of releaseTicks(e.moths)) this.ticks.push(t);
+        this.ticks.sort((a, b) => a - b);
+        this.hold = Math.max(this.hold, M.hold);
+      } else if (e.type === 'lureSnuff' && e.moths > 0) {
         const sx = 960 + (e.x - cam.x) * cam.zoom;
         const sy = 540 + (e.y - cam.y) * cam.zoom;
         const k = Math.min(M.fly.max, e.moths);
@@ -110,22 +126,19 @@ export class MothCount {
     // Anything not yet accounted for by a flyer (a load, a count from elsewhere) is shown at once.
     if (this.shown + this.inFlight() < target) this.shown = target - this.inFlight();
     const g = this.g.clear();
+    // A release's ticks.
+    for (let i = 0; i < this.ticks.length; i++) this.ticks[i] = (this.ticks[i] as number) - dt;
+    while (this.ticks.length && (this.ticks[0] as number) <= 0) {
+      this.ticks.shift();
+      this.tick(1);
+    }
     for (let i = this.flyers.length - 1; i >= 0; i--) {
       const f = this.flyers[i] as Flyer;
       f.t += dt;
       if (f.t < 0) continue;
       const u = Math.min(1, f.t / M.fly.secs);
       if (u >= 1) {
-        const before = this.shown;
-        this.shown += f.n;
-        this.pop = 1;
-        // A milestone crossed: a bigger pop and a longer hold (the light it gives shows in her lights).
-        if (mothMilestone(tuning, this.shown).lights > mothMilestone(tuning, before).lights) {
-          this.pop = 1.8;
-          this.hold = Math.max(this.hold, M.hold + 2);
-        }
-        // The count shows itself when the first moth reaches it (feel review r2: not a "0" before).
-        this.hold = Math.max(this.hold, M.hold);
+        this.tick(f.n);
         this.flyers.splice(i, 1);
         continue;
       }
@@ -145,79 +158,86 @@ export class MothCount {
     const a = this.alpha * this.alpha * (3 - 2 * this.alpha);
     // The count itself: a pale moth and the number.
     if (a > 0.003) this.moth(g, ix, iy, 0.6 + 0.4 * Math.sin(clock * 3), 1.15 + 0.3 * this.pop, M.alpha * a);
-    this.num.text = String(this.shown);
+    this.num.text = countText(this.shown);
     this.num.position.set(ix + M.gap, iy);
     this.num.scale.set(1 + 0.25 * this.pop);
     this.num.alpha = M.alpha * a;
     this.num.visible = a > 0.003;
-    // The next milestone: " / 60" and a thin bar under the count filled to it, a tick at its end.
-    // (The sim's own reading: `mothMilestone`, its lights from `health.mothMilestones`.)
+    // The lantern pip: fills toward the next light the moths buy; flashes full as one is bought.
     const ms = mothMilestone(tuning, this.shown);
-    const nx = ms.next;
-    if (nx > 0 && a > 0.003) {
-      const prev = ms.prev;
-      this.next.text = `/ ${nx}`;
-      this.next.position.set(ix + M.gap + this.num.width + 8, iy + 2);
-      this.next.alpha = 0.7 * a;
-      this.next.visible = true;
-      const bx = ix - 10;
-      const by = iy + 20;
-      const k = Math.min(1, Math.max(0, (this.shown - prev) / Math.max(1, nx - prev)));
-      g.rect(bx, by, M.bar, 2).fill({ color: 0x9aa6bc, alpha: 0.35 * a });
-      g.rect(bx, by, M.bar * k, 2).fill({ color: 0xdfe6f2, alpha: 0.85 * a });
-      g.rect(bx + M.bar - 1, by - 4, 2, 10).fill({ color: 0xdfe6f2, alpha: 0.7 * a });
-    } else this.next.visible = false;
-    // The area's lamps, once its moth-stone has been read.
-    const key = `${sim.scene.id}|${sim.save.snuffed.length}|${sim.save.taken.length}`;
-    if (key !== this.areaKey) {
-      this.areaKey = key;
-      this.area = this.areaOf(sim);
-    }
-    const area = this.area;
-    if (area && a > 0.003) {
-      this.lamps.text = `lamps ${area.out} / ${area.total} · moths ${area.freed} / ${area.moths}`;
-      this.lamps.position.set(ix - 10, iy + 40);
-      this.lamps.alpha = 0.75 * a;
-      this.lamps.visible = true;
-    } else this.lamps.visible = false;
+    this.bought *= Math.exp(-dt * 2.5);
+    if (a > 0.003 && (ms.next > 0 || this.bought > 0.05))
+      this.pip(
+        g,
+        ix + M.pip.dx,
+        iy + M.pip.dy,
+        Math.max(pipFill(this.shown, ms.prev, ms.next), this.bought),
+        clock,
+        a,
+      );
     this.root.visible = a > 0.003 || this.flyers.length > 0;
   }
 
   private inFlight(): number {
-    let n = 0;
+    let n = this.ticks.length;
     for (const f of this.flyers) n += f.n;
     return n;
   }
 
-  /** The area of the room she is in, if its moth-stone has been read: lamps out of all its lamps. */
-  private areaOf(sim: SimView): { out: number; total: number; freed: number; moths: number } | null {
-    const save = sim.save;
-    const a = WORLD.areas.find((x) => x.rooms.includes(sim.scene.id));
-    if (!a) return null;
-    let read = false;
-    let total = 0;
-    let out = 0;
-    let freed = 0;
-    let moths = 0;
-    for (const id of a.rooms) {
-      let room: ReturnType<typeof getRoom>;
-      try {
-        room = getRoom(id);
-      } catch {
-        continue;
-      }
-      for (const m of room.mothStones ?? []) if (save.taken.includes(`${id}:${m.id}`)) read = true;
-      for (const l of room.lures ?? []) {
-        const m = Math.round(tuning.lures.kinds[l.kind]?.moths ?? 0);
-        total++;
-        moths += m;
-        if (save.snuffed.includes(`${id}:${l.id}`)) {
-          out++;
-          freed += m;
+  /** The count goes up by `n` (a moth arriving, a release's tick): a pop, and a bigger one when a light is bought. */
+  private tick(n: number): void {
+    const before = this.shown;
+    this.shown += n;
+    this.pop = Math.max(this.pop, 0.6);
+    if (mothMilestone(tuning, this.shown).lights > mothMilestone(tuning, before).lights) {
+      this.pop = 1.8;
+      this.bought = 1;
+      this.hold = Math.max(this.hold, MOTHS_HUD.hold + 2);
+    }
+    // The count shows itself when the first moth reaches it (feel review r2: not a "0" before).
+    this.hold = Math.max(this.hold, MOTHS_HUD.hold);
+  }
+
+  /** The lantern pip: a small seed-pod lantern, its outline pale, lit from the bottom to `k` of its height. */
+  private pip(g: Graphics, x: number, y: number, k: number, clock: number, alpha: number): void {
+    const P = MOTHS_HUD.pip;
+    const pts: number[] = [];
+    const n = 16;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const w = P.w * Math.sin(Math.PI * t ** 0.8);
+      pts.push(x + w, y - P.h + 2 * P.h * t);
+    }
+    for (let i = n; i >= 0; i--) {
+      const t = i / n;
+      const w = P.w * Math.sin(Math.PI * t ** 0.8);
+      pts.push(x - w, y - P.h + 2 * P.h * t);
+    }
+    g.poly(pts).fill({ color: 0x0a0d14, alpha: 0.45 * alpha });
+    if (k > 0.001) {
+      // The lit part: the pod clipped to below the fill line (it is convex: drop the points above, close on the line).
+      const cut = y + P.h - 2 * P.h * k;
+      const lit: number[] = [];
+      for (let i = 0; i < pts.length; i += 2) {
+        const px = pts[i] as number;
+        const py = pts[i + 1] as number;
+        const nx = pts[(i + 2) % pts.length] as number;
+        const ny = pts[(i + 3) % pts.length] as number;
+        if (py >= cut) lit.push(px, py);
+        if (py >= cut !== ny >= cut) {
+          const u = (cut - py) / (ny - py);
+          lit.push(px + (nx - px) * u, cut);
         }
       }
+      const flick = 0.85 + 0.15 * Math.sin(clock * 7.3);
+      if (lit.length >= 6) g.poly(lit).fill({ color: P.fill, alpha: 0.85 * alpha * flick });
+      g.circle(x, y + P.h * 0.35, 2.4 * Math.min(1, k * 3)).fill({ color: P.core, alpha: 0.9 * alpha });
     }
-    return read ? { out, total, freed, moths } : null;
+    g.poly(pts).stroke({ color: P.ink, width: 1.4, alpha: 0.7 * alpha });
+    // Its stem.
+    g.moveTo(x, y - P.h)
+      .lineTo(x, y - P.h - 5)
+      .stroke({ color: P.ink, width: 1.2, alpha: 0.6 * alpha });
   }
 
   /** A moth: a chevron whose wings beat (the greybox freed moths' look). */

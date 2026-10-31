@@ -8,6 +8,9 @@
  * hurt muffles the mix for the stagger (a layer, router.ts). Tells are heard as long as they last: a
  * creak's variant is the one nearest the tell's length, so the creak is the countdown.
  */
+
+import { releaseFreeze, releaseGreat, releaseTicks } from '../render/lantern/release';
+import { LOOK } from '../render/scene/lib/room-look';
 import type { SimEvent } from '../sim/events';
 import type { SoundId } from './bake';
 import { CREAK_S, MOTH_CENTS, REAR_S } from './bake-play';
@@ -61,7 +64,7 @@ export type FlingEvent =
 export type PlayEvent = SimEvent | FlingEvent;
 
 /** Round 7's blow fields (a creature's weight), and a snuff by a fling: read loosely, like the fling. */
-type Loose = { weight?: 'light' | 'medium' | 'heavy'; fling?: boolean };
+type Loose = { weight?: 'light' | 'medium' | 'heavy'; fling?: boolean; trap?: boolean };
 
 export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteContext): Cue[] | null {
   const H = AUDIO.hero;
@@ -264,6 +267,8 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
             priority: 6,
           }),
         );
+      // A trap's release (the Canopy r11): its own beat, timed with the picture (render/lantern/release.ts).
+      if ((e as Loose).trap) return [...out, ...release(e.x, e.y, e.moths)];
       // A chain's embers go out together on the landing: one phrase climbing the chord, one rush of wings.
       const all: PlayEvent[] = (ctx.events ?? [e]).filter((q) => q.type === 'lureSnuff');
       const j = Math.max(0, all.indexOf(e));
@@ -361,6 +366,88 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
    * The freed moths: chimes rising up the forest's chord (in tune, unlike the lamp) and a rush of wings.
    * Flame `j` of `of` going out in one step takes its share of one phrase (the rush plays once).
    */
+  /**
+   * A trap's release (render/lantern/release.ts): the bars snap on the cut (in the hold), then once the hold lets go
+   * the swell comes up under the stream, one chime per count tick climbing the forest's chord (thinned to at most
+   * `R.chimes`), and a rush of wings as they leave her. The great cage: lower, longer, two rushes.
+   */
+  function release(x: number, y: number, n: number): Cue[] {
+    const R = A.release;
+    const great = releaseGreat(n);
+    const hold = releaseFreeze(n) / 60;
+    const ticks = releaseTicks(n);
+    const out: Cue[] = [
+      at(
+        'lantern',
+        'cageBreak',
+        x,
+        y,
+        R.breakDb + (great ? 3 : 0),
+        { place: 'hero', priority: 6, cents: great ? -500 : 0 },
+        1,
+      ),
+      at(
+        'lantern',
+        'releaseSwell',
+        x,
+        y,
+        R.swellDb,
+        { place: 'fixed', pan: 0, delay: hold + 0.15, priority: 5, cents: great ? -1200 : 0 },
+        2,
+      ),
+    ];
+    const max = great ? R.chimesGreat : R.chimes;
+    const every = Math.max(1, Math.ceil(ticks.length / max));
+    let c = 0;
+    for (let k = 0; k < ticks.length; k += every, c++) {
+      const note = c % MOTH_CENTS.length;
+      const up = Math.floor(c / MOTH_CENTS.length) * 1200;
+      out.push(
+        at(
+          'lantern',
+          'glintNote',
+          x,
+          y,
+          R.chimeDb - c * 0.35,
+          {
+            place: 'hero',
+            delay: hold + (ticks[k] as number),
+            cents: (MOTH_CENTS[note] ?? 0) + up + (great ? -1200 : 0) + jitter('glintNote', c, 6),
+            priority: 3,
+          },
+          3 + c,
+        ),
+      );
+    }
+    const leave = hold + (ticks[0] ?? 2);
+    // The rush pans toward the moon's side of the sky, where the stream goes.
+    const side = (LOOK.moon ? Math.sign(LOOK.moon.x - 960) || 1 : 1) * 0.6;
+    out.push(
+      at(
+        'lantern',
+        'mothRush',
+        x,
+        y,
+        A.rushDb + R.rushUp,
+        { place: 'fixed', pan: 0, panTo: side, delay: leave, priority: 3 },
+        60,
+      ),
+    );
+    if (great)
+      out.push(
+        at(
+          'lantern',
+          'mothRush',
+          x,
+          y,
+          A.rushDb + R.rushUp + 2,
+          { place: 'fixed', pan: -0.3, panTo: side, delay: leave + 1.4, priority: 3 },
+          61,
+        ),
+      );
+    return out;
+  }
+
   function moths(x: number, y: number, n: number, start: number, j: number, of: number): Cue[] {
     const per = of > 1 ? Math.max(1, Math.floor(MOTH_CENTS.length / of)) : A.chimes;
     const count = Math.min(per, Math.max(1, n));

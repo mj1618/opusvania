@@ -1213,7 +1213,8 @@ export const burrback: KindRules = {
         const n = frames(B.wakeFrames, 1);
         setMode(e, 'wake', n);
         e.dozing = false;
-        e.facing = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+        // (It rises facing the way it slept, and turns to her for the wake's last `wakeTurnFrames`: r11.)
+        if (B.wakeTurnFrames <= 0) e.facing = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
         // (Round 6: its gentle first rams are for her very first try only; a later wake rams at full speed.)
         if (B.firstTellRams > 0) {
           const key = `${e.id}:fought`;
@@ -1247,6 +1248,23 @@ export const burrback: KindRules = {
       ) {
         const away = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
         if (p.kickX * away < B.risePush) p.kickX = away * B.risePush;
+      }
+      // (The turn: the wake's last `wakeTurnFrames`, toward her; `enemyTurn` for render.)
+      if (B.wakeTurnFrames > 0 && e.timer === frames(B.wakeTurnFrames, 1) + 1) {
+        const to = p.x + p.w / 2 < e.x + e.w / 2 ? -1 : 1;
+        if (to !== e.facing) {
+          e.facing = to;
+          events.push({
+            type: 'enemyTurn',
+            id: e.id,
+            kind: e.kind,
+            x: e.x + e.w / 2,
+            y: e.y + e.h / 2,
+            dir: to,
+            cause: 'wake',
+            frames: frames(B.wakeTurnFrames, 1),
+          });
+        }
       }
       if (--e.timer <= 0) setMode(e, 'walk', 0);
       return false;

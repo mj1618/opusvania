@@ -74,6 +74,8 @@ export type KitEvent =
   | { type: 'fireflyStart'; id: string; x: number; y: number; frames: number }
   | { type: 'fireflyRelight'; id: string; lure: string; x: number; y: number }
   | { type: 'fireflyEnd'; id: string; x: number; y: number }
+  /** The firefly stops at its `hang` point (the Canopy r11): `frames` it holds there; `lure` the cage it hangs. */
+  | { type: 'fireflyHang'; id: string; x: number; y: number; frames: number; lure?: string }
   /**
    * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it
    * gives, `pogo` = off a down cut, `held` = jump was held (the higher throw).

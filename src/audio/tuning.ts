@@ -256,6 +256,12 @@ export const AUDIO = {
     chimeGapS: 0.11,
     /** Beating free (the old catch): her wing on each press. */
     beatDb: -26,
+    /**
+     * A trap's release (the Canopy r11, route-play.ts `release`): the cage's bars breaking (peak), the swell under the
+     * stream, one chime per count tick (at most `chimes`, the great cage `chimesGreat`, each 0.35 dB under the last),
+     * the wings' rush this much over a lamp's.
+     */
+    release: { breakDb: -19, swellDb: -31, chimeDb: -26, chimes: 16, chimesGreat: 28, rushUp: 3 },
   },
   /**
    * Lanternroot (route-lr.ts, bake-lr.ts): her light (bus `hero`), the moonwicks and moss (`lantern`), the gust
