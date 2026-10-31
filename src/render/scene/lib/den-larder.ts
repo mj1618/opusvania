@@ -462,6 +462,8 @@ export function oldCage(
   sink: number,
   c: { col: number; dark: number; lit: number },
   seed: number,
+  /** The earth heaped where it goes in (off for one hung in the air). */
+  heap = true,
 ): void {
   const L = LARDER;
   const r = rngFor(seed, 1361);
@@ -479,7 +481,11 @@ export function oldCage(
   const cutV = h * (1 - sink);
   // Earth heaped where it goes in.
   const [ex, ey] = P(0, cutV);
-  g.poly(chaikin(blob(ex, ey + 10, W * 1.5, h * 0.12, seed, 0.3, 14), 1)).fill({ color: c.dark, alpha: 0.7 });
+  if (heap)
+    g.poly(chaikin(blob(ex, ey + 10, W * 1.5, h * 0.12, seed, 0.3, 14), 1)).fill({
+      color: c.dark,
+      alpha: 0.7,
+    });
   const bars = 7;
   for (let k = 0; k < bars; k++) {
     const m = (k / (bars - 1)) * 2 - 1;

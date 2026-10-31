@@ -59,6 +59,17 @@ export const PREMISE = {
     wing: 0xe6ecd8,
     lantern: 0xeaff9a,
     thread: 1.1,
+    /**
+     * The chase (the Canopy r13, moment 4; `chase` passes): its trail at speed (points), the alarm (fast bright bursts:
+     * `alarm` s after it sees her, and while it waits for her), a kindle's flare (px, s), and the call at the shaft (s:
+     * three short, one long, slow; the column of its light up the shaft, px).
+     */
+    chaseTrail: 30,
+    alarm: 1.1,
+    alarmHz: 7,
+    flare: [150, 0.7] as const,
+    call: 3.4,
+    callUp: 700,
   },
   /** Moths at rest per roost (one per this many px² of its rect, clamped), and how many fly round it. */
   roost: { per: 1100, min: 22, max: 70, flying: 8, moth: 0xeef0e2, glow: 0xbcd4ff, size: [9, 14] as const },
@@ -287,6 +298,10 @@ export class Acts {
   private readonly ffLit: Array<{ x: number; y: number; fx: number; fy: number; t: number }> = [];
   /** The cage it is hanging (the `fireflyHang` stop): the lure, seconds since; the way it last faced. */
   private ffHang: { lure: string; t: number; frames: number } | null = null;
+  /** The chase: seconds since its alarm (start or a wait; -1 none), since its call (-1), its kindles' flares. */
+  private ffAlarm = -1;
+  private ffCall = -1;
+  private readonly ffFlares: Array<{ x: number; y: number; t: number }> = [];
   private ffDir = 1;
   /** Roosts that just filled (their id, seconds since): the moths settle in. */
   private readonly roostNew = new Map<string, number>();
@@ -376,9 +391,21 @@ export class Acts {
       else if (e.type === 'fireflyRelight') {
         const ff = (sim as { kit?: { firefly?: { x: number; y: number } } }).kit?.firefly;
         this.ffLit.push({ x: e.x, y: e.y, fx: ff?.x ?? e.x, fy: ff?.y ?? e.y, t: 0 });
+      } else if ((e.type as string) === 'fireflyKindle') {
+        // The chase: a hook catches fire as it passes (a thread of its light to the hook, then the flare).
+        const k = e as unknown as { x: number; y: number };
+        const ff = (sim as { kit?: { firefly?: { x: number; y: number } } }).kit?.firefly;
+        this.ffLit.push({ x: k.x, y: k.y, fx: ff?.x ?? k.x, fy: ff?.y ?? k.y, t: 0 });
+        this.ffFlares.push({ x: k.x, y: k.y, t: 0 });
+      } else if ((e.type as string) === 'fireflyChase') {
+        const ph = (e as unknown as { phase: string }).phase;
+        if (ph === 'start' || ph === 'wait') this.ffAlarm = 0;
+        else if (ph === 'call') this.ffCall = 0;
       } else if (e.type === 'fireflyStart') {
         this.ffTrail.length = 0;
         this.ffHang = null;
+        this.ffAlarm = -1;
+        this.ffCall = -1;
       } else if (e.type === 'fireflyHang') {
         const h = e as { lure?: string; frames: number };
         if (h.lure) this.ffHang = { lure: h.lure, t: 0, frames: h.frames };
@@ -474,6 +501,19 @@ export class Acts {
         .stroke({ color: F.glow, width: 1.6, alpha: 0.7 * a });
       glow.add(r.x, r.y, 30 + 60 * u, F.glow, 0.45 * a);
     }
+    // A hook kindled: a flare that swells and settles to a lamp's glow.
+    for (let k = this.ffFlares.length - 1; k >= 0; k--) {
+      const r = this.ffFlares[k] as (typeof this.ffFlares)[number];
+      r.t += dt;
+      const [R, T] = F.flare;
+      if (r.t > T) {
+        this.ffFlares.splice(k, 1);
+        continue;
+      }
+      const u = r.t / T;
+      halo.add(r.x, r.y, R * (0.4 + 0.8 * u), F.glow, 0.5 * (1 - u) ** 1.5);
+      glow.add(r.x, r.y, 26, F.core, 0.7 * (1 - u));
+    }
     if (!ff || ff.pass < 0 || !passes) {
       if (this.ffTrail.length) this.ffTrail.length = 0;
       return;
@@ -481,12 +521,53 @@ export class Acts {
     const pass = passes[ff.pass];
     if (!pass) return;
     if (this.ffHang) this.ffHang.t += dt;
-    const at = fireflyAt(pass as never, ff.frame - 1 + sim.alpha);
+    // A chase's firefly is where the sim put it (keyed to her progress), not on the pass's clock.
+    const chase = !!(pass as { chase?: unknown }).chase;
+    const st = ff as unknown as { px?: number; py?: number; beat?: number };
+    const at =
+      chase && typeof st.px === 'number'
+        ? {
+            x: (st.px as number) + (ff.x - (st.px as number)) * sim.alpha,
+            y: (st.py as number) + (ff.y - (st.py as number)) * sim.alpha,
+          }
+        : fireflyAt(pass as never, ff.frame - 1 + sim.alpha);
     this.ffTrail.push([at.x, at.y]);
-    if (this.ffTrail.length > F.trail) this.ffTrail.shift();
+    while (this.ffTrail.length > (chase ? F.chaseTrail : F.trail)) this.ffTrail.shift();
     // A firefly's signal: a glow that swells and dies in pulses, never quite out (it is looking for another).
     const ph = (clock * F.blink) % 1;
-    const pulse = 0.35 + 0.65 * Math.max(0, Math.sin(ph * Math.PI * 2)) ** 2;
+    let pulse = 0.35 + 0.65 * Math.max(0, Math.sin(ph * Math.PI * 2)) ** 2;
+    // The alarm: fast bright bursts as it sees her, and over again while it waits at a stop for her.
+    if (this.ffAlarm >= 0) {
+      this.ffAlarm += dt;
+      const waiting = chase && st.beat === 3;
+      if (this.ffAlarm > F.alarm && !waiting) this.ffAlarm = -1;
+      else {
+        const burst = Math.max(0, Math.sin(clock * Math.PI * 2 * F.alarmHz)) ** 3;
+        pulse = Math.max(pulse, 0.4 + 0.9 * burst);
+        halo.add(at.x, at.y, 60 + 140 * burst, F.glow, 0.35 * burst);
+      }
+    }
+    // The call at the shaft's top: three short, one long, slowly, up at the sky (nothing answers).
+    if (this.ffCall >= 0) {
+      this.ffCall += dt;
+      const u = this.ffCall / F.call;
+      if (u > 1) this.ffCall = -1;
+      else {
+        const seq = [
+          [0.0, 0.1],
+          [0.16, 0.26],
+          [0.32, 0.42],
+          [0.55, 0.95],
+        ] as const;
+        let on = 0;
+        for (const [a, b] of seq)
+          if (u >= a && u <= b) on = Math.sin((Math.PI * (u - a)) / (b - a)) ** (b - a > 0.2 ? 0.6 : 1.5);
+        pulse = Math.max(pulse, 0.3 + on);
+        // Its light thrown up the shaft, to the sky.
+        for (let k = 0; k < 6; k++)
+          halo.add(at.x, at.y - (F.callUp * (k + 0.5)) / 6, 70 - k * 6, F.glow, 0.16 * on * (1 - k / 7), 120);
+      }
+    }
     const n = this.ffTrail.length;
     for (let k = 0; k < n - 1; k++) {
       const [x0, y0] = this.ffTrail[k] as [number, number];

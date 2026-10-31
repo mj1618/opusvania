@@ -241,6 +241,8 @@ export const PREMISE_CAM = {
   release: { zoom: 1.06, pan: 0.12, in: 0.4, hold: 0.55, out: 1.0 },
   great: { zoom: 0.88, pan: 0.3, lift: 260, in: 0.9, hold: 3.6, out: 1.8 },
   firefly: { pan: 0.4, max: 340, in: 0.3, hold: 1.6, out: 0.9 },
+  /** The chase (moment 4): the view a little wider while it runs, so the firefly 450-600 px ahead stays in it. */
+  chaseZoom: 0.9,
   /** The old burrback's wake (`enemyWake`, 1.5 s): the view pushes in about it and toward it, then lets go. */
   wake: { zoom: 1.08, pan: 0.3, in: 0.5, hold: 1.0, out: 0.9 },
   /**

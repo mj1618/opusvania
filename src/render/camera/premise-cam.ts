@@ -74,7 +74,7 @@ export class PremiseCamera {
         this.rel = { x: e.x, y: e.y, t: -dt, great: false, wake: false, snap: true };
       else if (e.type === 'fireflyStart') this.ff = -dt;
       // Each lamp it relights leans the view again (or holds the lean on).
-      else if (e.type === 'fireflyRelight')
+      else if (e.type === 'fireflyRelight' || (e.type as string) === 'fireflyKindle')
         this.ff = this.ff === null ? -dt : Math.min(this.ff, PREMISE_CAM.firefly.in);
       else if (e.type === 'roomEnter') this.reset();
     }
@@ -128,6 +128,12 @@ export class PremiseCamera {
       y += ((this.look.y - follow.y) / 2) * k;
       if (this.look.zoom) zoom *= 1 + (this.look.zoom / follow.zoom - 1) * k;
     } else if (this.ff !== null) {
+      // (A chase holds the lean as long as it runs: it and her in the frame, a little wider: canopy-moments moment 4.)
+      const kc = sim.kit as unknown as { firefly?: { pass: number; beat?: number } };
+      const chasing =
+        (kc.firefly?.beat ?? 0) >= 1 && (kc.firefly?.beat ?? 0) <= 4 && (kc.firefly?.pass ?? -1) >= 0;
+      if (chasing) this.ff = Math.min(this.ff, PREMISE_CAM.firefly.in + PREMISE_CAM.firefly.hold * 0.5);
+      if (chasing) zoom *= PREMISE_CAM.chaseZoom;
       this.ff += dt;
       const C = PREMISE_CAM.firefly;
       const k = envelope(this.ff, C.in, C.hold, C.out);
@@ -136,7 +142,11 @@ export class PremiseCamera {
       const ffs = kit.firefly;
       const pass = (sim.scene as { fireflies?: unknown[] }).fireflies?.[ffs?.pass ?? -1];
       if (ffs && pass && ffs.pass >= 0) {
-        const at = fireflyAt(pass as never, ffs.frame - 1 + sim.alpha);
+        const cx = ffs as unknown as { x?: number; y?: number };
+        const at =
+          (pass as { chase?: unknown }).chase && typeof cx.x === 'number'
+            ? { x: cx.x, y: cx.y as number }
+            : fireflyAt(pass as never, ffs.frame - 1 + sim.alpha);
         let dx = (at.x - follow.x) * C.pan;
         let dy = (at.y - follow.y) * C.pan;
         const d = Math.hypot(dx, dy);

@@ -26,6 +26,7 @@ import { KeeperStage } from './keeper';
 import { Kit } from './kit';
 import { Lamps } from './lamps';
 import { Moonlight } from './moonlight';
+import { FireflyNest } from './nest';
 import { NightBack } from './night-back';
 import { Opening } from './opening';
 import { Vista, WoodVista } from './vista';
@@ -41,6 +42,8 @@ export class LanternPieces implements EnvModule {
   private acts: Acts | null = null;
   /** The den's great cage and its keeper (keeper.ts, the Canopy r12): light, shadows, moths, the column, the moon. */
   private keeper: KeeperStage | null = null;
+  /** The firefly's nest at the chase's end (nest.ts, the Canopy r13 moment 4). */
+  private nest: FireflyNest | null = null;
   /** The opening (opening.ts, the Canopy r12): the swarm's shadows, the title, the valley's lights and knots. */
   private opening: Opening | null = null;
   /** The ending's vista (vista-river.ts, the Canopy r12): the roosts' streams joining, the river round her glide. */
@@ -63,6 +66,7 @@ export class LanternPieces implements EnvModule {
     this.fx = new Fx(ctx.lights);
     if (LOOK.kit === 'wood') this.acts = new Acts(ctx, ctx.lights);
     this.keeper = KeeperStage.for(ctx, ctx.lights);
+    this.nest = FireflyNest.for(ctx, ctx.lights);
     this.opening = Opening.for(ctx);
     this.river = VistaRiver.for(ctx);
     if (this.keeper) this.lamps.handOff.add(this.keeper.cageId);
@@ -133,6 +137,7 @@ export class LanternPieces implements EnvModule {
     this.acts?.draw(dt, clock, sim, camera, this.back, this.front, this.glowBack, this.glowFront);
     this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
     this.keeper?.draw(dt, clock, sim, camera);
+    this.nest?.draw(dt, clock, sim, camera);
     this.opening?.draw(dt, clock, sim, camera);
     this.river?.draw(dt, clock, sim, camera);
     this.water?.draw(dt, clock, sim, camera, this.glowFront);
@@ -152,6 +157,7 @@ export class LanternPieces implements EnvModule {
     this.fx?.destroy();
     this.acts?.destroy();
     this.keeper?.destroy();
+    this.nest?.destroy();
     this.depth?.destroy();
     this.vista?.destroy();
     this.moon?.destroy();
