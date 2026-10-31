@@ -69,10 +69,10 @@ Render and audio build against these; sim / content names only (render never wri
   roll moves the box itself (`rollStep` in stage `end`); on a later visit the creature is `gone` (it woke on re-entry
   before: `init` never hid it).
 - **Measured** (headless unless said): the den plan (`keeper-run.ts --lag=0|8|15`) 68-87 s, 0-1 hits; live on the GPU
-  page with lag 15 (`escape-live.ts`, which runs keeper-live first) 50 s, 0 hits; **the crude reactive controller**
+  page with lag 15 (`escape-live.ts`, which runs keeper-live first) 50-65 s, 0-1 hits; **the crude reactive controller**
   (`keeper-react.ts`, lag 15, review r13's kind): jumping on the ram's charge never leaves P1 (11 fades in 5 min: the
-  fast rams after the beat); jumping in the tell wins in 41-58 s with 1 hit; `--learn` (on the charge until it has seen
-  the rage beat, then in the tell) wins in 130 s, 6 hits, 1 fade. Reading the sweep's arc (`boss.tellX0..X1`) it takes
+  fast rams after the beat); jumping in the tell wins in 41 s with 1 hit; `--learn` (on the charge until it has seen
+  the rage beat, then in the tell) wins in 57 s, 3 hits, 0 fades (130 s, 6 hits, 1 fade before `sweepFirst` 210). Reading the sweep's arc (`boss.tellX0..X1`) it takes
   0 claw hits (9 without it: render's arc carries P3). Its remaining hits are the slam's floor wave (render #6).
   The phases' gates put a floor of ~37 s under any fight (P1 ~11 s, P2 12.6 s, P3 13.5 s).
 - **The escape.** Way: the cage, west onto the west shelf, up `rubble-1/2`, east along `rubble-3..6` under the roof,
@@ -81,15 +81,29 @@ Render and audio build against these; sim / content names only (render never wri
   the next perch (a runner passes before they drop; a careful one waits and sees them land). The front follows where
   she last STOOD (`kit.escape.stand`), not her jumps (a missed jump to the gate fell back into it: a cheap loop);
   checkpoints mark on entering their rect (a leap over a perch counts). `escape-probe.ts [--careful] [--lag]`:
-  runner 7.3 s, careful (lag 15) 7.3-9.9 s, no hits; live (lag 15) 8.3 s from the roof's giving, 3.5 s of column
-  before it. **Short of the 20 s asked**: the den's room (3840 x 1536, the cellar above, the ledge below) holds
-  ~4,300 px of way; the next step for length is the clifftop room's chimney (out-1..3) under the front, not done.
+  (r14's final perches) runner 8.7 s, careful (lag 15) 8.7-11.7 s, no hits; 3.5 s of column before it; live on the
+  GPU page (lag 15) 10.7 s, 14.8 s from the release to the clifftop, no hits. A bot's
+  escape is short of 20 s (the den's room, 3840 x 1536 between the cellar and the ledge, holds ~4,300 px of way); a
+  first-timer's was 41 s (ft14den, harder perches). For more length the next step is the clifftop room's chimney
+  (out-1..3) under the front, not done.
 - **The chase.** Her progress counts only in the air and not falling (`fallVy` 2; caught counts as falling): the
   shelf under the S projected onto it and sent the firefly into the nest while she stood. A landing mid-chase off a
   hook past the first, short of the nest (`nestPx` 160), is a fall (`chase:<hook>` catch, once: landed again without
   a fling she stays); the hook she is put back at is the last `fling` event's, and every ember of the chain burns
   again. `chase-probe.ts --beat=0|6 / --closest` all reach the nest (`--beat=10`+ misses hook-6: back at hook-5).
   `hook-probe.ts` maps a hook's fling outcomes by press offset (how hook-7 was placed).
+- **First-timers (r14)**: ft14den (from the balcony, the first perch layout): won on 1 light (~75 s), "the tells read
+  once understood" (red arc = sweep, white flash = the wave), but "no breather" into P3's first sweep (now 210) and no
+  sign its first cuts landed (render); after the kill it climbed the dead-end east wall and found the cage by accident
+  (the `den-end` lean + render's lit cage are the answer); the column "the moment I'd screenshot", the roof "reads as
+  climb out NOW"; ~8 falls on 160-192 px perches with 192-224 gaps under a low roof (the perches were remade: 256 wide,
+  128 apart); release to clifftop 41.5 s of its game time; "yes, I'd tell a friend". ft14gap (from the crown) fell out
+  of the crown at once and never met the chase or the sit; ft14chase (the gap, with wings) glided straight into the
+  roost, left by its shaft and came back: the chase ended unflown (fixed: it restarts perched; no ratchet at the
+  clamp). Also seen: a freeze at the Lamp Grove's far east edge (~3,816 x 1,472) coming in from the Spire's lower
+  floor (not reproduced; not this round's rooms).
+- **Clips**: `npm run clip` without `--pickups` boots `?nopickups`, which strips the room's **enemies** too (main.ts):
+  r13's "take without the creature". Clip a fight with `--pickups --wide`.
 - **Gotchas (r14)**: render's `zoneAt` honours `after` only since r14 (r13's `crown-sit` was always on); zones are
   first-match, so a zone that must follow another is ordered after it with `until`s, not `after`s. `slashLures` runs
   after `slashEnemies` in a slash, so a cage's hit can ask whether its keeper took the same blade. An `after` lamp
