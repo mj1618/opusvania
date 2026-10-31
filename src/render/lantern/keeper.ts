@@ -112,10 +112,11 @@ interface Riser {
   s: number;
 }
 
-let holeTex: Texture | null = null;
-/** A soft hole: clear in the middle, opaque at the edge (the dark outside the light). */
+/**
+ * A soft hole: clear in the middle, opaque at the edge (the dark outside the light). One per sprite, never cached across rooms: the room's teardown, lifecycle.ts `destroyTree`, destroys every sprite's
+ * texture source; a cached one came back destroyed in the next den: `addressModeU` of null.
+ */
 function hole(): Texture {
-  if (holeTex) return holeTex;
   const n = 256;
   const c = document.createElement('canvas');
   c.width = n;
@@ -129,8 +130,7 @@ function hole(): Texture {
   }
   g.fillStyle = grad;
   g.fillRect(0, 0, n, n);
-  holeTex = Texture.from(c);
-  return holeTex;
+  return Texture.from(c);
 }
 
 /** The dark round a hole: the soft hole sprite and four rects out past the view. */
