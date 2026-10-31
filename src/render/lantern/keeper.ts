@@ -90,7 +90,23 @@ export const KEEPER = {
     cool: 0xd8e6ff,
   },
   /** The moonbeam down the shaft: its colour, alpha, width at the gate and at the floor (px), the light's reach. */
-  moon: { color: 0xcfe0ff, alpha: 0.15, w0: 190, w1: 520, light: 900, in: 2.2 },
+  // (Review r12 #7: at 0.15 a faint pale band that read as fog. Now the den's brightest thing once the roof is open: a
+  // cool shaft with a hard core, dust lit in it, the slope it lands on washed with it, the column silvered in it.)
+  moon: {
+    color: 0xcfe0ff,
+    core: 0xeef4ff,
+    alpha: 0.22,
+    shaft: [0.1, 0.13, 0.2] as const,
+    w0: 190,
+    w1: 420,
+    light: 1300,
+    intensity: 1.15,
+    in: 2.2,
+    motes: 60,
+    /** The wash down the slope it lands on (px west of the shaft, how far down), its alpha. */
+    wash: [900, 700] as const,
+    washA: 0.14,
+  },
   /** The ending's dust: grains per second along the roof while it groans, their colour. */
   dust: { rate: 60, color: 0x6a5a48 },
 };
@@ -217,6 +233,10 @@ export class KeeperStage {
   private readonly front = new Graphics();
   private readonly glowFront = new GlowPool('keeper-glow');
   private readonly beam = new GlowPool('keeper-beam');
+  /** The moonbeam's shaft: nested slanted bands, added. */
+  private readonly shaft = new Graphics({ label: 'keeper-shaft' });
+  /** Where the beam lands: the floor, or the collapse's rubble under the shaft once it has come down. */
+  private readonly rubble: Array<{ x: number; y: number; w: number; h: number; id: string }> = [];
   /** 0..1 eased: how much the swing's / the floor's dark is in. */
   private darkK = 0;
   private fallenK = 0;
@@ -261,6 +281,7 @@ export class KeeperStage {
       (scene as { gates?: Array<{ id: string; x: number; y: number; w: number; h: number }> }).gates ?? [];
     const g = gates.find((q) => q.id.endsWith('roof')) ?? null;
     this.gate = g ? { id: g.id, x: g.x, y: g.y, w: g.w, h: g.h } : null;
+    for (const q of gates) if (q.id.startsWith('rubble')) this.rubble.push({ ...q });
     // The arena's floor: the highest solid top under the cage.
     let fy = scene.height;
     for (const s of scene.solids)
@@ -270,8 +291,10 @@ export class KeeperStage {
     ctx.layers.get('pickupsBack').addChild(this.litter);
     const back = ctx.layers.get('airBack');
     back.addChild(this.darkBack.container, this.pool.container, this.shadows);
+    this.shaft.blendMode = 'add';
     ctx.layers.air.addChild(
       this.darkFront.container,
+      this.shaft,
       this.beam.container,
       this.front,
       this.glowFront.container,
@@ -745,7 +768,13 @@ export class KeeperStage {
       const e = Math.min(1, u * 1.2);
       const fade = Math.min(1, r.t / 0.2) * (u > 0.9 ? (1 - u) / 0.1 : 1);
       // Gold out of the cage, cooling as they climb toward the moon.
-      const col = mix(C.color, C.cool, Math.min(1, e * 1.2));
+      let col = mix(C.color, C.cool, Math.min(1, e * 1.2));
+      // Into the moonbeam (the roof open): silvered, and lit.
+      const inBeam = this.moonT >= 0 && Math.abs(x - gx) < KEEPER.moon.w0 * 0.8 && y < gy + 500;
+      if (inBeam) {
+        col = mix(col, KEEPER.moon.core, 0.85);
+        this.glowFront.add(x, y, 20, KEEPER.moon.core, 0.22 * fade);
+      }
       moth(
         g,
         x,
@@ -778,31 +807,60 @@ export class KeeperStage {
     const kk = k * k * (3 - 2 * k);
     const x0 = G.x + G.w / 2;
     const y0 = G.y + G.h;
-    const y1 = this.floorY;
-    const breathe = 0.85 + 0.15 * Math.sin(clock * 0.7);
-    for (let i = 0; i <= 12; i++) {
-      const t = i / 12;
+    // It lands on the floor, or on the rubble under the shaft once the slope has come down (shut rubble gates).
+    const scene = sim.scene as { gates?: Array<{ id: string }> };
+    const shut = (id: string): boolean => {
+      const i = (scene.gates ?? []).findIndex((q) => q.id === id);
+      return i >= 0 && (sim.kit.gates[i] ?? 0) <= 0 && sim.save.flags.includes('cn-den-collapse');
+    };
+    let y1 = this.floorY;
+    for (const r of this.rubble) if (x0 >= r.x && x0 <= r.x + r.w && r.y < y1 && shut(r.id)) y1 = r.y;
+    const breathe = 0.88 + 0.12 * Math.sin(clock * 0.7);
+    const slant = -30;
+    const x1 = x0 + slant;
+    // The shaft: three nested bands, the core narrow and nearly white.
+    const g = this.shaft.clear();
+    // (Landing on the rubble just under the gate it is short: a hard-edged band there read as a lampshade; glow only.)
+    const long = y1 - y0 > 380;
+    M.shaft.forEach((a, i) => {
+      if (!long) return;
+      const wk = 1 - i * 0.3;
+      const ha = (M.w0 * wk) / 2;
+      const hb = (M.w1 * wk) / 2;
+      const yEnd = y0 + (y1 - y0) * kk;
+      g.poly([x0 - ha, y0 - 40, x0 + ha, y0 - 40, x1 + hb, yEnd, x1 - hb, yEnd]).fill({
+        color: i === 2 ? M.core : M.color,
+        alpha: a * kk * breathe,
+      });
+    });
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
       const y = y0 + (y1 - y0) * t * kk;
       const w = M.w0 + (M.w1 - M.w0) * t;
-      // (The beam slants a little west, the moon's side.)
-      const x = x0 - 30 * t;
-      this.beam.add(x, y, w * 0.5, M.color, M.alpha * breathe * kk * (1 - 0.45 * t), 120, 0);
+      this.beam.add(x0 + slant * t, y, w * 0.5, M.color, M.alpha * breathe * kk * (1 - 0.35 * t), 120, 0);
     }
-    this.beam.add(x0 - 30, y1 - 10, M.w1 * 0.6, M.color, 0.22 * kk * breathe, 40);
-    this.lightMoon.x = x0 - 80;
-    this.lightMoon.y = (y0 + y1) / 2 + 120;
+    // Where it lands: a bright pool, and its wash down the slope westward (the rubble's tops catch it).
+    this.beam.add(x1, y1 - 6, M.w1 * 0.7, M.core, 0.3 * kk * breathe, 36);
+    if (y1 < this.floorY - 40)
+      for (const r of this.rubble) {
+        if (!shut(r.id) || r.x > x0 + M.w1) continue;
+        const d = Math.max(0, x0 - (r.x + r.w / 2));
+        const fall = Math.max(0, 1 - d / M.wash[0]) * Math.max(0, 1 - (r.y - y1) / M.wash[1]);
+        if (fall > 0.02) this.beam.add(r.x + r.w / 2, r.y + 10, r.w * 0.8, M.color, M.washA * fall * kk, 34);
+      }
+    this.lightMoon.x = x1 - 120;
+    this.lightMoon.y = (y0 + y1) / 2 + 160;
     this.lightMoon.radius = M.light;
-    this.lightMoon.intensity = 0.7 * kk;
-    // Motes drifting up through it.
-    for (let i = 0; i < 26; i++) {
+    this.lightMoon.intensity = M.intensity * kk;
+    // Dust drifting through it, lit.
+    for (let i = 0; i < M.motes; i++) {
       const h = hash01('mm', i);
-      const u = (clock * (0.03 + 0.03 * h) + h) % 1;
+      const u = (clock * (0.025 + 0.03 * h) + h) % 1;
       const y = y1 - (y1 - y0) * u;
-      const x =
-        x0 -
-        120 * (1 - u) +
-        Math.sin(clock * 0.8 + i) * (M.w0 * 0.3 + 60 * (1 - u)) * (hash01('mx', i) - 0.5) * 2;
-      this.glowFront.add(x, y, 3 + 2 * h, 0xeaf2ff, 0.35 * kk * Math.sin(Math.PI * u));
+      const t = (y - y0) / Math.max(1, y1 - y0);
+      const half = (M.w0 + (M.w1 - M.w0) * t) * 0.45;
+      const x = x0 + slant * t + Math.sin(clock * 0.6 + i * 2.3) * half * (hash01('mx', i) - 0.5) * 2;
+      this.glowFront.add(x, y, 2.5 + 3 * h, 0xf2f6ff, 0.6 * kk * Math.sin(Math.PI * u));
     }
     void cam;
   }
