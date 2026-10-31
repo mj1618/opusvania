@@ -49,13 +49,14 @@ function calm() {
 const flip = (t: string) => t.replace(/[LR]/g, (c) => (c === 'L' ? 'R' : 'L'));
 
 describe('input: the attack button', () => {
-  it('is a seventh action: `A` in the DSL, C / J on the keyboard, X on a pad', () => {
+  it('is a seventh action: `A` in the DSL, C / J / Ctrl on the keyboard, X on a pad', () => {
     expect(ActionBit.attack).toBe(64);
     expect(parseInputScript('A1 R+A2 .1')).toEqual([64, 66, 66, 0]);
     expect(parseInputScript('attack*1 up+attack')).toEqual([64, 68]);
     expect(formatInputScript([64, 66, 66, 0])).toBe('A1 R+A2 .1');
     const b = defaultBindings();
-    expect(b.keys.attack).toEqual(['KeyC', 'KeyJ']);
+    expect(b.keys.attack).toEqual(['KeyC', 'KeyJ', 'ControlLeft', 'ControlRight']);
+    expect(b.keys.lamp).toEqual(['KeyV', 'KeyI', 'ShiftLeft', 'ShiftRight']);
     expect(b.pad.attack).toEqual([2]);
     const all = Object.values(b.keys).flat();
     expect(new Set(all).size).toBe(all.length);

@@ -99,7 +99,7 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 ## Gotchas
 - In manual mode the page only redraws on API calls; change something by hand, then call `render()`.
 - `step()` with a big n renders every step's update but presents once: fine on a real GPU.
-- Keys in the page: arrows/WASD, Z/Space/K jump, X/L/Shift dash, C/J attack, Tab map, R restart (a game page: back
+- Keys in the page: arrows/WASD, Z/Space/K jump, X/L dash, C/J/Ctrl attack, V/I/Shift Lamp, Tab map, R restart (a game page: back
   to the last save; a `?room=` page: new game in the room).
 - After `gather` no
   input reaches her (`goal().ending.held`): `load()` to play on.
