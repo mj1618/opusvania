@@ -230,6 +230,13 @@ export type CameraTuning = typeof cameraTuning;
  *  - `firefly`: a sighting (`fireflyStart`) leans the view toward the firefly by `pan` of the way (at most `max` px)
  *    over `in` s, follows it `hold` s, back over `out` s; a pass with its own `look` frames that point with her.
  */
+/**
+ * The opening's camera (camera/open-cam.ts, the Canopy r12 moment 1): the close frame leans on a point `above` px over
+ * her cocoon's hatch point; a press's widening eases over `step` s, the breakout's let-go over `out` s. The black at
+ * the start is `marks.stage.open.black` (room-fade.ts).
+ */
+export const CAMERA_OPEN = { above: 60, step: 0.9, out: 1.8 };
+
 export const PREMISE_CAM = {
   release: { zoom: 1.06, pan: 0.12, in: 0.4, hold: 0.55, out: 1.0 },
   great: { zoom: 0.88, pan: 0.3, lift: 260, in: 0.9, hold: 3.6, out: 1.8 },

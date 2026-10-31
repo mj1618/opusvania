@@ -260,6 +260,8 @@ const CLAIMS: Claim[] = [
   },
   { room: 'cn-galleries', from: [200, 704], kit: [C], reach: ['larder'] },
   { room: 'cn-larder', from: [200, 640], kit: [C], reach: ['galleries', 'cn-larder:drop-larder'] },
+  // (r12, first-timer ft12: "trapped at the bottom of the larder": the way back up from its floor, with the claws.)
+  { room: 'cn-larder', from: [1800, 1536], kit: [C], reach: ['galleries', 'place:in'] },
   // The Grove: everything with the claws; the crown's seed needs them even inside.
   // (The way east is a root gate that opens as the pit's last creature dies: `cn-grove-clear`.)
   {
@@ -432,6 +434,15 @@ const CLAIMS: Claim[] = [
     flags: ['cn-den-down', 'cn-den-freed'],
     reach: ['out', 'place:roof'],
     not: ['tunnel'],
+  },
+  // (r12, the ending's fallback: the roof gave, the rubble's slope reaches the roof's shaft with no claws: from the
+  // balcony, a drop and the slope, out onto the clifftop. The east wall's climb was untaught, first-timer r11.)
+  {
+    room: 'cn-den',
+    from: [300, 320],
+    kit: [],
+    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
+    reach: ['out', 'place:roof'],
   },
   {
     room: 'cn-out',

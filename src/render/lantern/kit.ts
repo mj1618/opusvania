@@ -428,7 +428,11 @@ export class Kit {
       const kt = this.knit.get(i);
       const kk = kt === undefined ? 0 : 1 - kt / KIT.knit;
       const kx = kk * kk * 3 * Math.sin((kt ?? 0) * 70);
-      if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
+      // (The den's ending, the Canopy r12: the taproot is a gate the collapse opens; standing, the bake's column is it
+      // (pf-mass `paintTaproot`). The rubble is the collapse's slope: earth and broken roots, not a lattice.)
+      if (wood && g.id === 'taproot') return;
+      if (wood && g.id.startsWith('rubble')) this.rubble(back, g.x, g.y, g.w, g.h, fall, g.id);
+      else if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (wood) this.rootMat(back, glow, g.x + kx, g.y, g.w, g.h, clock, 1 - fall, g.id);
       else this.seal(back, g.x, g.y, g.w, g.h, clock, fall, g.id);
@@ -1110,6 +1114,46 @@ export class Kit {
    * posts either side and a lintel root over it, moonlight seeping through the weave from beyond. Opening, the roots
    * draw up into the lintel and the light pours out.
    */
+  /**
+   * The collapse's rubble (the Canopy r12, moment 7's slope): a heap of earth clods and broken roots filling the gate's
+   * rect, its top lumpy and dusted pale (it is walked), dropping in from above as it shuts (`fall` 1 -> 0).
+   */
+  private rubble(g: Graphics, x: number, y: number, w: number, h: number, fall: number, id: string): void {
+    const drop = fall * fall * 260;
+    const a = 1 - fall;
+    const earth = 0x120d0a;
+    const n = Math.max(6, Math.round((w * h) / 2600));
+    // The heap's body, clods overlapping, larger low down; it spills past its rect a little.
+    for (let k = 0; k < n; k++) {
+      const u = hash01(id, k * 3);
+      const v = hash01(id, k * 3 + 1);
+      const r = 26 + 34 * hash01(id, k * 3 + 2) * (0.6 + 0.6 * v);
+      const cx = x - 10 + u * (w + 20);
+      const cy = y + 18 + v * (h - 10) - drop;
+      g.ellipse(cx, cy, r, r * 0.72).fill({ color: mix(earth, 0x2a2018, 0.4 * (1 - v)), alpha: a });
+    }
+    // Broken roots sticking out of it, splintered ends lit.
+    for (let k = 0; k < 3; k++) {
+      const u = hash01(id, 50 + k);
+      const ang = (hash01(id, 60 + k) - 0.5) * 1.6 - Math.PI / 2;
+      const bx0 = x + u * w;
+      const by0 = y + 20 + hash01(id, 70 + k) * h * 0.6 - drop;
+      const len = 40 + 60 * hash01(id, 80 + k);
+      const ex = bx0 + Math.cos(ang) * len;
+      const ey = by0 + Math.sin(ang) * len;
+      g.moveTo(bx0, by0).lineTo(ex, ey).stroke({ color: 0x241a12, width: 9, cap: 'round', alpha: a });
+      g.circle(ex, ey, 3.5).fill({ color: 0x8a7458, alpha: 0.8 * a });
+    }
+    // Its top: a lumpy crust dusted pale (the walk's lip), the clods catching the moon.
+    for (let k = 0; k < Math.max(3, Math.round(w / 34)); k++) {
+      const cx = x + 6 + (k + hash01(id, 100 + k) * 0.6) * 34;
+      if (cx > x + w) break;
+      const r = 14 + 10 * hash01(id, 110 + k);
+      g.ellipse(cx, y + 6 - drop, r, r * 0.55).fill({ color: 0x1c1510, alpha: a });
+      g.ellipse(cx - r * 0.2, y - drop, r * 0.7, r * 0.22).fill({ color: 0x6a5c4c, alpha: 0.55 * a });
+    }
+  }
+
   private rootGate(
     g: Graphics,
     glow: GlowPool,

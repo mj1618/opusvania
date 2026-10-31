@@ -225,6 +225,67 @@ the render builder's.
 - **The bots read strips** (tools/playtest/lines.ts): a climb whose face has a thorn strip in its span offers the
   clean far face first, and the persona takes it first.
 
+## v12: the Keeper, the ending's fallback, the opening's hooks (the director's plan, `canopy-moments.md`)
+Round 12's level / sim lane: the climax, the first and last impressions (moments 6, 7 and 1), the hub's frame through
+the release (2), and the r11 first-timer's findings. Names, state and events for render and audio: `memory/canopy.md`
+v12 (committed first, b14e1a3).
+- **The Keeper (moment 6)**: the den's old burrback on the boss framework (`src/sim/boss/keeper.ts`, kind `keeper`,
+  tuning `t.keeper`), its creature still the `oldBurrback` (brace, ram, slam, taproot) with its phases driven by the
+  boss. 10 cuts; P2 at 7, P3 at 4.
+  - *Intro* (her first landing on the balcony): as the firefly leaves, a moth drops from the cage and the sleeper
+    heaves up and takes it (`enemyFeed`), in frame (the balcony's `intro` zone holds the arena's floor until then).
+  - *P1, under the light*: rams as before; a moth falls every 8 s (40-frame flutter, 3 px/f, ~3.2 s down). It breaks
+    off for it (`feed`, harmless). Catch it first (it clings: `mothSaved`) or let it eat and cut it head down (`eat`:
+    1.3 s, 2 cuts).
+  - *P2, the swinging light*: the big slam tears the east root; the cage swings ±560 px every 4.2 s (`cageSwing`).
+    It sees her only in the cone under the cage (±120 px at the cage, ±~350 at the floor: `keeperSight`); blind it
+    walks to where it saw her last, sniffs, braces at nothing, and a cut from behind lands. Moths fall every 7 s,
+    thrown on along the swing.
+  - *P3, the fallen cage*: the den's lamp goes out, the cage lands bent on the floor (`cageFall`), its guard off; the
+    moths circle low. Between its rams it sweeps the cloud every 5.5 s (a 0.5 s tell, 3 eaten, open 1.5 s; a cut in
+    the tell spoils it). Each of 3 cuts on the cage frees a third of what is in it (`cageRelease`).
+  - *The end*: the 22-frame hold, the death roll (its body kept); the cage takes one more cut and frees every moth
+    saved (caught + cut free + left: `lureSnuff.moths`), the held beat, the roof opens. A fade restarts the fight with
+    the cage full and hung.
+  - **Played**: the den's controller (`tools/playtest/keeper-run.ts`) wins in 64 s, 0 hits, 116 freed; the
+    human-like bots alone in the den (`humanplay -- den --room cn-den --at 300`, every skill, seeds 1-4): **12 of 12
+    down in 38-62 s, 0-2 hits**; the route plan in 41.5 s, 0 hits. By hand through `window.__game` (GPU page):
+    ~50 s, 2 hits (both standing still in P3), 114 freed; P1 ended on one wall stun, P2 on a blind back cut and a
+    spent ram, P3 on two sweeps. It reads (the dark P2 is the area's best picture) but it is **lenient**: Matt's play
+    decides whether to harden it.
+- **The ending's fallback (moment 7)**: after the release the roof gives (`denCollapse` groan +100, dust +150 / +200
+  / +260, rubble +330, settle +420; no hazards). The rubble's flag (`cn-den-collapse`) brings the taproot down (a gate
+  now) and shuts six rubble gates into a slope of 128 px steps up the arena's east end to under the roof's shaft: the
+  way out needs no claws (the east wall's climb was untaught) and the den stays caved (`rearmArenas` now re-arms only
+  a trigger's flag). The hub's roosts empty once the den's cage is freed (`roosts[].leaves`, `roostsLeft`). Proof:
+  the balcony to `out` and `place:roof` with no kit, the collapse saved.
+- **The opening's hooks (moment 1)**: the break sets `cn-hatched` (the kin's try: `marks.tatter.tryOn`); `marks.stage
+  .open` (3 s of black, the zooms 1.5 / 1.25 / 1 a press, the title 2.5 s after the break, the river's tail gone 8 s
+  after); the break waits for the black (`hatch.listenFrom` 210); the `promise` zone (0.85) on the crown's limb before
+  the lip; the valley's false lights (`stage.lights`).
+- **The hub's frame (moment 2)**: holds through the release: at 16:9 and 21:9 the cage stays in frame and the view
+  moves < 80 px from the cut to 7 s after (`canopy-r12.test.ts`).
+- **The r11 first-timer's findings**: the limbs' gap is a running jump onto a root knuckle (it was past any jump), its
+  lamp let go unaimed flings up-right (`aim`), held right it lands on the knuckle; the giant's wall is 320 tall (the
+  root over it came down to 512, 16 px over a jump onto the burl); the trunk's juvenile walks the top's floor, off
+  both landings; the den's roof climb is the rubble's slope. Burrback health against the references: the juvenile 2
+  (HK's crawlid 2 nail hits), the burrback 3 (a husk, 3-4); the "5-8 cuts" were glances off its braced front, the
+  lesson, and stay.
+- **Bots** (playtest-reports/canopy-r12, `--give-up 180`): all three lost in the well (10-14 min, the r11 sink; they
+  reach 4 rooms), no new bug; the juvenile on the trunk's top still cost each 1-2 hits (they run in from the door).
+- **First-timer ft12** (playtest-reports/2026-10-31T03-29-07-firsttimer-ft12, 16 game minutes, 16 fades, 95 hits):
+  no notch stop in the trunk, the limbs "flowed like a real traversal room" (thorn-g1 2 hits; r11 14), then 8 of its
+  10 later deaths in the Grove's pit (burr-pit-w 20 hits, burr-pit-e 16, thorn-e1 14: the thorn's put-back beside a
+  burrback); **two softlocks, fixed**: the larder's floor had no way up a person finds (three root ledges now, a
+  claim from the floor), and a Restart to the Grove's save left the wave's door shut outside it (`continueState`
+  re-arms an arena's saved lock-in). It never reached the boss; it learnt every rule by dying; the black start
+  "didn't respond to jump for a couple of seconds" (presses count in the sim; nothing shows or sounds yet).
+- **Checks**: `canopy-r12.test.ts` (16): the keeper block, the intro, P1's eat and cut and the catch, P2's swing and
+  sight, the blind back cut, P3's fall, cuts and sweep, the retry, the controller's win (>= 60 freed, < 2:30), the
+  collapse and the roosts, the hatch's flag after the black, the hub's frame, the limbs, the notch, the juvenile, the
+  Continue. Proofs: every claim holds (the rubble's, the larder's floor added); climbs; `canopy-furniture --check`:
+  round 9's bar met. `route-video.ts plan` (v9): the whole area, 70 legs, 0 failed, 6.0 min of play.
+
 ## v11: staging, three directed moments and the ending (review `reviews/canopy-r10.md`, 7.5/10)
 Round 10's step back: the premise works as a mechanic, but nothing is directed. v11 directs the first release, the
 firefly hanging a cage, and ends the area on a great cage. The level / sim side (#1, #2, #3, #4, #5, #10); the render

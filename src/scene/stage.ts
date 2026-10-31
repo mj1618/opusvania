@@ -18,6 +18,23 @@ const cue = { flag: z.string().min(1).optional(), zone: z.string().min(1).option
 
 export const StageSchema = z
   .object({
+    /**
+     * The opening (the Canopy r12, canopy-moments.md moment 1, render's): `black` frames of black from frame 0 (the
+     * wing sound; the sim's `tuning.hatch.listenFrom` keeps the break after it); `zooms` = the camera's zoom on her
+     * cocoon before the first `hatchStir` press, then after each press (1.5 -> 1.25 -> 1.0); the breakout lets go to
+     * the full frame. `title` fades in over the moon `titleAfter` frames after `hatch` (as the river's tail crosses
+     * it); the river's tail clears the sky `hatchTail` frames after `hatch` (the sky stays empty after).
+     */
+    open: z
+      .object({
+        black: z.number().int().min(0),
+        zooms: z.array(z.number().positive()).min(1),
+        title: z.string().min(1).optional(),
+        titleAfter: z.number().int().min(0).optional(),
+        hatchTail: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
     /** A pale greybox moon, far off. The title sits over it. */
     moon: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict().optional(),
     /** Far warm lights (the valley's lamps) scattered in a rect. */

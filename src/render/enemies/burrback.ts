@@ -83,6 +83,7 @@ const C = {
  * puts the burrback's back. The zone colours (edge, crest, spots) become the boss's in all three zones.
  */
 export function bossColors(on: boolean): void {
+  crustOn = on;
   if (!on) {
     loadColors();
     return;
@@ -274,6 +275,16 @@ export class BurrRig {
   private stood = false;
   /** Death effects already thrown (bit 1: first break, bit 2: second). */
   deadStage = 0;
+  /**
+   * The Keeper's death (the Canopy r12, `BOSS.death`): render frames since its killing hold let go (-1 = alive). The
+   * sim drops a dead body after 30 frames; the renderer keeps the carcass on its back (enemies/index.ts).
+   */
+  deathF = -1;
+  /**
+   * The intro's snap (`enemyFeed`, the Canopy r12): render seconds since it heaved up out of its sleep to take the
+   * falling moth (-1 = none). Its red eyes open for the snap and close again; it settles.
+   */
+  peekT = -1;
   /** Dust accumulator (render seconds). */
   dustT = 0;
   /** Sim frames into the current mode, fractional. */
@@ -563,8 +574,16 @@ export class BurrRig {
       // The sim's rule (`e.dozing`: an unseen burrback near her stops and sleeps where it stands).
       // (The old burrback's wake keeps its lids down for its first frames: it stirs before it looks.)
       const stirring = this.big && e.mode === 'wake' && this.mf < BOSS.wake.eyes;
-      const doze =
-        calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep' || stirring)
+      if (this.peekT >= 0) {
+        this.peekT += dt;
+        if (this.peekT > BOSS.snap.len) this.peekT = -1;
+      }
+      const snapping = this.peekT >= 0 && this.peekT < BOSS.snap.eyes;
+      // (Snapped awake: the lids fly open at once, and come down slowly after.)
+      if (snapping && this.peekT < 0.05) this.dozeK = 0;
+      const doze = snapping
+        ? 0
+        : calmT === 0 && !noticedNow && e.mode !== 'dead' && (e.dozing || e.mode === 'sleep' || stirring)
           ? 1
           : 0;
       this.dozeK += (doze - this.dozeK) * approach(doze ? Z.in : Z.out, dt);
@@ -840,6 +859,21 @@ export class BurrRig {
       leanT = this.d * BOSS.slamLean;
       squashT = 0.12;
       bristleT = -0.4;
+    } else if ((mode as string) === 'eat' && this.big) {
+      // The Keeper eats (the Canopy r12): head right down over its food, front low, the jaws working (a fast nod),
+      // burrs flat: open to every cut.
+      crouchT = 0.85;
+      tuckT = 0;
+      reachT = 1;
+      leanT = this.d * (0.16 + 0.05 * Math.sin(clock * 17 + this.seed));
+      bristleT = -0.3;
+    } else if ((mode as string) === 'feed' && this.big) {
+      // Going for a fallen moth: low and fast, head out, leaning into it.
+      crouchT = 0.35;
+      tuckT = 0.1;
+      reachT = 0.7;
+      leanT = this.d * 0.1;
+      bristleT = 0.4;
     } else if (mode === 'wake' && this.big) {
       // The old burrback's wake (1.5 s on her drop, the Canopy r11): it stirs with its eyes shut, opens them (red), heaves
       // itself up off the floor shaking, its burrs rising, and turns to her (the sim turns it for the last half second).
@@ -928,8 +962,19 @@ export class BurrRig {
       reachT *= 1 - ck;
       bristleT += (Cu.burrs - bristleT) * ck;
     }
+    // The Keeper's snap (the intro's `enemyFeed`): out of the lie it heaves up and lunges its head out over the moth,
+    // burrs up, then sinks back down into the dark.
+    const sn = this.peekT >= 0 ? this.peekT : -1;
+    if (sn >= 0) {
+      const up = smoothstep(0, BOSS.snap.rise, sn) * (1 - smoothstep(BOSS.snap.eyes, BOSS.snap.len, sn));
+      crouchT += (0.05 - crouchT) * up;
+      tuckT += (0 - tuckT) * up;
+      reachT += (1 - reachT) * up;
+      leanT += (this.d * 0.18 - leanT) * up;
+      bristleT += (1.2 - bristleT) * up;
+    }
     const sharp =
-      (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind || (curledNow && ck < 0.9);
+      sn >= 0 || (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind || (curledNow && ck < 0.9);
     this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
     this.crouch.zeta = sharp ? 0.55 : 0.8;
     this.crouch.step(crouchT, dt);
@@ -1140,6 +1185,11 @@ function rimPt(a: number, d: number, aEff: number, rimH: number): void {
 }
 
 let toneDark = 0;
+/** Drawing the Keeper: its coat of dead moth wings (`BOSS.crust`), set with its colours (`bossColors`). */
+let crustOn = false;
+const CRUST_WING: V3 = v3(BOSS.crust.wing);
+const CRUST_DARK: V3 = v3(BOSS.crust.wingDark);
+const CRUST_VEIN: V3 = v3(BOSS.crust.vein);
 let toneLight = 0;
 /** Beside the hero everything is a step darker (her light lifts it): 1 = no change. */
 let nearDim = 1;
@@ -1308,6 +1358,79 @@ function drawHead(
 }
 
 /** Draws one burrback. Returns the alpha it was drawn with (0 = nothing). */
+const SH_CRUST = sh(v3(0), v3(0), 0.12, 0.08, 0.05, 0.5);
+const SH_CRUST_ROOT = sh(v3(0), v3(0), 0, 0, 0, 0.5);
+/**
+ * Where the Keeper's dead wings sit on its dome (u along the shell, v up it, the wing's turn, its length 0..1, paired),
+ * the same every frame. Exported for the renderer's shed (index.ts throws the first `BOSS.crust.shed` of them).
+ */
+export function crustWing(i: number): { u: number; v: number; a: number; len: number; pair: boolean } {
+  const h = (k: number): number => hash1(i * 37 + k * 11 + 5);
+  const v = 0.18 + 0.78 * Math.sqrt(h(1));
+  // Toward its back end (where it lies under the cage's fall), a little more.
+  const u = clamp((h(2) - 0.42) * 1.9, -0.92, 0.92) * (1 - 0.25 * v);
+  // Stuck lying down the slope of the dome (tips away from the crown), each its own way off it.
+  const a = Math.atan2(0.5 + 0.5 * h(3), u * 1.8 + (h(6) - 0.5) * 0.8) + (h(7) - 0.5) * 1.3;
+  return { u, v, a, len: h(4), pair: h(5) < 0.3 };
+}
+
+/** The Keeper's coat (`BOSS.crust`): `gone` 0..1 of the first `shed` wings lifted off already (its death). */
+function drawCrust(p: Painter, d: number, rimH: number, whole: number, gone: number): void {
+  const K = BOSS.crust;
+  const wing = SH_CRUST.c0 as unknown as V3;
+  const dark = SH_CRUST.c1 as unknown as V3;
+  tone(wing, CRUST_WING, 0.8);
+  tone(dark, CRUST_DARK, 0.8);
+  tone(SH_CRUST_ROOT.c0 as unknown as V3, CRUST_VEIN, 0.5);
+  for (let k = 0; k < 3; k++)
+    (SH_CRUST_ROOT.c1 as unknown as V3)[k] = (SH_CRUST_ROOT.c0 as unknown as V3)[k]!;
+  SH_CRUST.alpha = K.alpha * whole;
+  SH_CRUST_ROOT.alpha = 0.9 * whole;
+  const shed = Math.round(K.shed * gone);
+  for (let i = shed; i < K.n; i++) {
+    const w = crustWing(i);
+    surface(w.u, w.v, d, rimH);
+    const cx = sX;
+    const cy = sY;
+    const L = K.len[0] + (K.len[1] - K.len[0]) * w.len;
+    // A forewing: root, the leading edge out to a blunt tip, the trailing edge back round (the moth's own shape).
+    const one = (a: number, flip: number): void => {
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const pt = (x: number, y: number, j: number): void => {
+        const lx = cx + x * ca - y * flip * sa;
+        const ly = cy + x * sa + y * flip * ca;
+        p.px[j] = bx(lx, ly);
+        p.py[j] = by(lx, ly);
+      };
+      pt(0, 0, 0);
+      pt(L * 0.5, -L * 0.13, 1);
+      pt(L, -L * 0.07, 2);
+      pt(L * 0.95, L * 0.13, 3);
+      pt(L * 0.55, L * 0.27, 4);
+      pt(L * 0.15, L * 0.18, 5);
+      const tx = cx + L * 0.9 * ca;
+      const ty = cy + L * 0.9 * sa;
+      p.shape(
+        6,
+        bx(cx + L * 0.45 * ca, cy + L * 0.45 * sa),
+        by(cx + L * 0.45 * ca, cy + L * 0.45 * sa),
+        SH_CRUST,
+        bx(tx, ty),
+        by(tx, ty),
+        p.px[0]!,
+        p.py[0]!,
+      );
+    };
+    one(w.a, 1);
+    if (w.pair) {
+      one(w.a + Math.PI * 0.62, -1);
+      // The body between them, a dark husk.
+      p.ellipse(bx(cx, cy), by(cx, cy), L * 0.35, L * 0.12, w.a + Math.PI * 0.31, SH_CRUST_ROOT, 8);
+    }
+  }
+}
+
 export function drawBurrback(
   p: Painter,
   /** The painter in front of the grass fringe: it gets the legs below the shell's rim. */
@@ -1336,7 +1459,23 @@ export function drawBurrback(
   let swell = 0;
   let deadK = 0;
   const dir = e.hitDir !== 0 ? e.hitDir : -e.facing;
-  if (dead) {
+  // (The Keeper does not burst: it rolls heavily onto its back, its legs kick and curl, one long breath swells it and
+  // sags out, and it lies there: `BOSS.death`, `rig.deathF`.)
+  let crackK = 0;
+  if (dead && crustOn) {
+    const D = BOSS.death;
+    const tk = Math.max(0, rig.deathF);
+    const r = sat(tk / D.roll);
+    roll = dir * Math.PI * (r * r * (3 - 2 * r));
+    // (On its back the dome is its foot: lifted so the shell rests on the floor, not half in it.)
+    hop = D.hop * Math.sin(Math.PI * r) + D.lift * (B.dome + B.rim) * (r * r * (3 - 2 * r));
+    curl = smoothstep(D.curl[0], D.curl[1], tk);
+    // One breath out: it swells a little, then sags flatter than it lay, and is still.
+    const br = smoothstep(D.crack[1], D.breath, tk) * (1 - smoothstep(D.breath, D.out, tk));
+    swell = 0.35 * br - 0.12 * smoothstep(D.breath, D.out, tk);
+    crackK = smoothstep(D.crack[0], D.crack[1], tk);
+    deadK = sat(tk / 3);
+  } else if (dead) {
     const D = B.death;
     if (t >= D.burst) return 0;
     const r = sat(t / D.roll);
@@ -1357,7 +1496,7 @@ export function drawBurrback(
   const holdLine = rig.held ? Math.max(hitFlash, B.hit.holdLine) : hitFlash;
   toneDark = B.hit.dark * (rig.held ? 1 : 1 - smoothstep(0.2, 1.6, rel)) * (1 - 0.7 * hitFlash);
   toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(0.2, 1.4, rel) * (1 - smoothstep(2, 4.2, rel));
-  toneLight = Math.max(toneLight, 0.5 * swell);
+  toneLight = crustOn && dead ? toneLight * 0.3 * (1 - crackK) : Math.max(toneLight, 0.5 * swell);
   nearDim = 1 - nearK * B.nearHero.dark * (1 - toneLight);
   tone(W.shellTop, C.shellTop);
   tone(W.shellLow, C.shellLow);
@@ -1970,7 +2109,7 @@ export function drawBurrback(
       e.hp >= e.hpMax
         ? 0
         : Math.ceil((1 - (e.hp - 1) / Math.max(1, e.hpMax - 1)) * (CRACKS.length - 1)) + (e.hp <= 1 ? 1 : 0);
-    const wide = dead ? 2.4 + 2 * swell : 1;
+    const wide = dead ? (crustOn ? 1 + 2.6 * crackK : 2.4 + 2 * swell) : 1;
     if (nCr > 0 && flank > 0.01) {
       W.crack[0] = C.crackEdge[0];
       W.crack[1] = C.crackEdge[1];
@@ -1988,6 +2127,9 @@ export function drawBurrback(
         p.ribbon(n, SH_CRACK, false, false);
       }
     }
+
+    // --- The Keeper's coat: dead moth wings stuck in its plates (thicker toward the crown and the back).
+    if (crustOn) drawCrust(p, d, rimH, whole, dead ? sat((rig.deathF - BOSS.death.roll * 0.6) / 30) : 0);
 
     // --- The row of lights on the flank: small, dim, slowly pulsing. Its only light.
     const S = B.spots;

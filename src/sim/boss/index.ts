@@ -26,6 +26,7 @@ import type { Tuning } from '../tuning';
 import { at, type BossCtx, type BossRules, lureIndex, runCues, startCues } from './core';
 import type { BossSpec } from './data';
 import { gloamRules } from './gloam';
+import { keeperRules } from './keeper';
 import { mantisRules } from './mantis';
 import { weaverRules } from './weaver';
 
@@ -36,6 +37,7 @@ const RULES: Record<BossSpec['kind'], BossRules> = {
   weaver: weaverRules,
   gloamweaver: gloamRules,
   mantis: mantisRules,
+  keeper: keeperRules,
 };
 
 /** The rules of a kind of boss. */
@@ -89,6 +91,24 @@ function freshBoss(spec: BossSpec): BossState {
     waveX: 0,
     waveDir: 1,
     waveT: 0,
+    left: 0,
+    saved: 0,
+    eaten: 0,
+    caught: 0,
+    moth: 0,
+    mothX: 0,
+    mothY: 0,
+    mothT: 0,
+    landY: 0,
+    nextDrop: 0,
+    cageX: 0,
+    cageY: 0,
+    swingT: -1,
+    cageCuts: 0,
+    lit: 1,
+    intro: 0,
+    sweepCd: 0,
+    collapse: -1,
   };
 }
 
@@ -125,6 +145,8 @@ export function createBoss(scene: Scene, t: Tuning, parts: BossParts): BossState
     dx: new Array<number>(n).fill(0),
     dy: new Array<number>(n).fill(0),
     shield: new Array<number>(n).fill(0),
+    moths: new Array<number>(n).fill(-1),
+    free: new Array<number>(n).fill(0),
   };
   const boss = freshBoss(spec);
   const down = parts.save.flags.includes(spec.flag);
@@ -152,6 +174,7 @@ export function updateBoss(state: GameState, scene: Scene, t: Tuning, events: Si
   const c: BossCtx = { rules: RULES[spec.kind], state, scene, spec, boss, t, events };
   const p = state.player;
   if (boss.stage === 'wait') {
+    RULES[spec.kind].wait?.(c);
     if (p.hp <= 0 || p.faded > 0 || state.exit || state.caught || !inside(p, spec.arena)) return;
     boss.locked = true;
     boss.attempt++;

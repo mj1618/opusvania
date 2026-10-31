@@ -57,6 +57,11 @@ export function updateHatch(
   if ((h.presses >= need && h.frames > H.listenFrom) || h.frames >= auto) {
     h.done = true;
     events.push({ type: 'hatch', x, y, cx: at.x, cy: at.y, auto: h.presses < need, frames: h.frames });
+    // (The Canopy r12, moment 1: the kin's try after the swarm keys on this flag, `marks.tatter.tryOn`.)
+    if (at.sets && !state.save.flags.includes(at.sets)) {
+      state.save.flags.push(at.sets);
+      events.push({ type: 'flagSet', flag: at.sets, by: 'hatch', x, y });
+    }
   }
   return true;
 }

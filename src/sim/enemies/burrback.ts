@@ -187,6 +187,11 @@ function walk(e: EnemyState, info: StepInfo): void {
   const t = rowOf(info.t, e);
   const G = info.t.goal;
   span(e, scene, t);
+  // (The Keeper blind in P2's dark: it goes for where it saw her last, slowly, and sniffs there.)
+  if (e.keep > 0 && e.blind > 0) {
+    seek(e, info, t);
+    return;
+  }
   // The old burrback hunts its den: it comes round to her when she is on its ground behind it.
   if (t.hunt && seenBy(e, info) > 0) {
     const p = state.player;
@@ -344,6 +349,8 @@ function brace(e: EnemyState, info: StepInfo, over = false): boolean {
   if (B.strikePx <= 0 || e.strikeCd > 0 || e.calm > 0 || heldUnseen(e, p)) return false;
   if (p.hp <= 0 || p.faded > 0 || p.kindling >= 0 || p.kindlingLamp >= 0 || info.state.goal.gathered)
     return false;
+  // (The Keeper: going for a moth it braces at nothing; in P2's dark it cannot see her to brace at.)
+  if (e.keep > 0 && (e.feedX >= 0 || e.blind > 0)) return false;
   // (Not at one dropping onto it from high above, nor at one in the air right over it, coming down
   // on it: its touch would land with the tell. It braces once she is down.)
   if (dropping(e, p, B)) return false;
@@ -786,6 +793,129 @@ function roll(e: EnemyState, info: StepInfo, B: Row): boolean {
 }
 
 /**
+ * The Keeper's phase `n` begins (src/sim/boss/keeper.ts, the Canopy r12): 2 = the big slam (the cage's root tears),
+ * a beat curled, then it hunts by the swinging light; 3 = the den's lamp out (`snuffs`), a beat, the desperate rams.
+ */
+export function keeperPhase(e: EnemyState, info: StepInfo, n: number): void {
+  const B = rowOf(info.t, e);
+  e.feedX = -1;
+  e.blind = 0;
+  e.seekX = -1;
+  e.tuck = 0;
+  e.braced = false;
+  e.chargeLeft = 0;
+  e.hitstop = 0;
+  if (e.mode === 'dead') return;
+  e.stunned = false;
+  toPhase(e, info, B, n);
+}
+
+/**
+ * The Keeper blind (P2's dark, the Canopy r12): it walks slowly to `seekX` (where it saw her last, or where a blow
+ * came from), sniffs there (`pause`), then patrols.
+ */
+function seek(e: EnemyState, info: StepInfo, t: Row): void {
+  const K = info.t.keeper;
+  if (e.seekX < 0) {
+    // (Nothing to go for: it patrols its den, turning at walls.)
+    e.vx = e.facing * t.speed;
+    stepAlong(e, info, t, e.facing, t.speed);
+    return;
+  }
+  const cx = e.x + e.w / 2;
+  const d = e.seekX - cx;
+  if (Math.abs(d) <= K.seekStopPx) {
+    e.seekX = -1;
+    e.vx = 0;
+    setMode(e, 'pause', frames(K.sniffFrames, 1));
+    e.turning = false;
+    return;
+  }
+  const dir = d < 0 ? -1 : 1;
+  if (dir !== e.facing) {
+    e.facing = dir;
+    info.events.push({
+      type: 'enemyTurn',
+      id: e.id,
+      kind: e.kind,
+      x: cx,
+      y: e.y + e.h / 2,
+      dir,
+      cause: 'hunt',
+      frames: 0,
+    });
+  }
+  stepAlong(e, info, t, dir, K.seekSpeed);
+}
+
+/** Moves it `speed` px/f along its floor toward `dir` (sub-pixel carried), turning at a wall or a brink. */
+function stepAlong(e: EnemyState, info: StepInfo, t: Row, dir: number, speed: number): void {
+  e.rx += dir * speed;
+  let n = roundHalfAway(e.rx);
+  e.rx -= n;
+  const x0 = e.x;
+  while (n !== 0) {
+    const stop = nudge(e, info.scene, dir, 0);
+    if (stop !== 0) {
+      e.rx = 0;
+      e.vx = 0;
+      turn(e, t, info.events, 'wall');
+      return;
+    }
+    e.stride += 1;
+    n -= dir;
+  }
+  e.vx = e.x - x0;
+}
+
+/**
+ * The Keeper goes for a moth (`feed`, the Canopy r12): it hurries to `feedX` at its hunt speed, braces at nothing,
+ * and waits there for its boss to say it eats (`eat`: head down, open). Returns false (its body is harmless).
+ */
+function feed(e: EnemyState, info: StepInfo, t: Row): boolean {
+  const K = info.t.keeper;
+  if (e.feedX < 0) {
+    setMode(e, 'walk', 0);
+    e.vx = 0;
+    return false;
+  }
+  const cx = e.x + e.w / 2;
+  const d = e.feedX - cx;
+  if (Math.abs(d) <= K.feedStopPx) {
+    e.vx = 0;
+    e.rx = 0;
+    return false;
+  }
+  const dir = d < 0 ? -1 : 1;
+  if (dir !== e.facing) {
+    e.facing = dir;
+    info.events.push({
+      type: 'enemyTurn',
+      id: e.id,
+      kind: e.kind,
+      x: cx,
+      y: e.y + e.h / 2,
+      dir,
+      cause: 'hunt',
+      frames: 0,
+    });
+  }
+  const speed = Math.min(K.feedSpeed, Math.abs(d) - K.feedStopPx + 1);
+  e.rx += dir * speed;
+  let n = roundHalfAway(e.rx);
+  e.rx -= n;
+  const x0 = e.x;
+  while (n !== 0 && nudge(e, info.scene, dir, 0) === 0) {
+    e.stride += 1;
+    n -= dir;
+  }
+  if (n !== 0) e.rx = 0;
+  e.vx = e.x - x0;
+  void t;
+  return false;
+}
+
+/**
  * The old burrback's boss phases (round 5), each step before its ordinary rules: the camp count, the phase
  * changes, the rear and slam, the curl, the roll. Returns what `update` returns, or null to go on with the
  * ordinary rules (phase 1 and 3's brace and ram, every stagger and open window).
@@ -819,11 +949,14 @@ function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
   if (up) e.camp++;
   else if (p.grounded || p.hp <= 0 || p.faded > 0) e.camp = 0;
   if (e.mode === 'hurt' || e.mode === 'dead') return null;
-  if (e.phase === 1 && e.hp <= Math.floor(e.hpMax * B.p2At)) {
+  // (The Keeper's phases are its boss's: src/sim/boss/keeper.ts calls `keeperPhase`.)
+  if (e.keep > 0) {
+    // (no change here)
+  } else if (e.phase === 1 && e.hp <= Math.floor(e.hpMax * B.p2At)) {
     toPhase(e, info, B, 2);
     return false;
   }
-  if (e.phase === 2 && e.hp <= Math.floor(e.hpMax * B.p3At)) {
+  if (e.keep === 0 && e.phase === 2 && e.hp <= Math.floor(e.hpMax * B.p3At)) {
     toPhase(e, info, B, 3);
     return false;
   }
@@ -838,14 +971,14 @@ function phaseStep(e: EnemyState, info: StepInfo, B: Row): boolean | null {
   if (e.mode === 'curl') {
     e.vx = 0;
     if (--e.timer <= 0) {
-      if (e.phase === 2) startRoll(e, info, B);
+      if (e.phase === 2 && e.keep === 0) startRoll(e, info, B);
       else setMode(e, 'walk', 0);
     }
     return false;
   }
   if (e.mode === 'roll') return roll(e, info, B);
   const free = (e.mode === 'walk' || e.mode === 'pause' || e.mode === 'alert') && e.knockVx === 0;
-  if (free && e.phase === 2) {
+  if (free && e.phase === 2 && e.keep === 0) {
     setMode(e, 'curl', frames(B.recurlFrames, 1));
     return false;
   }
@@ -1269,6 +1402,18 @@ export const burrback: KindRules = {
       if (--e.timer <= 0) setMode(e, 'walk', 0);
       return false;
     }
+    // (The Keeper, the Canopy r12: going for a moth, and head down over it, open: its boss says when.)
+    if (e.mode === 'feed') return feed(e, info, B);
+    if (e.mode === 'eat') {
+      e.vx = 0;
+      if (e.knockVx !== 0) knock(e, scene, B);
+      if (--e.timer <= 0) {
+        e.knockVx = 0;
+        e.stunned = false;
+        setMode(e, 'wake', frames(B.riseFrames, 1));
+      }
+      return false;
+    }
     // (Round 5: the old burrback's boss phases: the slam, the roll, the taproot.)
     if (e.phase > 0) {
       const r = phaseStep(e, info, B);
@@ -1686,6 +1831,8 @@ export const burrback: KindRules = {
       // The old burrback: braced, only a pogo lands (one a brace); a wall stun opens the shell; any
       // other time everything glances (a down cut still bounces her).
       if (e.stunned) return false;
+      // (The Keeper blind in P2's dark: a cut from behind it lands.)
+      if (e.keep > 0 && e.blind > 0 && dir !== 'down' && (px - (e.x + e.w / 2)) * e.facing < 0) return false;
       if (dir === 'down') return !e.braced || e.pogoed;
       return true;
     }

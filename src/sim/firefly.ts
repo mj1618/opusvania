@@ -208,9 +208,19 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
   }
 }
 
-/** Is roost `r` lit (its trap lamp freed)? */
+/** Is roost `r` lit (its trap lamp freed, its moths not yet gone on: `leaves`)? */
 export function roostLit(r: Roost, save: SaveState): boolean {
-  return save.snuffed.includes(r.lure);
+  return save.snuffed.includes(r.lure) && !roostLeft(r, save);
+}
+
+/** Has roost `r`'s cloud gone on the migration (its `leaves` flag saved, the Canopy r12's ending)? */
+export function roostLeft(r: Roost, save: SaveState): boolean {
+  return !!r.leaves && save.flags.includes(r.leaves);
+}
+
+/** The roosts of this room whose moths have gone on (render: an empty roost, a few wing scales on the bark). */
+export function roostsLeft(scene: Scene, save: SaveState): Roost[] {
+  return (scene.roosts ?? []).filter((r) => roostLeft(r, save));
 }
 
 /** The roosts of this room whose trap lamps she has freed, in the room's order (render draws a settled cloud on each). */

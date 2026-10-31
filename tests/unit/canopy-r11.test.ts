@@ -285,11 +285,13 @@ describe('the great cage over the old burrback (r11, review r10 #1)', () => {
     expect(s.lures.hp[k]).toBe(t.lures.trapHp);
   });
 
-  it('down, three cuts from a jump off the shelf free it: a held beat, 120 moths, the roof opens', () => {
-    const s = at('cn-den', 1500, 1088, CG, ['cn-den-down']);
+  it('down, it lies fallen on the floor (r12, the Keeper): a cut frees it, a held beat, 120 moths, the roof opens', () => {
+    const s = at('cn-den', 1500, 1344, CG, ['cn-den-down']);
     s.enemies.length = 0;
     const ev: SimEvent[] = [];
-    shelfCuts(s, ev);
+    const cx = (scene.boss?.lowered?.x ?? 0) - 40;
+    placePlayer(s, cx, 1344, t, withShortcuts(scene, s.save), []);
+    standCuts(s, k, 4, ev);
     run(s, 0, 100, ev);
     const snuff = ev.find((e) => e.type === 'lureSnuff' && e.id === 'trap-den') as Of<'lureSnuff'>;
     expect(snuff?.trap).toBe(true);

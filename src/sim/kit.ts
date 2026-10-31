@@ -97,7 +97,10 @@ export function rearmArenas(
   };
   for (const g of scene.gates ?? []) {
     if (g.shut === undefined || !gateShut(g, save.flags)) continue;
-    drop(g.shut);
+    // (Only an arena's lock-in, shut by a trigger: the Canopy r12's rubble shuts on the den's collapse for good.)
+    const shut = g.shut;
+    if (!(scene.triggers ?? []).some((tr) => tr.sets === shut)) continue;
+    drop(shut);
   }
   // An ambush (`rearm`, review r7 #2) plays again until every creature it wakes is down (its `sets` saved, or killed
   // now). Called with no creatures (a fresh entry into the room), only the saved flags count.

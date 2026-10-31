@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v11, 2026-10-31)
+# The Canopy: the first area built to the reference numbers (v12, 2026-10-31)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,72 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v12 (round 12, docs/design/levels/canopy-moments.md): the Keeper, the ending's fallback, the opening's hooks
+Names are the contract with render and audio (section 6 of the director's plan); render and audio never write them.
+- **The Keeper** (moment 6; `src/sim/boss/keeper.ts`, tuning `t.keeper`): the den's `old-burr` on the boss framework,
+  room block `boss {id: 'the-keeper', kind: 'keeper', heart: 'trap-den', lowered, floor, collapse}` (its `name` is
+  never to be shown: no name card). The creature is still kind `oldBurrback` (`EnemyState.keep` 1: the boss drives its
+  phases; spawn `hp` 10; P2 at `p2Hp` 7, P3 at `p3Hp` 4). Lock: her whole box on the arena's floor (no doors).
+  - **Intro** (stage `wait`, her first landing on the balcony, not on a retry): `introLead` frames before the firefly's
+    pass ends a moth leaves the cage (`cageDrop`), falls to the sleeper's mouth, and it takes it (`enemyFeed {id, x,
+    y}`). Measured: drop at +269, taken at +431 (2.7 s before she can be down).
+  - **P1 / P2 moths**: `cageDrop {lure, x, y, frames (the tell), landX, landY}`; then the moth falls (state
+    `boss.moth` 1 tell / 2 falling / 3 on the floor, `mothX`, `mothY`). Creature mode **`feed`** (it hurries for it,
+    braces at nothing, harmless), then **`eat`** (head down, `stunned`: every cut lands, `eatOpenHits` 2) with
+    `mothEaten {enemy, x, y, n, left}` + `keeperEat {id, x, y, frames, sweep}`. She catches it first (her box + 36):
+    `mothSaved {x, y, saved}` (it clings: `boss.caught`). Every ~8 s (P2 7 s), the next once the last is gone.
+  - **P2**: `cageSwing {lure, x, y, period 252, reach 560}`; the cage's flame swings (live offsets: `flameAt` /
+    `boss.cageX/Y`, lifting 110 at the ends). It sees her only in the cone under the cage (`lightBase` 120 + 0.42 per
+    px down): `boss.lit`, `keeperSight {id, x, y, lit}` on each change (audio: muffle when unseen). Blind
+    (`EnemyState.blind` 1) it walks slowly to `seekX` (where it last saw her, or where a blow came from), sniffs 60
+    frames (`pause`), braces at nothing, and **a cut from behind it lands**.
+  - **P3**: `enemyPhase 3` (the den's lamp `wick-taproot` out, as before), then `cageFall {lure, x, y}`: the cage lies
+    at `lowered` (1,856 x 1,272) with its guard off (`lures.live.free`). Between rams it **sweeps** the low cloud
+    (`feed` to the cage, `keeperEat sweep: true`, `sweepTell` 30 then `mothEaten n 3`; open the whole 90 frames, a cut
+    in the tell spoils the sweep). Each of 3 cuts on the cage frees a third of what is in it: `cageRelease {lure, x,
+    y, moths, left}` (then the bars glance again until it is down).
+  - **Counts** (render's cloud density, the HUD): `boss.left` (in the cage / the low cloud), `saved`, `eaten`,
+    `caught`. They are room-local: a fade restarts the fight with the cage full and hung (`init` on `resetBoss`, the
+    den's lamp relit).
+  - **The end**: its death is the old burrback's (a 22-frame hold, `killHitstopFrames`; the body lies `deadFrames` 150: the roll), the boss
+    `bossDefeat` (no moths: the cage is not the boss's to snuff), then stage `end` waits for the release: one cut on
+    the fallen cage (`lures.live.moths` = saved + left; `lureSnuff.moths` = every moth saved, `trap: true`, the held
+    beat 90) sets `cn-den-freed` (the roof's gate). **render: the column rising is `boss.left` of them**.
+- **The ending's fallback** (moment 7): from the release, cue set `collapse`: `denCollapse {phase, x, y}` `groan` +100,
+  `dust` +150 / +200 / +260 (x along the roof), `rubble` +330 (flag **`cn-den-collapse`**: the taproot, now gate
+  `taproot`, falls; gates `rubble-1..6` shut into a slope of 128 px steps from x 2,304 up to a top at 576 under the
+  roof's shaft: the way out needs no claws), `settle` +420 (the boss `down`). `rockfall` / `collapseFront` are named
+  for round 13 and not sent. The rubble's `shut` is not re-armed by a fade or an entry (`rearmArenas` only re-arms a
+  trigger's flag now): the den stays caved. **The roosts** (`scene.roosts[].leaves` = `cn-den-freed`):
+  `roostsLit` drops a roost whose moths have gone on; `roostsLeft(scene, save)` lists them (render: empty roosts, a
+  few wing scales).
+- **The opening's hooks** (moment 1, render's to draw): `cn-hatch.hatch.sets` = `cn-hatched` (`flagSet` on the
+  break; `marks.tatter.tryOn` = it: the kin's jump after the swarm and fall back); `marks.stage.open {black 180, zooms
+  [1.5, 1.25, 1], title 'LAMPFALL', titleAfter 150, hatchTail 480}` (frames; zooms before the first `hatchStir` press
+  and after each); `tuning.hatch.listenFrom` 210 (was 150: the break never comes in the black); camera zone
+  `promise` (x 2,816-3,296 on the crown's limb before the lip, zoom 0.85, no lock); `marks.stage.lights` (the valley's
+  false lights, x 4,200-6,200, y 1,250-1,610, 9).
+- **The intro's camera**: zone `intro` on the balcony (zoom 0.72, bounds over the arena's west two thirds) until
+  `boss.fed` (`cn-den-fed`: the sleeper took the moth, or she came down first): the fall and the snap are in frame.
+- **Render asks (r12)**: the gate `taproot` is the old taproot mass (standing until `cn-den-collapse`, then fallen) and
+  `rubble-1..6` are the collapse's rubble (solid from `cn-den-collapse`): both drew as root-lattice gates in r12's
+  first build. A Pixi `addressModeU` of null threw once on P2's start (`cageSwing`) in the dev page (render's
+  uncommitted code at the time); the next step drew.
+- **Gotcha: `rearmArenas` re-arms only a trigger's `shut` flag** (r12): a fade or an entry used to take back every
+  standing `shut` flag, so the den's rubble would have vanished on re-entry.
+- **The fight, measured** (r12): the den's controller (`keeper-run.ts`) wins in 64 s, 0 hits (P2 at 22 s, P3 at 44 s),
+  65-83 saved by cuts and catches, 116-117 freed; `humanplay -- den --room cn-den --at 300` (every skill, seeds 1-4):
+  **12 of 12 down in 38-62 s, 0-2 hits**. Played by hand through `window.__game` (bursts): P1 ended on one wall stun
+  (3 cuts), P2 on a blind back cut, a caught moth and a spent ram's 2 cuts, P3 on two sweeps; two hits taken, both
+  standing still in P3; 114 freed. Lenient: Matt's play decides.
+- **Softlocks the r12 first-timer found, fixed**: a Continue now re-arms an arena's saved lock-in (`continueState` calls
+  `rearmArenas`: a Restart to the Grove's save left the wave's door shut outside it); the larder's floor has a way
+  back up a person finds (three root masses, claim from the floor). Still open: the cellar <-> fork vertical link
+  reads as a loop (jump left off the cellar's ledge), the Grove's thorn put-back beside the pit's burrbacks (8 of
+  ft12's 10 later deaths), no feedback for presses in the hatch's black.
+- Tools: `npx tsx tools/levels/keeper-probe.ts [--from=balcony|floor] [--phase=n]` (events of a stand-still),
+  `npx tsx tools/playtest/keeper-run.ts [--catch] [--cage] [--trace]` (the den's fight controller from the balcony).
 
 ## The premise (v10, review r9 #2): sim state and events for render
 Two kinds of lamp, the firefly once, the hub's roosts. Names are stable; render reads them, never writes.

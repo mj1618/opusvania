@@ -123,6 +123,7 @@ export class Cast {
     // Behind the hero (she is added after this): the husks, then Tatter.
     layer.addChildAt(this.back.mesh, 0);
     for (const [i, c] of this.tatters.entries()) layer.addChildAt(c.t.mesh, 1 + i);
+    for (const c of this.tatters) layer.addChild(c.t.answerG);
     layer.addChildAt(this.halo, 1);
     layer.addChild(this.front.mesh);
     layer.addChild(this.pips);
@@ -245,6 +246,14 @@ export class Cast {
         });
       if (c.climb) this.climb(c, dt, her);
       if (c.tryOn && events.some((e) => e.type === 'flagSet' && e.flag === c.tryOn)) t.tryT = 0;
+      // The cage it wants cut open (the Canopy r12, moment 2): its answer.
+      const w = t.wants;
+      if (
+        w &&
+        t.answerT === -1 &&
+        events.some((e) => e.type === 'lureSnuff' && Math.hypot(e.x - w[0], e.y - w[1]) < 200)
+      )
+        t.answerT = 0;
       // (It is drawn about its mark: her, seen from where it has climbed to.)
       const seen = hatchLink.inside
         ? null

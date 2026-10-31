@@ -149,8 +149,14 @@ export const FACE_FAMILY: Record<TopFamily, { moss: number; lit: number } | null
   straw: { moss: 0x5a4c26, lit: 0x9a8650 },
 };
 
+/**
+ * Rooms whose tops grow another family than their look's (the Canopy r12, canopy-moments.md close-up #1: the hub is the
+ * most crossed green room, open to the sky; its bark is heartwood, its tops are moss).
+ */
+export const ROOM_TOP_FAMILY: Readonly<Record<string, TopFamily>> = { 'cn-hub': 'lime' };
+
 export function topFamilyOf(room: Room): TopFamily {
-  return TOP_FAMILY[lookOf(room)];
+  return ROOM_TOP_FAMILY[room.id] ?? TOP_FAMILY[lookOf(room)];
 }
 
 /** The family of the room being painted (null: the old band and blanket). */
@@ -318,6 +324,12 @@ export function paintGrowth(
     // 1. The shadow it casts on the wood under it, then its dark body.
     p.tint(fill(low, shadow), G.shadow, 0.6);
     p.solid(fill(top, low), G.deep, h + 0.1, { moss: G.moss });
+    // (Lime, the Canopy r12 close-up #1: Silksong's moss is round cushions of fine stipple, lit from the top, over a
+    // dark core, breaking the line; the even dots and blade tufts read as bubble wrap at play zoom.)
+    if (fam === 'lime') {
+      limeStipple(p, G, a, b, Y, thick, h, sd, r, bumps);
+      continue;
+    }
     // 2. The stipple: dots, lighter toward the top, dark gaps left between them.
     const area = len * th * 0.75;
     const n = Math.round(area / G.dot);
@@ -334,8 +346,7 @@ export function paintGrowth(
       });
     }
     // 3. The family's own pieces.
-    if (fam === 'lime') limeCushions(p, G, a, b, Y, thick, h, sd, r, bumps);
-    else if (fam === 'amber') amberRosettes(p, G, a, b, Y, thick, h, sd, r, bumps);
+    if (fam === 'amber') amberRosettes(p, G, a, b, Y, thick, h, sd, r, bumps);
     else if (fam === 'frost') frostFringe(p, G, a, b, Y, thick, h, sd, r, bumps);
     else if (fam === 'fungus') fungusCaps(p, G, a, b, Y, thick, h, sd, r, bumps);
     else strawBlades(p, G, a, b, Y, thick, h, sd, r, bumps);
@@ -357,65 +368,122 @@ type Piece = (
   bumps: Array<[number, number, number]>,
 ) => void;
 
-/** Lime: cushions along the crest (each its own size, a lit cap), and now and then a clump of drips under a run. */
-const limeCushions: Piece = (p, G, a, b, Y, thick, h, sd, r, bumps) => {
-  // Clumps of 2-5 tufts of 3-7 blades on a low dark mound, with bare gaps between the clumps (r9 #8: round beads).
-  let x = a + range(r, 4, 30);
-  while (x < b - 8) {
-    const nt = 2 + Math.floor(r() * 4);
-    for (let q = 0; q < nt && x < b - 8; q++) {
-      const k = smoothstep(a, a + 30, x) * smoothstep(b, b - 30, x);
-      const len = range(r, 8, 22) * (0.5 + 0.5 * k);
-      const rise = range(r, 0.2, 1) * G.rise * k;
-      const base = Y(x) - rise + 3;
-      bumps.push([x, rise, len * 0.5]);
+/**
+ * Lime moss as Silksong's (the Canopy r12, canopy-moments.md close-up #1): overlapping cushions 26-90 px across along
+ * the run, each a lobed dark core with its mid and lit layers stacked up toward the light (upper left), built of fine
+ * stipple in three value steps (`LIME_STIPPLE`: 60-300 marks a cushion, ~25-40 marks per 100 px of top), rising up to
+ * ~14 px over the walk's line; a fringe of short strands off the band's lower edge; a few fronds standing out of it.
+ */
+export const LIME_STIPPLE = {
+  /** Cushion width (px) and how far along the next one starts (x its width). */
+  w: [26, 90] as const,
+  step: [0.45, 0.75] as const,
+  /** How high over the line a cushion rises (x its width, capped px). */
+  rise: 0.34,
+  riseMax: 18,
+  /** One mark per this many px² of a cushion, and their radius (px). */
+  per: 20,
+  dotR: [1.8, 3.4] as const,
+  /** The fringe off the band's lower edge: spacing and length (px). */
+  fringeGap: [3, 9] as const,
+  fringeLen: [4, 18] as const,
+  /** Fronds standing out of the moss (silhouette life): spacing (px). */
+  frondGap: [90, 260] as const,
+};
+
+const limeStipple: Piece = (p, G, a, b, Y, thick, h, sd, r, bumps) => {
+  const S = LIME_STIPPLE;
+  const steps = [G.deep, mixc(G.deep, G.body, 0.55), G.body, mixc(G.body, G.high, 0.5), G.high, G.lit];
+  let x = a + range(r, 0, 12);
+  let k = 0;
+  while (x < b - 6) {
+    const end = smoothstep(a, a + 40, x) * smoothstep(b, b - 40, x);
+    const w = range(r, S.w[0], S.w[1]) * (0.45 + 0.55 * end) * (0.6 + 0.4 * clamp(thick(x) / 30, 0, 1));
+    const rx = w / 2;
+    const rise = Math.min(S.riseMax, w * S.rise * (0.5 + 0.5 * r())) * (0.4 + 0.6 * end);
+    const top = Y(x) - rise;
+    const bot = Y(x) + thick(x) * 0.7;
+    const cy = (top + bot) / 2;
+    const ry = (bot - top) / 2;
+    bumps.push([x, rise, rx * 0.9]);
+    const seed = sd + k * 7;
+    // The core, then the mid and lit layers stacked toward the light (up and a little left), each smaller.
+    p.solid(blob(x, cy, rx, ry, seed, 0.28, 14), G.deep, h + 0.12, { moss: G.moss });
+    p.solid(
+      blob(x - rx * 0.08, cy - ry * 0.18, rx * 0.84, ry * 0.74, seed + 1, 0.3, 12),
+      steps[2] as number,
+      h + 0.15,
+      {
+        moss: G.moss,
+      },
+    );
+    p.solid(
+      blob(x - rx * 0.16, cy - ry * 0.42, rx * 0.56, ry * 0.42, seed + 2, 0.32, 10),
+      steps[4] as number,
+      h + 0.18,
+      {
+        moss: G.moss,
+      },
+    );
+    // The stipple: fine marks over the whole cushion, the value by how far toward the light, jittered.
+    const n = Math.round((Math.PI * rx * ry) / S.per);
+    for (let q = 0; q < n; q++) {
+      const ang = r() * Math.PI * 2;
+      const rr = Math.sqrt(r());
+      const dx = Math.cos(ang) * rr * rx * 0.96;
+      const dy = Math.sin(ang) * rr * ry * 0.96;
+      // Lit from up-left: -1 (shadow side) .. 1 (lit side).
+      const toward = clamp((-dy / ry) * 0.85 - (dx / rx) * 0.25, -1, 1);
+      // (The palest step only now and then: under the warm key a pale green cap goes grey-pink.)
+      const v = clamp(Math.round((toward + 1) * 2.2 + range(r, -1.2, 1.2)), 0, r() < 0.12 ? 5 : 4);
+      const rad = range(r, S.dotR[0], S.dotR[1]) * (v >= 4 ? 0.85 : 1);
       p.solid(
-        chaikin(blob(x, base + 2, len * 0.55, len * 0.22, sd + Math.round(x), 0.25, 10), 1),
-        G.body,
-        h + 0.2,
-        { moss: G.moss },
+        blob(x + dx, cy + dy, rad, rad * range(r, 0.75, 1), seed + q, 0.25, 5),
+        steps[v] as number,
+        h + 0.16 + v * 0.02,
+        {
+          moss: G.moss,
+        },
       );
-      const lean = range(r, -0.35, 0.35);
-      tuft(p, x, base, lean, 3 + Math.floor(r() * 5), len, range(r, 2.2, 3.6), G.body, h + 0.22, G.moss, r);
-      tuft(
-        p,
-        x + range(r, -2, 2),
-        base - 1,
-        lean,
-        2 + Math.floor(r() * 3),
-        len * 0.7,
-        range(r, 1.6, 2.6),
-        r() < 0.5 ? G.high : G.lit,
-        h + 0.28,
-        G.moss,
-        r,
-        range(r, 0.5, 0.85),
-      );
-      x += len * range(r, 0.6, 1.1);
     }
-    x += range(r, 24, 90);
+    x += w * range(r, S.step[0], S.step[1]);
+    k++;
   }
-  if (b - a > 140 && r() < 0.7) {
-    const nd = 1 + Math.floor(r() * 3);
-    for (let k = 0; k < nd; k++) {
-      const sx = range(r, a + 30, b - 30);
-      const sy = Y(sx) + thick(sx) * 0.75;
-      const len = range(r, 18, 64);
-      const w0 = range(r, 8, 18);
-      const pts: number[] = [];
-      for (let i = 0; i <= 10; i++) {
-        const t = i / 10;
-        const hw = (w0 / 2) * (1 - t ** 1.8) ** 0.5 * (1 + 0.3 * wobble(sy + t * len, sd + k, 9));
-        pts.push(sx - hw, sy + t * len);
-      }
-      pts.push(sx, sy + len + w0 * 0.25);
-      for (let i = 10; i >= 0; i--) {
-        const t = i / 10;
-        const hw = (w0 / 2) * (1 - t ** 1.8) ** 0.5 * (1 + 0.3 * wobble(sy + t * len, sd + k + 3, 9));
-        pts.push(sx + hw, sy + t * len);
-      }
-      p.solid(pts, mixc(G.deep, G.body, range(r, 0.2, 0.7)), h + 0.08, { moss: 0.9 });
-    }
+  // The fringe: short strands off the band's lower edge (thicker under thick moss), dark tips.
+  for (let fx = a + range(r, 2, 8); fx < b - 4; fx += range(r, S.fringeGap[0], S.fringeGap[1])) {
+    const d = thick(fx);
+    if (d < 8) continue;
+    const y0 = Y(fx) + d * 0.72;
+    const len = range(r, S.fringeLen[0], S.fringeLen[1]) * clamp(d / 34, 0.35, 1.2);
+    const lean = range(r, -2.5, 2.5);
+    const ww = range(r, 0.7, 1.3);
+    // (Fine and dark: wide pale drips read as icicles or paint, art-direction r7.)
+    const col = r() < 0.4 ? mixc(G.deep, G.body, 0.6) : G.deep;
+    p.solid(
+      [fx - ww, y0, fx + ww, y0, fx + lean + ww * 0.7, y0 + len, fx + lean - ww * 0.7, y0 + len],
+      col,
+      h + 0.1,
+      {
+        moss: G.moss,
+      },
+    );
+  }
+  // Fronds standing up out of it, now and then (the line's silhouette life).
+  for (let fx = a + range(r, 20, S.frondGap[0]); fx < b - 20; fx += range(r, S.frondGap[0], S.frondGap[1])) {
+    const base = Y(fx) - 2;
+    tuft(
+      p,
+      fx,
+      base,
+      range(r, -0.35, 0.35),
+      3 + Math.floor(r() * 3),
+      range(r, 14, 30),
+      range(r, 2.2, 3.4),
+      G.deep,
+      h + 0.22,
+      G.moss,
+      r,
+    );
   }
 };
 

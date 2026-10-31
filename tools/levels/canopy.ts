@@ -972,6 +972,8 @@ const G = 'glide';
 
 /** The first fling's lamp (r8): over the gap between S5's cut end and S8, on a running jump's rise off the lip. */
 const FIRST_WICK: [number, number] = [3700, 660];
+/** The promise's widen zone (r12, moment 1): the crown's limb west of the lip (the first fling's frame is the lip's). */
+const PROMISE_X: [number, number] = [2816, 3296];
 
 function hatch(): Json {
   const src = JSON.parse(readFileSync('content/rooms/wood-hatch.json', 'utf8')) as Json;
@@ -1054,6 +1056,8 @@ function hatch(): Json {
     id: 'cn-hatch',
     title: 'The hatching branch',
     abilities: [],
+    // (r12, moment 1: the break sets a flag the kin's try keys on: it jumps after the swarm and falls back.)
+    hatch: { ...(src.hatch as Json), sets: 'cn-hatched' },
     // (The level's pieces draw the pocket's cover: r6.)
     art: { ...(src.art as Json), pieces: true },
     width: P.w,
@@ -1094,6 +1098,9 @@ function hatch(): Json {
           bounds: { x: 3200, y: 360, w: 2048, h: 1152 },
           until: 'cn-first-fling',
         },
+        // (r12, moment 1, the reveal: on the crown's limb before the lip the view widens over the canopy's edge: the
+        // river pouring down into the valley's false lights. No lock, no input held: as long as she stands there.)
+        { id: 'promise', x: PROMISE_X[0], y: 560, w: PROMISE_X[1] - PROMISE_X[0], h: 420, zoom: 0.85 },
       ],
     },
     solids: [...solids, ...pocketSolids],
@@ -1101,6 +1108,16 @@ function hatch(): Json {
     pods: [...((src.pods as Json[] | undefined) ?? []), pocketPod],
     marks: {
       ...marks,
+      // (r12, moment 1: the kin tries the air after the swarm as she breaks out, and falls back.)
+      tatter: { ...(marks.tatter as Json), tryOn: 'cn-hatched' },
+      stage: {
+        ...((marks.stage as Json | undefined) ?? {}),
+        // (r12, moment 1, render's: 3 s of black, the cocoon close and a widen a press, the title over the moon as the
+        // river's tail crosses it, the tail gone from the sky 8 s after the break.)
+        open: { black: 180, zooms: [1.5, 1.25, 1], title: 'LAMPFALL', titleAfter: 150, hatchTail: 480 },
+        // (The valley's false lights, far below the lip: the river breaks into knots round them.)
+        lights: { x: 4200, y: 1250, w: 2000, h: 360, count: 9 },
+      },
       places: [
         ...((marks.places as Json[] | undefined) ?? []),
         { id: 'pocket', x: 4960, y: 1600 },
@@ -1143,6 +1160,8 @@ function hatch(): Json {
 const HX = 3520;
 /** The three trap lamps (r10, review r9 #2): the hub's, the Grove's west, the den's warning's. */
 const HUB_TRAP = 'trap-crossing';
+/** The den's great release (the great cage's `sets`): the roof opens, the roosts' moths go on (r12). */
+const DEN_FREED = 'cn-den-freed';
 /** The hub's cage (r11): under the landing limb, in the drop's frame. */
 const HUB_CAGE: [number, number] = [6300, 1400];
 const GROVE_TRAP = 'trap-grove';
@@ -1279,9 +1298,18 @@ function hub(): Json {
   // it (`lures.trapRadius`), the first cut lets one moth out. Freed, `cn-hub-freed`: the landing's frame lets go.)
   r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, moths: 30, sets: 'cn-hub-freed' });
   r.set('roosts', [
-    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 1024, y: 1088, w: 128, h: 448 },
-    { id: 'roost-grove', lure: `cn-grove:${GROVE_TRAP}`, x: 2560, y: 1344, w: 320, h: 192 },
-    { id: 'roost-warn', lure: `cn-tunnel:${WARN_TRAP}`, x: 6144, y: 640, w: 512, h: 320 },
+    // (r12, the ending: once the den's great cage is freed the roosts' moths go on the migration: `leaves`.)
+    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 1024, y: 1088, w: 128, h: 448, leaves: DEN_FREED },
+    {
+      id: 'roost-grove',
+      lure: `cn-grove:${GROVE_TRAP}`,
+      x: 2560,
+      y: 1344,
+      w: 320,
+      h: 192,
+      leaves: DEN_FREED,
+    },
+    { id: 'roost-warn', lure: `cn-tunnel:${WARN_TRAP}`, x: 6144, y: 640, w: 512, h: 320, leaves: DEN_FREED },
   ]);
   r.place('trap', HUB_CAGE[0], 1600);
   // (r11: off the landing either way, the first time: its frame lets go, and the kin goes back to its light.)
@@ -1375,15 +1403,17 @@ const TRUNK_BED: [number, number] = [1664, 2304];
 const TRUNK_WICK: [number, number] = [1184, 800];
 
 function trunk(): Json {
-  const r = new Wood('cn-trunk', 'The fallen giant', [2900, 384], 7202, { back: true, mood: 'deep' });
+  const r = new Wood('cn-trunk', 'The fallen giant', [3136, 384], 7202, { back: true, mood: 'deep' });
   r.cave(2560, 128, 3200, 384, { ceil: 64, w: 0, e: 0, corner: 0 });
   // Tier 1: the hall inside the giant (its roof bitten).
   r.cave(1536, 192, 2624, 704, { ceil: 128, w: 0, e: 0 });
   // The hall's west end: a low corridor shut by rotten heartwood (the wall that teaches breaking), and behind it a
   // chamber over the drop, the seed in an alcove up in its roof over a root burl (the wall pays at once: the seed
   // is behind it, not before it; orchestrator r4).
-  r.hole(1472, 512, 1536, 704);
-  r.bark('giant-wall', 1472, 512, 64, 192);
+  // (r12, first-timer r11: "a full jump bonks the trunk": the root hanging over the wall came down to 512, 16 px over
+  // a jump onto the burl west of it; only a short hop got through. The wall is 320 tall now, its top at 384.)
+  r.hole(1472, 384, 1536, 704);
+  r.bark('giant-wall', 1472, 384, 64, 320);
   r.cave(1088, 320, 1472, 704, { ceil: 0, w: 0, e: 0, corner: 64 });
   r.hole(1152, 160, 1344, 320);
   // The drop to tier 2; tier 2 under a low roof.
@@ -1410,7 +1440,10 @@ function trunk(): Json {
   // A root column carries the shaft's east face down to 192 over tier 3's floor: with the claws she climbs back up
   // (v3's shaft started 448 over the floor: tier 3 was a pocket the bots wandered for minutes).
   r.mass(640, 1216, 64, 256);
-  r.juvenile('juv-t1', 2496, 704, -1, 96, { fenced: true });
+  // (r12, first-timer r11: "that bug pops up right where I land": on the hall's 320 px of floor east of the bed both
+  // ends are landings (the drop from the top, the knuckles back east). It walks the top's floor now, seen from the
+  // door (260 px off: its 30-frame tell plays before it can reach her), clear of the shaft's lip.)
+  r.juvenile('juv-t1', 2830, 384, -1, 70, { fenced: true });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);
@@ -1654,6 +1687,9 @@ function well(): Json {
   return r.finish();
 }
 
+/** The limbs' gap (r12): a root knuckle west of the second limb ([x, top, w]). */
+const LIMB_KNUCKLE: [number, number, number] = [1376, 720, 96];
+
 function limbs(): Json {
   const r = new Wood('cn-limbs', 'The upper limbs', [200, 768], 7204, { back: true, art: { anchorY: 800 } });
   r.cave(384, 256, 2880, 1280, { ceil: 128, w: 0, e: 0, skip: [[1344, 2944]] });
@@ -1684,7 +1720,14 @@ function limbs(): Json {
   // The high line (review r6 #4): two lamps over the bed, the first a jump off the first limb's end, the second a
   // jump off the second limb; flung up from it she is in the niche over the second limb (three glints: the claws
   // reach it too, up the tall trunk's face and along the roof).
-  r.lamp('wick-limb-1', 1240, 600);
+  // (r12, first-timer r11: four deaths here, 5-7 thorn hits a bot; "when I grab it and press V I don't go far enough
+  // right". The gap was past any jump (384 across, ~200 up), and the fling only crossed aimed up-right. Now: a root
+  // knuckle under the second limb's west end (48 up, 288 across: a running jump), up from it onto the limb; and the
+  // lamp let go with no direction held flings up-right onto the limb, as the hatch's first lamp does. Held right it
+  // lands on the knuckle.)
+  // (A root mass, not a one-way: the route's spread counts one-ways, and the limbs sit in its quiet stretch.)
+  r.mass(LIMB_KNUCKLE[0], LIMB_KNUCKLE[1], LIMB_KNUCKLE[2], 48);
+  r.lamp('wick-limb-1', 1240, 600, { aim: [1, -1] });
   r.lamp('wick-limb-2', 1640, 450);
   r.hoard('niche-', 1920, 220, 240, 40, 2);
   r.cover('niche-cover', 1664, 64, 640, 320);
@@ -2041,6 +2084,13 @@ function larder(): Json {
   r.sealDeep();
   r.fill();
   r.burl(1280, 1536, 384, 192, 2);
+  // (r12, first-timer ft12: "trapped at the bottom of the larder": the way back up was a claw climb round the corner's
+  // overhang that only the explorer found. Three root ledges now, a jump each (~210-230 up), the last under the hole:
+  // from it a jump carries over the hole's lip onto the way in's floor.)
+  // (Root masses, not one-ways: the room spread counts one-ways and the larder is a quiet room.)
+  r.mass(640, 1328, 192, 48);
+  r.mass(832, 1112, 160, 48);
+  r.mass(768, 880, 160, 48);
   r.burrback('burr-larder', 1880, 1536, -1, 300, { fenced: true });
   r.ants('ant-l', 900, 1800, 1536, 2);
   r.hollow('drop-larder', 2150, 1536, 'moonShard');
@@ -3002,6 +3052,17 @@ const DEN_CAGE: [number, number] = [1856, 760];
 /** The roof's way out (r11): a shaft up the arena's east end, its root gate the cage's, a passage east under the roof. */
 const ROOF_X: [number, number] = [3072, 3264];
 const ROOF_PASS = 384;
+/** The ending's collapse (r12): the Keeper's flag once the roof gives; the rubble shuts, the taproot falls. */
+const DEN_COLLAPSE = 'cn-den-collapse';
+/** The rubble's slope ([x0, x1, top], each down to the floor): a jump a step up to under the roof's shaft. */
+const DEN_RUBBLE: Array<[number, number, number]> = [
+  [2304, 2432, 1216],
+  [2432, 2560, 1088],
+  [2560, 2688, 960],
+  [2688, 2816, 832],
+  [2816, 2944, 704],
+  [2944, 3264, 576],
+];
 
 function den(): Json {
   const r = new Wood('cn-den', 'The burrow under the roots', [300, DEN_IN], 7503, {
@@ -3046,7 +3107,24 @@ function den(): Json {
   // one still counts as camping for its slam.)
   r.oneWay(1152, 1088, 384, 'branch');
   r.oneWay(2176, 1088, 384, 'branch');
-  r.mass(2944, 448, 96, 808, false);
+  // The taproot (the cage's root, phase 3's wall): a gate since r12, so the ending's collapse can bring it down
+  // (`cn-den-collapse`): standing until then, as the mass it was.
+  // (In the arena's air already: added as is, no carve after the fill.)
+  r.add('gates', { id: 'taproot', x: 2944, y: 448, w: 96, h: 808, flag: DEN_COLLAPSE, kick: false });
+  // The ending's rubble (r12, moment 7's fallback): when the roof gives after the great release, the rubble lands in
+  // a slope up the arena's east end where the taproot stood, a jump a step, to under the roof's shaft: the way out
+  // needs no claws now (the east wall's climb was untaught, first-timer r11). Gates `shut` on the collapse.
+  for (const [i, [x0, x1, top]] of DEN_RUBBLE.entries())
+    r.add('gates', {
+      id: `rubble-${i + 1}`,
+      x: x0,
+      y: top,
+      w: x1 - x0,
+      h: 1344 - top,
+      flag: 'cn-den-rubble-gone',
+      shut: DEN_COLLAPSE,
+      kick: false,
+    });
   // (r11: the arena's east wall is the climb to the roof's gate; its foot refuses the claws as v10's root gate there
   // did, so the fight's floor is unchanged: the face starts 192 over the floor.)
   r.mass(ROOF_X[1], 1152, 64, 192, false);
@@ -3073,9 +3151,31 @@ function den(): Json {
     y: 1344,
     facing: -1,
     radius: 1300,
+    // (r12, the Keeper: 10 cuts, P2 at 7, P3 at 4: tuning.keeper.)
+    hp: 10,
     sets: 'cn-den-down',
     taproot: [2944, 3040],
     snuffs: 'wick-taproot',
+  });
+  // The Keeper (r12, canopy-moments.md moment 6): the old burrback on the boss framework, eating from the great cage
+  // (src/sim/boss/keeper.ts). No doors (the balcony is a drop); the lock is her whole box on the arena's floor. The
+  // cage falls in P3 to `lowered` (its flame's point, on the floor between the shelves). Its name is never shown.
+  r.set('boss', {
+    id: 'the-keeper',
+    kind: 'keeper',
+    name: 'The Keeper',
+    arena: { x: 832, y: 1024, w: 3264 - 832, h: 1344 - 1024 },
+    lock: [],
+    flag: 'cn-den-down',
+    met: 'cn-den-met',
+    creature: 'old-burr',
+    heart: 'trap-den',
+    rings: [],
+    retryOut: [],
+    floor: 1344,
+    lowered: { x: DEN_CAGE[0], y: 1344 - 72 },
+    collapse: DEN_COLLAPSE,
+    fed: 'cn-den-fed',
   });
   // The firefly's third sighting (r11, review r10 #4: it fled into the den from the warning): as she lands on the
   // balcony the first time it is over the arena, circles the great cage it hung (the old burrback asleep under it),
@@ -3108,7 +3208,21 @@ function den(): Json {
     headroom: 0,
     // (r11: the arena's lock lets go with the great cage's release, so the view follows her up the roof's shaft and
     // along the passage to the clifftop: locked, the passage was out of frame.)
-    zones: [{ id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true, until: 'cn-den-freed' }],
+    zones: [
+      { id: 'arena', x: 448, y: 320, w: 2944, h: 1152, lock: true, until: 'cn-den-freed' },
+      // (r12, the Keeper's intro: on the balcony the view takes in the arena's floor under the cage, where the sleeper
+      // takes the falling moth, until it has (`fed`). It lets go then: the balcony's own frame.)
+      {
+        id: 'intro',
+        x: 0,
+        y: 64,
+        w: 640,
+        h: 256,
+        zoom: 0.72,
+        bounds: { x: 0, y: 160, w: 2688, h: 1376 },
+        until: 'cn-den-fed',
+      },
+    ],
   });
   r.landmark('arena', 'arena', 1900, 1344);
   r.landmark('roof', 'gate', (ROOF_X[0] + ROOF_X[1]) / 2, 448);

@@ -245,6 +245,10 @@ export function createEnemy(spawn: EnemySpawn, t: Tuning, scene?: Scene): EnemyS
     waveHit: false,
     slams: 0,
     shy: 0,
+    keep: 0,
+    feedX: -1,
+    blind: 0,
+    seekX: -1,
   };
   K.place(e, spawn, t);
   if (scene) K.init?.(e, spawn, scene, t);

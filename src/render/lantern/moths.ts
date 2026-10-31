@@ -53,6 +53,7 @@ uniform mat3 uProjectionMatrix;
 uniform mat3 uWorldTransformMatrix;
 uniform mat3 uTransformMatrix;
 uniform vec4 uLamp[${MOTH_SLOTS}];   // flame x, y, level 0..1, lamp size px
+uniform vec4 uKeep[${MOTH_SLOTS}];   // x: the share of its moths still there (the Keeper's cage thins as they go)
 uniform vec4 uClock;                // t, side (-1 far half, +1 near half), size min, size max
 uniform vec4 uBeat;                 // beat min, max, unused, unused
 out vec2 vLocal;
@@ -77,7 +78,8 @@ void main(void) {
   float here = uClock.y < 0.0 ? step(side, 0.0) : step(0.0, side);
   float d = length(p) / max(s, 1.0);
   float light = clamp((1.3 - d * 0.3) * (0.75 + 0.35 * fract(aB.z * 3.7)), 0.0, 1.0);
-  float alpha = here * smoothstep(0.02, 0.3, level) * (uClock.y < 0.0 ? 0.75 : 1.0);
+  float alpha = here * smoothstep(0.02, 0.3, level) * (uClock.y < 0.0 ? 0.75 : 1.0)
+    * step(fract(aB.z * 13.7), uKeep[int(aA.x)].x);
   float unit = mix(uClock.z, uClock.w, aB.y) * (uClock.y < 0.0 ? 0.85 : 1.0);
   float hz = mix(uBeat.x, uBeat.y, fract(aB.z * 7.3));
   float flap = abs(sin(t * hz * TAU * 0.5 + aB.w * TAU));
@@ -140,6 +142,7 @@ export interface MothLamp {
 /** Hundreds of moths round the lamps, two meshes (behind / in front). */
 export class MothClouds {
   private readonly lamps = new Float32Array(MOTH_SLOTS * 4);
+  private readonly keeps = new Float32Array(MOTH_SLOTS * 4).fill(1.0001);
   private readonly clock = new Float32Array(4);
   private readonly group: UniformGroup;
   private readonly groupFront: UniformGroup;
@@ -168,6 +171,7 @@ export class MothClouds {
     const mk = (side: number): UniformGroup =>
       new UniformGroup({
         uLamp: { value: this.lamps, type: 'vec4<f32>', size: MOTH_SLOTS },
+        uKeep: { value: this.keeps, type: 'vec4<f32>', size: MOTH_SLOTS },
         uClock: { value: side < 0 ? this.clock : new Float32Array(4), type: 'vec4<f32>' },
         uBeat: { value: new Float32Array([MOTHS.beat[0], MOTHS.beat[1], 0, 0]), type: 'vec4<f32>' },
         uLit: { value: new Float32Array(MOTHS.lit), type: 'vec3<f32>' },
@@ -238,6 +242,11 @@ export class MothClouds {
     this.lamps[i] = x;
     this.lamps[i + 1] = y;
     this.lamps[i + 2] = lv * lv * (3 - 2 * lv);
+  }
+
+  /** The share of a lamp's moths still there (0..1; the rest are not drawn): the Keeper's cage, eaten and saved. */
+  keep(slot: number, k: number): void {
+    if (slot < MOTH_SLOTS) this.keeps[slot * 4] = k >= 1 ? 1.0001 : k;
   }
 
   update(clock: number): void {

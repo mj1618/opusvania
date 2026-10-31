@@ -29,6 +29,7 @@ import { DipOverlay } from './camera/dip';
 import { HurtVignette } from './camera/hurt-fx';
 import { type CameraState, createCamera, lerpCamera, resizeCamera, stepCamera } from './camera/index';
 import { CameraKick } from './camera/kick';
+import { OpenCamera } from './camera/open-cam';
 import { PremiseCamera } from './camera/premise-cam';
 import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
@@ -128,6 +129,8 @@ export class RenderStage {
   private freezeTo = -1;
   /** The room's scripted beats: the hatch kick, the lean toward the swarm (camera/beats.ts). */
   private beats!: CameraBeats;
+  /** The opening's close frame widening on each press (camera/open-cam.ts, the Canopy r12). */
+  private openCam!: OpenCamera;
   /** The story's camera beats from `marks.stage`: the vista hold, the glimpse, the bask (camera/stage-cam.ts). */
   private stageCam!: StageCamera;
   /** The follow camera's tuning for this room (`room.camera` framing over `cameraTuning`). */
@@ -204,6 +207,10 @@ export class RenderStage {
     this.beats = new CameraBeats(scene.camera);
     this.stageCam = new StageCamera(scene, game.state.save.flags);
     this.roomFade.setRoomFadeIn(scene.camera?.fadeIn ?? 0);
+    this.openCam = new OpenCamera(scene);
+    this.roomFade.setBlack(
+      ((scene.marks?.stage as { open?: { black?: number } } | undefined)?.open?.black ?? 0) / 60,
+    );
     // The room's look first: shaders are built with its zone edges and key light (room-look.ts).
     setRoomLook(scene);
     this.ctx = {
@@ -348,6 +355,12 @@ export class RenderStage {
     sc.update(dt, events, this.cam.zone, follow, this.game.state.save.flags);
     const pc = this.premiseCam;
     pc.update(dt, events, { kit: this.game.state.kit, scene: this.game.scene, alpha }, follow);
+    const oc = this.openCam;
+    oc.update(dt, this.game.state.hatch, {
+      ...follow,
+      x: follow.x + this.beats.x,
+      y: follow.y + this.beats.y,
+    });
     for (const e of events)
       if (e.type === 'lureSnuff' && (e as { trap?: boolean }).trap) {
         this.freezeFrom = this.game.state.frame;
@@ -358,14 +371,14 @@ export class RenderStage {
     const ky = this.kick.y + this.shake.y;
     // (The premise's beats lean toward things near the room's edge, the den's mouth: they never take the view past
     // the room's edge further than the follow camera already has.)
-    const zoom = base.zoom * gc.zoom * sc.zoom * pc.zoom;
+    const zoom = base.zoom * gc.zoom * sc.zoom * pc.zoom * oc.zoom;
     const inRoom = (from: number, off: number, half: number, size: number): number => {
       const lo = Math.min(from, half);
       const hi = Math.max(from, size - half);
       return Math.min(hi, Math.max(lo, from + off)) - from;
     };
-    const vx0 = base.x + kx + gc.x + rs.x + this.beats.x + sc.x;
-    const vy0 = base.y + ky + gc.y + rs.y + this.beats.y + sc.y;
+    const vx0 = base.x + kx + gc.x + rs.x + this.beats.x + sc.x + oc.x;
+    const vy0 = base.y + ky + gc.y + rs.y + this.beats.y + sc.y + oc.y;
     const view: CameraView = o
       ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom, w: vs.w, h: vs.h }
       : {

@@ -96,7 +96,7 @@ export const KIT_FIELDS = {
         .strict(),
     )
     .optional(),
-  roosts: z.array(z.object({ ...rect, lure: id }).strict()).optional(),
+  roosts: z.array(z.object({ ...rect, lure: id, leaves: id.optional() }).strict()).optional(),
   // --- Finds (src/sim/finds.ts).
   mothStones: z.array(z.object({ id, x: int, y: int, area: id }).strict()).optional(),
   signs: z

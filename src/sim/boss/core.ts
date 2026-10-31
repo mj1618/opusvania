@@ -49,6 +49,8 @@ export interface BossRules {
   cue(c: BossCtx, set: string, cue: string): void;
   /** Debug and tests (`__game.boss({phase})`): set the fight up as phase `n` begins. */
   jump(c: BossCtx, n: number): void;
+  /** One step before the lock (stage `wait`; the Keeper's intro plays out over its sleeping creature). */
+  wait?(c: BossCtx): void;
 }
 
 /** Index of a lure by id (-1 = none). */
@@ -145,7 +147,8 @@ export function defeat(c: BossCtx): void {
     c.events.push({ type: 'flagSet', flag: spec.flag, by: spec.id, x: p.x, y: p.y });
   }
   let moths = 0;
-  for (const id of [spec.heart, ...spec.rings]) {
+  // (The Keeper's cage is not the boss's to snuff: she cuts it open after, src/sim/boss/keeper.ts.)
+  for (const id of spec.kind === 'keeper' ? [] : [spec.heart, ...spec.rings]) {
     const i = lureIndex(scene, id);
     const l = scene.lures?.[i];
     if (!l) continue;

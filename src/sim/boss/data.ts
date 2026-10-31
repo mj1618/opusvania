@@ -26,7 +26,7 @@ export interface BossDoor extends BossRect {
 export interface BossSpec {
   /** Unique in the room (a route node: `routes` may name it; the world check reaches its flag through it). */
   id: string;
-  kind: 'weaver' | 'gloamweaver' | 'mantis';
+  kind: 'weaver' | 'gloamweaver' | 'mantis' | 'keeper';
   /** The name card. */
   name: string;
   /** The fight's rect: the lock closes once her whole box is inside it. */
@@ -52,8 +52,18 @@ export interface BossSpec {
   /** The canopy's y (where P2's threads hang from) and the floor's (P3's ground). */
   canopy?: number;
   floor?: number;
-  /** Where the heart hangs once the boss has fled (it lowers there, unguarded). */
+  /**
+   * Where the heart hangs once the boss has fled (it lowers there, unguarded). The Keeper: where the great cage (its
+   * `heart`, a trap `wick`) lies once it is ripped down (P3), its flame's point.
+   */
   lowered?: { x: number; y: number };
+  /**
+   * The Keeper (the Canopy, src/sim/boss/keeper.ts): the flag its ending's collapse sets (the rubble's gates `shut`
+   * on it: the slope from the floor up to the roof's way out).
+   */
+  collapse?: string;
+  /** The Keeper: the flag set as its intro's moth is taken (or the fight starts first): a camera zone frames the intro until then. */
+  fed?: string;
   /** A lure the firefly relights after the fight (a husk until the boss is beaten). */
   relight?: string;
   /**
@@ -79,5 +89,7 @@ export interface BossSpec {
 /** Is lure `id` part of this room's boss (its heart, a ring flame)? Those are saved when it is beaten, not when snuffed. */
 export function bossOwnsLure(boss: BossSpec | undefined, id: string): boolean {
   if (!boss) return false;
+  // (The Keeper's cage goes out only once it is beaten, and is saved then like any cage.)
+  if (boss.kind === 'keeper') return false;
   return boss.heart === id || boss.rings.includes(id);
 }

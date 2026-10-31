@@ -26,13 +26,20 @@ export interface MoonVista {
  */
 export const MOON_VISTAS: Readonly<Record<string, readonly MoonVista[]>> = {
   'cn-hatch': [{ x0: 0, y0: -2000, x1: 1250, y1: 4000, fade: 300 }],
-  'cn-hub': [{ x0: 2600, y0: 0, x1: 3400, y1: 2304, fade: 350 }],
+  // (The Canopy r12: the hub's landing too, the first thing she sees after the hatch: the landing zone holds the view
+  // at zoom 0.9 round 6,267-6,373 x 1,080-1,160 until she walks off it; the moon over the cage and the kin.)
+  'cn-hub': [
+    { x0: 2600, y0: 0, x1: 3400, y1: 2304, fade: 350 },
+    { x0: 6000, y0: 700, x1: 6700, y1: 1400, fade: 300 },
+  ],
   'cn-crown': [{ x0: -2000, y0: -2000, x1: 5000, y1: 5000, fade: 1 }],
   // (The Canopy r11: the den's roof opens onto the way out's clifftop, 0-600 x 128-384, the area's last beat: the moon
-  // is there from her first step out.)
+  // is there from her first step out. r12: the camera's centre there is ~960-1,300 x 540-760 (clamped to the room),
+  // which the r11 box (x <= 700, y <= 520) missed; one box over the clifftop to the valley's box now, its foot above
+  // the chimney (her climb from the west door, 900-1,088 x 832-1,000, stays under the canopy).)
   'cn-out': [
     { x0: 1792, y0: -2000, x1: 6000, y1: 1700, fade: 450 },
-    { x0: -2000, y0: -2000, x1: 700, y1: 520, fade: 300 },
+    { x0: -2000, y0: -2000, x1: 1792, y1: 580, fade: 240 },
   ],
 };
 

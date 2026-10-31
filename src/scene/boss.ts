@@ -15,7 +15,7 @@ const rect = z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).
 export const BOSS = z
   .object({
     id,
-    kind: z.enum(['weaver', 'gloamweaver', 'mantis']),
+    kind: z.enum(['weaver', 'gloamweaver', 'mantis', 'keeper']),
     name: z.string().min(1),
     arena: rect,
     lock: z.array(z.object({ id, x: int, y: int, w: int.positive(), h: int.positive() }).strict()),
@@ -31,6 +31,9 @@ export const BOSS = z
     floor: int.optional(),
     lowered: z.object({ x: int, y: int }).strict().optional(),
     relight: id.optional(),
+    // The Keeper (src/sim/boss/keeper.ts): the flag its ending's collapse sets.
+    collapse: id.optional(),
+    fed: id.optional(),
     // The Gloamweaver (src/sim/boss/gloam.ts): its orb's hub and radius, the arena's moonwicks, the high pair.
     hub: z.object({ x: int, y: int }).strict().optional(),
     orbR: int.min(64).max(1600).optional(),
@@ -108,6 +111,20 @@ export function checkBoss(s: BossRoom, seen: Set<string>): void {
       throw new Error(`${where}: its ${what} "${lid}" must be a ${kinds.join(' or ')}`);
     return l;
   };
+  if (b.kind === 'keeper') {
+    // The Keeper (the Canopy): its creature an old burrback; its heart the great cage (a trap wick); where it falls.
+    const cr = s.enemies.find((e) => e.id === b.creature);
+    if (cr?.kind !== 'oldBurrback')
+      throw new Error(`${where}: its creature "${b.creature}" must be an oldBurrback`);
+    const cage = (s.lures ?? []).find((q) => q.id === b.heart) as
+      | { kind: string; trap?: boolean }
+      | undefined;
+    if (cage?.kind !== 'wick' || cage.trap !== true)
+      throw new Error(`${where}: its heart "${b.heart}" must be a trap wick (the great cage)`);
+    if (!b.lowered) throw new Error(`${where}: the Keeper needs where its cage falls (\`lowered\`)`);
+    if (b.floor === undefined) throw new Error(`${where}: the Keeper needs its floor`);
+    return;
+  }
   const heart = lure(b.heart, ['great'], 'heart');
   if (b.kind === 'mantis') {
     // The Mantis: its creature on the floor under its lamp (the heart, shielded: the brightest lamp).
