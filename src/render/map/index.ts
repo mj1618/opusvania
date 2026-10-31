@@ -63,6 +63,8 @@ export class MapOverlay {
   /** Seconds since it began to unroll. */
   private opened = 0;
   open = false;
+  /** A map station opens the map by itself; not in `?manual` (captures, look:check: it covered their frames). */
+  glimpse = true;
   /** A map station's glimpse: seconds since it began (null: none). */
   private flashT: number | null = null;
   private hooked: Game | null = null;
@@ -73,6 +75,11 @@ export class MapOverlay {
     this.layer.addChild(this.back, this.sheet, this.mask, this.roll);
     this.layer.visible = false;
     this.layer.eventMode = 'none';
+    try {
+      this.glimpse = !new URLSearchParams(window.location.search).has('manual');
+    } catch {
+      this.glimpse = false;
+    }
   }
 
   toggle(on = !this.open): boolean {
@@ -92,7 +99,7 @@ export class MapOverlay {
     if (this.hooked !== game) {
       this.hooked = game;
       game.afterStep.add((events) => {
-        if (!this.open && events.some((e) => e.type === 'mapStation')) {
+        if (this.glimpse && !this.open && events.some((e) => e.type === 'mapStation')) {
           this.flashT = 0;
           this.opened = 0;
           this.since = 1;
