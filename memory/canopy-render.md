@@ -435,3 +435,53 @@ three times frees it; a teleport into the gap's floor trigger starts the firefly
   with burrow mouths and a lit crest), the lid's red-amber breath (acts `drawDenMouth`: gates whose id ends `lid`),
   beetles in a den look drawn `DEN_READ.scale` 1.22 with a warm backlight glow behind the dome (enemies/index.ts; the
   sim box unchanged). The mid plane's big translucent bank ovals are still flat (the weakest part).
+
+## Round 11: staging (review r10 #2 #4 #5 #8 #9; the sim's hooks in memory/canopy.md "The premise, staged")
+Shots `shots/canopy-r11-render/` (`before|after/<room>/`, `look-check/`); clips `clips/r11-release-hub{,-21x9,-16x10,
+-audio}.mp4`, `r11-great-cage.mp4`, `r11-firefly-gap.mp4`, `r11-firefly-warn.mp4`, `r11-boss-intro.mp4`,
+`r11-boss-wake.mp4`. Scratch probes that step `__game`, set `cam({x, y, zoom})` on the firefly or the boss and screenshot
+were the fastest way to judge the small things (the clip tool's 1280 frames hide a 24 px body).
+- **The release** (lantern/release.ts, pure: the one timeline the lamps, the HUD, the camera and the sound read): a
+  trap's `lureSnuff` **holds the drawn frame** 14 sim frames (22 the great cage): `RenderStage.update` returns early
+  while `freezeFrom <= frame < freezeTo`, the events wait in `pending`, the tree is presented unchanged (a render-side
+  hitstop; the sim's `lures.trapSnuffHitstop` 14 holds her the same frames, creatures are not held). Then the bars burst
+  (each a bowed stroke that flies, turns, lands flat on the floor under the cage and dims), **2x the moths at 10-16 px**
+  pour out, swirl round her once (1.5 s; 2.4 s the great cage), pale gold turning cool, and peel off one by one
+  (`releaseDepart`) onto a fixed curve toward the moon's side (`releasePath`: set where she stood when the first left;
+  the great cage's goes up through the roof), 240-300 px/s: in frame 3-5 s at 16:9, 16:10 and 21:9. One cut breaks one
+  bar (9 bars, 3 cuts), and the first cut's `escape` lets one moth out to circle her.
+- **The camera** (camera/premise-cam.ts, `PREMISE_CAM` in camera/tuning.ts): the release zooms 6% about the cage
+  (the cage keeps its place on screen) + 12% toward it, 0.4 s in once the hold lets go, 0.55 s held, 1 s back; the
+  great cage pulls out to 0.88 and lifts 260 px for 3.6 s; `enemyWake` (old burrback) pushes in 8% about the boss;
+  `fireflyStart` / each `fireflyRelight` leans 40% toward the firefly (<= 340 px) over 0.3 s; a pass's `look` hook frames
+  its point with her (half way) at its zoom, eased over 30 frames inside `from..to`.
+- **The count** (hud/moths.ts): the number alone (`countText`, never " / "), a seed-pod lantern pip under it filling
+  toward the next light (`pipFill`, flashes full when one is bought); a trap's release ticks it once per freed moth as
+  they leave her (`releaseTicks`). The area tally is the map's (map/paint.ts `mapTally`: "60 of 100 moths · 2 of 3
+  cages" under the region's name, over every room of the world).
+- **Lines** (hud/line-logic.ts, pure): 2.5 s (0.3 in, 1.5, 0.7 out); a line waits while `fightNear` (a live creature
+  `aware` or `arrive`-ing within 800 px), one up when a fight starts goes in 0.2 s and comes back after if it was cut
+  in its first half. `tests/unit/hud-honest.test.ts` drives it with the real sim beside the tunnel's burrback.
+- **The firefly** (acts.ts `ffBody`): a 24 px beetle (dark wing cases a little open, a dull rim, head, antennae, legs
+  tucked), its abdomen a lantern pulsing cold gold, wings two faint beating sheets. **Its halo goes in `glowBack`**:
+  over the body (glowFront) it washed the silhouette to a yellow smudge. Threads to each relit lamp follow it for
+  1.1 s; hanging a cage (`fireflyHang` with `lure`) it hovers 34 px over the stop point, bobbing, a thread down to the
+  cage, and the cage grows in from a quarter size over 0.9 s (lamps.ts `hung`). An `after` trap not yet hung draws
+  nothing (it was a husk on the warning's floor before).
+- **The den** (interior.ts): three planes. Deep = only the far rank, pale in the fog (whole, alpha 1); mid
+  (`drawMidBack` den branch) = two opaque rolling banks with arched burrow mouths (an oval read as the old lenses) and
+  a fungus-lit sill, dark roots hanging in front; near = `denColumns`, braided root columns roof to floor (3-4 strands
+  winding round a bowing line, flared at both ends, roots splaying on the floor, one dim lit edge, no lit top). The
+  earth lenses (alpha 0.24) and the mid plane's shell crescents and arching roots are gone (`den-planes.test.ts`).
+  Air mean 54-62 (look:check). **Free ledges in a den look hang from braided roots** (pf-mass.ts `paintBackMount`;
+  stands on the floor read as croquet hoops and trestles): three thick roots out of the roof's dark into the ledge, a
+  ragged tail under it. **Shed shells** (`denShell`): an opaque dark dome of overlapping plates, half buried, a split,
+  a dull warm rim (the pale violet domes read as glass).
+- **The boss** (enemies: `BOSS.look`, burrback.ts `bossColors` swaps the palette for its draw): shell luma ~10-20,
+  rim = the great cage's warm light, crest and burrs dark bronze, eyes and flank lights the only red. Its wake
+  (`BOSS.wake`): lids down for 18 frames, the flank lights come on one by one, it heaves up shaking with its burrs
+  rising by frame 60, dust and grit pour off its back; the sim turns it for the last 30.
+- **Sound** (audio.md "The release").
+- **Not done / weak**: creatures are not held by the release's hold (they jump ~14 frames of motion after it); the
+  hub's `landing` zone ends on the snuff (`until: cn-hub-freed`), so the follow camera drops ~250 px under the
+  release's ease; many identical hanging-root ledges in the tunnel's run; the den's far rank is still a flat pale band.

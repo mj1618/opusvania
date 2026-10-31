@@ -565,7 +565,9 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
       // Earth: big soft clumps of packed earth, close in value to the deep back (so none reads as a ledge), with
       // gaps between where the deep and its fog show; stones and short roots in them.
       // (Soft and large, low alpha, no edge light: a mottled wall, never a boulder or a ledge.)
-      const n = Math.round((b.w * b.h) / 120000);
+      // (The den, canopy review r10 #5: these translucent lenses were the "flat card with ovals". Its near plane is
+      // root columns instead: denColumns.)
+      const n = plan.look === 'den' ? 0 : Math.round((b.w * b.h) / 120000);
       for (let k = 0; k < n; k++) {
         const cx = b.x + range(r, -0.05, 1.05) * b.w;
         const cy = b.y + range(r, -0.05, 1.05) * b.h;
@@ -636,7 +638,10 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
         }
     }
     if (plan.look === 'nest') nestNear(p, plan, b, e, seed + i * 11);
-    if (plan.look === 'den') denNear(p, plan, b, e, seed + i * 11);
+    if (plan.look === 'den') {
+      denColumns(p, plan, b, e, seed + i * 13);
+      denNear(p, plan, b, e, seed + i * 11);
+    }
   });
 }
 
@@ -985,32 +990,96 @@ function nestNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: num
   }
 }
 
+/**
+ * The den's near plane (canopy review r10 #5: "three depth planes: far pale fog, mid banks with burrow mouths, near root
+ * columns"): braided root columns from the roof to the floor, a step darker than the mid banks and with no lit top,
+ * twisting and splitting (a plain post reads as a trunk to climb), flaring into the floor and the roof, a dim lit edge
+ * on the fungus side, gaps where the banks show through.
+ */
+function denColumns(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
+  const B = BRANCH;
+  const T = plan.tone;
+  const r = rngFor(seed, 977);
+  const body = mixc(T.near, T.grain, 0.35);
+  for (const [x0, x1, y] of topsIn(plan, b)) {
+    if (x1 - x0 < 300) continue;
+    for (let x = x0 + range(r, 160, 520); x < x1 - 140; x += range(r, 620, 1150)) {
+      if (tornK(b, e, x, y - 200) < 0.4) continue;
+      // The roof over it: the lowest underside above the floor here, or the back's top.
+      let top = b.y - 40;
+      for (const m of plan.masses) {
+        const bot = m.y + m.h;
+        if (x >= m.x && x <= m.x + m.w && bot <= y - 200 && bot > top) top = bot;
+      }
+      const h = y - top;
+      if (h < 260) continue;
+      const w0 = range(r, 60, 110);
+      const strands = 3 + (r() < 0.4 ? 1 : 0);
+      const lean = range(r, -60, 60);
+      for (let k = 0; k < strands; k++) {
+        const ph = (k / strands) * Math.PI * 2 + r();
+        const turns = range(r, 0.8, 1.6);
+        const line: number[] = [];
+        for (let t = 0; t <= 20; t++) {
+          const u = t / 20;
+          // Braided: each strand winds round the column's line (wide at the roof and the foot, tight between), the
+          // column leaning and bowing a little.
+          const open = 0.45 + 0.9 * (Math.max(0, 1 - u / 0.2) ** 2 + Math.max(0, (u - 0.8) / 0.2) ** 2);
+          const bow = Math.sin(u * Math.PI) * lean + lean * 0.3 * (u - 0.5);
+          line.push(
+            x + bow + Math.sin(ph + u * turns * Math.PI * 2) * w0 * 0.42 * open,
+            top - 30 + (h + 50) * u,
+          );
+        }
+        const ws = w0 * range(r, 0.22, 0.34);
+        p.solid(
+          ribbon(
+            wander(line, 14, seed + Math.round(x) + k, 120),
+            (t) => ws * (1 + 0.8 * Math.max(0, 1 - t / 0.15)),
+          ),
+          body,
+          B.backH + 0.1,
+          { bark: 0.5 },
+        );
+        // A dim edge where the fungus light from the floor catches it (no lit top).
+        if (k === 0)
+          p.tint(
+            strand(
+              line.slice(10).map((v, j) => (j % 2 ? v : v + ws * 0.4)),
+              ws * 0.25,
+              0.6,
+            ),
+            T.nearLit,
+            0.2,
+          );
+      }
+      // Roots splaying from the foot over the floor.
+      for (let k = 0; k < 3; k++) {
+        const d = (k - 1) * range(r, 50, 110) + range(r, -20, 20);
+        p.solid(
+          strand([x, y - 40, x + d * 0.6, y - 12, x + d * 1.6, y + 2], range(r, 10, 18), 0.8),
+          body,
+          B.backH + 0.1,
+          {
+            bark: 0.4,
+          },
+        );
+      }
+    }
+  }
+}
+
 /** The burrbacks' den, near: shed shells against the walls, the old one's scrapes low on the back. */
 function denNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
-  const B = BRANCH;
   const T = plan.tone;
   const r = rngFor(seed, 431);
   for (const [x0, x1, y] of topsIn(plan, b)) {
     if (x1 - x0 < 360) continue;
-    // A shed shell or two (pale plated domes, cast off and lying on their side).
+    // A shed shell or two, cast off and half buried: opaque dark plates with a split down one, a dull rim of the
+    // fungus light (canopy review r10 #5: the pale translucent domes read as glass).
     for (let q = 0; q < (x1 - x0 > 1400 ? 2 : 1); q++) {
       const x = r() < 0.5 ? x0 + range(r, 60, 260) : x1 - range(r, 60, 260);
-      const R = range(r, 30, 56);
-      const dome: number[] = [];
-      for (let t = 0; t <= 14; t++) {
-        const a = Math.PI + (Math.PI * t) / 14;
-        dome.push(x + Math.cos(a) * R * 1.3, y + 4 + Math.sin(a) * R);
-      }
-      p.solid(dome, 0x4a4456, B.backH + 0.2, { bark: 0.1 });
-      for (let k = 1; k < 4; k++) {
-        const a = Math.PI + (Math.PI * k) / 4;
-        p.tint(
-          strand([x, y + 4, x + Math.cos(a) * R * 1.3, y + 4 + Math.sin(a) * R], 2.5, 0.3),
-          0x1a1620,
-          0.7,
-        );
-      }
-      p.tint(chaikin(blob(x - R * 0.3, y - R * 0.6, R * 0.5, R * 0.18, seed + q, 0.2, 10), 1), 0x8a8094, 0.5);
+      denShell(p, T, x, y, range(r, 34, 60), seed + q * 7, r() < 0.5 ? -1 : 1);
     }
     // Scrapes on the back above the floor.
     for (let x = x0 + range(r, 100, 400); x < x1 - 100; x += range(r, 500, 900)) {
@@ -1041,6 +1110,70 @@ function denNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: numb
       }
     }
   }
+}
+
+/**
+ * A shed shell half buried in the floor at (x, y) (the floor's top), `R` px: an opaque back of overlapping plates (a
+ * burrback's, cast off), tipped `dir`, a split across it, the earth heaped against its low side, a dull warm rim.
+ */
+function denShell(
+  p: Paint,
+  T: (typeof TONES)['den'],
+  x: number,
+  y: number,
+  R: number,
+  seed: number,
+  dir = 1,
+): void {
+  const B = BRANCH;
+  const r = rngFor(seed, x, 433);
+  const tilt = dir * range(r, 0.12, 0.3);
+  const sink = R * range(r, 0.3, 0.45);
+  const shellC = mixc(0x1c1612, T.near, 0.4);
+  const plateC = mixc(0x2c241e, T.nearLit, 0.18);
+  const P = (a: number, k: number): [number, number] => {
+    const px = Math.cos(a) * R * 1.35 * k;
+    const py = Math.sin(a) * R * k;
+    return [
+      x + px * Math.cos(tilt) - py * Math.sin(tilt),
+      y + sink + px * Math.sin(tilt) + py * Math.cos(tilt),
+    ];
+  };
+  // The back: a low dome, its lower part under the floor (the floor's top cuts it: drawn only above y).
+  const dome: number[] = [];
+  for (let t = 0; t <= 18; t++) {
+    const [px, py] = P(Math.PI + (Math.PI * t) / 18, 1);
+    dome.push(px, Math.min(py, y + 2));
+  }
+  p.solid(dome, shellC, B.backH + 0.22, { bark: 0.15 });
+  // Plates: bands across the back, each a shade lighter at its leading edge, overlapping like a beetle's.
+  for (let k = 1; k <= 4; k++) {
+    const a0 = Math.PI + (Math.PI * (k - 0.85)) / 5;
+    const a1 = Math.PI + (Math.PI * k) / 5;
+    const band: number[] = [];
+    for (let t = 0; t <= 6; t++) {
+      const [px, py] = P(a0 + ((a1 - a0) * t) / 6, 0.98);
+      band.push(px, Math.min(py, y + 1));
+    }
+    for (let t = 6; t >= 0; t--) {
+      const [px, py] = P(a0 + ((a1 - a0) * t) / 6, 0.55);
+      band.push(px, Math.min(py, y + 1));
+    }
+    p.solid(band, plateC, B.backH + 0.24, { bark: 0.1 });
+  }
+  // The split: a dark crack across two plates.
+  const [sx0, sy0] = P(Math.PI * (1.35 + 0.1 * dir), 0.95);
+  const [sx1, sy1] = P(Math.PI * (1.55 + 0.1 * dir), 0.4);
+  p.tint(strand([sx0, sy0, (sx0 + sx1) / 2 + 4, (sy0 + sy1) / 2, sx1, sy1], 4, 0.4), 0x050302, 0.9);
+  // The rim: a dull warm line along the top (no bright highlight: it is not glass).
+  const rim: number[] = [];
+  for (let t = 3; t <= 15; t++) rim.push(...P(Math.PI + (Math.PI * t) / 18, 1));
+  p.tint(strand(rim, 2.5, 0.5), T.nearLit, 0.35);
+  // Earth heaped against its low side.
+  const lowX = x - dir * R * 1.2;
+  p.solid(chaikin(blob(lowX, y + 2, R * 0.7, R * 0.22, seed + 3, 0.3, 12), 1), T.near, B.backH + 0.25, {
+    bark: 0,
+  });
 }
 
 /** Points turned by `a` about (cx, cy). */
@@ -1335,10 +1468,11 @@ function denBanks(
   seed: number,
 ): void {
   const r = rngFor(seed, b0.x, 991);
+  // (Canopy review r10 #5: three planes. The deep back keeps only the far rank, pale in the fog; the banks with their
+  // burrow mouths are the mid plane's (drawMidBack), the root columns the near back's.)
   const ranks: Array<[number, number, number, number]> = [
     // [colour, alpha, the rank's crest as a share of the back's height, hill scale px]
-    [mixc(T.fog, T.nearLit, 0.3), 0.8, 0.34, 700],
-    [mixc(T.deep, T.grain, 0.7), 0.95, 0.56, 480],
+    [mixc(T.fog, T.nearLit, 0.12), 1, 0.34, 700],
   ];
   ranks.forEach(([col, a, yK, scale], k) => {
     const crest = b0.y + b0.h * yK;
@@ -1954,122 +2088,75 @@ export function drawMidBack(
         }
       }
     } else {
-      // The den: roots hanging from the roof, thick, twisting, tapering, and a few rising from the floor and arching
-      // back into it (ribbed shell domes here read as wheels). (Canopy review r7 #10: flat grey fog with lenses.) Also
-      // burrow mouths in banks of packed earth and shed half-shells, lit from below by the fungus on the floor.
+      // The den's mid plane (canopy review r10 #5: translucent arcs and ovals read as a flat card): banks of packed
+      // earth, opaque, a step darker than the far rank in the fog, their crests rolling, burrow mouths dark in them
+      // with the fungus light on their lower lips; dark roots hanging from the roof in front of them. No shells
+      // (crescents read as arcs), no arching roots, nothing round floating free.
       const fung = mixC(lit, DEN_FUNGUS, 0.45);
-      while (covered < want && guard++ < 400) {
-        const roll = r();
-        if (roll < 0.3) {
-          // A burrow mouth: a broad bank of earth rising from the back's floor, a dark way in low in it, the fungus light
-          // on its lower lip only. (A round mound with a mouth and a lit crescent read as a face.)
-          const cx = b.x + r() * b.w;
-          const cy = b0.y + b0.h * range(r, 0.7, 1.0);
-          const rx = range(r, 220, 440);
-          const ry = rx * range(r, 0.38, 0.55);
-          // (A step darker than the other mid shapes: at their value the burrow's back stayed one flat grey.)
-          fill(
-            chaikin(blob(cx, cy, rx, ry, seed + guard, 0.3, 18), 2),
-            mixC(col, dark, 0.4),
-            0.94,
-            Math.PI * rx * ry * 0.9,
-          );
-          const mx = cx + range(r, -0.3, 0.3) * rx;
-          const my = cy + ry * range(r, 0.2, 0.4);
-          const mw = rx * range(r, 0.2, 0.3);
-          const mh = mw * range(r, 0.6, 0.85);
-          g.poly(chaikin(blob(mx, my, mw, mh, seed + guard + 1, 0.3, 16), 2)).fill({
-            color: dark,
-            alpha: 0.97,
-          });
-          const lip: number[] = [];
-          const l0 = range(r, 0.2, 0.35);
-          for (let q = 0; q <= 8; q++) {
-            const t = Math.PI * (l0 + (1 - 2 * l0) * (q / 8));
-            lip.push(mx + Math.cos(t) * mw * 1.04, my + Math.sin(t) * mh * 1.04);
-          }
-          g.poly(strand(lip, range(r, 3, 6), 0.4)).fill({ color: fung, alpha: 0.4 });
-          continue;
+      const bank = mixC(col, dark, 0.25);
+      for (let k = 0; k < 2; k++) {
+        const crest = b0.y + b0.h * (k === 0 ? 0.5 : 0.68);
+        const scale = k === 0 ? 620 : 420;
+        const top: number[] = [];
+        const st = 40;
+        for (let x = b.x; x <= b.x + b.w + 0.01; x += st) {
+          const hill =
+            0.5 + 0.5 * wobble(x, seed + k * 31, scale) + 0.2 * wobble(x, seed + k * 37, scale * 0.3);
+          top.push(x, crest + (1 - hill) * b0.h * 0.16);
         }
-        if (roll < 0.46) {
-          // A shed half-shell on its side: an open crescent with ribs along its curve (never a whole dome: a wheel), its
-          // underside catching the fungus light.
-          const cx = b.x + r() * b.w;
-          const cy = b0.y + b0.h * range(r, 0.55, 0.95);
-          const R = range(r, 70, 160);
-          const rot = range(r, -0.9, 0.9);
-          const a0 = range(r, 0.05, 0.25) * Math.PI;
-          const a1 = Math.PI - range(r, 0.05, 0.25) * Math.PI;
-          const outer: number[] = [];
-          const inner: number[] = [];
-          for (let q = 0; q <= 14; q++) {
-            const t = lerp(a0, a1, q / 14);
-            const ox = -Math.cos(t) * R;
-            const oy = -Math.sin(t) * R * 0.75;
-            const ix = -Math.cos(t) * R * 0.78;
-            const iy = -Math.sin(t) * R * 0.5 + R * 0.08;
-            outer.push(
-              cx + ox * Math.cos(rot) - oy * Math.sin(rot),
-              cy + ox * Math.sin(rot) + oy * Math.cos(rot),
-            );
-            inner.push(
-              cx + ix * Math.cos(rot) - iy * Math.sin(rot),
-              cy + ix * Math.sin(rot) + iy * Math.cos(rot),
-            );
-          }
-          const shell = [...outer];
-          for (let q = inner.length / 2 - 1; q >= 0; q--)
-            shell.push(inner[q * 2] as number, inner[q * 2 + 1] as number);
-          fill(shell, mixC(col, dark, 0.3), 0.95, R * R * 0.9);
-          g.poly(strand(inner, range(r, 4, 8), 0.3)).fill({ color: fung, alpha: 0.5 });
-          for (let q = 1; q < 4; q++) {
-            const k = q / 4;
-            const rib = outer.map((v, j) => lerp(v, inner[j] as number, k));
-            g.poly(strand(rib, 2.5, 0.4)).fill({ color: dark, alpha: 0.6 });
-          }
-          continue;
+        const c = k === 0 ? mixC(bank, col, 0.4) : bank;
+        g.poly([...top, b.x + b.w, b.y + b.h, b.x, b.y + b.h]).fill({ color: c, alpha: 1 });
+        // Its crest catches a little light, broken (never a lit flat run: the crest rolls).
+        for (let q = 0; q < top.length / 2 - 3; q += 4 + Math.floor(r() * 5)) {
+          const seg = top.slice(q * 2, (q + 3) * 2);
+          if (seg.length >= 6) g.poly(strand(seg, 3, 0.6)).fill({ color: lit, alpha: 0.18 });
         }
-        if (roll < 0.8) {
-          const x = b.x + r() * b.w;
-          const len = range(r, 0.25, 0.7) * b0.h;
-          const raw: number[] = [];
-          for (let t = 0; t <= 12; t++)
-            raw.push(x + Math.sin(t * 0.6 + x) * 30 * (t / 12), b.y + pad - 60 + (len * t) / 12);
-          const w0 = range(r, 30, 90);
-          fill(
-            ribbon(wander(raw, 24, seed + guard, 220), (t) => Math.max(3, w0 * (1 - t) ** 0.7)),
-            col,
-            0.92,
-            len * w0 * 0.55,
-          );
+        // Burrow mouths: dark ways in, the fungus light on the lower lip only.
+        for (let x = b.x + range(r, 120, 600); x < b.x + b.w - 120; x += range(r, 620, 1300)) {
+          const ix = Math.round((x - b.x) / st);
+          const ty = (top[ix * 2 + 1] as number | undefined) ?? crest;
+          const my = ty + range(r, 60, 140);
+          const mw = range(r, 44, 90) * (k === 0 ? 0.8 : 1);
+          const mh = mw * range(r, 0.55, 0.75);
+          // An arch, not an oval (ovals read as the old card's lenses): a rounded top, its floor the bank's earth.
+          const arch = (w: number, hh: number, oy: number): number[] => {
+            const pts: number[] = [];
+            for (let q = 0; q <= 14; q++) {
+              const a = Math.PI + (Math.PI * q) / 14;
+              const j = 1 + 0.08 * wobble(q * 40 + x, seed + k, 60);
+              pts.push(x + Math.cos(a) * w * j, my + oy + Math.sin(a) * hh * j);
+            }
+            pts.push(x + w * 0.9, my + oy + hh * 0.12, x - w * 0.9, my + oy + hh * 0.12);
+            return chaikin(pts, 1);
+          };
+          g.poly(arch(mw, mh * 1.3, mh * 0.35)).fill({ color: dark, alpha: 1 });
+          g.poly(arch(mw * 0.7, mh * 0.95, mh * 0.4)).fill({ color: mixC(dark, 0x000000, 0.5), alpha: 1 });
+          // The fungus light on its sill.
+          const sill = my + mh * 0.4;
           g.poly(
-            strand(
-              raw.map((v, j) => (j % 2 ? v : v + w0 * 0.22)),
-              w0 * 0.16,
-              0.4,
-            ),
-          ).fill({ color: lit, alpha: 0.4 });
-        } else {
-          const x0 = b.x + r() * b.w;
-          const span = range(r, 260, 640);
-          const rise = span * range(r, 0.3, 0.7);
-          const y0 = b0.y + b0.h + 40;
-          const line: number[] = [];
-          for (let q = 0; q <= 14; q++) {
-            const t = q / 14;
-            line.push(
-              x0 + span * t,
-              y0 - rise * Math.sin(Math.PI * t) ** 0.8 + 20 * wobble(t * 700, seed + guard, 200),
-            );
-          }
-          const w0 = range(r, 30, 70);
-          fill(
-            ribbon(line, (t) => w0 * (0.75 + 0.5 * Math.abs(t - 0.5))),
-            col,
-            0.92,
-            span * w0,
-          );
+            strand([x - mw * 0.95, sill + 2, x, sill + 5, x + mw * 0.95, sill + 1], range(r, 3, 6), 0.5),
+          ).fill({
+            color: fung,
+            alpha: 0.45,
+          });
         }
+        covered += b.w * b.h * 0.25;
+      }
+      // Roots hanging from the roof in front of the banks: thick, twisting, tapering, opaque.
+      const nRoots = Math.round(b.w / 300);
+      for (let k = 0; k < nRoots; k++) {
+        const x = b.x + r() * b.w;
+        const len = range(r, 0.2, 0.55) * b0.h;
+        const raw: number[] = [];
+        for (let t = 0; t <= 12; t++)
+          raw.push(x + Math.sin(t * 0.6 + x) * 30 * (t / 12), b.y + pad - 60 + (len * t) / 12);
+        const w0 = range(r, 26, 70);
+        fill(
+          ribbon(wander(raw, 24, seed + guard, 220), (t) => Math.max(3, w0 * (1 - t) ** 0.7)),
+          mixC(col, dark, 0.5),
+          1,
+          len * w0 * 0.55,
+        );
       }
     }
   });

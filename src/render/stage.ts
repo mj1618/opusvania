@@ -29,6 +29,7 @@ import { DipOverlay } from './camera/dip';
 import { HurtVignette } from './camera/hurt-fx';
 import { type CameraState, createCamera, lerpCamera, resizeCamera, stepCamera } from './camera/index';
 import { CameraKick } from './camera/kick';
+import { PremiseCamera } from './camera/premise-cam';
 import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
 import { CameraShake } from './camera/shake';
@@ -41,6 +42,7 @@ import { GivingRenderer } from './giving/index';
 import { GoalCamera } from './goal/camera';
 import { GoalRenderer } from './goal/index';
 import { Hud } from './hud/index';
+import { releaseFreeze } from './lantern/release';
 import { LightRegistry } from './lights';
 import { PickupRenderer } from './pickups/index';
 import { POST } from './post/config';
@@ -116,6 +118,14 @@ export class RenderStage {
   private readonly dip = new DipOverlay();
   /** Leaving the room (a black fade over the exit's hold) and the dip of a caught fall: camera/room-fade.ts. */
   private readonly roomFade: RoomFade;
+  /** The premise's beats: the release's ease toward a cage, the lean toward the firefly (camera/premise-cam.ts). */
+  private readonly premiseCam = new PremiseCamera();
+  /**
+   * A trap's release holds the drawn frame (the Canopy r11, release.ts): sim frames [from, to) are not drawn, the
+   * picture of the snuff stays up (a render-side hitstop; the sim runs on). Its events wait in `pending`.
+   */
+  private freezeFrom = -1;
+  private freezeTo = -1;
   /** The room's scripted beats: the hatch kick, the lean toward the swarm (camera/beats.ts). */
   private beats!: CameraBeats;
   /** The story's camera beats from `marks.stage`: the vista hold, the glimpse, the bask (camera/stage-cam.ts). */
@@ -262,6 +272,7 @@ export class RenderStage {
 
   /** Tears the room's renderers down and builds them for the room now being played. */
   rebuild(): void {
+    this.freezeTo = -1;
     this.teardown();
     this.build();
     for (const fn of this.onRoom) fn(this.builtFor);
@@ -277,6 +288,19 @@ export class RenderStage {
    * way from the previous sim frame to the latest (1 = the latest).
    */
   update(dt: number, alpha: number): void {
+    // The release's hold: the frame of the snuff stays up (nothing advances, the events wait), unless she left the
+    // room or the state was replaced (a load goes back to frame 0).
+    const fr = this.game.state.frame;
+    if (
+      fr >= this.freezeFrom &&
+      fr < this.freezeTo &&
+      this.game.scene.id === this.builtFor &&
+      !this.override
+    ) {
+      for (const fn of this.afterUpdate) fn(0);
+      return;
+    }
+    this.freezeTo = -1;
     this.clock += dt;
     // The window may have changed shape since the last sim step: the camera sees through the new view.
     const vs = this.ga.view();
@@ -322,15 +346,22 @@ export class RenderStage {
     );
     const sc = this.stageCam;
     sc.update(dt, events, this.cam.zone, follow, this.game.state.save.flags);
+    const pc = this.premiseCam;
+    pc.update(dt, events, { kit: this.game.state.kit, scene: this.game.scene, alpha }, follow);
+    for (const e of events)
+      if (e.type === 'lureSnuff' && (e as { trap?: boolean }).trap) {
+        this.freezeFrom = this.game.state.frame;
+        this.freezeTo = this.freezeFrom + releaseFreeze(e.moths);
+      }
     // The kick and the shake: render-side offsets, the follow camera never sees them.
     const kx = this.kick.x + this.shake.x;
     const ky = this.kick.y + this.shake.y;
     const view: CameraView = o
       ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom, w: vs.w, h: vs.h }
       : {
-          x: base.x + kx + gc.x + rs.x + this.beats.x + sc.x,
-          y: base.y + ky + gc.y + rs.y + this.beats.y + sc.y,
-          zoom: base.zoom * gc.zoom * sc.zoom,
+          x: base.x + kx + gc.x + rs.x + this.beats.x + sc.x + pc.x,
+          y: base.y + ky + gc.y + rs.y + this.beats.y + sc.y + pc.y,
+          zoom: base.zoom * gc.zoom * sc.zoom * pc.zoom,
           w: vs.w,
           h: vs.h,
         };

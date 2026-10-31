@@ -28,7 +28,12 @@ export const MOON_VISTAS: Readonly<Record<string, readonly MoonVista[]>> = {
   'cn-hatch': [{ x0: 0, y0: -2000, x1: 1250, y1: 4000, fade: 300 }],
   'cn-hub': [{ x0: 2600, y0: 0, x1: 3400, y1: 2304, fade: 350 }],
   'cn-crown': [{ x0: -2000, y0: -2000, x1: 5000, y1: 5000, fade: 1 }],
-  'cn-out': [{ x0: 1792, y0: -2000, x1: 6000, y1: 1700, fade: 450 }],
+  // (The Canopy r11: the den's roof opens onto the way out's clifftop, 0-600 x 128-384, the area's last beat: the moon
+  // is there from her first step out.)
+  'cn-out': [
+    { x0: 1792, y0: -2000, x1: 6000, y1: 1700, fade: 450 },
+    { x0: -2000, y0: -2000, x1: 700, y1: 520, fade: 300 },
+  ],
 };
 
 /** 0..1: how much of the moon's disc shows with the camera at (x, y) in `roomId`. */

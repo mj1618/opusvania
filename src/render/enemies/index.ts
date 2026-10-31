@@ -20,7 +20,7 @@ import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { lookOf } from '../scene/lib/looks';
 import { LOOK } from '../scene/lib/room-look';
 import { arrivalView } from './arrive';
-import { BurrRig, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
+import { BurrRig, bossColors, COLORS, drawBurrback, loadColors, stepFeelers, topHit } from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
@@ -1038,7 +1038,32 @@ export class EnemyRenderer {
         // Rolling, the old burrback is a ball (its dome cannot turn over: half of it is belly): painted on its own.
         this.ball(rig, e, scale, clock);
         drawn++;
-      } else if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+      } else {
+        // (The old burrback in its own colours: the darkest shape in its den, rimmed warm, red-eyed: the Canopy r11.)
+        if (rig.big) bossColors(true);
+        if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+        if (rig.big) bossColors(false);
+      }
+      // Its wake: as its eyes open, dust and grit pour off its back and its burrs shiver up.
+      if (rig.wakeNew) {
+        rig.wakeNew = false;
+        rig.bristle.v += 40;
+        const half = BURR.halfLen * scale;
+        for (let k = 0; k < BOSS.wake.dust; k++) {
+          const u = k / (BOSS.wake.dust - 1) - 0.5;
+          this.dust(rig.x + u * half * 1.6, rig.y - 30 * scale * 0.4, u * 160, 1.8, 1.6);
+          this.emit(
+            K_GRIT,
+            rig.x + u * half * 1.8,
+            rig.y - 50,
+            u * 120,
+            -60 - this.rand() * 120,
+            0.7,
+            1.2,
+            rig.y,
+          );
+        }
+      }
       if (small && !(rig.big && rig.rollK > 0.5 && e.mode !== 'dead')) {
         p.scaleFrom(v0, rig.x, rig.y, scale);
         pf.scaleFrom(f0, rig.x, rig.y, scale);

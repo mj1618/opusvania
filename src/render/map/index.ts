@@ -18,7 +18,7 @@ import { WORLD_FILES } from '../../scene/index';
 import { upgradesOwned } from '../../sim/upgrades';
 import type { WorldRoom } from '../../sim/world';
 import { SAFE_H, SAFE_W, type ViewSize } from '../contract';
-import { bakeMap, isTrap, MAP_RES, type MapFrame, type MapRoom, mothPath } from './paint';
+import { bakeMap, isTrap, MAP_RES, type MapFrame, type MapRoom, mapTally, mothPath } from './paint';
 
 const MAP = {
   backdrop: 0x050403,
@@ -237,6 +237,7 @@ export class MapOverlay {
         left: v.left,
         top: v.top,
         name: this.name(game),
+        tally: mapTally(Object.values(game.world?.rooms ?? {}), save.snuffed) ?? undefined,
         unseen,
       });
       const old = this.baked.texture;

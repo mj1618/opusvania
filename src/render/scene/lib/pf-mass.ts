@@ -17,7 +17,7 @@
 import { ROOMS } from '../../../scene/index';
 import type { Room } from '../../../scene/room';
 import { shelfFamilies, shelfKey } from './families';
-import { gradeLookOf, type Look } from './looks';
+import { gradeLookOf, type Look, lookOf } from './looks';
 import {
   BRANCH,
   type BranchPlan,
@@ -2568,7 +2568,11 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
     // a wall within 256 px, rising under it below the walk (so the walk visibly ends at the ledge's end), or by a
     // knuckle of roots rising from the floor under it; hung only when nothing is near.
     const fam = shelfFamilies().get(shelfKey(room.id, i)) ?? '';
-    if (!sh.wall && sh.near) paintNearMount(p, fam, sh, sh.near, y, th, rr, seed + i * 41);
+    // (The den, canopy review r10 #5: a ledge standing on a mount over the floor read as a croquet hoop on the
+    // warning's floor and a trestle in the boss's arena. In the den's rooms a free ledge grows out of the back.)
+    const denFree = !sh.wall && !sh.near && lookOf(room) === 'den';
+    if (denFree) paintBackMount(p, sh, y, th, sh.ceil, rr, seed + i * 59);
+    else if (!sh.wall && sh.near) paintNearMount(p, fam, sh, sh.near, y, th, rr, seed + i * 41);
     else if (!sh.wall && sh.floor !== null && fam === 'hump')
       paintFloorMount(p, fam, sh, sh.floor, y, th, rr, seed + i * 43);
     else if (!sh.wall && sh.floor !== null) {
@@ -2669,6 +2673,64 @@ export function paintShelves(p: Paint, plan: BranchPlan | null, room: Room, seed
 }
 
 type ShelfPlan = ReturnType<typeof shelfFor>;
+
+/**
+ * A free ledge in the den (canopy review r10 #5: "grown from the walls, not stands"; a mount on the floor read as a
+ * croquet hoop on the warning's floor and a trestle in the arena): the ledge is a knot in one of the den's great root
+ * columns, which comes down out of the roof (the near back's columns, interior.ts `denColumns`): two or three thick
+ * roots braiding down from the dark over it into the ledge, one running on below it a little and ending ragged.
+ * Nothing stands on the floor under it.
+ */
+function paintBackMount(
+  p: Paint,
+  sh: ShelfPlan,
+  y: number,
+  th: number,
+  ceil: number | null,
+  rr: () => number,
+  seed: number,
+): void {
+  const B = BRANCH;
+  const cx = (sh.x0 + sh.x1) / 2 + range(rr, -0.15, 0.15) * (sh.x1 - sh.x0);
+  const top = ceil ?? y - 900;
+  const n = 3;
+  const ph = rr() * 6.28;
+  for (let k = 0; k < n; k++) {
+    // Braided: each root winds round the column's line, meeting at the ledge, splaying a little into the roof.
+    const raw: number[] = [];
+    const w0 = range(rr, 16, 28) * (k === 1 ? 1.25 : 1);
+    const splay = (k - 1) * range(rr, 40, 90);
+    for (let t = 0; t <= 16; t++) {
+      const v = t / 16;
+      const wind = Math.sin(ph + k * 2.1 + v * Math.PI * range(rr, 1.6, 2.2)) * 22 * Math.sin(Math.PI * v);
+      raw.push(cx + splay * (1 - v) ** 2 + wind + (k - 1) * 10 * v, lerp(top - 80, y + th * 0.55, v));
+    }
+    const pts = wander(raw, 10, seed + k * 13, 140);
+    paintLimb(
+      p,
+      lineLimb(pts, (t) => w0 * (0.85 + 0.35 * t), B.walkH - 0.06, seed + k * 31, 0.05, 0.3),
+    );
+    // Up into the dark of the roof.
+    p.tint(
+      ribbon(pts.slice(0, Math.round(pts.length * 0.4) & ~1), () => w0 * 1.7),
+      T.body,
+      0.6,
+    );
+  }
+  // One runs on under the ledge and ends ragged (a root, not a post: it stops in the air).
+  const tail = chaikinLine([
+    cx + range(rr, -10, 10),
+    y + th * 0.6,
+    cx + range(rr, -24, 24),
+    y + th + range(rr, 40, 70),
+    cx + range(rr, -40, 40),
+    y + th + range(rr, 90, 150),
+  ]);
+  paintLimb(
+    p,
+    lineLimb(tail, (t) => lerp(range(rr, 16, 22), 3, t), B.walkH - 0.04, seed + 97, 0.1, 0.4),
+  );
+}
 
 /**
  * A one-way held by a mass within reach (review r6 #8: grown from its mount): `elbow` two roots out of the wall rising

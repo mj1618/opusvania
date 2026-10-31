@@ -42,7 +42,24 @@ import type { GlowPool } from './glow';
  *    closing their wings, a few always in the air, a cool breath of moonlight over them.
  */
 export const PREMISE = {
-  firefly: { core: 0xf4ffb0, glow: 0xd8ff7a, trail: 14, blink: 1.7, size: 4 },
+  /**
+   * The firefly as a creature (the Canopy r11, review r10 #4): a beetle `len` px long, dark wing cases a little open,
+   * wings a blur over them, its lantern (the abdomen) pulsing cold gold `blink` times a second; a silk thread of its
+   * light to each lamp it touches (`thread` s), and while it hangs a cage, the thread it lowers it on.
+   */
+  firefly: {
+    core: 0xf4ffb0,
+    glow: 0xd8ff7a,
+    trail: 14,
+    blink: 1.7,
+    size: 4,
+    len: 24,
+    shell: 0x15130c,
+    shellLit: 0x4a4630,
+    wing: 0xe6ecd8,
+    lantern: 0xeaff9a,
+    thread: 1.1,
+  },
   /** Moths at rest per roost (one per this many px² of its rect, clamped), and how many fly round it. */
   roost: { per: 1100, min: 22, max: 70, flying: 8, moth: 0xeef0e2, glow: 0xbcd4ff, size: [9, 14] as const },
 };
@@ -268,6 +285,9 @@ export class Acts {
   /** The firefly's recent places (its trail) and its relights (lamp, seconds since). */
   private readonly ffTrail: Array<[number, number]> = [];
   private readonly ffLit: Array<{ x: number; y: number; fx: number; fy: number; t: number }> = [];
+  /** The cage it is hanging (the `fireflyHang` stop): the lure, seconds since; the way it last faced. */
+  private ffHang: { lure: string; t: number; frames: number } | null = null;
+  private ffDir = 1;
   /** Roosts that just filled (their id, seconds since): the moths settle in. */
   private readonly roostNew = new Map<string, number>();
 
@@ -356,7 +376,13 @@ export class Acts {
       else if (e.type === 'fireflyRelight') {
         const ff = (sim as { kit?: { firefly?: { x: number; y: number } } }).kit?.firefly;
         this.ffLit.push({ x: e.x, y: e.y, fx: ff?.x ?? e.x, fy: ff?.y ?? e.y, t: 0 });
-      } else if (e.type === 'fireflyStart') this.ffTrail.length = 0;
+      } else if (e.type === 'fireflyStart') {
+        this.ffTrail.length = 0;
+        this.ffHang = null;
+      } else if (e.type === 'fireflyHang') {
+        const h = e as { lure?: string; frames: number };
+        if (h.lure) this.ffHang = { lure: h.lure, t: 0, frames: h.frames };
+      } else if (e.type === 'fireflyEnd') this.ffHang = null;
       // The map station opens: every stone on the crook swings (the map unrolls from it: render/map).
       else if (e.type === 'mapStation')
         for (const f of sim.save.flags) if ((this.hung.get(f) ?? 1e9) > 0.8) this.hung.set(f, 0.8);
@@ -385,7 +411,7 @@ export class Acts {
     for (const [f, t] of this.hung) this.hung.set(f, t + dt);
     this.drawStones(clock, sim, back, glowFront, seen);
     this.drawDoors(clock, sim, back, glowBack, glowFront, seen);
-    this.drawFirefly(dt, clock, sim, front, glowFront);
+    this.drawFirefly(dt, clock, sim, front, glowFront, glowBack);
     this.drawDenMouth(clock, sim, glowBack, seen);
     this.drawRoosts(dt, clock, sim, back, glowBack, seen);
   }
@@ -412,7 +438,14 @@ export class Acts {
   }
 
   // --- The firefly's pass (the gap): small, bright, fleeing; it relights what she put out behind her.
-  private drawFirefly(dt: number, clock: number, sim: SimView, front: Graphics, glow: GlowPool): void {
+  private drawFirefly(
+    dt: number,
+    clock: number,
+    sim: SimView,
+    front: Graphics,
+    glow: GlowPool,
+    halo: GlowPool,
+  ): void {
     const F = PREMISE.firefly;
     const kit = sim.kit as unknown as { firefly?: { pass: number; frame: number; x: number; y: number } };
     const ff = kit.firefly;
@@ -421,17 +454,24 @@ export class Acts {
     for (let k = this.ffLit.length - 1; k >= 0; k--) {
       const r = this.ffLit[k] as (typeof this.ffLit)[number];
       r.t += dt;
-      if (r.t > 0.9) {
+      if (r.t > F.thread) {
         this.ffLit.splice(k, 1);
         continue;
       }
-      // A thread of its light runs from it to the flame, then the flame flares.
+      // A thread of its light runs from it to the flame (it follows the firefly as it goes on), then the flame flares.
       const u = Math.min(1, r.t / 0.25);
-      const a = 1 - Math.max(0, (r.t - 0.25) / 0.65);
+      const a = 1 - Math.max(0, (r.t - 0.3) / (F.thread - 0.3));
+      const ffNow = (sim as { kit?: { firefly?: { pass: number; x: number; y: number } } }).kit?.firefly;
+      if (ffNow && ffNow.pass >= 0) {
+        r.fx = ffNow.x;
+        r.fy = ffNow.y;
+      }
+      const mx = (r.fx + r.x) / 2;
+      const my = Math.max(r.fy, r.y) + 30;
       front
         .moveTo(r.fx, r.fy)
-        .lineTo(r.fx + (r.x - r.fx) * u, r.fy + (r.y - r.fy) * u)
-        .stroke({ color: F.glow, width: 1.5, alpha: 0.6 * a });
+        .quadraticCurveTo(mx, my, r.fx + (r.x - r.fx) * u, r.fy + (r.y - r.fy) * u)
+        .stroke({ color: F.glow, width: 1.6, alpha: 0.7 * a });
       glow.add(r.x, r.y, 30 + 60 * u, F.glow, 0.45 * a);
     }
     if (!ff || ff.pass < 0 || !passes) {
@@ -440,6 +480,7 @@ export class Acts {
     }
     const pass = passes[ff.pass];
     if (!pass) return;
+    if (this.ffHang) this.ffHang.t += dt;
     const at = fireflyAt(pass as never, ff.frame - 1 + sim.alpha);
     this.ffTrail.push([at.x, at.y]);
     if (this.ffTrail.length > F.trail) this.ffTrail.shift();
@@ -456,14 +497,119 @@ export class Acts {
         .lineTo(x1, y1)
         .stroke({ color: F.glow, width: 1 + 2 * t, alpha: 0.35 * t * pulse });
     }
-    // Its body: a dark speck with a lit tail, wings a blur.
-    const dir = n > 1 ? Math.sign(at.x - (this.ffTrail[n - 2]?.[0] ?? at.x)) || 1 : 1;
-    front.ellipse(at.x + dir * 3, at.y - 1, 3, 1.8).fill({ color: 0x1a1810, alpha: 0.9 });
-    const flap = Math.abs(Math.sin(clock * 38));
-    front.ellipse(at.x + dir * 2, at.y - 3 - flap * 2, 4, 1.4 + flap).fill({ color: 0xe8eadc, alpha: 0.35 });
-    front.circle(at.x - dir * 2, at.y, F.size * (0.8 + 0.3 * pulse)).fill({ color: F.core, alpha: 0.95 });
-    glow.add(at.x - dir * 2, at.y, 34 + 40 * pulse, F.glow, 0.55 * pulse + 0.2);
-    glow.add(at.x - dir * 2, at.y, 160, F.glow, 0.1 * pulse);
+    // Its body: a small dark beetle, its lantern hanging behind it, wings a blur (it flees: the lantern trails).
+    const prev = this.ffTrail[n - 2] ?? [at.x, at.y];
+    const vx = at.x - prev[0];
+    const vy = at.y - prev[1];
+    // Hanging a cage it hovers a little over it (the stop's point is the cage's top), bobbing as it ties the thread.
+    const hg = this.ffHang;
+    const hs = hg ? hg.frames / 60 : 0;
+    const lift = hg ? 34 * Math.max(0, Math.min(1, hg.t / 0.3, (hs - hg.t) / 0.3)) : 0;
+    const bob = lift > 0 ? Math.sin(clock * 7) * 3 : 0;
+    at.y -= lift + bob;
+    this.ffBody(front, glow, halo, at.x, at.y, vx, vy, pulse, clock);
+    // While it hangs a cage: the thread it lowers it on, from its jaws to the cage's top, and it works at it.
+    const h = this.ffHang;
+    if (h) {
+      const lure = (sim.scene.lures ?? []).find((l) => l.id === h.lure);
+      if (lure) {
+        const u = Math.min(1, h.t / 0.6);
+        front
+          .moveTo(at.x, at.y + 4)
+          .lineTo(lure.x, at.y + 4 + (lure.y - 30 - at.y - 4) * u)
+          .stroke({ color: F.glow, width: 1.4, alpha: 0.75 });
+        glow.add(lure.x, lure.y - 30, 26, F.glow, 0.35 * pulse);
+      }
+    }
+  }
+
+  /** The firefly's body at (x, y) moving (vx, vy) px a frame: 24 px of dark beetle, a lantern behind, wings a blur. */
+  private ffBody(
+    g: Graphics,
+    glow: GlowPool,
+    halo: GlowPool,
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    pulse: number,
+    clock: number,
+  ): void {
+    const F = PREMISE.firefly;
+    const sp = Math.hypot(vx, vy);
+    // Heading: where it flies (level when it hovers), its body pitched up a little into its flight.
+    const dir = Math.abs(vx) > 0.3 ? Math.sign(vx) : this.ffDir;
+    this.ffDir = dir;
+    const pitch = Math.max(-0.6, Math.min(0.6, sp > 0.5 ? Math.atan2(vy, Math.abs(vx)) * 0.6 : 0)) - 0.25;
+    const c = Math.cos(pitch);
+    const sn = Math.sin(pitch);
+    // Body frame: +u forward (toward its head), +v down.
+    const P = (u: number, v: number): [number, number] => [x + dir * (u * c - v * sn), y + u * sn + v * c];
+    const L = F.len;
+    // The lantern: the abdomen's last half, hanging back and down, lit from inside (cold gold), pulsing.
+    const [lx, ly] = P(-L * 0.32, L * 0.12);
+    // (Its halo behind it: over it, the light washed the dark body out to a yellow smudge.)
+    halo.add(lx, ly, 80 + 60 * pulse, F.glow, 0.25 + 0.4 * pulse);
+    halo.add(lx, ly, 220, F.glow, 0.07 + 0.05 * pulse);
+    glow.add(lx, ly, 12 + 6 * pulse, F.lantern, 0.35 + 0.4 * pulse);
+    const lantern: number[] = [];
+    for (let k = 0; k <= 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      lantern.push(...P(-L * 0.32 + Math.cos(a) * L * 0.24, L * 0.12 + Math.sin(a) * L * 0.17));
+    }
+    g.poly(lantern).fill({ color: mix(0x3a3a18, F.lantern, 0.35 + 0.65 * pulse), alpha: 1 });
+    // Its segments: dark bands across the lit belly.
+    for (const u of [-0.18, -0.3, -0.42]) {
+      const [ax, ay] = P(L * u, L * -0.02);
+      const [bx, by] = P(L * u - L * 0.03, L * 0.27);
+      g.moveTo(ax, ay).lineTo(bx, by).stroke({ color: 0x2a2810, width: 1.2, alpha: 0.6 });
+    }
+    const [hx, hy] = P(-L * 0.34, L * 0.14);
+    g.circle(hx, hy, L * 0.1 * (0.7 + 0.5 * pulse)).fill({ color: F.core, alpha: 0.9 });
+    // The wing cases: a dark shell over the thorax and the abdomen's front, a little open, a dull rim on top.
+    const shell: number[] = [];
+    for (let k = 0; k <= 12; k++) {
+      const t = k / 12;
+      const u = L * (0.28 - 0.62 * t);
+      shell.push(...P(u, -L * 0.2 * Math.sin(Math.PI * (0.15 + 0.85 * t))));
+    }
+    for (let k = 12; k >= 0; k--) {
+      const t = k / 12;
+      shell.push(...P(L * (0.28 - 0.62 * t), L * 0.06 * Math.sin(Math.PI * t)));
+    }
+    g.poly(shell).fill({ color: F.shell, alpha: 1 });
+    const rim: number[] = [];
+    for (let k = 1; k < 12; k++) {
+      const t = k / 12;
+      rim.push(...P(L * (0.28 - 0.62 * t), -L * 0.2 * Math.sin(Math.PI * (0.15 + 0.85 * t))));
+    }
+    g.poly(rim, false).stroke({ color: F.shellLit, width: 1.3, alpha: 0.9 });
+    // Head and antennae.
+    const [qx, qy] = P(L * 0.36, -L * 0.02);
+    g.circle(qx, qy, L * 0.11).fill({ color: F.shell, alpha: 1 });
+    for (const s of [-1, 1]) {
+      const [ax, ay] = P(L * 0.42, -L * 0.06);
+      const [bx, by] = P(L * 0.62, -L * (0.2 + 0.08 * s) + Math.sin(clock * 9 + s) * 1.5);
+      g.moveTo(ax, ay).lineTo(bx, by).stroke({ color: F.shell, width: 1.1, alpha: 0.95 });
+    }
+    // Wings: a blur over the shell, two beating sheets (a smear, not a shape).
+    const beat = Math.sin(clock * 52);
+    for (const s of [0, 1]) {
+      const up = -L * (0.35 + 0.35 * Math.abs(beat + s * 0.6));
+      const wing = [
+        ...P(L * 0.12, -L * 0.12),
+        ...P(-L * 0.2, up),
+        ...P(-L * 0.42, up * 0.7),
+        ...P(-L * 0.12, -L * 0.1),
+      ];
+      g.poly(wing).fill({ color: F.wing, alpha: 0.16 + 0.08 * s });
+    }
+    // Legs tucked under it.
+    for (const u of [0.15, 0.02, -0.1]) {
+      const [ax, ay] = P(L * u, L * 0.04);
+      const [bx, by] = P(L * (u - 0.08), L * 0.2);
+      g.moveTo(ax, ay).lineTo(bx, by).stroke({ color: F.shell, width: 1, alpha: 0.85 });
+    }
   }
 
   // --- The hub's roosts: freed moths settled, more each trap she frees.
