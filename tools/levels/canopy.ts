@@ -973,6 +973,14 @@ const G = 'glide';
 
 /** The first fling's lamp (r8): over the gap between S5's cut end and S8, on a running jump's rise off the lip. */
 const FIRST_WICK: [number, number] = [3700, 660];
+/**
+ * The safe first flame (r17: every first-timer fell 6-10 times under FIRST_WICK, ~25-30 s, before pressing the Lamp by
+ * it): over S3's east half (top ~860), 265 over the limb, where a standing jump on the limb finds it and a miss lands on
+ * the limb she jumped from (or the trunk's step east of it: no void under it). Its lesson drift holds her in reach (the
+ * HUD shows the Lamp key by it); a fling with nothing held, right or up-right carries her up onto S4 (the crown's limb,
+ * the promise's vista) or S5 (the lip). Not over S2 -> S3's gap: its drift would slow a jump and drop her in.
+ */
+const PATH_WICK: [number, number] = [2640, 590];
 /** The promise's widen zone (r12, moment 1): the crown's limb west of the lip (the first fling's frame is the lip's). */
 const PROMISE_X: [number, number] = [2816, 3296];
 
@@ -1071,6 +1079,16 @@ function hatch(): Json {
     // 90 frames after it goes out (`relight`, never saved): cut down with the blade it was gone for good, and the
     // hatch with it (the bots' old lamp-cut lines found it: a softlock).)
     lures: [
+      {
+        id: 'wick-path',
+        kind: 'wick',
+        x: PATH_WICK[0],
+        y: PATH_WICK[1],
+        relight: 90,
+        lesson: true,
+        aim: [1, -1],
+        moths: 0,
+      },
       {
         id: 'wick-first',
         kind: 'wick',

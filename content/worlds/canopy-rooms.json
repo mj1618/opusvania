@@ -783,6 +783,16 @@
     },
     "lures": [
       {
+        "id": "wick-path",
+        "kind": "wick",
+        "x": 2640,
+        "y": 590,
+        "relight": 90,
+        "lesson": true,
+        "aim": [1, -1],
+        "moths": 0
+      },
+      {
         "id": "wick-first",
         "kind": "wick",
         "x": 3700,
