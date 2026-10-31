@@ -426,10 +426,14 @@ describe("the first-timer's r11 findings (r12)", () => {
     expect(door && gateShut(door, s.save.flags)).toBe(false);
   });
 
-  it("the trunk's juvenile walks the top, away from both landings in the hall", () => {
+  it("the trunk's juvenile walks the top, away from both landings in the hall and (r17) 400 px from the door", () => {
     const trunk = getRoom('cn-trunk');
     const j = (trunk.enemies ?? []).find((e) => e.id === 'juv-t1');
     expect(j?.y).toBe(384);
-    expect(Math.abs((j?.x ?? 0) - 2592)).toBeGreaterThan(200);
+    // (r17, ft16a / ft16c: hit coming through the door at 2,830. Its walk stays on the top, short of its west lip
+    // (2,624) and 400 px or more from the door (3,200).)
+    const r = (j as { radius?: number } | undefined)?.radius ?? 0;
+    expect((j?.x ?? 0) - r).toBeGreaterThan(2624);
+    expect(3200 - ((j?.x ?? 0) + r)).toBeGreaterThanOrEqual(400);
   });
 });

@@ -686,6 +686,16 @@ export class Lamps {
         this.clouds.set(i, x, y, false, dt);
         continue;
       }
+      // A lamp waiting on its flag (`after`, the hub's seed sockets; never lit or put out): a small closed bud, dark,
+      // no thread, no lace (r17: three first-timers read the lampoak's empty husks as "cages up the trunk" to reach).
+      if (!burning && l.after && !info.trap && !sim.save.snuffed.includes(`${sim.scene.id}:${l.id}`)) {
+        this.clouds.set(i, x, y, false, dt);
+        const bs = info.size * 0.5;
+        back.poly(calyx(x, y, bs, 1, 0)).fill({ color: LR.lamp.husk, alpha: 0.85 });
+        back.poly(calyx(x, y + bs * 0.1, bs * 0.55, 1, 0)).fill({ color: 0x120a06, alpha: 0.9 });
+        glow.add(x, y, bs * 1.6, LR.lamp.halo, 0.04);
+        continue;
+      }
       if (!info.moonwick) this.clouds.set(i, x, y, burning && !this.embers.has(i), dt);
       // (The Keeper's cage, the Canopy r12: its cloud thins as the moths are eaten or saved, `boss.left` of them.)
       const kb = sim.boss as unknown as {

@@ -65,9 +65,17 @@ export const KIT = {
     silk: 0xd8d0bc,
     silkGlow: 0xe8e0c8,
     leak: 0x9ab8e0,
+    /** A knock's light from beyond, its bright core (r17). */
+    leakCore: 0xe4f0ff,
   },
   /** Seconds a cut's dust hangs. */
   dust: 0.6,
+  /**
+   * Seconds a shut root door answers a knock (the Canopy r17: two first-timers in r16 and one in r17 still saw "no
+   * response at all" from the well's doors): it shudders, its silk bands twang, and the knots on the side that opens it
+   * flare with the light that leaks from beyond, for this long.
+   */
+  doorKnock: 1.6,
   heart: { body: 0x2c1410, ring: 0x401c14, ringLit: 0x6a3020, scar: 0xc8a888, sheen: 0x9a5a40 },
   thorn: {
     cane: 0x1a0e12,
@@ -150,6 +158,11 @@ export class Kit {
    * seconds since, the side she is on.
    */
   private readonly knock = new Map<string, { t: number; side: number }>();
+  /**
+   * A door that counts moonseeds cut at (the Canopy r17, first-timer ft17a: "cut it, cut down on it, pressed the Lamp:
+   * no response at all"): seconds since, by gate index. Its sockets answer one after another, the empty ones ringing.
+   */
+  private readonly seedKnock = new Map<number, number>();
   /** Gates opening while she watches (seconds since, by index). */
   private readonly opening = new Map<number, number>();
   private readonly perches = new PerchSprings();
@@ -184,6 +197,14 @@ export class Kit {
         this.knock.clear();
         continue;
       }
+      // A cut made standing on a door that counts moonseeds (a floor: the blade meets no face, so no `slashTerrain`).
+      if (ev.type === 'slash') {
+        const p = sim.player;
+        (S.gates ?? []).forEach((g, gi) => {
+          if (!g.flag.startsWith('seeds:') || this.seedKnock.has(gi)) return;
+          if (p.x + p.w > g.x && p.x < g.x + g.w && Math.abs(p.y + p.h - g.y) < 24) this.seedKnock.set(gi, 0);
+        });
+      }
       switch (ev.type) {
         case 'shortcutShut':
           this.knock.set(ev.id ?? '', { t: 0, side: (e as { side?: number }).side ?? 1 });
@@ -191,6 +212,11 @@ export class Kit {
         case 'slashTerrain': {
           // A cut into a shut shortcut from either side: it shudders too (the push's answer, by the blade).
           const q = e as { x: number; y: number };
+          (S.gates ?? []).forEach((g, gi) => {
+            if (!g.flag.startsWith('seeds:') || this.seedKnock.has(gi)) return;
+            if (q.x >= g.x - 16 && q.x <= g.x + g.w + 16 && q.y >= g.y - 40 && q.y <= g.y + g.h + 16)
+              this.seedKnock.set(gi, 0);
+          });
           for (const sc of S.shortcuts ?? []) {
             if (sim.save.opened.includes(`${S.id}:${sc.id}`)) continue;
             if (q.x >= sc.x - 12 && q.x <= sc.x + sc.w + 12 && q.y >= sc.y - 12 && q.y <= sc.y + sc.h + 12)
@@ -295,7 +321,11 @@ export class Kit {
     for (const [k, t] of this.readT) this.readT.set(k, t + dt);
     for (const [k, n] of this.knock) {
       n.t += dt;
-      if (n.t > 0.9) this.knock.delete(k);
+      if (n.t > KIT.doorKnock) this.knock.delete(k);
+    }
+    for (const [k, t] of this.seedKnock) {
+      if (t > KIT.doorKnock) this.seedKnock.delete(k);
+      else this.seedKnock.set(k, t + dt);
     }
     for (const [k, t] of this.capT) {
       if (t > 0.6) this.capT.delete(k);
@@ -455,7 +485,20 @@ export class Kit {
         this.bark(back, sc.x, sc.y, sc.w, sc.h, true, 0, sc.id);
         continue;
       }
-      this.rootDoor(back, glow, sc.x, sc.y, sc.w, sc.h, sc.opens, sc.id, this.knock.get(sc.id), clock);
+      this.rootDoor(
+        back,
+        glow,
+        front,
+        glowFront,
+        sc.x,
+        sc.y,
+        sc.w,
+        sc.h,
+        sc.opens,
+        sc.id,
+        this.knock.get(sc.id),
+        clock,
+      );
     }
 
     // Thorns: brambles.
@@ -562,6 +605,17 @@ export class Kit {
           const sy = g.y - 18;
           back.circle(sx, sy, 11).fill(0x0c0a10);
           back.circle(sx, sy, 11).stroke({ color: KIT.seed.rim, width: 2, alpha: 0.8 });
+          // Cut at: each socket in turn rings out (the empty ones a pale ring opening: "a seed goes here").
+          const st = this.seedKnock.get(i);
+          if (st !== undefined) {
+            const u = (st - k * 0.18) / 0.7;
+            if (u > 0 && u < 1) {
+              front
+                .circle(sx, sy, 11 + 22 * u)
+                .stroke({ color: KIT.seed.glow, width: 2.5 * (1 - u) + 0.5, alpha: 0.9 * (1 - u) });
+              glowFront.add(sx, sy, 30, KIT.seed.glow, 0.5 * (1 - u));
+            }
+          }
           if (k < held) {
             back.ellipse(sx, sy, 5, 7).fill(KIT.seed.body);
             glow.add(sx, sy, 26, KIT.seed.glow, 0.5 + 0.1 * Math.sin(clock * 2 + k));
@@ -870,6 +924,9 @@ export class Kit {
   private rootDoor(
     g: Graphics,
     glow: GlowPool,
+    /** (r17: a knock's light is drawn in front of the room's tint, so it reads.) */
+    fg: Graphics,
+    gf: GlowPool,
     x: number,
     y: number,
     w: number,
@@ -881,12 +938,28 @@ export class Kit {
   ): void {
     const D = KIT.door;
     const kt = knock?.t ?? 9;
-    const shake = knock ? Math.exp(-kt * 7) * Math.sin(kt * 55) * 4 * -knock.side : 0;
+    const shake = knock ? Math.exp(-kt * 6) * Math.sin(kt * 55) * 7 * -knock.side : 0;
+    // (r17: the answer that stays: the far side's light and the knots flare and ebb over `doorKnock` s.)
+    const flare = knock ? Math.min(1, kt * 12) * Math.max(0, 1 - kt / KIT.doorKnock) ** 1.5 : 0;
+    const twang = knock ? Math.exp(-kt * 5) * Math.sin(kt * 38) * 9 * -knock.side : 0;
     const open = opens === 'w' ? -1 : 1;
-    // Light from the far side between the roots (cool, faint, breathing a little).
+    // Light from the far side between the roots (cool, faint, breathing a little; a knock makes it flare).
     for (let k = 1; k < 3; k++) {
       const gx = x + (w * k) / 3;
-      glow.add(gx, y + h * 0.5, 26, D.leak, 0.07 + 0.02 * Math.sin(clock * 0.8 + k));
+      glow.add(
+        gx,
+        y + h * 0.5,
+        26 + 30 * flare,
+        D.leak,
+        0.07 + 0.02 * Math.sin(clock * 0.8 + k) + 0.3 * flare,
+      );
+      if (flare > 0.02)
+        fg.moveTo(gx, y + h * 0.06)
+          .lineTo(gx, y + h * 0.94)
+          .stroke({ color: D.leak, width: 10, alpha: 0.3 * flare })
+          .moveTo(gx, y + h * 0.1)
+          .lineTo(gx, y + h * 0.9)
+          .stroke({ color: D.leakCore, width: 2.5, alpha: 0.95 * flare });
     }
     for (let k = 0; k < 3; k++) {
       const rw = w / 3 + 6;
@@ -920,10 +993,19 @@ export class Kit {
     for (const by of [0.3, 0.68]) {
       const yy = y + h * by;
       g.moveTo(x - 4 + shake, yy - 4)
-        .quadraticCurveTo(x + w / 2 + shake, yy + 4, x + w + 4 + shake, yy - 3)
+        .quadraticCurveTo(
+          x + w / 2 + shake + twang,
+          yy + 4 + Math.abs(twang) * 0.5,
+          x + w + 4 + shake,
+          yy - 3,
+        )
         .stroke({ color: D.silk, width: 5, alpha: 0.75 });
       const kx = (open > 0 ? x + w + 6 : x - 6) + shake;
-      g.circle(kx, yy, 7).fill({ color: D.silk, alpha: 0.95 });
+      g.circle(kx, yy, 7 + 3 * flare).fill({ color: D.silk, alpha: 0.95 });
+      if (flare > 0.02) {
+        gf.add(kx, yy, 22 + 40 * flare, D.silkGlow, 0.5 * flare);
+        fg.circle(kx, yy, 9 + 14 * (1 - flare)).stroke({ color: D.leakCore, width: 2, alpha: 0.85 * flare });
+      }
       g.moveTo(kx, yy)
         .quadraticCurveTo(kx + open * 10, yy + 10, kx + open * 6, yy + 24)
         .moveTo(kx, yy)
@@ -932,7 +1014,7 @@ export class Kit {
       glow.add(kx, yy, 22, D.silkGlow, 0.18);
     }
     // Knocked: dust shaken out of its head.
-    if (knock && kt < 0.9) this.dust(g, x + w / 2, y + 10 + 60 * kt, w, 20, kt / 0.9, `${id}k`);
+    if (knock && kt < 0.9) this.dust(g, x + w / 2, y + 10 + 60 * kt, w * 1.6, 20, kt / 0.9, `${id}k`);
   }
 
   /** A puff of rot dust from a cut (t: 0..1 of its life), and (r16) chips of rot thrown out of it, falling. */

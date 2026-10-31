@@ -1331,8 +1331,8 @@ function hub(): Json {
   // (r11, review r10 #6: the clump's east face lit, a claw route from the bank's floor to its crown.)
   r.lamp('wick-clump', 7944, 720);
   // The premise (r10, review r9 #2): the first trap lamp, a cage of moths hung over the root floor west of the seed
-  // door, the first thing she meets walking west from the drop. Three cuts free it for good; its moths settle on the
-  // high block's claw face (the shard chamber's way up, lit), the Grove's over the kin's lamp, the warning's in the
+  // door, the first thing she meets walking west from the drop. Three cuts free it for good; its moths settle under
+  // the landing limb over it (r17; on the high block's claw face they read as the way on), the Grove's over the kin's lamp, the warning's in the
   // lampoak's crown over the drop: the hub changes with each lamp freed (`roosts`, render draws them).
   // (r11, review r10 #3: the cage hangs under the landing limb, in the frame where she lands from the drop (v10's was
   // 1,800 px west, out of it: holding right, the reviewer never saw it). 200 over the floor: a standing up cut reaches
@@ -1340,7 +1340,10 @@ function hub(): Json {
   r.lamp(HUB_TRAP, HUB_CAGE[0], HUB_CAGE[1], { trap: true, moths: 30, sets: 'cn-hub-freed' });
   r.set('roosts', [
     // (r12, the ending: once the den's great cage is freed the roosts' moths go on the migration: `leaves`.)
-    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 1024, y: 1088, w: 128, h: 448, leaves: DEN_FREED },
+    // (r17, first-timers ft16a / ft16c: up the high block's claw face the moths read as "the way" and led only to the
+    // limbs' top, "a bit of a letdown". They settle under the landing limb now, over the cage they came out of: a band
+    // along the bark, not a line up anything.)
+    { id: 'roost-crossing', lure: `cn-hub:${HUB_TRAP}`, x: 5840, y: 1236, w: 400, h: 96, leaves: DEN_FREED },
     {
       id: 'roost-grove',
       lure: `cn-grove:${GROVE_TRAP}`,
@@ -1485,7 +1488,9 @@ function trunk(): Json {
   // (r12, first-timer r11: "that bug pops up right where I land": on the hall's 320 px of floor east of the bed both
   // ends are landings (the drop from the top, the knuckles back east). It walks the top's floor now, seen from the
   // door (260 px off: its 30-frame tell plays before it can reach her), clear of the shaft's lip.)
-  r.juvenile('juv-t1', 2830, 384, -1, 70, { fenced: true });
+  // (r17, ft16a / ft16c: at 2,830 it hit them as they came through the door, "before I could see it". It walks the
+  // top's west end now, by the drop, 440 px from the door and facing it: she sees it come before it reaches her.)
+  r.juvenile('juv-t1', 2720, 384, 1, 44, { fenced: true });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);
