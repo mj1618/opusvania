@@ -183,3 +183,15 @@ a take without the Hush layer, for an A/B. The default flips only when he approv
 - **The generic "fantasy pad"** of big detuned saws: use rubbed glass, breath and string instead.
 - **Agents can't hear.** Measurements catch loud, harsh and dense, not ugly. The owner's ear is the gate:
   every milestone ends in a short A/B clip for him, never in "it passes the checks".
+
+## 6. The score as built (the Canopy, 2026-10-31)
+
+The rules above hold; the story note is answered by docs/design/levels/canopy-moments.md §5 (the director's sound plan).
+**Silence is the default.** Music plays only at the hatch's title (Wing's motif once on plucked string over the forest's
+chord D A E B in rubbed glass, unresolved on E), at the glades (two bars of the theme on a find or a rest), in an ambush
+(a regular pulse: col legno sixteenths, a tremolo pedal, the falling fourth D->A in the bass), at the den's boss (three
+phases; its last hit is followed by total silence, then its breath) and the great cage's release (the forest's chord
+rising, no motif), and at the clifftop vista (the theme whole, harmonised for the first time; the motif goes home to D,
+then the last chord is A over D, open). The instruments are Wing's (felt-struck and plucked strings, struck and rubbed
+glass) plus a bowed section, low drum and col legno for the beasts' music; nothing blown or voiced. How it is built and
+measured: memory/audio.md "The score and the Canopy".

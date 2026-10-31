@@ -46,6 +46,11 @@ export interface RoomBed {
   drips: number;
   voice: boolean;
   zones?: boolean;
+  /** The Canopy (2026-10-31): far insects (calls a second, 0 none), the earth's rumble (dB offset; absent = none),
+   * and an echo after each drip (0..1: the well's cold shaft). */
+  insects?: number;
+  earth?: number;
+  echo?: number;
 }
 export const BEDS: Record<string, RoomBed> = {
   default: { wind: -4, leaves: -3, hissHz: 3000, drips: 0.6, voice: false },
@@ -69,14 +74,52 @@ export const BEDS: Record<string, RoomBed> = {
   'lr-hall': { wind: -12, leaves: -14, hissHz: 2200, drips: 0.5, voice: false },
   'lr-roots': { wind: -18, leaves: -20, hissHz: 1800, drips: 2.4, voice: false },
   'lr-cache': { wind: -16, leaves: -18, hissHz: 2000, drips: 0.2, voice: false },
+  // The Canopy (canopy-moments.md §5: airy in the hatch, crown and gap; hushed in the well and the den; no owl
+  // underground). Up in the night canopy: wind, leaves, far insects. Inside the giant and the roots: the wind far
+  // above, drips near, a few ground insects. The well: cold drips with an echo. The den: the earth's own rumble.
+  'cn-hatch': { wind: 1, leaves: 3, hissHz: 3600, drips: 0.4, voice: true, insects: 0.35 },
+  'cn-hub': { wind: -1, leaves: 1, hissHz: 3200, drips: 0.6, voice: true, insects: 0.5 },
+  'cn-trunk': { wind: -10, leaves: -11, hissHz: 2200, drips: 1.4, voice: false, insects: 0.1 },
+  'cn-well': { wind: -12, leaves: -13, hissHz: 2000, drips: 2.6, voice: false, echo: 1 },
+  'cn-limbs': { wind: 2, leaves: 2, hissHz: 3500, drips: 0.4, voice: true, insects: 0.3 },
+  'cn-rot': { wind: -9, leaves: -10, hissHz: 2300, drips: 1.2, voice: false, insects: 0.12 },
+  'cn-crawl': { wind: -11, leaves: -12, hissHz: 2100, drips: 1.3, voice: false, insects: 0.08 },
+  'cn-webs': { wind: -14, leaves: -16, hissHz: 2000, drips: 0.5, voice: false },
+  'cn-elder': { wind: -10, leaves: -11, hissHz: 2200, drips: 1.8, voice: false, echo: 0.5 },
+  'cn-fork': { wind: 0, leaves: 1, hissHz: 3300, drips: 0.5, voice: true, insects: 0.4 },
+  'cn-cellar': { wind: -13, leaves: -14, hissHz: 2000, drips: 1.5, voice: false, earth: -10 },
+  'cn-galleries': {
+    wind: -12,
+    leaves: -13,
+    hissHz: 2100,
+    drips: 1.1,
+    voice: false,
+    insects: 0.1,
+    earth: -12,
+  },
+  'cn-larder': { wind: -13, leaves: -14, hissHz: 2000, drips: 1, voice: false, earth: -9 },
+  'cn-grove': { wind: -2, leaves: 0, hissHz: 3000, drips: 0.8, voice: true, insects: 0.6 },
+  'cn-spire': { wind: 1, leaves: 1, hissHz: 3400, drips: 0.4, voice: true, insects: 0.25 },
+  'cn-nook': { wind: -12, leaves: -13, hissHz: 2100, drips: 1, voice: false, insects: 0.15 },
+  'cn-hollowroot': { wind: -13, leaves: -14, hissHz: 1900, drips: 1.7, voice: false, echo: 0.4, earth: -12 },
+  'cn-bower': { wind: 1, leaves: 2, hissHz: 3500, drips: 0.3, voice: true, insects: 0.4 },
+  'cn-crown': { wind: 3, leaves: 3, hissHz: 3800, drips: 0.2, voice: true, insects: 0.2 },
+  'cn-attic': { wind: 0, leaves: 1, hissHz: 3400, drips: 0.5, voice: false, insects: 0.2 },
+  'cn-gap': { wind: 3, leaves: 2, hissHz: 3700, drips: 0.3, voice: true, insects: 0.25 },
+  'cn-sky': { wind: 4, leaves: 2, hissHz: 3900, drips: 0.2, voice: true },
+  'cn-tunnel': { wind: -12, leaves: -13, hissHz: 2100, drips: 1.2, voice: false, insects: 0.08, earth: -11 },
+  'cn-burrow': { wind: -14, leaves: -15, hissHz: 2000, drips: 1, voice: false, earth: -8 },
+  'cn-den': { wind: -16, leaves: -18, hissHz: 1900, drips: 0.9, voice: false, earth: -5, echo: 0.5 },
+  'cn-out': { wind: 3, leaves: 2, hissHz: 3700, drips: 0.3, voice: true, insects: 0.3 },
+  'cn-ledge': { wind: -9, leaves: -9, hissHz: 2400, drips: 1, voice: false, insects: 0.15 },
 };
 export const bedOf = (room: string): RoomBed => BEDS[room] ?? (BEDS.default as RoomBed);
 
 export const AUDIO = {
-  /** Master gain (dB). The whole mix sits near -20 LUFS integrated with this. */
-  master: 10,
+  /** Master gain (dB): play near -23 LUFS integrated, true peaks under -3 dBTP (the Canopy's clips, 2026-10-31). */
+  master: 8.5,
   /** Bus volumes (dB): Tweakpane and `__game.audio.volume(bus, v)`. */
-  bus: { world: 0, hero: 0, combat: 0, lantern: 0, creatures: 0 },
+  bus: { world: 0, hero: 0, combat: 0, lantern: 0, creatures: 0, score: 0 },
   /** Seconds the scheduler works ahead of the context clock. */
   lookahead: 0.03,
   /** Continuous layers are re-aimed at most this often (s) and glide there with this time constant. */
@@ -319,6 +362,77 @@ export const AUDIO = {
     /** Ants are heard within this many px of her; a skitter about this often per second while near. */
     skitterPx: 520,
     skitterRate: 2.2,
+  },
+  /**
+   * The score (score.ts, its own bus and hall; memory/audio.md "The score"): note peaks by instrument (dB before the
+   * master), its own voice pool, beats in sim frames (the boss's bar is the Keeper's swing, ~4 s), the hall send.
+   */
+  score: {
+    db: {
+      felt: -26,
+      harp: -24,
+      strings: -29,
+      trem: -31,
+      marc: -28,
+      celesta: -31,
+      glass: -32,
+      drum: -26,
+      colLegno: -33,
+    },
+    /** Seconds a note takes to die once its `dur` is up (a damper, a bow lifting). */
+    release: {
+      felt: 0.35,
+      harp: 0.6,
+      strings: 0.5,
+      trem: 0.25,
+      marc: 0.3,
+      celesta: 0.4,
+      glass: 0.6,
+      drum: 0.3,
+      colLegno: 0.05,
+    },
+    maxVoices: 32,
+    beat: 56,
+    bossBeat: 60,
+    hall: 0.55,
+    /** A glade's piece of the theme at most this often (s). */
+    gladeGapS: 45,
+    /** After the boss's last hit: the ring held this many frames, then this many of total silence, then its breath. */
+    lastRingFrames: 22,
+    silenceFrames: 150,
+  },
+  /** The Canopy's world (route-canopy.ts): levels (dB peaks; layers RMS). */
+  canopy: {
+    insectDb: -44,
+    trickleDb: -38,
+    trickleRate: 0.12,
+    echoDb: -10,
+    echoS: 0.42,
+    earthDb: -44,
+    /** The firefly: its call (three short, one long), blinks while it flies, a kindle, a hang's clinks. */
+    callDb: -30,
+    blinkDb: -36,
+    blinkEvery: 48,
+    kindleDb: -28,
+    clinkDb: -32,
+    gateDb: -22,
+    groanDb: -26,
+    /** A lampwing's hum and a hawker's wings, heard within these px (RMS dB at the creature). */
+    lampwingDb: -42,
+    hawkerDb: -40,
+    flyerPx: 700,
+    /** A burrback hunting her huffs every ~`huffS` s (it has a mouth). */
+    huffDb: -34,
+    huffS: 1.8,
+    /** The hatch: the swarm passing overhead (RMS dB) before the breakout, at it, and its tail (s). */
+    riverDb: [-46, -35] as [number, number],
+    riverTailS: 8,
+    /** The valley's false lights far below, heard from the promise lip (RMS dB, from this x in cn-hatch). */
+    valleyDb: -50,
+    valleyFromX: 2900,
+    /** Freed moths roosting: a soft flutter now and then within this many px. */
+    roostDb: -40,
+    roostPx: 700,
   },
   /** Held moments (the fling's aim, a story hold, a fade): the world bed ducks by up to this (dB). */
   duckDb: -10,

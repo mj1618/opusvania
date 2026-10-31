@@ -1,11 +1,14 @@
 /**
- * The mixing graph: five buses (world, hero, combat, lantern, creatures), one shared room reverb and a far,
+ * The mixing graph: six buses (world, hero, combat, lantern, creatures, score), one shared room reverb and a far,
  * darker one as sends, a roll-off above 9 kHz on everything but the glass, the master gain and a
  * gentle limiter that should never touch a normal mix (it is there for pile-ups).
  *
  *   voice -> bus.in -> roll-off -> bus.vol -> muffle -> sum -> fader -> master -> limiter -> trim -> out
  *        \-> roomIn ------------------> the convolver ------^
  *        \-> farIn  -> dull, delayed, fed back -^
+ *
+ * The score (score.ts) goes straight to the sum with its own hall: never muffled or ducked. `hush` (everything) is
+ * the boss's last hit: total silence.
  *
  * `duck` (the world bed's own gain) lowers the bed in held moments; `muffle` (a low-pass over everything
  * but the lamps: her hurt, the fling's hold) closes it. Both are layer targets (router.ts `layers`).
@@ -38,6 +41,10 @@ export class AudioGraph {
   /** The world bed's duck (linear gain) and the low-pass over all but the lamps. */
   readonly duck: GainNode;
   readonly muffle: BiquadFilterNode;
+  /** Everything at once (the boss's last hit: total silence, then its breath). A layer target. */
+  readonly hush: GainNode;
+  /** The score's own reverb: a longer, brighter hall than the forest (it is not in the world). */
+  readonly hallIn: GainNode;
   /** Muting a bus for an A/B (offline: the take without the bed). */
   readonly off = new Set<BusId>();
 
@@ -51,7 +58,14 @@ export class AudioGraph {
     const limiter = new DynamicsCompressorNode(ctx, LIMIT);
     const trim = new GainNode(ctx, { gain: dbToGain(-MAKEUP_DB) });
     this.fader = new GainNode(ctx, { gain: 0 });
-    sum.connect(this.fader).connect(this.master).connect(limiter).connect(trim).connect(out);
+    this.hush = new GainNode(ctx);
+    sum
+      .connect(this.hush)
+      .connect(this.fader)
+      .connect(this.master)
+      .connect(limiter)
+      .connect(trim)
+      .connect(out);
     this.muffle = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0 });
     this.muffle.connect(sum);
     this.duck = new GainNode(ctx);
@@ -74,6 +88,8 @@ export class AudioGraph {
       // Glass may ring above the roll-off; the lamps are never muffled (caught, the hum dominates).
       lantern: bus('lantern', 15000, sum),
       creatures: bus('creatures', AUDIO.rolloff, this.muffle),
+      // The score is not in the world: never muffled or ducked, its own hall (below).
+      score: bus('score', 12000, sum),
     };
     this.duck.connect(this.muffle);
 
@@ -92,9 +108,13 @@ export class AudioGraph {
     this.farIn.connect(dull).connect(pre).connect(wet).connect(conv);
     pre.connect(loop).connect(loopDull).connect(feedback).connect(loop);
     feedback.connect(wet);
-    for (const b of Object.values(this.buses)) {
-      b.room.connect(this.roomIn);
-      b.far.connect(this.farIn);
+    // The score's hall: a second convolver (3.4 s, brighter), its sends only.
+    this.hallIn = new GainNode(ctx);
+    const hall = new ConvolverNode(ctx, { buffer: this.buffer(baked.ir.hall), disableNormalization: false });
+    this.hallIn.connect(hall).connect(sum);
+    for (const [id, b] of Object.entries(this.buses)) {
+      b.room.connect(id === 'score' ? this.hallIn : this.roomIn);
+      b.far.connect(id === 'score' ? this.hallIn : this.farIn);
     }
   }
 

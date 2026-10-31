@@ -135,3 +135,55 @@ per count tick (thinned to 16, the great cage 28), climbing `MOTH_CENTS` then up
 last, and a `mothRush` panned toward the moon as they leave her (two for the great cage, all an octave / 500 cents
 down). Timed by render/lantern/release.ts (audio reads it, render never imports audio). Levels `AUDIO.lamp.release`.
 The hub's release with the bed: -25.7 LUFS, -7.9 dBTP, 0 clipped (`clips/r11-release-hub-audio.mp4`).
+
+## The score and the Canopy (2026-10-31, round 1; still muted, Matt has not judged it)
+Brief: docs/design/levels/canopy-moments.md §5 (the director's sound plan) over this file's rules. **Silence is the
+default**: no music in a room walked. Clips: `playtest-reports/canopy-audio-r1/` (README there has the numbers).
+- **score.ts**: a stateful director inside the conductor (live and offline alike; fed every step, muted or not;
+  `__game.audio.score()` = the piece now). Pieces are bars of notes on a sim-frame grid (`AUDIO.score.beat` 56 f; the
+  boss's `bossBeat` 60 f = a 4 s bar = the Keeper's swing, re-set from `cageSwing.period / 4`). Each bar's notes are
+  cues on bus **`score`** (its own voice pool of 32, never muffled or ducked, its own 3.4 s hall `graph.hallIn`), with
+  `dur` / `release` (oneshots.ts lets a held note go). A **cut** (`engine.cut('score', t)`) lets go of everything
+  scheduled, even notes not yet started. Pieces: `opening` (on `hatch` + 120 f: Wing's motif A D E F E on harp over the
+  forest chord D A E B in rubbed glass, held on E), `glade` (two bars of the theme on a find or a rest:
+  `gladeGrant`/`hollowGrant`/`seedTaken`/`patchRest`/`stoneHung`/`healthUp`, at most every 45 s), `tension1/2` (an
+  ambush: `snap.arena`; exact col legno 16ths, tremolo pedal D then E flat, the falling fourth D->A in the bass, a drum;
+  level 2 adds a high cluster), `clear` (the chord back, the motif's first steps), `wake` / `boss1-3` (below),
+  `greatRelease` (the forest chord swelling up two octaves, no motif), `vista` (on `cn-out-vista`: the theme whole,
+  harmonised for the first time, 18 bars + the motif going home to D, then A over D, open; it survives room changes).
+- **The theme** (`THEME` in score.ts): A = the motif twice over Dm9 Bbmaj7 Gm7 Asus->A / Dm9 Bbmaj7 C Asus->A; B = the
+  moths' version (C F G A G: her shape in F) over Bbmaj7 F/A Gm7 A ...; then the motif once more, resolving. Felt left
+  hand in eighths, harp melody, glass chords; the vista adds bowed strings.
+- **The boss** (old burrback now; the round-12 Keeper's names attach loosely: `bossCue intro/p2/p3`, `cageSwing`,
+  `cageFall`, `bossPhase`, the framework's stage): `snap.fight` (router.ts `fightSnap`: the framework's `state.boss`, or
+  the old burrback's own phases; its `wake` mode comes back after blows, only a whole one is waking). P1 drum knocks +
+  bass pedal + strings; P2 the pulse on the swing's ends, tremolo, her motif sinking chromatically (A D E F | E Eb | D |
+  C#); P3 eighths, a cluster, the motif fast in felt octaves. On `cageSwing` the mix muffles in the cage's shadow
+  (`player.lit`, `Score.shape`); on `cageFall` the great hum drops an octave. **The last hit** (stage fight -> down, or
+  `enemyDie` of a boss kind): the score cut, the ring held 22 f, then `graph.hush` = 0 for 150 f (no bed, no hum), then
+  its long breath out (`settle` -700 cents). The rams play the falling fourth on the score bus (route-canopy.ts).
+- **Instruments** (bake-music.ts), baked as notes every 3 semitones and repitched <= 1.5: `felt` (modal felt-hammered
+  string), `harp` (plucked), `strings` / `trem` / `marc` (5 wavetable voices with their own vibrato through a body),
+  `celesta`, `glass` (rubbed: bake-lib `rubbed`), `drum`, `colLegno`. Tuned within ~2 cents (strings ~±6 by ensemble
+  spread). **Cost**: ~0.7 s to bake (one idle step per note), ~38 MB of baked arrays (+ the AudioBuffers): the biggest
+  thing in the audio; drop the arrays after OneShots copies them if memory bites.
+- **The Canopy's world** (route-canopy.ts; `BEDS['cn-*']` with `insects`, `earth`, `echo`): far insects (a trill or
+  rasps, never near), the den / roots' earth rumble (voices/canopy.ts `EarthVoice`) and trickles, the well's drip echo,
+  the swarm over the hatch heard before it is seen (`RiverVoice`: out of the black over 3 s, closer per press, a breath
+  of silence at the breakout then the rush overhead thinning over 8 s), the valley's false lights from the promise lip
+  (`ValleyVoice`), lampwings' and hawkers' wings (`FlyerVoice`), burrbacks huffing as they hunt, freed moths stirring at
+  lit roosts. The firefly: its call three short one long (`fireflyBlink` 0 = short, 2 = long, at the lamps' sharp
+  pitch) on `fireflyStart`, slower on `fireflyEnd`, a blink every 48 f while it flies, `fireflyKindle` per relight, a
+  thread and hook on `fireflyHang`. Gates thud shut / groan open; a guarded cage clangs; a cut cage's bar clinks; the
+  warning's second beat is a deep slam from the den. The Keeper's `enemyFeed`, `cageDrop`, `mothEaten` (a chime cut
+  off), `mothSaved`, `keeperEat`, `keeperSight`, `cageFall`, `cageRelease`, `denCollapse` have cues already.
+- **Levels** (master 8.5 now, was 10): the route clips sit at -22.5 to -27.4 LUFS integrated, true peak -3.4 to -8.1
+  dBTP but -2.2 in the well's ambush (a pile-up of existing combat sounds, the limiter's); 0 clipped. Score alone: ~-24
+  LUFS at the vista, ~-28 in the boss, ~-32 under an ambush.
+- **Tools**: `tools/audio/route-audit.ts --tape <dir>/tape.json` (headless: per room the cues, the events with no sound,
+  the score's timeline) and `tools/audio/route-clips.ts --dir <route dir> --clip name:from:to` (mp4s with sound from a
+  route-video tape; `--wav --stems` for the score / bed / rest alone). Plan the tape with `route-video.ts plan`, and
+  build a frozen copy for the page (the level lane's WIP broke both the dev server and vitest mid-round).
+- **Not yet** (round 13 in the plan): the chase cue, the capture (wings falling into the hum's beat: `trapFill`), the
+  crown's duet (`kinSit`), the collapse's escape; the hub's music is the cage's hum and the bed only (the director's
+  plan, not the original brief's "theme at the hub").

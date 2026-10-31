@@ -10,6 +10,7 @@
  */
 import { at, bowl, breath, click, exp, len, panned, type Recipe, rubbed, swell } from './bake-lib';
 import { LR_RECIPES, LR_SOUNDS } from './bake-lr';
+import { INSTR, MUSIC_GLASS, MUSIC_RECIPES, MUSIC_SLOW, MUSIC_SOUNDS } from './bake-music';
 import { PLAY_RECIPES, PLAY_SOUNDS } from './bake-play';
 import {
   arEnv,
@@ -73,6 +74,8 @@ export const SOUNDS = {
   ...PLAY_SOUNDS,
   // Lanternroot (bake-lr.ts): her light, the moonwicks, the moss, the gust, the cap and the signs.
   ...LR_SOUNDS,
+  // The score's instruments (bake-music.ts: one variant per baked pitch) and the Canopy's own sounds.
+  ...MUSIC_SOUNDS,
 } as const;
 export type SoundId = keyof typeof SOUNDS;
 
@@ -92,6 +95,7 @@ export const SLOW: Partial<Record<SoundId, number>> = {
   glowBell: 2,
   bellAnswer: 2,
   mendLand: 2,
+  ...MUSIC_SLOW,
 };
 
 /** The rate a sound is baked at, for a context running at `sr`. */
@@ -106,12 +110,13 @@ export interface Baked {
   /** Seamless stereo noise beds for the continuous layers. */
   loops: { pink: Float32Array[]; brown: Float32Array[] };
   /** The reverb impulse (one convolver: graph.ts sends the far sounds into it darker and later). */
-  ir: { room: Float32Array[] };
+  ir: { room: Float32Array[]; hall: Float32Array[] };
 }
 
 const RECIPES: Record<SoundId, Recipe> = {
   ...PLAY_RECIPES,
   ...LR_RECIPES,
+  ...MUSIC_RECIPES,
   /** One soft *fff*: noise band-passed from ~1.8 kHz down to ~700 Hz in ~90 ms, a low push under it. */
   wing(sr, r) {
     const n = len(sr, 0.22);
@@ -667,6 +672,7 @@ const GLASS: readonly SoundId[] = [
   'wingHum',
   'glassSettle',
   'chordCatch',
+  ...MUSIC_GLASS,
 ];
 
 /** The last pass over every variant: a roll-off above ~7 kHz (but glass), a 2 ms fade to zero, peak 0.9. */
@@ -729,7 +735,7 @@ export function bakeSteps(sr: number, seed: number): { out: Baked; steps: Array<
     sr,
     sounds: {} as Bank,
     loops: { pink: [], brown: [] },
-    ir: { room: [] },
+    ir: { room: [], hall: [] },
   };
   const steps: Array<() => void> = [
     () => {
@@ -739,8 +745,20 @@ export function bakeSteps(sr: number, seed: number): { out: Baked; steps: Array<
     () => {
       out.ir.room = impulse(sr, seed ^ 0x700, 2.2, 0.012, 4000, 450);
     },
+    () => {
+      out.ir.hall = impulse(sr, seed ^ 0x4a11, 3.4, 0.025, 6500, 1400);
+    },
   ];
   for (const id of Object.keys(SOUNDS) as SoundId[]) {
+    // The score's instruments are many long notes: one step per note, so no idle callback runs long.
+    if (id in INSTR) {
+      out.sounds[id] = [];
+      for (let v = 0; v < SOUNDS[id]; v++)
+        steps.push(() => {
+          (out.sounds[id] as Float32Array[][])[v] = bakeVariant(id, rateOf(id, sr), seed, v);
+        });
+      continue;
+    }
     steps.push(() => {
       out.sounds[id] = bakeSound(id, rateOf(id, sr), seed);
     });
@@ -756,7 +774,10 @@ export function bakeAll(sr: number, seed: number): Baked {
 
 /** Bakes one sound's variants at `sr` (bakeSteps passes `rateOf`; tests call it directly). */
 export function bakeSound(id: SoundId, sr: number, seed: number): Float32Array[][] {
-  return Array.from({ length: SOUNDS[id] }, (_, v) =>
-    finish(id, sr, RECIPES[id](sr, stream((seed ^ salt(id)) + v * 977), v)),
-  );
+  return Array.from({ length: SOUNDS[id] }, (_, v) => bakeVariant(id, sr, seed, v));
+}
+
+/** One variant of a sound (a note of an instrument). */
+export function bakeVariant(id: SoundId, sr: number, seed: number, v: number): Float32Array[] {
+  return finish(id, sr, RECIPES[id](sr, stream((seed ^ salt(id)) + v * 977), v));
 }

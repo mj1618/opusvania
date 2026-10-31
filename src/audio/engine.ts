@@ -6,8 +6,9 @@
 import type { Baked } from './bake';
 import { AudioGraph } from './graph';
 import type { AudioCam, Cue, Layers } from './router';
-import { AUDIO } from './tuning';
+import { AUDIO, type BusId } from './tuning';
 import { BowlVoice } from './voices/bowl';
+import { EarthVoice, FlyerVoice, RiverVoice, ValleyVoice } from './voices/canopy';
 import { ChordVoice } from './voices/chord';
 import { GlassAirVoice, PoolVoice, SteamVoice } from './voices/forest';
 import { LampVoice } from './voices/lamp';
@@ -31,6 +32,10 @@ const LAZY: Array<{ need: (L: Layers) => boolean; make: (g: AudioGraph, b: Baked
   { need: (L) => L.rub > 0 || L.hum > 0, make: (g, b) => new BowlVoice(g, b) },
   { need: (L) => L.chord.some((x) => x > 0), make: (g, b) => new ChordVoice(g, b) },
   { need: (L) => L.lamp > 0 || L.aim > 0, make: (g, b) => new LampVoice(g, b) },
+  { need: (L) => L.earth > 1e-5, make: (g, b) => new EarthVoice(g, b) },
+  { need: (L) => L.river > 1e-5, make: (g, b) => new RiverVoice(g, b) },
+  { need: (L) => L.valley > 1e-5, make: (g) => new ValleyVoice(g) },
+  { need: (L) => L.lampwing > 1e-5 || L.hawker > 1e-5, make: (g) => new FlyerVoice(g) },
 ];
 
 export class AudioEngine {
@@ -58,12 +63,18 @@ export class AudioEngine {
     // Held moments duck the bed; her hurt closes the mix quickly and opens it slower.
     aim(this.graph.duck.gain, L.duck, when, 0.12);
     aim(this.graph.muffle.frequency, L.muffleHz, when, L.muffleHz < this.muffled ? 0.02 : 0.15);
+    aim(this.graph.hush.gain, L.hush, when, L.hush < 0.5 ? 0.04 : 0.6);
     this.muffled = L.muffleHz;
     for (const v of this.voices) v.apply(L, when, AUDIO.layerTau);
     LAZY.forEach((z, i) => {
       if (!this.lazy[i] && z.need(L)) this.lazy[i] = z.make(this.graph, this.baked);
       this.lazy[i]?.apply(L, when, AUDIO.layerTau);
     });
+  }
+
+  /** Lets go of everything scheduled on a bus from `when` (the score cut short). */
+  cut(bus: BusId, when: number): void {
+    this.shots.cut(bus, when);
   }
 
   /** The whole mix up or down (mute, a fade in at start), gliding. */
