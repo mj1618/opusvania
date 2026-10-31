@@ -434,6 +434,11 @@ export class Kit {
       // (The den's ending, the Canopy r12: the taproot is a gate the collapse opens; standing, the bake's column is it
       // (pf-mass `paintTaproot`). The rubble is the collapse's slope: earth and broken roots, not a lattice.)
       if (wood && g.id === 'taproot') return;
+      // (The Canopy r14: the taproot's top half left hanging from the roof after the collapse, broken off.)
+      if (wood && g.id === 'rubble-root') {
+        this.brokenRoot(back, g.x, g.y, g.w, g.h, 1 - fall, g.id);
+        return;
+      }
       if (wood && g.id.startsWith('rubble')) {
         // (Moonlit once the roof's shaft is open: canopy review r12 #3, "a moonlit rubble face".)
         const roof = (S.gates ?? []).findIndex((q) => q.id.endsWith('roof'));
@@ -1123,6 +1128,46 @@ export class Kit {
    * draw up into the lintel and the light pours out.
    */
   /**
+   * The taproot's top half (the Canopy r14, `rubble-root`): left hanging from the roof once the collapse snapped it, a
+   * twisted bundle of strands thinning down to a splintered break, the splinters pale where they tore.
+   */
+  private brokenRoot(g: Graphics, x: number, y: number, w: number, h: number, a: number, id: string): void {
+    if (a <= 0.01) return;
+    const cx = x + w / 2;
+    const h1 = (k: number): number => hash01(id, k);
+    for (let k = 0; k < 4; k++) {
+      const ph = k * 1.7 + h1(k) * 2;
+      const pts: number[] = [];
+      const back: number[] = [];
+      const end = h * (0.82 + 0.18 * h1(k + 10));
+      for (let q = 0; q <= 14; q++) {
+        const v = q / 14;
+        const yy = y - 30 + (end + 30) * v;
+        const wd = (w * 0.34 + 10) * (1 - 0.55 * v) * (k === 0 ? 1.4 : 1);
+        const xx = cx + Math.sin(v * 5 + ph) * w * 0.22 + (k - 1.5) * w * 0.14 * (1 - v);
+        pts.push(xx - wd / 2, yy);
+        back.unshift(xx + wd / 2, yy);
+      }
+      g.poly([...pts, ...back]).fill({
+        color: k === 0 ? 0x0e0a07 : mix(0x140e0a, 0x2a1f16, h1(k + 20)),
+        alpha: a,
+      });
+      // A dull lit edge on the moon's side.
+      g.poly(pts, false).stroke({ color: 0x4a3a2c, width: 2, alpha: 0.6 * a });
+    }
+    // The break: splinters, torn pale.
+    for (let k = 0; k < 7; k++) {
+      const sx = cx + (h1(k + 30) - 0.5) * w * 0.9;
+      const sy = y + h * (0.78 + 0.12 * h1(k + 40));
+      const len = 18 + 36 * h1(k + 50);
+      const ang = Math.PI / 2 + (h1(k + 60) - 0.5) * 0.8;
+      g.moveTo(sx, sy)
+        .lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len)
+        .stroke({ color: k % 2 ? 0x8a7458 : 0x2a1f16, width: 3 + 3 * h1(k + 70), cap: 'round', alpha: a });
+    }
+  }
+
+  /**
    * The collapse's rubble (the Canopy r12, moment 7's slope): a heap of earth clods and broken roots filling the gate's
    * rect, its top lumpy and dusted pale (it is walked), dropping in from above as it shuts (`fall` 1 -> 0).
    */
@@ -1164,7 +1209,19 @@ export class Kit {
         surf.push(st.x + 10 + ((st.w - 10) * q) / n, top + 2 + (h1(k++) - 0.5) * 9);
     });
     const last = S[S.length - 1] as (typeof S)[number];
-    const body = [...surf, last.x + last.w + 4, bottom, first.x - 70, bottom];
+    // (Its east side slumps too: a vertical edge read as a box, the r14 slab most of all.)
+    const lastTop = last.y - drop(last);
+    const body = [
+      ...surf,
+      last.x + last.w + 14,
+      lastTop + 26,
+      last.x + last.w + 40,
+      lastTop + (bottom - lastTop) * 0.55,
+      last.x + last.w + 70,
+      bottom,
+      first.x - 70,
+      bottom,
+    ];
     const a = Math.max(...S.map((st) => 1 - st.fall));
     if (a <= 0.01) return;
     g.poly(body).fill({ color: 0x0b0806, alpha: a });

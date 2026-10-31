@@ -26,6 +26,9 @@ export function zoneAt(
 ): CameraZone | null {
   for (const z of zones) {
     if (z.until && flags.includes(z.until)) continue;
+    // (Only once its story flag is saved: the crown's `crown-sit` after the kin sits. Review r13 #4: the camera never
+    // moved, as this was not read.)
+    if (z.after && !flags.includes(z.after)) continue;
     if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return z;
   }
   return null;
@@ -45,4 +48,15 @@ export function zoneZoom(z: CameraZone): number {
     return Math.max(0.5, Math.min(2, SAFE_W / f.w, SAFE_H / f.h));
   }
   return z.zoom ?? 1;
+}
+
+/** A zone's lean (the Canopy r14): the view's centre goes `k` of the way from her to (`x`, `y`). Read loosely. */
+export function zoneLean(z: CameraZone | null): { x: number; y: number; k: number } | null {
+  const l = (z as { lean?: { x: number; y: number; k: number } } | null)?.lean;
+  return l && l.k > 0 ? l : null;
+}
+
+/** Frames a zone's zoom eases over: the camera's own, or the zone's slide if slower (a staged push-in: 2 s). */
+export function zoneZoomFrames(z: CameraZone | null, own: number, last: number | undefined): number {
+  return Math.max(own, z ? (z.frames ?? 0) : (last ?? 0));
 }

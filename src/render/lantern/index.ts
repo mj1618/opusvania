@@ -19,6 +19,7 @@ import { lanternTops } from '../scene/lib/lr-terrain';
 import { isInterior, LOOK } from '../scene/lib/room-look';
 import { Acts } from './acts';
 import { Creatures } from './creatures';
+import { EscapeStage } from './escape';
 import { drawMotes, InteriorDepth } from './fore';
 import { Fx } from './fx';
 import { GlowPool } from './glow';
@@ -43,6 +44,8 @@ export class LanternPieces implements EnvModule {
   private acts: Acts | null = null;
   /** The den's great cage and its keeper (keeper.ts, the Canopy r12): light, shadows, moths, the column, the moon. */
   private keeper: KeeperStage | null = null;
+  /** The den's escape (escape.ts, the Canopy r14 moment 7): rocks, the collapse front, the roof's dust, the cloud. */
+  private escape: EscapeStage | null = null;
   /** The firefly's nest at the chase's end (nest.ts, the Canopy r13 moment 4). */
   private nest: FireflyNest | null = null;
   /** The trap is set (trap-stream.ts, the Canopy r13 moment 5): the passing stream, the catch, the den's answer. */
@@ -69,6 +72,7 @@ export class LanternPieces implements EnvModule {
     this.fx = new Fx(ctx.lights);
     if (LOOK.kit === 'wood') this.acts = new Acts(ctx, ctx.lights);
     this.keeper = KeeperStage.for(ctx, ctx.lights);
+    this.escape = EscapeStage.for(ctx, ctx.lights);
     this.nest = FireflyNest.for(ctx, ctx.lights);
     this.trap = TrapStream.for(ctx);
     this.opening = Opening.for(ctx);
@@ -119,6 +123,7 @@ export class LanternPieces implements EnvModule {
     this.water?.onEvents(sim.events, sim);
     this.acts?.onEvents(sim.events, sim);
     this.keeper?.onEvents(sim);
+    this.escape?.onEvents(sim);
     this.back.clear();
     this.front.clear();
     this.glowBack.begin();
@@ -141,6 +146,7 @@ export class LanternPieces implements EnvModule {
     this.acts?.draw(dt, clock, sim, camera, this.back, this.front, this.glowBack, this.glowFront);
     this.moon?.draw(dt, clock, sim, camera, this.glowBack, this.glowFront);
     this.keeper?.draw(dt, clock, sim, camera);
+    this.escape?.draw(dt, clock, sim, camera);
     this.nest?.draw(dt, clock, sim, camera);
     this.trap?.draw(dt, clock, sim, camera);
     this.opening?.draw(dt, clock, sim, camera);
@@ -162,6 +168,7 @@ export class LanternPieces implements EnvModule {
     this.fx?.destroy();
     this.acts?.destroy();
     this.keeper?.destroy();
+    this.escape?.destroy();
     this.nest?.destroy();
     this.depth?.destroy();
     this.vista?.destroy();

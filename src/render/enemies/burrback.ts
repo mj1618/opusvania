@@ -109,6 +109,9 @@ export function bossColors(on: boolean): void {
   set(C.feeler, L.feeler);
   set(C.fringeTop, L.fringeTop);
   set(C.fringeTip, L.fringeTip);
+  set(C.belly, L.belly);
+  set(C.bellyLow, L.bellyLow);
+  set(C.seamOpen, L.seamOpen);
   for (let i = 0; i < 3; i++) {
     set(C.edge[i]!, L.edge);
     set(C.crest[i]!, L.crest);
@@ -285,6 +288,32 @@ export class BurrRig {
    * falling moth (-1 = none). Its red eyes open for the snap and close again; it settles.
    */
   peekT = -1;
+  /**
+   * The Keeper's sweep (keeper-tells.ts, review r13 #2): 0..1 through its tell (-1 none): it rears its front half,
+   * claws up; 0..1 through the strike: it throws itself down and forward. Set by the renderer before `update`.
+   */
+  sweepTell = -1;
+  sweepStrike = -1;
+  private sweepK = 0;
+  /** P1's rage is over and it stays angry (`boss.angry` 2: every eye lit to the end; review r13 #3). Set by the renderer. */
+  angry = 0;
+  private angryK = 0;
+
+  /**
+   * A cut it shrugged off at its phase's gate (`keeperGlance gate`, review r13 #7): a heave of the plates up and a
+   * settle, burrs on end (not the block's flinch).
+   */
+  /** 0..1: how lit its eyes stay from its anger (P1's rage onward). */
+  get angryLit(): number {
+    return this.angryK;
+  }
+
+  shrug(): void {
+    this.squash.x = 0.09;
+    this.squash.v = 0;
+    this.bristle.v += 46;
+    this.rock.v += this.d * 1.6;
+  }
   /** Dust accumulator (render seconds). */
   dustT = 0;
   /** Sim frames into the current mode, fractional. */
@@ -904,7 +933,9 @@ export class BurrRig {
     }
     if (mode === 'rear' && this.lastBossMode !== 'rear' && !fresh) this.bristle.v += 40;
     this.lastBossMode = mode;
-    const rearing = mode === 'rear' || mode === 'slam' ? 1 : 0;
+    // (The sweep's tell rears it too, lights to the ram's red: review r13 #2, a tell must look nothing like eating.)
+    const rearing = mode === 'rear' || mode === 'slam' || (this.big && this.sweepTell >= 0) ? 1 : 0;
+    this.angryK += ((this.angry > 0 ? 1 : 0) - this.angryK) * approach(this.angry > 0 ? 8 : 3, dt);
     this.rearK += (rearing - this.rearK) * approach(rearing ? 30 : 6, dt);
     // Rolling: the ball turns with the ground it covers (its radius is the dome's).
     if (mode === 'roll') this.spin += (this.vx * dt) / BOSS.ballR;
@@ -974,8 +1005,33 @@ export class BurrRig {
       leanT += (this.d * 0.18 - leanT) * up;
       bristleT += (1.2 - bristleT) * up;
     }
+    // The sweep's tell (P3, review r13 #2: it was the eat pose, the one that meant "cut it"): the front half reared,
+    // head up and back, burrs on end, trembling as it holds; the strike throws the front down and forward.
+    const swOn = this.sweepTell >= 0 || this.sweepStrike >= 0 ? 1 : 0;
+    this.sweepK += (swOn - this.sweepK) * approach(swOn ? 24 : 7, dt);
+    if (this.sweepK > 0.001) {
+      const k = this.sweepK;
+      const u = Math.max(0, this.sweepTell);
+      const hit = this.sweepStrike >= 0;
+      const cT = hit ? 0.95 : -0.3;
+      const lT = hit
+        ? this.d * BOSS.sweep.strikeLean
+        : -this.d * BOSS.sweep.rear * (0.6 + 0.4 * u) +
+          BOSS.sweep.shake * u * Math.sin(clock * 44 + this.seed);
+      crouchT += (cT - crouchT) * k;
+      tuckT += ((hit ? 0 : 0.15) - tuckT) * k;
+      reachT += ((hit ? 1 : 0.2) - reachT) * k;
+      leanT += (lT - leanT) * k;
+      backT += ((hit ? this.d * 4 : -this.d * 4 * u) - backT) * k;
+      bristleT += (1.3 - bristleT) * k;
+    }
     const sharp =
-      sn >= 0 || (mode === 'alert' && !sliding) || (shying && react > 0.5) || wind || (curledNow && ck < 0.9);
+      this.sweepStrike >= 0 ||
+      sn >= 0 ||
+      (mode === 'alert' && !sliding) ||
+      (shying && react > 0.5) ||
+      wind ||
+      (curledNow && ck < 0.9);
     this.crouch.omega = sharp ? 36 : mode === 'walk' ? 15 : 10;
     this.crouch.zeta = sharp ? 0.55 : 0.8;
     this.crouch.step(crouchT, dt);
@@ -1529,7 +1585,7 @@ export function drawBurrback(
   tone(W.eye, C.eye, 0.3);
   // Braced, the eyes take the colour of its lights: a glare under the plate.
   for (let k = 0; k < 3; k++)
-    W.eye[k] = W.eye[k]! + (C.ramLight[k]! - W.eye[k]!) * 0.7 * Math.max(rig.braceK, rig.rearK);
+    W.eye[k] = W.eye[k]! + (C.ramLight[k]! - W.eye[k]!) * 0.7 * Math.max(rig.braceK, rig.rearK, rig.angryLit);
   // Calmed, the eyes take the lantern's warmth; right after a blow they are not lit.
   for (let k = 0; k < 3; k++) W.eye[k] = W.eye[k]! + (C.calmLight[k]! - W.eye[k]!) * 0.45 * rig.calmK;
   eyeLit = 1 - sat(toneDark * 1.2);
@@ -2171,7 +2227,7 @@ export function drawBurrback(
       for (let k = 0; k < 3; k++) sc[k] = sc[k]! + (C.calmLight[k]! - sc[k]!) * calm;
       // Braced: the colour of the ram.
       for (let k = 0; k < 3; k++)
-        sc[k] = sc[k]! + (C.ramLight[k]! - sc[k]!) * 0.85 * Math.max(braceK, rig.rearK);
+        sc[k] = sc[k]! + (C.ramLight[k]! - sc[k]!) * 0.85 * Math.max(braceK, rig.rearK, rig.angryLit);
       const alert = e.mode === 'alert' ? sat(t / 3) * sat((e.timer + 4) / 6) : 0;
       // Its touch: they jump at once, then fall back through the flinch.
       const flash = rig.touching ? (B.touch.flash - 1) * (1 - smoothstep(1, 12, t)) : 0;
@@ -2302,19 +2358,42 @@ export function drawBurrback(
       bx(mcx, -rimH + bh),
       by(mcx, -rimH + bh),
     );
-    // Soft creases across it (the plates of its underside).
-    SH_SEAM.alpha = 0.32 * spentK;
-    for (let c = 0; c < 3; c++) {
-      const cu = 0.3 + 0.2 * c;
+    // Soft creases across it (the plates of its underside). The Keeper's (review r13 #8: "a white slab"): a mid-tone
+    // underside in segmented plates with dark seams, and a few wings stuck in it like its back.
+    const plates = crustOn ? BOSS.belly.plates : 3;
+    SH_SEAM.alpha = (crustOn ? BOSS.belly.seam : 0.32) * spentK;
+    for (let c = 0; c < plates; c++) {
+      const cu = crustOn ? 0.12 + (0.76 * (c + 0.5)) / plates : 0.3 + 0.2 * c;
       const lx = sgn * (x0 + (x1 - x0) * cu) * (bw / R.bellyLen);
       const depth = bh * Math.sin(Math.PI * (0.06 + 0.94 * cu)) ** 0.7;
       for (let k = 0; k < 3; k++) {
         const v = k / 2;
         p.px[k] = bx(lx + sgn * 1.2 * Math.sin(Math.PI * v), -rimH + 1 + (depth - 1.5) * v);
         p.py[k] = by(lx + sgn * 1.2 * Math.sin(Math.PI * v), -rimH + 1 + (depth - 1.5) * v);
-        p.pw[k] = 0.65;
+        p.pw[k] = crustOn ? 1.1 : 0.65;
       }
       p.ribbon(3, SH_SEAM, false, false);
+    }
+    if (crustOn) {
+      SH_CRUST.alpha = BOSS.crust.alpha * spentK;
+      for (let j = 0; j < BOSS.belly.wings; j++) {
+        const cu = 0.25 + 0.5 * hash1(seed * 31 + j * 7);
+        const lx = sgn * (x0 + (x1 - x0) * cu) * (bw / R.bellyLen);
+        const depth = bh * Math.sin(Math.PI * (0.06 + 0.94 * cu)) ** 0.7;
+        const ly = -rimH + 1 + depth * (0.3 + 0.4 * hash1(seed * 17 + j));
+        const L = 2.6 + 1.4 * hash1(j * 5 + 3);
+        const a = (hash1(j * 11 + 1) - 0.5) * 2.4;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const pts = [0, 0, L * 0.5, -L * 0.14, L, -L * 0.06, L * 0.9, L * 0.16, L * 0.4, L * 0.26];
+        for (let q = 0; q < 5; q++) {
+          const qx = lx + pts[q * 2]! * ca - pts[q * 2 + 1]! * sa;
+          const qy = ly + pts[q * 2]! * sa + pts[q * 2 + 1]! * ca;
+          p.px[q] = bx(qx, qy);
+          p.py[q] = by(qx, qy);
+        }
+        p.shape(5, bx(lx, ly), by(lx, ly), SH_CRUST, p.px[0]!, p.py[0]!, p.px[2]!, p.py[2]!);
+      }
     }
   }
 

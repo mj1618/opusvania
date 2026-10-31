@@ -27,6 +27,7 @@ import { flameAt } from '../../sim/lures';
 import type { Lure } from '../../sim/scene';
 import { tuning } from '../../sim/tuning';
 import type { CameraView, SimView } from '../contract';
+import { sweepRead } from '../enemies/keeper-tells';
 import type { LightRegistry, PointLight } from '../lights';
 import type { SceneContext } from '../scene/index';
 import { type LarderRoot, oldCage, wingPts } from '../scene/lib/den-larder';
@@ -60,10 +61,16 @@ export const KEEPER = {
    * `spread` px either side, up to `mound` px deep at its middle), gnawed husks along the floor, an old cage on its
    * side by each wall. Colours: the wings' ash and dark, the husks.
    */
+  // (r14, review r13 #8: at play zoom the litter was a line of grit. The drift is 300+ px wide and a few wings deep with
+  // wings 10-24 px, and a heap of old cages (`heap` of them, `heapH` px) stands by the west wall: a larder's floor.)
   litter: {
-    wings: 170,
-    spread: 420,
-    mound: 14,
+    wings: 260,
+    spread: 380,
+    mound: 26,
+    wingL: [10, 24] as const,
+    heap: 3,
+    heapH: [150, 230] as const,
+    heapAt: 150,
     ash: 0x7c6e5e,
     dark: 0x2e241c,
     husks: 7,
@@ -80,14 +87,54 @@ export const KEEPER = {
   moth: { size: 15, color: 0xe8e0cc, tell: 26, saved: [46, 30] as const, savedMax: 14, trail: 5 },
   /** P3's low cloud: drawn moths at most, its ellipse round the fallen cage (px), how low over the floor. */
   low: { max: 90, rx: 520, ry: 110, over: 110, size: [6, 10] as const, color: 0xf0d8b0 },
-  /** The column: moths drawn, seconds to rise, its width (px), where it goes once through the gate (up the shaft). */
+  /**
+   * The column (canopy review r13 #1: "a thin dotted diagonal"): the great release rises STRAIGHT UP off the fallen
+   * cage into the moonbeam through the roof over it, a dense column `w` px wide narrowing to `funnel` at the roof.
+   * At least `n` moths whatever the count (a density floor; more with more saved, up to `max`), launched over
+   * `launch` s, rising at `speed` px/s with a slow helix (`helix` px): in frame >= 3 s. Gold out of the cage, silvered
+   * in the beam. A partial release (P3's `cageRelease`) rises the same way, thinner, to the roof.
+   */
   column: {
-    n: 140,
-    secs: [3.6, 6] as const,
-    w: 170,
-    size: [7, 12] as const,
-    color: 0xf4ecd8,
-    cool: 0xd8e6ff,
+    n: 220,
+    max: 300,
+    launch: 2.8,
+    speed: [230, 320] as const,
+    w: 250,
+    funnel: 110,
+    helix: 22,
+    size: [8, 13] as const,
+    color: 0xffe9c4,
+    cool: 0xe6ecff,
+  },
+  /**
+   * After the kill (review r13 #1, "the cage hidden under the carcass, nothing points"): the fallen cage's light swells
+   * back to its P1 brightness and beckons (a slow pulse), and what is left of its moths lifts to head height and
+   * circles it, tighter. `pool` / `beacon` alpha, the pulse's rate, the cloud's height over the floor and its radius.
+   */
+  after: { pool: 0.24, beacon: 0.2, pulse: 2.2, over: 210, rx: 230, in: 1.4 },
+  /**
+   * The anchor's moonlight (review r13 #1: "the moonbeam is at the far east, over the rubble, not over the cloud"): the
+   * roots that held the cage's chain in the roof part as it is freed, a ragged hole opens over the cage (`hole` px wide,
+   * the night's sky in it) and moonlight falls straight down it onto the column and the floor: the real light where the
+   * false one hung. Opens `at` s after the release, grows in over `in` s; for good after (`cn-den-freed`).
+   */
+  anchor: {
+    at: 0.5,
+    in: 1.6,
+    hole: 190,
+    w0: 220,
+    w1: 480,
+    sky: 0x2c3c60,
+    skyMid: 0x6f88b4,
+    skyCore: 0xdce6ff,
+    roots: 7,
+    /** The beam's three nested bands (additive alpha), how much they fade down its length, its glow, the floor's pool. */
+    bands: [0.06, 0.07, 0.09] as const,
+    fade: 0.6,
+    glow: 0.1,
+    pool: 0.2,
+    /** How far a moth in it is silvered (0..1): the moths stay warm-pale and brighter than the beam. */
+    silver: 0.35,
   },
   /** The moonbeam down the shaft: its colour, alpha, width at the gate and at the floor (px), the light's reach. */
   // (Review r12 #7: at 0.15 a faint pale band that read as fog. Now the den's brightest thing once the roof is open: a
@@ -107,6 +154,18 @@ export const KEEPER = {
     wash: [900, 700] as const,
     washA: 0.14,
   },
+  /**
+   * P3's sweep told (review r13 #2: its tell was the eat pose): its claws raised over its reared front, rimmed amber,
+   * trembling (`len` x its drawn height, `rim`); a lit arc on the floor where they will land (the sim's claw box),
+   * raked by three scores, brightening through the tell; dust lifting off the floor in it (`dust` a second).
+   */
+  sweep: { len: 0.95, rim: 0xffa040, dark: 0x0e0806, arc: 0xff9a40, dust: 40, drawK: 1.3 },
+  /**
+   * The slam's floor wave (review r13 #6: "unreadable in the dark"): a lit crack runs along the floor behind each front
+   * at the wave's speed (`color`, brightest at the front, fading `fade` s after), dust kicked up off the front, and the
+   * floor's rim flashes across the arena for `flash` s as it lands.
+   */
+  wave: { color: 0xffb060, hot: 0xffe0a0, fade: 1.1, flash: 0.2, flashA: 0.3, dust: 70 },
   /** The ending's dust: grains per second along the roof while it groans, their colour. */
   dust: { rate: 60, color: 0x6a5a48 },
 };
@@ -131,6 +190,11 @@ interface KeeperBoss {
   pivotY: number;
   lit: number;
   collapse: number;
+  /** r14: the sweep's span through its tell, P1's anger, the phase's gate. */
+  tellX0: number;
+  tellX1: number;
+  angry: number;
+  gated: number;
 }
 
 interface Mote {
@@ -145,13 +209,16 @@ interface Mote {
 }
 
 interface Riser {
-  /** Start (the cage), the gate, then up the shaft and east along the passage. */
+  /** Start (the cage's floor), seconds since launch (< 0 waiting), px/s up, its lane across the column (-1..1). */
   x0: number;
   y0: number;
   t: number;
-  secs: number;
+  speed: number;
+  lane: number;
   seed: number;
   s: number;
+  /** Out through the roof's hole (the great release), else it spreads under the roof and fades (a partial one). */
+  out: boolean;
 }
 
 /**
@@ -245,17 +312,46 @@ export class KeeperStage {
   private moonT = -1;
   private readonly gate: { x: number; y: number; w: number; h: number; id: string } | null;
   private readonly floorY: number;
+  private arenaX0 = 0;
   private readonly risers: Riser[] = [];
+  /** The roof over the cage (the underside of the solid above it), the chain's anchor's x, and the hole's clock. */
+  private readonly roofY: number;
+  private readonly anchorX: number;
+  private anchorT = -1;
+  private readonly crack = new Graphics({ label: 'keeper-anchor' });
+  private readonly anchorShaft = new Graphics({ label: 'keeper-anchor-shaft' });
+  /** 0..1 eased: the fight is won and the cage still burns (its light beckons, its moths lift). */
+  private downK = 0;
   private readonly puffs: Mote[] = [];
   private readonly dust: Mote[] = [];
   private groanT = -1;
-  private readonly glances: Array<{ x: number; y: number; t: number; lit: boolean }> = [];
+  private readonly glances: Array<{ x: number; y: number; t: number; lit: boolean; gate: boolean }> = [];
+  /** Sparks scraped along the floor at a gate's shrug. */
+  private readonly sparks: Mote[] = [];
+  private gateK = 0;
   private readonly sweeps: Array<{ x0: number; x1: number; y: number; t: number; secs: number }> = [];
   private feedT = -1;
+  private readonly sweepR = { tell: -1, strike: -1 };
+  private sweepK = 0;
+  private sweepDust = 0;
+  /** The slam's crack: where it started, how far each way it has run, seconds since the wave ended (-1 running). */
+  private crackX = 0;
+  private crackL = 0;
+  private crackR = 0;
+  private crackT = -2;
+  private flashT = -1;
+  private waveDust = 0;
   private feedX = 0;
   private feedY = 0;
   private readonly lightCage: PointLight = { x: 0, y: 0, radius: 0, color: KEEPER.light.color, intensity: 0 };
   private readonly lightMoon: PointLight = { x: 0, y: 0, radius: 0, color: KEEPER.moon.color, intensity: 0 };
+  private readonly lightAnchor: PointLight = {
+    x: 0,
+    y: 0,
+    radius: 0,
+    color: KEEPER.moon.color,
+    intensity: 0,
+  };
 
   /** A stage for this room, or null (no great cage over a keeper). */
   static for(ctx: SceneContext, lights: LightRegistry): KeeperStage | null {
@@ -289,20 +385,32 @@ export class KeeperStage {
     for (const s of scene.solids)
       if (this.lure.x >= s.x && this.lure.x <= s.x + s.w && s.y > this.lure.y && s.y < fy) fy = s.y;
     this.floorY = fy;
+    let ry = 0;
+    for (const s of scene.solids)
+      if (this.lure.x >= s.x && this.lure.x <= s.x + s.w && s.y + s.h <= this.lure.y && s.y + s.h > ry)
+        ry = s.y + s.h;
+    this.roofY = ry;
+    this.anchorX = this.lure.x;
+    const arena = (scene as { boss?: { arena?: { x: number } } }).boss?.arena;
+    this.arenaX0 = arena?.x ?? Math.max(200, this.lure.x - 1000);
     this.drawLitter(scene.width);
     ctx.layers.get('pickupsBack').addChild(this.litter);
     const back = ctx.layers.get('airBack');
     back.addChild(this.darkBack.container, this.pool.container, this.shadows);
     this.shaft.blendMode = 'add';
+    this.anchorShaft.blendMode = 'add';
     ctx.layers.air.addChild(
       this.darkFront.container,
+      this.crack,
       this.shaft,
+      this.anchorShaft,
       this.beam.container,
       this.front,
       this.glowFront.container,
     );
     lights.set('keeper-cage', this.lightCage);
     lights.set('keeper-moon', this.lightMoon);
+    lights.set('keeper-anchor', this.lightAnchor);
   }
 
   /**
@@ -322,7 +430,7 @@ export class KeeperStage {
         const x = cx + gauss * 2 * T.spread * 1.6;
         const m = Math.max(0, 1 - Math.abs(x - cx) / T.spread);
         const y = fy - T.mound * m * m * (3 - 2 * m) * (0.3 + 0.7 * hash01('lm', i)) + 2;
-        const l = 6 + 9 * hash01('ll', i + pass * 7);
+        const l = T.wingL[0] + (T.wingL[1] - T.wingL[0]) * hash01('ll', i + pass * 7) ** 1.5;
         const a = h * Math.PI * 2;
         const col = pass === 0 ? T.dark : mix(T.ash, T.dark, 0.5 * hash01('lc', i));
         g.poly(wingPts(x, y, l, a, hash01('lf', i) < 0.5 ? 1 : -1)).fill({
@@ -356,10 +464,25 @@ export class KeeperStage {
       }
       g.circle(x + 0.5 * len * ca, fy - 2, len * 0.12).fill({ color: 0x080504, alpha: 0.9 });
     }
-    // An old cage on its side by each wall, half in the floor.
+    // A heap of old cages by the west wall (emptied, thrown aside, piled), one on its side by the east wall.
     const C = { col: 0x2a1c12, dark: 0x0e0907, lit: 0x9a744e };
-    oldCage(g, cx - 760, fy - 26, 120, 1.45, 0.42, C, 71);
-    oldCage(g, cx + 640, fy - 22, 100, -1.75, 0.5, C, 73);
+    const wx = this.arenaX0 + T.heapAt;
+    for (let k = 0; k < T.heap; k++) {
+      const h = T.heapH[0] + (T.heapH[1] - T.heapH[0]) * hash01('hh', k);
+      const x = wx + (k - 1) * h * 0.55 + (hash01('hx', k) - 0.5) * 40;
+      const up = k === 1 ? h * 0.42 : 0;
+      oldCage(
+        g,
+        x,
+        fy - h * 0.18 - up,
+        h,
+        (hash01('ht', k) - 0.5) * 2.4 + (k === 1 ? 0.4 : 1.5),
+        0.3,
+        C,
+        71 + k * 7,
+      );
+    }
+    oldCage(g, cx + 640, fy - 30, 160, -1.75, 0.45, C, 73);
   }
 
   /** The great cage's lure id (lamps.ts hands its release's moths to the column). */
@@ -386,10 +509,21 @@ export class KeeperStage {
           // in P2's light the flash is the cage's own colour: it saw her.)
           const hx = (e.hitX as number) ?? e.x ?? 0;
           const hy = (e.hitY as number) ?? e.y ?? 0;
-          this.glances.push({ x: hx, y: hy, t: 0, lit: (e.why as string) === 'lit' });
+          const why = e.why as string;
+          this.glances.push({ x: hx, y: hy, t: 0, lit: why === 'lit', gate: why === 'gate' });
           this.scales(hx, hy, 5, 0.4);
+          // At its gate it shrugs the blow off: its claws scrape the floor (sparks along it), plates flare pale.
+          if (why === 'gate') this.scrape(e.x ?? hx, this.floorY);
           break;
         }
+        case 'keeperRage':
+          // P1's rage (review r13 #3): its slam lands with the floor's flash (no wave).
+          if ((e.phase as string) === 'slam') {
+            this.crackX = e.x ?? this.crackX;
+            this.flashT = 0;
+            this.burstDust(e.x ?? 0, this.floorY - 260, 18, 1.4);
+          }
+          break;
         case 'keeperSweep':
           // P3's sweep: its claws through the low cloud, a pale arc of dust along the floor it reaches.
           this.sweeps.push({
@@ -405,10 +539,13 @@ export class KeeperStage {
           break;
         case 'cageRelease':
           if ((e.lure as string) === this.lure.id)
-            this.rise(e.x ?? 0, e.y ?? 0, (e.moths as number) ?? 30, 0.5);
+            this.rise(e.x ?? 0, e.y ?? 0, (e.moths as number) ?? 30, false);
           break;
         case 'lureSnuff':
-          if ((e.id as string) === this.lure.id) this.rise(e.x ?? 0, e.y ?? 0, KEEPER.column.n, 1);
+          if ((e.id as string) === this.lure.id) {
+            this.rise(e.x ?? 0, e.y ?? 0, (e.moths as number) ?? 0, true);
+            this.anchorT = 0;
+          }
           break;
         case 'gateOpen':
           if (this.gate && (e.id as string) === this.gate.id) this.moonT = 0;
@@ -425,19 +562,31 @@ export class KeeperStage {
     }
   }
 
-  /** Moths rising from (x, y) to the roof's gate and up the shaft (`k` of the column's count, scaled by `n`). */
-  private rise(x: number, y: number, n: number, k: number): void {
+  /**
+   * Moths rising straight up from (x, y): the great release (`great`: a dense column of at least `column.n`, out
+   * through the roof's hole) or a partial one (P3's third: thinner, to under the roof).
+   */
+  private rise(x: number, y: number, n: number, great: boolean): void {
     const C = KEEPER.column;
-    const count = Math.round(Math.min(C.n, Math.max(12, n * 1.15)) * (k < 1 ? 0.6 : 1));
+    const count = great
+      ? Math.round(Math.min(C.max, Math.max(C.n, n * 1.8)))
+      : Math.round(Math.min(C.n * 0.5, Math.max(14, n * 1.2)));
+    const launch = great ? C.launch : 0.9;
+    const base = this.risers.length;
     for (let i = 0; i < count; i++) {
-      const seed = hash01(`rise${this.risers.length}`, i);
+      const j = base + i;
+      const seed = hash01('rise', j);
+      // Denser in the middle: a sum of three draws.
+      const lane = (hash01('rl1', j) + hash01('rl2', j) + hash01('rl3', j)) / 1.5 - 1;
       this.risers.push({
-        x0: x + (hash01('rx', i + this.risers.length) - 0.5) * 120,
-        y0: y + (hash01('ry', i) - 0.5) * 60,
-        t: -i * 0.012 - 0.3 * hash01('rd', i),
-        secs: C.secs[0] + (C.secs[1] - C.secs[0]) * seed,
+        x0: x,
+        y0: y - 10 - 40 * hash01('ry', j),
+        t: -(i / count) * launch - 0.12 * hash01('rd', j),
+        speed: C.speed[0] + (C.speed[1] - C.speed[0]) * hash01('rv', j),
+        lane,
         seed,
-        s: C.size[0] + (C.size[1] - C.size[0]) * hash01('rs', i),
+        s: C.size[0] + (C.size[1] - C.size[0]) * hash01('rs', j),
+        out: great,
       });
     }
   }
@@ -490,6 +639,11 @@ export class KeeperStage {
     this.fallenK = ease(this.fallenK, fallen, S.dark.in, S.dark.out);
     const fightOn = ((kb?.stage ?? '') !== 'down' && (kb?.stage ?? 'wait') !== 'wait') || !!fake?.phase;
     this.darkK = ease(this.darkK, (swinging || fallen) && fightOn, S.dark.in, S.dark.out);
+    // Won, the cage still burning: its light swells back and beckons, its moths lift (review r13 #1).
+    const won =
+      burning &&
+      ((kb?.stage ?? '') === 'down' || (kb?.stage ?? '') === 'end' || sim.save.flags.includes('cn-den-down'));
+    this.downK = ease(this.downK, won, S.after.in, 0.6);
     const phaseK = (arr: readonly number[]): number =>
       lerp3(arr[0] as number, arr[1] as number, arr[2] as number, this.swingK, this.fallenK);
 
@@ -521,6 +675,15 @@ export class KeeperStage {
       this.lightCage.y = L.y + (this.fallenK > 0 ? -80 : 60);
       this.lightCage.radius = 900 + 500 * Math.max(this.swingK, this.fallenK);
       this.lightCage.intensity = (0.35 + 0.45 * Math.max(this.swingK, this.fallenK)) * flick;
+      if (this.downK > 0.01) {
+        // The beckon: a slow swell (the "come here" without a sign), lit up off the floor round the cage.
+        const pulse = 0.75 + 0.25 * Math.sin(clock * S.after.pulse);
+        const dk = this.downK * pulse;
+        this.pool.add(L.x, L.y - 160, 980, S.light.color, S.after.pool * dk, 760);
+        this.glowFront.add(L.x, L.y - 50, 190, 0xffd6a0, S.after.beacon * dk, 150);
+        this.lightCage.intensity += 0.4 * dk;
+        this.lightCage.radius += 300 * this.downK;
+      }
       this.drawShadows(L, sim, phaseK(S.shadow.alpha));
     } else this.lightCage.intensity = 0;
 
@@ -542,11 +705,15 @@ export class KeeperStage {
     // --- P3's low cloud.
     if (fallen && kb && typeof kb.left === 'number') this.drawLow(clock, L, kb.left);
     // --- The column, the moonbeam, the dust, the scales.
+    this.drawAnchor(dt, clock, sim);
     this.drawRisers(dt, clock);
     this.drawMoon(dt, clock, sim, cam);
     this.drawDust(dt);
     this.drawPuffs(dt);
     this.drawGlances(dt);
+    this.drawSweepTell(dt, clock, sim, kb);
+    this.drawWaveCrack(dt, clock, sim);
+    this.drawGate(dt, clock, sim, kb);
     this.pool.end();
     this.glowFront.end();
     this.beam.end();
@@ -724,15 +891,19 @@ export class KeeperStage {
     const g = this.front;
     const n = Math.min(C.max, Math.round(left * 0.75));
     const fy = Math.min(this.floorY, L.y + 120);
+    // Won: they lift to her head's height and circle the cage closer.
+    const dk = this.downK;
+    const over = C.over + (KEEPER.after.over - C.over) * dk;
+    const rx = C.rx + (KEEPER.after.rx - C.rx) * dk;
     for (let i = 0; i < n; i++) {
       const h = hash01('low', i);
       const sp = (0.6 + 0.9 * hash01('lsp', i)) * (h < 0.5 ? -1 : 1);
       const a = clock * sp + h * 40;
       const r = 0.35 + 0.65 * hash01('lr', i);
-      const x = L.x + Math.cos(a) * C.rx * r + Math.sin(clock * 2.1 + i) * 14;
+      const x = L.x + Math.cos(a) * rx * r + Math.sin(clock * 2.1 + i) * 14;
       const y =
         fy -
-        C.over * (0.3 + 0.7 * hash01('ly', i)) +
+        over * (0.3 + 0.7 * hash01('ly', i)) +
         Math.sin(a) * C.ry * r * 0.5 +
         Math.sin(clock * 5 + i) * 8;
       const s = C.size[0] + (C.size[1] - C.size[0]) * hash01('ls', i);
@@ -750,52 +921,45 @@ export class KeeperStage {
     this.glowFront.add(L.x, fy - 70, C.rx * 0.9, 0xffc890, 0.05 + 0.08 * Math.min(1, left / 60), C.ry);
   }
 
-  /** The column: each moth rises from the cage to the roof's gate, then up the shaft and out of sight. */
+  /**
+   * The column: each moth rises straight up off the cage, the column narrowing toward the hole in the roof over it
+   * (`anchorX`, `roofY`), a slow helix in it; out through the hole (or, a partial release, spreading under the roof).
+   */
   private drawRisers(dt: number, clock: number): void {
     const C = KEEPER.column;
+    const A = KEEPER.anchor;
     const g = this.front;
-    const gx = this.gate ? this.gate.x + this.gate.w / 2 : this.lure.x;
-    const gy = this.gate ? this.gate.y + this.gate.h : 0;
+    const ak = this.anchorK();
     for (let i = this.risers.length - 1; i >= 0; i--) {
       const r = this.risers[i] as Riser;
       r.t += dt;
       if (r.t < 0) continue;
-      const u = r.t / r.secs;
+      // A start off the floor (slower for the first half second), then its own speed.
+      const dist = r.speed * (r.t - 0.22 * (1 - Math.exp(-r.t / 0.22)));
+      const top = r.out ? this.roofY - 70 : this.roofY + 70;
+      const total = Math.max(200, r.y0 - top);
+      const u = dist / total;
       if (u >= 1) {
         this.risers.splice(i, 1);
         continue;
       }
-      // A column: straight up off the cage to under the roof, then along under it to the gate, narrowing; then up the
-      // shaft and away.
-      const yMid = gy + 260;
-      const spread = C.w * (r.seed - 0.5);
-      const wob = Math.sin(clock * (3 + r.seed * 4) + r.seed * 30) * 18;
-      let x: number;
-      let y: number;
-      if (u < 0.5) {
-        const v = u / 0.5;
-        const e = v * v * (3 - 2 * v);
-        x = r.x0 + spread * (1 - 0.3 * e) + wob;
-        y = r.y0 + (yMid - r.y0) * e;
-      } else if (u < 0.82) {
-        const v = (u - 0.5) / 0.32;
-        const e = v * v * (3 - 2 * v);
-        x = r.x0 + spread * 0.7 * (1 - e) + (gx - r.x0) * e + wob;
-        y = yMid + (gy - yMid) * e - Math.sin(Math.PI * v) * 60;
-      } else {
-        const v = (u - 0.82) / 0.18;
-        x = gx + spread * 0.3 + Math.sin(clock * 5 + r.seed * 20) * 10;
-        y = gy - 280 * v;
-      }
-      const e = Math.min(1, u * 1.2);
-      const fade = Math.min(1, r.t / 0.2) * (u > 0.9 ? (1 - u) / 0.1 : 1);
-      // Gold out of the cage, cooling as they climb toward the moon.
-      let col = mix(C.color, C.cool, Math.min(1, e * 1.2));
-      // Into the moonbeam (the roof open): silvered, and lit.
-      const inBeam = this.moonT >= 0 && Math.abs(x - gx) < KEEPER.moon.w0 * 0.8 && y < gy + 500;
-      if (inBeam) {
-        col = mix(col, KEEPER.moon.core, 0.85);
-        this.glowFront.add(x, y, 20, KEEPER.moon.core, 0.22 * fade);
+      const e = u * u * (3 - 2 * u);
+      const half = (C.w / 2) * (1 - e) + (C.funnel / 2) * e;
+      const cx = r.x0 + (this.anchorX - r.x0) * e;
+      const helix = Math.sin(r.t * (2.2 + r.seed * 1.6) + r.seed * 40) * C.helix * (1 - 0.6 * u);
+      let x = cx + r.lane * half + helix + Math.sin(clock * (4 + r.seed * 5) + r.seed * 30) * 6;
+      const y = r.y0 - dist;
+      // A partial release spreads out under the roof as it arrives (it cannot leave yet).
+      if (!r.out && u > 0.75) x += r.lane * 260 * ((u - 0.75) / 0.25) ** 1.5;
+      const fade = Math.min(1, r.t / 0.25) * (u > 0.9 ? (1 - u) / 0.1 : 1);
+      // Gold out of the cage, cooling as they climb; silvered and lit inside the moonbeam.
+      let col = mix(C.color, C.cool, Math.min(1, u * 1.3));
+      const beamHalf =
+        (A.w0 + (A.w1 - A.w0) * Math.max(0, (y - this.roofY) / (this.floorY - this.roofY))) * 0.42;
+      const lit = ak * (Math.abs(x - this.anchorX) < beamHalf ? 1 : 0);
+      if (lit > 0) {
+        col = mix(col, KEEPER.moon.core, A.silver * lit);
+        if (i % 3 === 0) this.glowFront.add(x, y, 20, 0xffffff, 0.16 * fade * lit);
       }
       moth(
         g,
@@ -805,9 +969,126 @@ export class KeeperStage {
         Math.abs(Math.sin(clock * (13 + r.seed * 7) + r.seed * 9)),
         r.seed > 0.5 ? 1 : -1,
         col,
-        0.92 * fade,
+        0.95 * fade,
       );
-      if (i % 6 === 0) this.glowFront.add(x, y, 34, col, 0.14 * fade);
+      if (i % 5 === 0) this.glowFront.add(x, y, 34, col, 0.12 * fade);
+    }
+    void dt;
+  }
+
+  /** 0..1: the anchor's hole and its moonlight are in (eased). */
+  private anchorK(): number {
+    const A = KEEPER.anchor;
+    if (this.anchorT < A.at) return 0;
+    const k = Math.min(1, (this.anchorT - A.at) / A.in);
+    return k * k * (3 - 2 * k);
+  }
+
+  /**
+   * The anchor's moonlight: the roots that held the chain part, a ragged hole opens in the roof over the cage with the
+   * night in it, and moonlight falls straight down onto the column and the floor (the real light where the false one
+   * hung), dust lit in it.
+   */
+  private drawAnchor(dt: number, clock: number, sim: SimView): void {
+    const A = KEEPER.anchor;
+    const M = KEEPER.moon;
+    const freed = sim.save.flags.includes(`${(this.lure as { sets?: string }).sets ?? '-'}`);
+    if (this.anchorT < 0 && freed) this.anchorT = 99;
+    const g = this.crack.clear();
+    if (this.anchorT < 0) {
+      this.lightAnchor.intensity = 0;
+      return;
+    }
+    const before = this.anchorT;
+    this.anchorT += dt;
+    // The roots give: a fall of earth from the roof as the hole opens.
+    if (before < A.at && this.anchorT >= A.at) {
+      this.burstDust(this.anchorX, this.roofY + 6, 46, 1.2);
+      this.scales(this.anchorX, this.roofY + 20, 10, 1.2);
+    }
+    const k = this.anchorK();
+    if (k <= 0) return;
+    const x0 = this.anchorX;
+    const y0 = this.roofY;
+    const y1 = this.floorY;
+    const breathe = 0.9 + 0.1 * Math.sin(clock * 0.6 + 1.3);
+    // The hole: a ragged opening up into the roof, the night's sky in it, a pale core where the moon is.
+    const hw = (A.hole / 2) * (0.4 + 0.6 * k);
+    const pts: number[] = [];
+    const N = 26;
+    for (let q = 0; q <= N; q++) {
+      const t = q / N;
+      const a = Math.PI * t;
+      const rag = 0.5 + 0.6 * hash01('ah', q) * (q % 3 === 0 ? 1.3 : 1);
+      pts.push(x0 - Math.cos(a) * hw * rag, y0 + 8 - Math.sin(a) * 70 * k * rag);
+    }
+    for (let q = N; q >= 0; q--) {
+      const t = q / N;
+      pts.push(x0 - Math.cos(Math.PI * t) * hw * 0.92, y0 + 10 + 6 * hash01('ab', q));
+    }
+    // (A pale scalloped disc read as a lamp or a cloud: the night is dark blue in it, paler where the moon is.)
+    g.poly(pts).fill({ color: A.sky, alpha: 0.95 * k });
+    g.ellipse(x0 + 14, y0 - 22 * k, hw * 0.55, 30 * k).fill({ color: A.skyMid, alpha: 0.4 * k });
+    g.ellipse(x0 + 22, y0 - 30 * k, hw * 0.22, 14 * k).fill({ color: A.skyCore, alpha: 0.35 * k });
+    for (let q = 0; q < 5; q++)
+      g.circle(x0 + (hash01('as', q) - 0.5) * hw * 1.2, y0 - 10 - 40 * hash01('asy', q) * k, 1.4).fill({
+        color: 0xffffff,
+        alpha: 0.7 * k,
+      });
+    // The parted roots: hanging from the hole's lips, settling after their give.
+    const sway = Math.max(0, 1 - (this.anchorT - A.at) / 3);
+    for (let q = 0; q < A.roots; q++) {
+      const h = hash01('ar', q);
+      const side = q % 2 === 0 ? -1 : 1;
+      const rx = x0 + side * hw * (0.55 + 0.45 * h);
+      const len = (40 + 110 * hash01('al', q)) * k;
+      const sw = Math.sin(clock * 3 + q * 1.7) * 14 * sway + side * 10;
+      g.moveTo(rx, y0 + 4)
+        .quadraticCurveTo(rx + sw * 0.4 + side * 6, y0 + len * 0.5, rx + sw, y0 + len)
+        .stroke({ color: 0x0b0806, width: 5 - 3 * h, alpha: 0.95, cap: 'round' });
+    }
+    // The beam: straight down, a hard core in a wider soft band (moonlight, not a lamp: it starts at the roof, long).
+    const sh = this.anchorShaft.clear();
+    const yEnd = y0 + (y1 - y0) * Math.min(1, k * 1.25);
+    // (Uniform bands read as a lit tube with the column lost in it: it fades down its length, and the moths in it stay
+    // the brightest things.)
+    const SEG = 12;
+    A.bands.forEach((a, i) => {
+      const wk = 1 - i * 0.3;
+      for (let q = 0; q < SEG; q++) {
+        const t0 = q / SEG;
+        const t1 = (q + 1) / SEG;
+        const ya = y0 + (yEnd - y0) * t0;
+        const yb = y0 + (yEnd - y0) * t1;
+        const ha = ((A.w0 + (A.w1 - A.w0) * t0) * wk) / 2;
+        const hb = ((A.w0 + (A.w1 - A.w0) * t1) * wk) / 2;
+        const fall = 1 - A.fade * ((t0 + t1) / 2);
+        sh.poly([x0 - ha, ya, x0 + ha, ya, x0 + hb, yb, x0 - hb, yb]).fill({
+          color: i === 2 ? M.core : M.color,
+          alpha: a * k * breathe * fall,
+        });
+      }
+    });
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      const y = y0 + (yEnd - y0) * t;
+      const w = A.w0 + (A.w1 - A.w0) * t;
+      this.beam.add(x0, y, w * 0.55, M.color, A.glow * breathe * k * (1 - 0.5 * t), 130, 0);
+    }
+    this.beam.add(x0, y1 - 6, A.w1 * 0.8, M.core, A.pool * k * breathe, 34);
+    this.lightAnchor.x = x0;
+    this.lightAnchor.y = (y0 + y1) / 2 + 120;
+    this.lightAnchor.radius = M.light;
+    this.lightAnchor.intensity = M.intensity * k;
+    // Dust drifting down through it, lit.
+    for (let i = 0; i < M.motes; i++) {
+      const h = hash01('am', i);
+      const u = (clock * (0.02 + 0.03 * h) + h) % 1;
+      const y = y0 + (y1 - y0) * u;
+      if (y > yEnd) continue;
+      const half = (A.w0 + (A.w1 - A.w0) * u) * 0.45;
+      const x = x0 + Math.sin(clock * 0.5 + i * 2.3) * half * (hash01('amx', i) - 0.5) * 2;
+      this.glowFront.add(x, y, 2.5 + 3 * h, 0xf2f6ff, 0.6 * k * Math.sin(Math.PI * u));
     }
   }
 
@@ -924,7 +1205,9 @@ export class KeeperStage {
         this.glances.splice(i, 1);
         continue;
       }
-      const col = q.lit ? 0xffc070 : 0xffa040;
+      const col = q.gate ? 0xfff2dc : q.lit ? 0xffc070 : 0xffa040;
+      // (The gate's own look, review r13 #7: the plates flare pale over the whole dome, not the block's amber spark.)
+      if (q.gate) this.glowFront.add(q.x, q.y + 20, 170 * (0.7 + 0.5 * u), col, 0.42 * (1 - u), 90);
       this.glowFront.add(q.x, q.y, 70 * (0.6 + u), col, 0.55 * (1 - u));
       this.front
         .arc(q.x, q.y, 26 + 30 * u, -Math.PI * 0.9, -Math.PI * 0.1)
@@ -947,6 +1230,256 @@ export class KeeperStage {
     }
   }
 
+  /** The sweep's tell and strike (keeper-tells.ts): raised claws over it, the arc on the floor, dust off the floor. */
+  private drawSweepTell(dt: number, clock: number, sim: SimView, kb: Partial<KeeperBoss> | null): void {
+    const W = KEEPER.sweep;
+    const e = sim.enemies.find((q) => q.kind === 'oldBurrback' && !q.gone);
+    if (!e) return;
+    const rd = sweepRead(sim.boss, e, tuning.keeper, this.sweepR);
+    const on = rd.tell >= 0 || rd.strike >= 0 ? 1 : 0;
+    this.sweepK = on ? Math.min(1, this.sweepK + dt / 0.12) : Math.max(0, this.sweepK - dt / 0.35);
+    if (this.sweepK <= 0.003) return;
+    const k = this.sweepK;
+    const u = rd.strike >= 0 ? 1 : Math.max(0, rd.tell);
+    const g = this.front;
+    const f = e.facing;
+    const H = e.h * W.drawK;
+    const feet = e.y + e.h;
+    const cx = e.x + e.w / 2;
+    // --- The arc on the floor where the claws will land (the sim's box: the cage's x +- sweepHitPx).
+    const ax0 = typeof kb?.tellX0 === 'number' && kb.tellX1 !== kb.tellX0 ? kb.tellX0 : null;
+    const cageX = ax0 !== null ? (ax0 + (kb?.tellX1 as number)) / 2 : (kb?.cageX ?? this.lure.x);
+    const reach = ax0 !== null ? Math.abs((kb?.tellX1 as number) - ax0) / 2 : tuning.keeper.sweepHitPx;
+    const fy = this.floorY;
+    const pulse = 0.75 + 0.25 * Math.sin(clock * (10 + 14 * u));
+    const ak = k * (0.35 + 0.65 * u) * pulse * (rd.strike >= 0 ? 1.4 : 1);
+    for (let i = 0; i <= 6; i++) {
+      const x = cageX - reach + (2 * reach * i) / 6;
+      this.glowFront.add(x, fy - 6, reach * 0.42, W.arc, 0.12 * ak, 22);
+    }
+    for (let s2 = 0; s2 < 3; s2++) {
+      const off = (s2 - 1) * 26;
+      const lift = 34 + 10 * s2;
+      g.moveTo(cageX - reach + off * 0.3, fy - 2)
+        .quadraticCurveTo(cageX + off, fy - lift, cageX + reach + off * 0.3, fy - 2)
+        .stroke({ color: W.arc, width: 2.5, alpha: Math.min(1, 0.85 * ak), cap: 'round' });
+    }
+    // Dust lifting off the floor in the box (the claws' wind).
+    this.sweepDust += dt * W.dust * k * (0.4 + u);
+    while (this.sweepDust >= 1) {
+      this.sweepDust -= 1;
+      const h = hash01('swd', this.puffs.length + Math.floor(clock * 60));
+      this.puffs.push({
+        x: cageX - reach + 2 * reach * h,
+        y: fy - 4,
+        vx: (hash01('swx', Math.floor(clock * 97)) - 0.5) * 40,
+        vy: -90 - 120 * hash01('swy', Math.floor(clock * 61)),
+        t: 0,
+        life: 0.9,
+        s: 2 + 2.5 * h,
+        seed: h,
+      });
+    }
+    // --- The claws: two scythes off the reared front (the far one darker, behind), raised, trembling; struck, down
+    // through the floor's arc.
+    const S = H / 150;
+    for (const far of [1, 0]) {
+      const bx = cx + f * (e.w * 0.42 - far * 26);
+      const by = feet - H * (0.42 + 0.4 * u) - far * 10;
+      const shake = (1 - far * 0.4) * u * 5 * Math.sin(clock * 47 + far * 2);
+      let tx: number;
+      let ty: number;
+      if (rd.strike >= 0) {
+        const v = rd.strike;
+        tx = cx + f * (H * (0.8 + 0.5 * v) - far * 34);
+        ty = fy - 30 - 50 * (1 - v);
+      } else {
+        tx = bx + f * H * W.len * (0.45 - 0.1 * far) + shake;
+        ty = by - H * W.len * (0.35 + 0.35 * u) + shake;
+      }
+      // The elbow bows back over it: a mantis's raised foreleg.
+      const ex = (bx + tx) / 2 - f * 26 * S;
+      const ey = Math.min(by, ty) - 26 * S;
+      // The blade: a hooked sickle hanging off the tip, its point down and forward, the inner edge serrated.
+      const L = 62 * S;
+      const ang = rd.strike >= 0 ? 0.25 : 0.95 - 0.25 * u;
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      const P = (x: number, y: number): [number, number] => [
+        tx + f * (x * ca - y * sa),
+        ty + x * sa + y * ca,
+      ];
+      const blade: number[] = [];
+      const outer: Array<[number, number]> = [
+        [-4, -6],
+        [0.35 * L, -12 * S],
+        [0.75 * L, -6 * S],
+        [L, 6 * S],
+        [1.05 * L, 18 * S],
+      ];
+      const inner: Array<[number, number]> = [
+        [0.85 * L, 8 * S],
+        [0.7 * L, 6 * S],
+        [0.62 * L, 10 * S],
+        [0.5 * L, 4 * S],
+        [0.42 * L, 9 * S],
+        [0.3 * L, 3 * S],
+        [0.1 * L, 7 * S],
+        [-4, 8],
+      ];
+      for (const [x, y] of [...outer, ...inner]) blade.push(...P(x, y));
+      g.moveTo(bx, by)
+        .quadraticCurveTo(ex, ey, tx, ty)
+        .stroke({ color: W.dark, width: (20 - far * 5) * S, alpha: 0.97 * k, cap: 'round' });
+      g.poly(blade).fill({ color: W.dark, alpha: 0.97 * k });
+      if (!far) {
+        g.poly(blade).stroke({ color: W.rim, width: 3, alpha: (0.5 + 0.5 * u) * k });
+        g.moveTo(bx, by)
+          .quadraticCurveTo(ex, ey, tx, ty)
+          .stroke({ color: W.rim, width: 2.5, alpha: (0.3 + 0.45 * u) * k, cap: 'round' });
+        const [px, py] = P(1.05 * L, 18 * S);
+        this.glowFront.add(px, py, 30 + 26 * u, W.rim, (0.2 + 0.35 * u) * k);
+      }
+    }
+  }
+
+  /** The slam's wave along the floor: a crack lit behind each front, dust off the fronts, the floor's flash. */
+  private drawWaveCrack(dt: number, clock: number, sim: SimView): void {
+    const V = KEEPER.wave;
+    const e = sim.enemies.find((q) => q.kind === 'oldBurrback' && !q.gone);
+    const fy = this.floorY;
+    if (e && e.wave > 0) {
+      if (this.crackT !== -1) {
+        // A new slam: the floor flashes, the crack starts under it.
+        this.crackX = e.waveX;
+        this.crackL = this.crackR = 0;
+        this.flashT = 0;
+      }
+      this.crackT = -1;
+      this.crackL = Math.max(this.crackL, e.wave);
+      this.crackR = Math.max(this.crackR, e.wave);
+      // Dust kicked up at each front.
+      this.waveDust += dt * V.dust;
+      while (this.waveDust >= 1) {
+        this.waveDust -= 1;
+        for (const side of [-1, 1]) {
+          const h = hash01('wd', this.puffs.length + side);
+          this.puffs.push({
+            x: e.waveX + side * e.wave - side * 20 * h,
+            y: fy - 3,
+            vx: side * (40 + 60 * h),
+            vy: -120 - 160 * hash01('wdy', this.puffs.length),
+            t: 0,
+            life: 0.8 + 0.5 * h,
+            s: 2.5 + 3 * h,
+            seed: h,
+          });
+        }
+      }
+    } else if (this.crackT === -1) this.crackT = 0;
+    else if (this.crackT >= 0) this.crackT += dt;
+    // The floor's flash as it lands.
+    if (this.flashT >= 0) {
+      this.flashT += dt;
+      const u = this.flashT / V.flash;
+      if (u >= 1) this.flashT = -1;
+      else
+        for (let i = -6; i <= 6; i++)
+          this.glowFront.add(
+            this.crackX + i * 220,
+            fy - 4,
+            200,
+            V.hot,
+            V.flashA * (1 - u) * (1 - Math.abs(i) / 8),
+            14,
+          );
+    }
+    if (this.crackT === -2 || this.crackT > V.fade) return;
+    const fade = this.crackT < 0 ? 1 : 1 - this.crackT / V.fade;
+    const g = this.front;
+    for (const side of [-1, 1]) {
+      const reach = side < 0 ? this.crackL : this.crackR;
+      if (reach < 8) continue;
+      // A jagged lit line along the floor's lip, brightest at the front, a dark split under it.
+      const n = Math.max(2, Math.ceil(reach / 24));
+      const pts: number[] = [];
+      for (let q = 0; q <= n; q++) {
+        const d = (q / n) * reach;
+        const jag = q === 0 || q === n ? 0 : (hash01('ck', q * side + 500) - 0.5) * 7;
+        pts.push(this.crackX + side * d, fy + 2 + jag);
+      }
+      g.poly(pts, false).stroke({ color: 0x050302, width: 8, alpha: 0.85 * fade });
+      for (let q = 0; q < n; q++) {
+        const u = (q + 0.5) / n;
+        const a = (0.25 + 0.75 * u * u) * fade;
+        g.moveTo(pts[q * 2] as number, (pts[q * 2 + 1] as number) - 1)
+          .lineTo(pts[q * 2 + 2] as number, (pts[q * 2 + 3] as number) - 1)
+          .stroke({ color: u > 0.85 ? V.hot : V.color, width: 4, alpha: a });
+        // Light leaking up out of the split.
+        if (q % 3 === 0)
+          this.glowFront.add(pts[q * 2] as number, fy - 14, 22, V.color, 0.3 * a, 40 + 30 * hash01('cj', q));
+      }
+      const fx = this.crackX + side * reach;
+      if (this.crackT < 0) {
+        this.glowFront.add(fx, fy - 24, 110, V.hot, 0.55 + 0.1 * Math.sin(clock * 40), 70);
+        this.glowFront.add(fx - side * reach * 0.3, fy - 4, reach * 0.4, V.color, 0.2, 16);
+      } else
+        this.glowFront.add(this.crackX + side * reach * 0.5, fy - 2, reach * 0.5, V.color, 0.1 * fade, 8);
+    }
+  }
+
+  /** A gate's shrug: its claws scrape the floor under it, sparks thrown along it. */
+  private scrape(x: number, fy: number): void {
+    for (let i = 0; i < 16; i++) {
+      const h = hash01(`sp${this.sparks.length}`, i);
+      const side = i % 2 === 0 ? -1 : 1;
+      this.sparks.push({
+        x: x + side * (60 + 80 * h),
+        y: fy - 3,
+        vx: side * (180 + 260 * hash01('spv', i)),
+        vy: -80 - 160 * hash01('spy', i + this.sparks.length),
+        t: 0,
+        life: 0.35 + 0.3 * h,
+        s: 1.5 + h,
+        seed: h,
+      });
+    }
+  }
+
+  /** The sparks of a scrape, and while it is gated a slow pale sheen breathing over its dome (it cannot be hurt now). */
+  private drawGate(dt: number, clock: number, sim: SimView, kb: Partial<KeeperBoss> | null): void {
+    const g = this.front;
+    for (let i = this.sparks.length - 1; i >= 0; i--) {
+      const q = this.sparks[i] as Mote;
+      q.t += dt;
+      if (q.t > q.life) {
+        this.sparks.splice(i, 1);
+        continue;
+      }
+      q.vy += 900 * dt;
+      q.x += q.vx * dt;
+      q.y = Math.min(this.floorY - 2, q.y + q.vy * dt);
+      const a = 1 - q.t / q.life;
+      g.moveTo(q.x, q.y)
+        .lineTo(q.x - q.vx * 0.03, q.y - q.vy * 0.03)
+        .stroke({ color: 0xffd080, width: q.s, alpha: a });
+    }
+    const on = (kb?.gated ?? 0) > 0;
+    this.gateK = on ? Math.min(1, this.gateK + dt / 0.4) : Math.max(0, this.gateK - dt / 0.6);
+    if (this.gateK <= 0.01) return;
+    const e = sim.enemies.find((q) => q.kind === 'oldBurrback' && !q.gone && q.mode !== 'dead');
+    if (!e) return;
+    const br = 0.5 + 0.5 * Math.sin(clock * 3.1);
+    this.glowFront.add(
+      e.x + e.w / 2,
+      e.y + e.h * 0.25,
+      e.w * 0.75,
+      0xe8e4f0,
+      0.1 * this.gateK * br,
+      e.h * 0.55,
+    );
+  }
+
   private drawPuffs(dt: number): void {
     const g = this.front;
     for (let i = this.puffs.length - 1; i >= 0; i--) {
@@ -967,6 +1500,7 @@ export class KeeperStage {
   destroy(): void {
     this.lights.remove('keeper-cage');
     this.lights.remove('keeper-moon');
+    this.lights.remove('keeper-anchor');
   }
 }
 

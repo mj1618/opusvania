@@ -66,6 +66,7 @@ const WING_C1 = rgb(0x463a52);
 const DUST = rgb(0x8c8494);
 const VEIN = rgb(0x8e8698);
 const SPOT = rgb(0x9a8a70);
+const MOON_RIM = rgb(0xeef3ff);
 const SPOT_DARK = rgb(0x17111d);
 
 const SH_WING: Shade = { c0: WING_C0, c1: WING_C1, rim: 0.7, cool: 0.2, form: 0.15, band: 0.22, ember: 0 };
@@ -136,6 +137,8 @@ export function drawMothWing(
   clock: number,
   tremble: number,
   windX: number,
+  /** 0..1: the moon on its edge (the sit, review r13 #4: grey wings on the pale disc did not read): a silver fringe. */
+  rimK = 0,
 ): void {
   const ca = Math.cos(pose.ang);
   const sa = Math.sin(pose.ang);
@@ -209,15 +212,15 @@ export function drawMothWing(
       const dx = fx[i]! - cx0;
       const dy = fy[i]! - cy0;
       const d = Math.hypot(dx, dy) || 1;
-      const grow = 1.1 + 0.5 * hash1(look.seed * 7 + i);
+      const grow = (1.1 + 0.5 * hash1(look.seed * 7 + i)) * (1 + 1.4 * rimK);
       p.px[i] = fx[i]! + (dx / d) * grow;
       p.py[i] = fy[i]! + (dy / d) * grow;
       p.gx[i] = fx[i]! - (dx / d) * 0.6;
       p.gy[i] = fy[i]! - (dy / d) * 0.6;
-      p.gc[i * 3] = DUST[0];
-      p.gc[i * 3 + 1] = DUST[1];
-      p.gc[i * 3 + 2] = DUST[2];
-      p.pw[i] = 0.22;
+      p.gc[i * 3] = lerp(DUST[0], MOON_RIM[0], rimK);
+      p.gc[i * 3 + 1] = lerp(DUST[1], MOON_RIM[1], rimK);
+      p.gc[i * 3 + 2] = lerp(DUST[2], MOON_RIM[2], rimK);
+      p.pw[i] = 0.22 + 0.5 * rimK;
     }
     p.sweep(n + 1, false);
     for (let i = 0; i < n; i++) {

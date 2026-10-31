@@ -20,7 +20,7 @@ import type { Scene } from '../../sim/scene';
 import type { GameState } from '../../sim/state';
 import { type CameraView, SAFE_H, SAFE_W } from '../contract';
 import { type CameraTuning, cameraTuning } from './tuning';
-import { zoneAt, zoneBounds, zonesOf, zoneZoom } from './zones';
+import { zoneAt, zoneBounds, zoneLean, zonesOf, zoneZoom, zoneZoomFrames } from './zones';
 
 export interface CameraState {
   /** Free-follow view centre x and anchor-line y (feet level), before clamping. */
@@ -194,7 +194,13 @@ function stepZones(
   if (snap) {
     cam.zoom = want;
     cam.zvz = 0;
-  } else [cam.zoom, cam.zvz] = smoothDamp(cam.zoom, cam.zvz, want, Z.zoomFrames);
+  } else
+    [cam.zoom, cam.zvz] = smoothDamp(
+      cam.zoom,
+      cam.zvz,
+      want,
+      zoneZoomFrames(z, Z.zoomFrames, cam.zoneFrames),
+    );
   // The free view (no shift) at this zoom, then the shift its bounds ask for.
   const ox = cam.ox;
   const oy = cam.oy;
@@ -202,9 +208,13 @@ function stepZones(
   cam.oy = 0;
   place(cam, scene, ct);
   const b = z ? zoneBounds(z) : null;
-  const tx = b ? clampAxis(cam.x, b.x, b.w, shownW(cam)) - cam.x : 0;
+  // A zone's lean (the Canopy r14: the den's end on the fallen cage, the crown's sit on the pair and the moon).
+  const ln = zoneLean(z);
+  const lx = ln ? (ln.x - (cam.x + shownW(cam) / 2)) * ln.k : 0;
+  const ly = ln ? (ln.y - (cam.y + shownH(cam) / 2)) * ln.k : 0;
+  const tx = b ? clampAxis(cam.x + lx, b.x, b.w, shownW(cam)) - cam.x : lx;
   // A fall leads down even inside a zone: its vertical bounds yield as the fall's lead comes in.
-  const ty = (b ? clampAxis(cam.y, b.y, b.h, shownH(cam)) - cam.y : 0) * (1 - cam.fallK);
+  const ty = (b ? clampAxis(cam.y + ly, b.y, b.h, shownH(cam)) - cam.y : ly) * (1 - cam.fallK);
   if (snap) {
     cam.ox = tx;
     cam.oy = ty;
