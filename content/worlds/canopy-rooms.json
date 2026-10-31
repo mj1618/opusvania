@@ -10781,6 +10781,7 @@
           [3210, 1140]
         ],
         "frames": 360,
+        "relights": ["wick-gap-1"],
         "chase": {
           "lead": [450, 600],
           "kindles": ["hook-1", "hook-2", "hook-3", "hook-4", "hook-5", "hook-6"],

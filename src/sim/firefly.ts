@@ -283,6 +283,18 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
       if ((l.x - ff.x) * (l.x - ff.x) + (l.y - ff.y) * (l.y - ff.y) <= R * R)
         kindle(state, scene, f, id, t, events);
     }
+    // (And the chain's lamps it passes burn again if she put them out before: its line is always lit ahead of her.)
+    const lures = scene.lures ?? [];
+    for (const id of f.relights ?? []) {
+      const i = lures.findIndex((q) => q.id === id);
+      const l = lures[i];
+      if (!l || (state.lures.hp[i] ?? 0) > 0 || state.lures.ember[i]) continue;
+      if ((l.x - ff.x) * (l.x - ff.x) + (l.y - ff.y) * (l.y - ff.y) > R * R) continue;
+      state.lures.hp[i] = lureHpMax(l, t);
+      state.lures.out[i] = 0;
+      events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
+      events.push({ type: 'fireflyRelight', id: f.id, lure: l.id, x: l.x, y: l.y });
+    }
     if (ff.d >= total - 0.5) {
       ff.beat = 4;
       ff.t = 0;

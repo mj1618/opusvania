@@ -2703,6 +2703,7 @@ function gap(): Json {
       trigger: { x: 3456, y: 1088, w: 704, h: 256 },
       path: GAP_CHASE,
       frames: 360,
+      relights: ['wick-gap-1'],
       chase: {
         lead: [450, 600],
         kindles: GAP_HOOKS.map((h) => h[0]),
