@@ -181,6 +181,11 @@ if (process.argv[1]?.endsWith('keeper-run.ts')) {
           'denCollapse',
           'lureSnuff',
           'bossLock',
+          'keeperGlance',
+          'keeperLunge',
+          'keeperGuard',
+          'cageGuard',
+          'keeperSweep',
         ].includes(e.type)
       )
         console.log(e.f, JSON.stringify(e));

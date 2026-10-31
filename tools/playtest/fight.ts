@@ -171,6 +171,35 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
         // Up on a ledge over its floor: down (camping is slammed). Off a solid shelf away from it: the v7 den's
         // shelves are 384 wide, and with it parked under the shelf she stood over it for minutes (route-video v5).
         if (p.grounded && floorY - fy > 60) return onOneWay(s, scene) ? (prev & J ? D : D | J) : dirBit(-d);
+        // The Keeper's P2 (the Canopy r13): in the cage's light every cut but its eat's glances, and the light that
+        // finds her close brings a lunge. Out of the light (away from the cage's flame), then in from behind it while
+        // it is blind; its eat is open lit or not.
+        const boss = s.boss;
+        const p2 = !!boss && boss.phase === 2 && e.phase === 2 && (e as { keep?: number }).keep === 1;
+        if (p2 && mode !== 'eat' && mode !== 'windup' && mode !== 'charge' && p.grounded) {
+          const cage = boss?.cageX ?? c.x;
+          if (boss?.lit === 1) {
+            const away = Math.sign(px - cage) || -d;
+            // (Not into it: round it on the far side if it stands that way.)
+            const into = Math.sign(c.x - px) === away && dist < 260;
+            return dirBit(into ? -away : away);
+          }
+          const behind = e.facing > 0 ? e.x - 50 : e.x + e.w + 50;
+          if (Math.abs(behind - px) > 40) return dirBit(Math.sign(behind - px) || 1);
+          const face = Math.sign(c.x - px) || 1;
+          if (p.facing !== face) return dirBit(face);
+          return prev & A ? 0 : A;
+        }
+        // The Keeper's P3 sweep (r13): its tell (head down at the cage), its claws through the low cloud: out of the
+        // cloud until they have passed, then in to cut it while it eats.
+        const sweepTell =
+          !!boss && boss.phase === 3 && boss.moth === 4 && boss.mothT < defaultTuning.keeper.sweepTell + 2;
+        if (sweepTell || (boss && boss.sweepHit > 0)) {
+          const cx = boss?.cageX ?? c.x;
+          const off = defaultTuning.keeper.sweepHitPx + 70;
+          if (Math.abs(px - cx) < off) return dirBit(Math.sign(px - cx) || -1) | (p.grounded ? 0 : prev & J);
+          return 0;
+        }
         // Open on its back: in and cut.
         if (stunned) {
           if (!p.grounded) return dirBit(d);

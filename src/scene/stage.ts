@@ -32,6 +32,11 @@ export const StageSchema = z
         title: z.string().min(1).optional(),
         titleAfter: z.number().int().min(0).optional(),
         hatchTail: z.number().int().positive().optional(),
+        /**
+         * The Canopy r13 (review r12 #6): the tail leaves the sky when this flag is saved (her arrival at the promise
+         * zone: the stream is keyed to her progress), or `hatchTail` frames after `hatch` at the latest.
+         */
+        tailFlag: z.string().min(1).optional(),
       })
       .strict()
       .optional(),
@@ -54,6 +59,11 @@ export const StageSchema = z
         points: path,
         count: z.number().int().positive().optional(),
         speed: z.number().positive().optional(),
+        /**
+         * The Canopy r13, moment 5: the stream is caught by this lure (`trapFill`): its moths bend into the cage's orbit
+         * one by one as it fills.
+         */
+        captured: z.string().min(1).optional(),
       })
       .strict()
       .optional(),

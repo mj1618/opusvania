@@ -141,7 +141,16 @@ export function createLures(scene: Scene, t: Tuning, snuffed: readonly string[] 
     ember: list.map(() => 0),
     // (Moonwicks start cold: src/sim/light.ts `initWicks` lights the ones the save keeps.)
     burn: list.map(() => 0),
+    // (The Canopy r13: a cage hung empty fills from the step it lights, src/sim/kit.ts.)
+    fill: list.map(() => -1),
+    fillT: list.map(() => 0),
   };
+}
+
+/** Is lure `i` a cage still filling (the Canopy r13, `Lure.fills`): the blade glances off it until it is full. */
+export function filling(s: LuresState, i: number, l: Lure): boolean {
+  const n = s.fill?.[i] ?? -1;
+  return !!l.fills && n >= 0 && n < Math.max(0, Math.round(l.moths ?? 0));
 }
 
 /** A moonwick (Lanternroot): her light's anchor, not a warm lamp (no pull, no moths, never cut out). */
@@ -431,7 +440,11 @@ export function slashLures(
       continue;
     s.hitBy[i] = seq;
     // (Guarded by its keeper, the Canopy r11's great cage: the blade glances off the bars until the flag is saved.)
-    if (l.guard && !state.save.flags.includes(l.guard) && (s.live?.free[i] ?? 0) !== 1) {
+    // (And a cage still filling, the Canopy r13: it can't be cut empty.)
+    if (
+      (l.guard && !state.save.flags.includes(l.guard) && (s.live?.free[i] ?? 0) !== 1) ||
+      filling(s, i, l)
+    ) {
       events.push({ type: 'lureGuarded', id: l.id, x: lx, y: ly, dir });
       continue;
     }

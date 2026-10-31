@@ -77,6 +77,35 @@ export type KitEvent =
   /** The firefly stops at its `hang` point (the Canopy r11): `frames` it holds there; `lure` the cage it hangs. */
   | { type: 'fireflyHang'; id: string; x: number; y: number; frames: number; lure?: string }
   /**
+   * The Canopy r13, moment 4 (the chase, `FireflyPass.chase`): its beats. `start`: it sees her (the alarm flash,
+   * then it bolts); `wait`: she fell behind (the low line, a fall), it hovers at its next stop flashing; `go`: she is
+   * back within reach, it flies on; `nest`: it dives into the roost's mouth; `call`: at the shaft's top, one slow long
+   * flash up at the sky (nothing answers); `gone`: up the shaft (`fireflyHide` comes with it). `x`, `y` = the firefly.
+   */
+  | {
+      type: 'fireflyChase';
+      id: string;
+      phase: 'start' | 'wait' | 'go' | 'nest' | 'call' | 'gone';
+      x: number;
+      y: number;
+    }
+  /** The chase: a dark hook (`lure`) catches fire as it passes (a springboard from now on; `x`, `y` = the flame). */
+  | { type: 'fireflyKindle'; id: string; lure: string; x: number; y: number }
+  /** The chase's end: it is gone up the shaft from (`x`, `y`) (the nest is quiet after). */
+  | { type: 'fireflyHide'; id: string; x: number; y: number }
+  /**
+   * The Canopy r13, moment 3 (`scene.sits`, `marks.tatter.sit`): she stood still near the kin long enough: it comes
+   * to sit by her (render: the walk-over, the wings, the lean; the sim never moves the kin). `x`, `y` = her feet.
+   */
+  | { type: 'kinSit'; id: string; x: number; y: number }
+  /**
+   * The Canopy r13, moment 5 (`Lure.fills`): a moth of the passing stream is caught in the newly hung cage: `n` in
+   * it now of `of` (`state.lures.fill`); it can be cut once full. `x`, `y` = the cage.
+   */
+  | { type: 'trapFill'; lure: string; n: number; of: number; x: number; y: number }
+  /** The cage is full and something under the den's floor answers (the deep slam: render ~0.3 trauma, dust). */
+  | { type: 'denStir'; lure: string; x: number; y: number }
+  /**
    * A bounce cap threw her up (`x`, `y` = her feet): `vy` the speed (px/f, up), `height` the rise it
    * gives, `pogo` = off a down cut, `held` = jump was held (the higher throw).
    */

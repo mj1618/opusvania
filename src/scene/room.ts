@@ -108,6 +108,8 @@ export interface CameraZone {
   bounds?: { x: number; y: number; w: number; h: number };
   /** Only until this story flag is saved. */
   until?: string;
+  /** Only once this story flag is saved (the Canopy r13: `crown-sit`, from the kin's `kinSit`). */
+  after?: string;
   /** Frames the view slides into it (Lanternroot's chambers: 20). */
   frames?: number;
 }
@@ -186,7 +188,17 @@ export interface RoomMarks {
    * to her and tries for it once, and fails (render/character/tatter.ts). `when` / `until`: it is here only
    * once / until that story flag is set (the root ladder: it leaves the hub and is ahead of her after).
    */
-  tatter?: { x: number; y: number; facing: -1 | 1; want?: [number, number]; when?: string; until?: string };
+  tatter?: {
+    x: number;
+    y: number;
+    facing: -1 | 1;
+    want?: [number, number];
+    when?: string;
+    until?: string;
+    tryOn?: string;
+    /** The Canopy r13, moment 3: where she may sit with it (the sim's `sits` has the same numbers). */
+    sit?: { x: number; y: number; r: number; frames: number };
+  };
   /** The swarm's path through the sky, west to east (world px polyline). */
   swarm?: Array<[number, number]>;
   /**

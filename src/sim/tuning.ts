@@ -539,7 +539,28 @@ export const defaultTuning = withVariants({
      * The firefly's pass (`scene.fireflies`, src/sim/firefly.ts): a lamp of its `relights` burns again when it passes
      * within `relightPx` of the flame.
      */
-    firefly: { relightPx: 48 },
+    firefly: {
+      relightPx: 48,
+      // --- The Canopy r13, moment 4: the chase (`FireflyPass.chase`, src/sim/firefly.ts). The alarm on sighting her
+      // (`alarmFrames`), then it keeps its lead along the path: at most `chaseMax` px/f, easing `chaseEase` of the gap
+      // to its goal a frame, `chaseHurry` px/f more while she is under `lead[0]` behind it. Her progress counts while
+      // her centre is within `nearPx` of the path. In the nest it flies to the shaft's top at `nestSpeed`, waits there
+      // until she is within `callPx` of the nest's mouth (at most `callWait`), calls (`callFrames`), and is gone up the shaft.
+      alarmFrames: 36,
+      chaseMax: 13,
+      chaseEase: 0.09,
+      chaseHurry: 3,
+      nearPx: 560,
+      // (Held `waitAfter` frames where its lead runs out, it waits flashing (`fireflyChase wait`); on once its goal is
+      // `goPx` ahead.)
+      waitAfter: 20,
+      goPx: 40,
+      nestSpeed: 5,
+      callPx: 560,
+      callWait: 1200,
+      callFrames: 110,
+      // --- Moment 3: the kin sits by her when she stands still this close to it (`scene.sits`; `r`, `frames` there).
+    },
     /** The longest held story beat a trigger may ask for (`hold`), frames: journey.md's 3 s; the `finale` one, ~10 s. */
     storyHoldMax: 180,
     finaleHoldMax: 600,
@@ -1452,13 +1473,21 @@ export const defaultTuning = withVariants({
    * `p3Hp`. Frames at 60 Hz, px.
    */
   keeper: {
-    p2Hp: 7,
-    p3Hp: 4,
+    // (r13, review r12 #1: 25 s from the first ram to the kill was a factor 3-6 short of the references. 16 hp (the
+    // den's spawn), 6 / 5 / 5 a phase, and each phase gated on its moths or time as well as its hits: P1 ends once
+    // `p1Drops` moths have fallen, P2 after `p2MinFrames` (two swings), P3 not before `p3Sweeps` sweeps. At its gate a
+    // cut glances (`keeperGlance gate`) and the gating thing is brought forward (`gateSoon`).)
+    p2Hp: 10,
+    p3Hp: 5,
+    p1Drops: 2,
+    p2MinFrames: 504,
+    p3Sweeps: 3,
+    gateSoon: 40,
     // --- The falling moths (P1, P2). One at a time: it leaves the orbit (`dropTell`: a pale flutter), then falls
     // at `fallSpeed` swaying `fallSway` px either side over `fallSwayFrames`, to the floor. The first `dropFirst`
     // after the phase begins, then every `dropEvery` (P2: `dropEveryP2`) once the last is gone.
-    dropFirst: 300,
-    dropEvery: 480,
+    dropFirst: 240,
+    dropEvery: 420,
     dropEveryP2: 420,
     dropTell: 40,
     fallSpeed: 3,
@@ -1489,6 +1518,12 @@ export const defaultTuning = withVariants({
     seekSpeed: 2.2,
     seekStopPx: 30,
     sniffFrames: 60,
+    // (r13: P2's new move: the light finds her within `lungePx` of it, and it lunges at once: a `lungeTell` frame tell
+    // and a `lungeRamPx` ram. Not within `lungeCooldown` of its last.)
+    lungePx: 460,
+    lungeTell: 18,
+    lungeRamPx: 380,
+    lungeCooldown: 90,
     // --- P3, the fallen cage. The rip: the cage falls `fallFrames` after the cue. The low cloud: it sweeps it every
     // `sweepEvery` (the first `sweepFirst` after P3 begins), within `sweepReachPx` of the cage: a `sweepTell` beat,
     // then `sweepEat` moths eaten, open the whole `sweepTell + sweepOpen` for `p3` open hits. `cageCuts` cuts on the
@@ -1498,15 +1533,30 @@ export const defaultTuning = withVariants({
     sweepEvery: 330,
     sweepReachPx: 150,
     sweepTell: 30,
-    sweepEat: 3,
+    // (r13, review r12 #2: the low cloud halves after two sweeps (was 3 a sweep).)
+    sweepEat: 7,
     sweepOpen: 60,
+    // (r13: the sweep's claws go through the cloud: `sweepHitPx` each side of the cage, `sweepHitH` over the floor,
+    // live `sweepHitFrames` at the end of the tell. One who stands cutting the cage there is hit.)
+    sweepHitPx: 200,
+    sweepHitH: 150,
+    sweepHitFrames: 10,
     cageCuts: 3,
     cutShare: 3,
+    // (r13, review r12 #2: the fallen cage lies under its claws, guarded, until its first sweep; a cut on it turns the
+    // Keeper on her (`keeperGuard`): it drops what it does and rams at the cage's side after `guardTell` frames, the ram
+    // `guardOverPx` past the cage.)
+    guardTell: 24,
+    guardOverPx: 160,
+    // (r13: P3's rams are shorter and come in pairs (the old burrback's are 640 px, three in a row).)
+    p3ChargePx: 420,
+    p3Streak: 2,
     // --- The ending's collapse (the fallback, round 12: no hazards), frames from the great release.
-    collapseGroan: 100,
-    collapseDust: [150, 200, 260],
-    collapseRubble: 330,
-    collapseSettle: 420,
+    // (r13, review r12 #7: the rubble at +150 (was +330: 7 s of waiting before a staircase).)
+    collapseGroan: 40,
+    collapseDust: [70, 100, 125],
+    collapseRubble: 150,
+    collapseSettle: 240,
     // --- The intro: the moth leaves as the firefly does (`introLead` frames before its pass ends).
     introLead: 70,
   },

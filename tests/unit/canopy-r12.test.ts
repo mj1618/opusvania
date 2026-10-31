@@ -55,6 +55,16 @@ const den = getRoom('cn-den');
 const cageIx = (den.lures ?? []).findIndex((l) => l.id === 'trap-den');
 const burr = (s: GameState) => s.enemies.find((e) => e.id === 'old-burr') as GameState['enemies'][number];
 
+/** (r13: P1 ends once two moths have fallen as well as at its health; P2 after two swings.) */
+function toP2(s: GameState): void {
+  if (s.boss) s.boss.drops = Math.max(s.boss.drops, t.keeper.p1Drops);
+  burr(s).hp = t.keeper.p2Hp;
+}
+function toP3(s: GameState): void {
+  if (s.boss) s.boss.phaseTime = Math.max(s.boss.phaseTime, t.keeper.p2MinFrames + 1);
+  burr(s).hp = t.keeper.p3Hp;
+}
+
 /** She is on the den's floor (the lock), the fight under way, phase 1. */
 function fight(x = 1000): { s: GameState; ev: SimEvent[] } {
   const s = at('cn-den', x, 1344);
@@ -71,7 +81,7 @@ describe('the Keeper (r12, moment 6)', () => {
     expect((ev.find((e) => e.type === 'bossPhase') as Of<'bossPhase'>)?.phase).toBe(1);
     expect(s.boss?.left).toBe(120);
     expect(burr(s).keep).toBe(1);
-    expect(burr(s).hpMax).toBe(10);
+    expect(burr(s).hpMax).toBe(16);
   });
 
   it('the intro: as the firefly leaves, a moth falls and the sleeper takes it, before she can be down', () => {
@@ -131,10 +141,9 @@ describe('the Keeper (r12, moment 6)', () => {
     expect(s.boss?.eaten).toBe(0);
   });
 
-  it('P2 at 7: the cage swings (its period and reach), it sees her only in its light', () => {
+  it('P2 (r13: at 10): the cage swings (its period and reach), it sees her only in its light', () => {
     const { s } = fight(1000);
-    const e = burr(s);
-    e.hp = 7;
+    toP2(s);
     const ev = run(s, 0, 1);
     expect(s.boss?.stage).toBe('shift');
     run(s, 0, 120, ev);
@@ -170,7 +179,7 @@ describe('the Keeper (r12, moment 6)', () => {
 
   it('P2: blind, a cut from behind lands; from its front it glances', () => {
     const { s } = fight(1000);
-    burr(s).hp = 7;
+    toP2(s);
     run(s, 0, 140);
     const e = burr(s);
     // (Out of the light: the cage swung away; it faces west.)
@@ -195,16 +204,31 @@ describe('the Keeper (r12, moment 6)', () => {
     expect(burr(s).hp).toBe(hp - 1);
   });
 
-  it('P3 at 4: the cage falls unguarded; its sweeps eat 3; a cut frees a third; 3 cuts, then it holds', () => {
+  it('P3: the cage falls guarded until its first sweep (r13); a cut frees a third; 3 cuts, then it holds', () => {
     const { s } = fight(1000);
-    burr(s).hp = 7;
+    toP2(s);
     run(s, 0, 200);
-    burr(s).hp = 4;
+    toP3(s);
     const ev = run(s, 0, 200);
     expect(s.boss?.phase).toBe(3);
     const fall = ev.find((q) => q.type === 'cageFall') as Of<'cageFall'>;
     expect(fall?.x).toBe(den.boss?.lowered?.x);
     expect(ev.some((q) => q.type === 'lureSnuff' && q.id === 'wick-taproot')).toBe(true);
+    // (r13: its bars are under its claws until its first sweep: the blade glances.)
+    placePlayer(s, (fall?.x ?? 0) - 30, 1344, t, withShortcuts(den, s.save), []);
+    s.player.invuln = 60;
+    const g0 = run(s, U | A, 1);
+    run(s, U, 24, g0);
+    expect(g0.some((z) => z.type === 'lureGuarded' && z.id === 'trap-den')).toBe(true);
+    expect(g0.some((z) => z.type === 'cageRelease')).toBe(false);
+    const ev1: SimEvent[] = [];
+    for (let f = 0; f < 1200 && !ev1.some((z) => z.type === 'cageGuard' && !z.on); f++) {
+      s.player.invuln = 30;
+      placePlayer(s, 700, 1344, t, withShortcuts(den, s.save), []);
+      run(s, 0, 1, ev1);
+    }
+    const sw = ev1.find((z) => z.type === 'mothEaten') as Of<'mothEaten'>;
+    expect(sw?.n).toBe(t.keeper.sweepEat);
     // Cuts on the fallen cage: each a third of what is in it.
     const left0 = s.boss?.left ?? 0;
     placePlayer(s, (fall?.x ?? 0) - 30, 1344, t, withShortcuts(den, s.save), []);
@@ -219,22 +243,13 @@ describe('the Keeper (r12, moment 6)', () => {
     expect(cuts.length).toBe(t.keeper.cageCuts);
     expect(cuts[0]?.moths).toBe(Math.round(left0 / 3));
     expect(s.lures.hp[cageIx]).toBeGreaterThan(0);
-    // A sweep: 3 moths eaten.
-    const ev2: SimEvent[] = [];
-    for (let f = 0; f < 900 && !ev2.some((z) => z.type === 'mothEaten'); f++) {
-      s.player.invuln = 30;
-      placePlayer(s, 700, 1344, t, withShortcuts(den, s.save), []);
-      run(s, 0, 1, ev2);
-    }
-    const sw = ev2.find((z) => z.type === 'mothEaten') as Of<'mothEaten'>;
-    expect(sw?.n).toBe(t.keeper.sweepEat);
   });
 
   it('a fade restarts the fight: the cage full and hung, the den lamp lit, the creature whole', () => {
     const { s } = fight(1000);
-    burr(s).hp = 7;
+    toP2(s);
     run(s, 0, 200);
-    burr(s).hp = 4;
+    toP3(s);
     run(s, 0, 200);
     expect(s.boss?.phase).toBe(3);
     const ev: SimEvent[] = [];
@@ -250,7 +265,7 @@ describe('the Keeper (r12, moment 6)', () => {
     expect(s.lures.hp[cageIx]).toBe(t.lures.trapHp);
     const ti = (den.lures ?? []).findIndex((q) => q.id === 'wick-taproot');
     expect(s.lures.hp[ti]).toBeGreaterThan(0);
-    expect(burr(s).hp).toBe(10);
+    expect(burr(s).hp).toBe(16);
   });
 
   it("the den's fight controller beats it alone from the balcony, and frees >= 60 of 120", () => {

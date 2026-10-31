@@ -18,7 +18,6 @@ import type { SimEvent } from '../../src/sim/events';
 import { createState, newSave, placePlayer, step } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
 import { gateShut } from '../../src/sim/kit';
-import { flingTarget } from '../../src/sim/lures';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';
@@ -44,7 +43,7 @@ function run(s: GameState, input: number, n = 1, ev: SimEvent[] = []): SimEvent[
   }
   return ev;
 }
-const { jump: J, right: R, left: L, lamp: B, up: U, attack: A, down: D } = ActionBit;
+const { jump: J, right: R, up: U, attack: A } = ActionBit;
 const lureIx = (room: string, id: string) => (getRoom(room).lures ?? []).findIndex((l) => l.id === id);
 type Of<K extends SimEvent['type']> = Extract<SimEvent, { type: K }>;
 
@@ -203,45 +202,7 @@ describe("the warning's cage, hung by the firefly (r11, review r10 #3 / #4)", ()
   });
 });
 
-describe("the gap's pass on her first fling off the chain (r11, review r10 #4)", () => {
-  it('flung off the chain, the firefly comes out of the roost and lights the lamp she left, in her frame', () => {
-    const scene = getRoom('cn-gap');
-    const k1 = lureIx('cn-gap', 'wick-gap-1');
-    const s = at('cn-gap', 3560, 1344);
-    s.enemies.length = 0;
-    run(s, 0, 20);
-    const ev: SimEvent[] = [];
-    let n = 0;
-    // (Off the shelf's lip: the first lamp hangs just under it.)
-    while (flingTarget(s, withShortcuts(scene, s.save), t) !== k1 && n++ < 80) run(s, L, 1, ev);
-    expect(flingTarget(s, withShortcuts(scene, s.save), t)).toBe(k1);
-    // (Lamp, aim down-left, let go.)
-    run(s, B, 4, ev);
-    run(s, B | L | D, 8, ev);
-    run(s, L | D, 1, ev);
-    expect(ev.some((e) => e.type === 'fling' && e.id === 'wick-gap-1')).toBe(true);
-    expect(ev.some((e) => e.type === 'fireflyStart' && e.id === 'firefly-gap')).toBe(true);
-    const ct = cameraFor(scene);
-    const cam = createCamera(s, scene, ct, 1920, 1080);
-    let relit: Of<'fireflyRelight'> | undefined;
-    let seen = false;
-    for (let f = 0; f < 300 && !relit; f++) {
-      const e = run(s, 0);
-      stepCamera(cam, s, scene, ct);
-      relit = e.find((q) => q.type === 'fireflyRelight' && q.lure === 'wick-gap-1') as
-        | Of<'fireflyRelight'>
-        | undefined;
-      if (relit) {
-        const v = lerpCamera(cam, cam, 1);
-        seen = Math.abs(relit.x - v.x) < 1920 / cam.zoom / 2 && Math.abs(relit.y - v.y) < 1080 / cam.zoom / 2;
-      }
-    }
-    expect(relit).toBeDefined();
-    expect(seen).toBe(true);
-    expect(s.lures.hp[k1]).toBeGreaterThan(0);
-  });
-});
-
+// (r13: the gap's pass is the firefly's chase now: tests/unit/canopy-r13.test.ts.)
 describe('the great cage over the old burrback (r11, review r10 #1)', () => {
   const scene = getRoom('cn-den');
   const k = lureIx('cn-den', 'trap-den');

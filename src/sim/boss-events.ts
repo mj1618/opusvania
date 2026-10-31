@@ -93,6 +93,37 @@ export type BossEvent =
    * `cn-den-collapse`), `settle` (quiet; moonlight down the shaft).
    */
   | { type: 'denCollapse'; phase: 'groan' | 'dust' | 'rubble' | 'settle'; x: number; y: number }
+  /**
+   * The Canopy r13: a cut glanced off the Keeper's dome for a boss reason (an `enemyBlock` comes with it): `lit` =
+   * P2, she stands in the cage's light (only the dark, or its eat, lets her hurt it); `gate` = the phase is not done
+   * with her yet (its time or its moths: it shrugs the blow off; render: the dome's crust flashes, no crack).
+   */
+  | {
+      type: 'keeperGlance';
+      id: string;
+      x: number;
+      y: number;
+      hitX: number;
+      hitY: number;
+      why: 'lit' | 'gate';
+    }
+  /**
+   * P2's new move (r13): it waited in the dark at the light's rim and the swing brought her into it: a short, fast
+   * lunge (`frames` of tell, then a ram of `px`). An `enemyWindup` / `enemyCharge` follow as for any ram.
+   */
+  | { type: 'keeperLunge'; id: string; x: number; y: number; dir: number; frames: number; px: number }
+  /** P3 (r13): a cut on its fallen cage turns it on her: it drops what it is doing and rams at the cage's side. */
+  | { type: 'keeperGuard'; id: string; x: number; y: number; dir: number }
+  /**
+   * P3 (r13): the fallen cage's bars are under its claws (`on`: the blade glances, `lureGuarded`) until its first
+   * sweep; then open (`on` false) to her cuts.
+   */
+  | { type: 'cageGuard'; lure: string; x: number; y: number; on: boolean }
+  /**
+   * P3 (r13): the sweep's claws go through the low cloud (`x0`..`x1` at the floor `y`): she is hurt if she stands in
+   * it (the boss's blade box, `boss.hit*`, for `frames`).
+   */
+  | { type: 'keeperSweep'; id: string; x0: number; x1: number; y: number; frames: number }
   /** Round 13 (the full escape; not sent yet): a rock falls at (`x`, `y`) after `tell` frames of trickling grit. */
   | { type: 'rockfall'; x: number; y: number; tell: number }
   /** Round 13 (not sent yet): the collapse front's top (`y`) rising behind her. */

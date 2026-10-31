@@ -15,8 +15,6 @@
  *    pit), at the mark patch.
  */
 import { describe, expect, it } from 'vitest';
-import { createCamera, lerpCamera, stepCamera } from '../../src/render/camera/index';
-import { cameraFor } from '../../src/render/camera/tuning';
 import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
@@ -236,74 +234,8 @@ describe("the hub's map station opens on her first pass (r10, review r9 #9)", ()
   });
 });
 
-describe("the firefly's pass at the gap (r10, review r9 #2)", () => {
-  // (r11: it starts on her first fling off the chain, not a landing below it.)
-  it('her first fling off the chain starts it once; it relights the lamps she flung and is gone in 5 s', () => {
-    const scene = getRoom('cn-gap');
-    const s = at('cn-gap', 2944, 2048 - 64);
-    const ids = ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'];
-    const ks = ids.map((id) => (scene.lures ?? []).findIndex((l) => l.id === id));
-    // (As if the chain had been flung: all three out, the first smouldering behind her.)
-    for (const k of ks) {
-      s.lures.hp[k] = 0;
-      s.lures.out[k] = 1;
-    }
-    s.lures.ember[ks[0] as number] = 1;
-    const ev = run(s, 0, 330);
-    const start = ev.filter((e) => e.type === 'fireflyStart');
-    expect(start.length).toBe(1);
-    expect(ev.filter((e) => e.type === 'fireflyRelight').map((e) => (e as { lure: string }).lure)).toEqual(
-      ids,
-    );
-    expect(ev.some((e) => e.type === 'fireflyEnd')).toBe(true);
-    expect(s.kit.firefly.pass).toBe(-1);
-    for (const k of ks) expect(s.lures.hp[k]).toBeGreaterThan(0);
-    expect(s.save.flags).toContain('cn-firefly-gap');
-    // Once: another fling, nothing.
-    s.lures.ember[ks[1] as number] = 1;
-    expect(run(s, 0, 60).some((e) => e.type === 'fireflyStart')).toBe(false);
-  });
-});
-
-describe("the firefly's pass stays in her frame (r10, render's note)", () => {
-  for (const [vw, vh] of [
-    [1920, 1080],
-    [1920, 1200],
-    [2560, 1080],
-  ] as const)
-    it(`down the chain into the pod garden, it is in the view 2.5 s or more at ${vw}x${vh}, and leaves by the drop ahead of her`, () => {
-      for (const x of [2800, 3000, 3200]) {
-        const scene = getRoom('cn-gap');
-        const s = at('cn-gap', x, 2048 - 64);
-        // (r11: down the chain into the garden: the first lamp still smoulders behind her, the pass under way.)
-        const k1 = (scene.lures ?? []).findIndex((l) => l.id === 'wick-gap-1');
-        s.lures.hp[k1] = 0;
-        s.lures.ember[k1] = 1;
-        const ct = cameraFor(scene);
-        const cam = createCamera(s, scene, ct, vw, vh);
-        let seen = 0;
-        for (let k = 0; k < 330; k++) {
-          run(s, 0);
-          stepCamera(cam, s, scene, ct);
-          if (s.kit.firefly.pass < 0) continue;
-          const v = lerpCamera(cam, cam, 1);
-          const w = vw / cam.zoom;
-          const h = vh / cam.zoom;
-          const { x: fx, y: fy } = s.kit.firefly;
-          if (Math.abs(fx - v.x) < w / 2 - 40 && Math.abs(fy - v.y) < h / 2 - 40) seen++;
-        }
-        expect(seen, `from ${x}`).toBeGreaterThanOrEqual(150);
-        const f = scene.fireflies?.[0];
-        const end = f?.path[f.path.length - 1] ?? [0, 0];
-        // (Gone down the drop to the fork: the way on.)
-        const drop = (scene.exits ?? []).find((e) => e.id === 'fork');
-        expect(drop?.edge).toBe('s');
-        expect(end[0]).toBeGreaterThanOrEqual(drop?.from ?? 0);
-        expect(end[0]).toBeLessThanOrEqual(drop?.to ?? 0);
-      }
-    });
-});
-
+// (r13: the gap's pass is the firefly's chase now: tests/unit/canopy-r13.test.ts.)
+// (r13: the gap's pass is the firefly's chase now: tests/unit/canopy-r13.test.ts.)
 describe('a gate never shuts on her (r10)', () => {
   it("the Grove's arena gate shutting with her in it pushes her clear", () => {
     const scene = getRoom('cn-grove');

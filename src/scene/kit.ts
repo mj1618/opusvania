@@ -92,6 +92,31 @@ export const KIT_FIELDS = {
             })
             .strict()
             .optional(),
+          chase: z
+            .object({
+              lead: z.tuple([int.min(0), int.min(1)]),
+              kindles: z.array(id),
+              waits: z.array(int.min(0)),
+              end: z.tuple([int, int]),
+              needs: id.optional(),
+            })
+            .strict()
+            .optional(),
+        })
+        .strict(),
+    )
+    .optional(),
+  sits: z
+    .array(
+      z
+        .object({
+          id,
+          x: int,
+          y: int,
+          r: int.positive(),
+          frames: int.min(1).max(600),
+          when: id.optional(),
+          sets: id,
         })
         .strict(),
     )
@@ -164,6 +189,8 @@ export const CAMERA_ZONES = z
         bounds: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
         /** Only until this story flag is saved (the den's close frame lets go once the beetle is down). */
         until: z.string().min(1).optional(),
+        /** Only once this story flag is saved (the Canopy r13: the crown's sit with the kin, `crown-sit`). */
+        after: z.string().min(1).optional(),
         /** Frames the view takes to slide into this zone (Lanternroot's chambers: 20; default the camera's own). */
         frames: int.min(1).max(120).optional(),
       })

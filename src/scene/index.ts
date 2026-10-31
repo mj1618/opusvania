@@ -168,6 +168,11 @@ const SceneSchema = z
             // The Canopy r11: a cage its keeper guards (the blade glances off until the flag), a held beat on its snuff.
             guard: z.string().min(1).optional(),
             hold: int.min(1).max(600).optional(),
+            // The Canopy r13: a trap hung empty that fills while she watches.
+            fills: z
+              .object({ frames: int.min(30).max(1200) })
+              .strict()
+              .optional(),
           })
           .strict(),
       )
@@ -347,6 +352,8 @@ const SceneSchema = z
             until: z.string().min(1).optional(),
             /** On this flag's `flagSet` it tries the air once (the hatch, r12: its jump after the swarm, and the fall back). */
             tryOn: z.string().min(1).optional(),
+            /** The Canopy r13, moment 3: where she may sit with it (the sim's `sits` entry with the same numbers). */
+            sit: z.object({ x: int, y: int, r: int.positive(), frames: int.positive() }).strict().optional(),
           })
           .strict()
           .optional(),

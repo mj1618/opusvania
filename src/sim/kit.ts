@@ -28,7 +28,7 @@
  */
 import type { SimEvent, SlashDir } from './events';
 import { updateFinds } from './finds';
-import { createFirefly, type FireflyState, updateFireflies } from './firefly';
+import { createFirefly, type FireflyState, updateFireflies, updateSits } from './firefly';
 import type { Bark, BounceCap } from './kit-data';
 import { strikeBell } from './light';
 import { lureHpMax } from './lures';
@@ -65,6 +65,8 @@ export interface KitState {
   catchCount: number[];
   /** The firefly's pass under way (src/sim/firefly.ts; `pass` -1 = none). */
   firefly: FireflyState;
+  /** The Canopy r13 (`scene.sits`): frames she has stood still in a sit's reach. */
+  sitStill: number;
 }
 
 /** A gate stands (a solid) with these flags: until its `flag`, and an arena's door only once `shut` is set. */
@@ -122,6 +124,30 @@ export function rearmArenas(
     for (const sp of spawns) if (sp.wakes === out[k] && sp.sets) drop(sp.sets);
 }
 
+/**
+ * The Canopy r13, moment 5: a cage hung empty (`Lure.fills`) takes its moths from the passing stream one by one over
+ * `fills.frames` (`trapFill` each); full, something under the den answers (`denStir`).
+ */
+function fillCages(state: GameState, scene: Scene, events: SimEvent[]): void {
+  const L = state.lures;
+  if (!L.fill || !L.fillT) return;
+  const lures = scene.lures ?? [];
+  for (let i = 0; i < lures.length; i++) {
+    const l = lures[i];
+    const n0 = L.fill[i] ?? -1;
+    if (!l?.fills || n0 < 0) continue;
+    const of = Math.max(0, Math.round(l.moths ?? 0));
+    if (n0 >= of) continue;
+    const T = Math.max(1, Math.round(l.fills.frames));
+    const ft = (L.fillT[i] ?? 0) + 1;
+    L.fillT[i] = ft;
+    const n = Math.min(of, Math.floor((of * Math.min(ft, T)) / T));
+    for (let k = n0 + 1; k <= n; k++) events.push({ type: 'trapFill', lure: l.id, n: k, of, x: l.x, y: l.y });
+    L.fill[i] = n;
+    if (n >= of) events.push({ type: 'denStir', lure: l.id, x: l.x, y: l.y });
+  }
+}
+
 /** The save key of a piece of this room. */
 function key(scene: Scene, id: string): string {
   return `${scene.id}:${id}`;
@@ -150,6 +176,7 @@ export function createKit(scene: Scene, t: Tuning, save: SaveState): KitState {
     storyBy: '',
     catchCount: (scene.catches ?? []).map(() => 0),
     firefly: createFirefly(),
+    sitStill: 0,
   };
 }
 
@@ -170,6 +197,7 @@ export function cloneKit(k: KitState): KitState {
     storyBy: k.storyBy,
     catchCount: k.catchCount.slice(),
     firefly: { ...k.firefly },
+    sitStill: k.sitStill,
   };
 }
 
@@ -598,13 +626,22 @@ export function updateKit(
     if (!want && hp > 0) {
       state.lures.hp[i] = 0;
       state.lures.out[i] = 1;
-    } else if (want && hp <= 0) {
+    } else if (want && hp <= 0 && (l.relight === undefined || (state.lures.out[i] ?? 0) <= 1)) {
       // (A trap hung on a flag takes its cage's cuts, the Canopy r11: the warning's, hung by the firefly.)
+      // (A springboard lit on a flag, the Canopy r13's chase hooks: only its first lighting is the flag's; a fling's
+      // ember and its relight are its own rules after.)
       state.lures.hp[i] = lureHpMax(l, t);
       state.lures.out[i] = 0;
+      // (A cage hung empty starts to fill, the Canopy r13, moment 5.)
+      if (l.fills && state.lures.fill && state.lures.fillT) {
+        state.lures.fill[i] = 0;
+        state.lures.fillT[i] = 0;
+      }
     }
   }
+  fillCages(state, scene, events);
   updateFireflies(state, scene, t, events);
+  updateSits(state, scene, events);
   const gates = scene.gates ?? [];
   for (let i = 0; i < gates.length; i++) {
     const g = gates[i];

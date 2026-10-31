@@ -1103,6 +1103,12 @@ function hatch(): Json {
         { id: 'promise', x: PROMISE_X[0], y: 560, w: PROMISE_X[1] - PROMISE_X[0], h: 420, zoom: 0.85 },
       ],
     },
+    // (r13, review r12 #6: the river's tail is keyed to her progress: it leaves the sky when she reaches the promise
+    // zone (`cn-promise`, `open.tailFlag`), or 30 s after the break.)
+    triggers: [
+      ...((src.triggers as Json[] | undefined) ?? []),
+      { id: 'promise', x: PROMISE_X[0], y: 560, w: PROMISE_X[1] - PROMISE_X[0], h: 420, sets: 'cn-promise' },
+    ],
     solids: [...solids, ...pocketSolids],
     pickups: [...((src.pickups as Json[] | undefined) ?? [])],
     pods: [...((src.pods as Json[] | undefined) ?? []), pocketPod],
@@ -1114,7 +1120,14 @@ function hatch(): Json {
         ...((marks.stage as Json | undefined) ?? {}),
         // (r12, moment 1, render's: 3 s of black, the cocoon close and a widen a press, the title over the moon as the
         // river's tail crosses it, the tail gone from the sky 8 s after the break.)
-        open: { black: 180, zooms: [1.5, 1.25, 1], title: 'LAMPFALL', titleAfter: 150, hatchTail: 480 },
+        open: {
+          black: 180,
+          zooms: [1.5, 1.25, 1],
+          title: 'LAMPFALL',
+          titleAfter: 150,
+          hatchTail: 1800,
+          tailFlag: 'cn-promise',
+        },
         // (The valley's false lights, far below the lip: the river breaks into knots round them.)
         lights: { x: 4200, y: 1250, w: 2000, h: 360, count: 9 },
       },
@@ -2498,6 +2511,10 @@ function bower(): Json {
   return r.finish();
 }
 
+/** The crown's sit (r13, moment 3): on the limb c4 under the moon, west of the glade (feet, reach, frames still). */
+const CROWN_WINGS = 'cn-crown-wings';
+const CROWN_SIT = { x: 2000, y: 1024, r: 160, frames: 120 };
+
 function crown(): Json {
   const r = new Wood('cn-crown', 'The moon crown', [1400, 1792], 7402, {
     art: { anchorY: 1100, moon: { x: 1300, y: 620, r: 230 }, afterglow: { x: 1400, y: 900, strength: 0.2 } },
@@ -2509,6 +2526,12 @@ function crown(): Json {
   r.limb('c3', 1472, 1856, 1216, { grows: 'east', end: 'tip' });
   r.limb('c4', 1856, 2496, 1024, { grows: 'west', end: 'snap', flat: [[1950, 2300]] });
   r.add('glades', { id: 'glade-glide', x: 1980, y: 800, w: 400, h: 224, ability: G });
+  // Moonlight for two (r13, moment 3): the glade's grant is also a flag (a trigger over the same rect), and once she has
+  // her wings the kin is at the limb's tip, looking at the moon (it walked: the bower's chamber was its climb). Stand
+  // still near it 2 s and it comes to sit by her (`kinSit`): the camera eases out (`crown-sit`), the duet. It has
+  // walked on once she is at the gap (`cn-firefly-gap`).
+  r.add('triggers', { id: 'glade-wings', x: 1980, y: 800, w: 400, h: 224, sets: CROWN_WINGS });
+  r.add('sits', { id: 'kin-sit', ...CROWN_SIT, when: CROWN_WINGS, sets: 'cn-kin-sat' });
   // (r7, review r6 #1: the glide is learned in a calm room: no lampwing, no strip, no pod; the moon and the limbs.)
   r.landmark('crown', 'landmark', 2200, 1024);
   r.place('in', 1400, 1792);
@@ -2518,6 +2541,34 @@ function crown(): Json {
   ]);
   r.route('bower', 'in');
   r.route('in', 'glade-glide');
+  r.set('marks', {
+    ...(r.data.marks as Json),
+    tatter: {
+      x: CROWN_SIT.x - 96,
+      y: CROWN_SIT.y,
+      facing: -1,
+      when: CROWN_WINGS,
+      until: 'cn-firefly-gap',
+      sit: CROWN_SIT,
+    },
+  });
+  const sr = CROWN_SIT.r + 200;
+  r.set('camera', {
+    ...(r.data.camera as Json),
+    zones: [
+      ...(((r.data.camera as Json | undefined)?.zones as Json[] | undefined) ?? []),
+      {
+        id: 'crown-sit',
+        x: CROWN_SIT.x - sr,
+        y: CROWN_SIT.y - sr - 200,
+        w: 2 * sr,
+        h: sr + 200 + 64,
+        zoom: 0.85,
+        after: 'cn-kin-sat',
+        until: 'cn-firefly-gap',
+      },
+    ],
+  });
   return r.finish();
 }
 
@@ -2552,6 +2603,31 @@ const GAP_KNUCKLES: Array<[number, number]> = [
   [3008, 2016],
   [3200, 2080],
   [3328, 2016],
+];
+
+/**
+ * The chase's hooks (r13, moment 4): dark until the firefly passes (`after` its own flag), then springboards. Up over the
+ * shelf (the perch's hook, a jump off the shelf), then a falling S across the upper air down onto the chain's first
+ * lamp, whose up-left fling is the roost's mouth.
+ */
+const GAP_HOOKS: Array<[string, number, number]> = [
+  ['hook-1', 4150, 1080],
+  ['hook-2', 4150, 760],
+  ['hook-3', 4150, 450],
+  ['hook-4', 3780, 470],
+  ['hook-5', 3460, 680],
+  ['hook-6', 3810, 880],
+];
+/** The firefly's line: the perch, its hooks, the chain's first lamp, the roost's mouth (the path's end: the nest). */
+const GAP_CHASE: Array<[number, number]> = [
+  [4150, 1050],
+  [4150, 740],
+  [4150, 430],
+  [3780, 450],
+  [3460, 660],
+  [3810, 860],
+  [3400, 1400],
+  [3210, 1140],
 ];
 
 function gap(): Json {
@@ -2611,37 +2687,50 @@ function gap(): Json {
   r.lamp('wick-gap-1', 3400, 1420);
   r.lamp('wick-gap-2', 3250, 1460);
   r.lamp('wick-gap-3', GAP_WICK3[0], GAP_WICK3[1]);
-  // The firefly once (r10, review r9 #2: "a light that flees and relights lamps behind her"; Kuro's first pass). As she
-  // lands below the chain (the pod garden, or anywhere on the floor's east half) the first time, a light comes out of
-  // the roost's mouth, touches the three lamps (any she flung burns again), swoops down past her over the garden and
-  // flees ahead of her down the drop to the fork, the way she is going: 5 s, ~3 of them in her frame, no control lost
-  // (render's note: v10's first path crossed to the moon's side, out of frame but for 1 s). The gap's lamps relight
-  // slowly on their own (`GAP_RELIGHT`): the firefly is what lights them the first time.
+  // The firefly's flight (r13, moment 4: the chase; it replaces r10-r11's pass). Once she has the glide, the firefly is
+  // perched in the upper air over the shelf, hanging a light (`hook-1`), its back to her. She lands on the shelf: the
+  // alarm, and it bolts: up, then a falling S across the upper air, and every dark hook it passes catches fire
+  // (`fireflyKindle`; springboards from then on); down onto the chain's first lamp and into the roost's mouth. It keeps
+  // 450-600 px of path ahead of her, never back, never escaping; fallen behind (the glide's low line, a fall), it
+  // waits at its next stop flashing. In the nest it waits at the shaft's top for her, calls once up at the sky, and
+  // is gone up the shaft. The flag keeps r10's name (the route plan reads it).
+  for (const [id, x, y] of GAP_HOOKS)
+    r.lamp(id, x, y, { after: `cn-gap-${id}`, relight: SPRING_RELIGHT, moths: 0 });
   r.set('fireflies', [
     {
       id: 'firefly-gap',
       flag: 'cn-firefly-gap',
-      // (r11, review r10 #4: the reviewer came down the chain's far side with every lamp lit, and the pass relit
-      // nothing. It starts on her first fling off the chain instead of a landing below it: the lamp she left
-      // smoulders, and the firefly comes out of the roost's mouth and lights it again in front of her, then the next,
-      // then flees ahead down the drop. (A landing first, kept as a second trigger, spent it on nothing in the route
-      // plan: the glide to the far seed and the roost come before the chain.))
-      onFling: ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'],
-      path: [
-        [3040, 1150],
-        [3400, 1400],
-        [3250, 1450],
-        [2800, 1570],
-        [2620, 1780],
-        [2900, 1930],
-        [3180, 1900],
-        [3330, 2060],
-        [3330, 2330],
-      ],
-      frames: 300,
-      relights: ['wick-gap-1', 'wick-gap-2', 'wick-gap-3'],
+      trigger: { x: 3456, y: 1088, w: 704, h: 256 },
+      path: GAP_CHASE,
+      frames: 360,
+      chase: {
+        lead: [450, 600],
+        kindles: GAP_HOOKS.map((h) => h[0]),
+        waits: [1, 4, 6],
+        end: [3040, 120],
+        needs: G,
+      },
+      look: { x: 3900, y: 880, zoom: 0.85, from: 0, to: 90 },
     },
   ]);
+  // (The chase's frame: the upper air over the shelf, zoomed out while it is on.)
+  r.set('camera', {
+    ...(r.data.camera as Json),
+    zones: [
+      ...(((r.data.camera as Json | undefined)?.zones as Json[] | undefined) ?? []),
+      {
+        id: 'chase',
+        x: 3328,
+        y: 0,
+        w: 1024,
+        h: 1344,
+        zoom: 0.8,
+        bounds: { x: 2752, y: 0, w: 1600, h: 1600 },
+        after: 'cn-firefly-gap',
+        until: 'cn-firefly-gap-done',
+      },
+    ],
+  });
   r.place('shelf', 4000, 1344);
   r.place('far', 1200, 1856);
   r.place('floor', 2944, 2048);
@@ -2891,7 +2980,31 @@ function tunnel(): Json {
   // freed it by accident and never saw it. Now the firefly hangs it once the warning is cleared (the second
   // sighting), over the knuckle before the den's mouth: cut standing on the knuckle, and not there while the fight is
   // on.)
-  r.lamp(WARN_TRAP, WARN_CAGE[0], WARN_CAGE[1], { trap: true, moths: 40, after: 'cn-warn-hung' });
+  // (r13, moment 5: hung empty, it fills in front of her from a passing stream over 3 s; can't be cut until it's full;
+  // full, the den answers: `denStir`.)
+  r.lamp(WARN_TRAP, WARN_CAGE[0], WARN_CAGE[1], {
+    trap: true,
+    moths: 40,
+    after: 'cn-warn-hung',
+    fills: { frames: 180 },
+  });
+  // (The stream it catches, render's: a thin far stream in the tunnel's high air since she came onto the floor.)
+  r.set('marks', {
+    ...(r.data.marks as Json),
+    stage: {
+      ...(((r.data.marks as Json).stage as Json | undefined) ?? {}),
+      stream: {
+        points: [
+          [6720, 760],
+          [7140, 900],
+          [7560, 980],
+          [8000, 900],
+        ],
+        count: 40,
+        captured: WARN_TRAP,
+      },
+    },
+  });
   // The firefly's second sighting (r11, review r10 #4: "the cause is shown"): the step beat 2 is down (the lid opens),
   // it comes down out of the tube's east shaft, hangs the cage before the mouth (it lights: `cn-warn-hung`) and holds
   // there a beat, then flees down through the mouth into the den, ahead of her. Her input is held while it comes and
@@ -3151,8 +3264,8 @@ function den(): Json {
     y: 1344,
     facing: -1,
     radius: 1300,
-    // (r12, the Keeper: 10 cuts, P2 at 7, P3 at 4: tuning.keeper.)
-    hp: 10,
+    // (r12, the Keeper: 10 cuts, P2 at 7, P3 at 4. r13, review r12 #1: 16, P2 at 10, P3 at 5: tuning.keeper.)
+    hp: 16,
     sets: 'cn-den-down',
     taproot: [2944, 3040],
     snuffs: 'wick-taproot',
