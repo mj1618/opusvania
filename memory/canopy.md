@@ -82,6 +82,11 @@ Names are the contract with render and audio (section 6 of the director's plan);
   **12 of 12 down in 38-62 s, 0-2 hits**. Played by hand through `window.__game` (bursts): P1 ended on one wall stun
   (3 cuts), P2 on a blind back cut, a caught moth and a spent ram's 2 cuts, P3 on two sweeps; two hits taken, both
   standing still in P3; 114 freed. Lenient: Matt's play decides.
+- **Softlocks the r12 first-timer found, fixed**: a Continue now re-arms an arena's saved lock-in (`continueState` calls
+  `rearmArenas`: a Restart to the Grove's save left the wave's door shut outside it); the larder's floor has a way
+  back up a person finds (three root masses, claim from the floor). Still open: the cellar <-> fork vertical link
+  reads as a loop (jump left off the cellar's ledge), the Grove's thorn put-back beside the pit's burrbacks (8 of
+  ft12's 10 later deaths), no feedback for presses in the hatch's black.
 - Tools: `npx tsx tools/levels/keeper-probe.ts [--from=balcony|floor] [--phase=n]` (events of a stand-still),
   `npx tsx tools/playtest/keeper-run.ts [--catch] [--cage] [--trace]` (the den's fight controller from the balcony).
 
