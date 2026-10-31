@@ -14,6 +14,7 @@
  */
 import type { Room } from '../../../scene/room';
 import { drawLarderDeep, drawLarderMid, type LarderRoot, larderRoots, paintLarderRoots } from './den-larder';
+import { drawHeartDeep, drawHeartMid } from './heartwood';
 import { type Look, lookOf } from './looks';
 import { BRANCH, strand } from './pf-branch';
 import { exposedSides, type MassRect } from './pf-mass';
@@ -47,6 +48,8 @@ export const INTERIOR = {
   larva: 0xe8f0b0,
   /** How far the near back's torn edge reaches into it where it meets open air (px). */
   tear: 420,
+  /** Texture px per layer px of the baked planes (heartwood: layers/interior.ts, lib/bake-plane.ts). */
+  bake: { deep: 0.6, mid: 0.75 },
 } as const;
 
 /** The den's fungus light from below (review r5 #7). */
@@ -393,7 +396,8 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
       return;
     }
     if (look !== 'canopy' && look !== 'heartwood') return;
-    const every = look === 'heartwood' ? I.shaftEvery * 1.8 : I.shaftEvery;
+    // (r19: the giant's inside gets a beam per ~1650 px, dust hanging in each: layers/interior.ts.)
+    const every = look === 'heartwood' ? I.shaftEvery * 1.1 : I.shaftEvery;
     const n = Math.max(1, Math.round(b.w / every));
     for (let k = 0; k < n; k++) {
       const x = b.x + ((k + 0.3 + 0.4 * hash1(k + j, seed + 29)) * b.w) / n;
@@ -651,6 +655,18 @@ export function paintNearBacks(p: Paint, plan: InteriorPlan, seed: number): void
   });
 }
 
+/** The undersides of the room's masses over back `b`: [x0, x1, y]. */
+function ceilingsIn(plan: InteriorPlan, b: Rect): Array<[number, number, number]> {
+  const out: Array<[number, number, number]> = [];
+  for (const m of plan.masses)
+    for (const [x0, x1] of exposedSides(m, plan.masses, 1e9, 1e9).bottom) {
+      const y = m.y + m.h;
+      if (y > b.y && y < b.y + b.h && x1 > b.x && x0 < b.x + b.w)
+        out.push([Math.max(x0, b.x), Math.min(x1, b.x + b.w), y]);
+    }
+  return out;
+}
+
 /** The tops of the room's masses that lie in back `b` (where she walks in front of the back). */
 function topsIn(plan: InteriorPlan, b: Rect): Array<[number, number, number]> {
   const out: Array<[number, number, number]> = [];
@@ -662,39 +678,38 @@ function topsIn(plan: InteriorPlan, b: Rect): Array<[number, number, number]> {
 }
 
 /**
- * The giant's heartwood, near (review r3 #4): long split panels whose grain runs along the trunk, dark splits, knots
+ * The giant's heartwood, near (review r3 #4): torn fibre hanging from the ceilings, dark splits along the grain, knots
  * with sap weeping from them. Low in contrast, no lit top edge (a lit top behind her reads as a ledge).
  */
 function heartwoodNear(p: Paint, plan: InteriorPlan, b: Rect, e: BackEdges, seed: number): void {
   const B = BRANCH;
   const T = plan.tone;
   const r = rngFor(seed, 401);
-  // (Review r5 #7: along the giant, diagonal, as the deep back's panels: horizontal lenses read as bands.)
+  // (Review r5 #7: along the giant, diagonal, as the deep back's panels: horizontal lenses read as bands. Review r18
+  // #1: the lenses themselves read as "three soft diagonal blobs"; the far wall is drawn in the deep back now,
+  // heartwood.ts.) Torn fibre hanging from every ceiling over the back, in bunches: the hollow's roof frays.
   const ang = heartAngle(plan);
-  const n = Math.round((b.w * b.h) / 160000);
-  for (let k = 0; k < n; k++) {
-    const cx = b.x + range(r, -0.05, 1.05) * b.w;
-    const cy = b.y + range(r, -0.05, 1.05) * b.h;
-    const kx = tornK(b, e, clamp(cx, b.x, b.x + b.w), clamp(cy, b.y, b.y + b.h));
-    if (kx < range(r, 0, 0.6)) continue;
-    const rx = range(r, 300, 800) * (0.6 + 0.4 * kx);
-    const ry = range(r, 30, 80);
-    p.solid(
-      turn(chaikin(blob(cx, cy, rx, ry, seed + k * 3, 0.25, 22), 2), cx, cy, ang),
-      T.near,
-      B.backH + 0.02,
-      { bark: 0.6, alpha: 0.4 },
-      0.3,
-    );
-    // Grain along it.
-    for (let q = 0; q < 3; q++) {
-      const y = cy + range(r, -0.6, 0.6) * ry;
-      const line: number[] = [];
-      for (let t = 0; t <= 10; t++)
-        line.push(cx - rx * 0.8 + (rx * 1.6 * t) / 10, y + 6 * wobble(cx + t * 90, seed + q, 200));
-      p.tint(turn(strand(line, range(r, 2, 5), 0.2), cx, cy, ang), T.grain, 0.5);
+  for (const [cx0, cx1, cy] of ceilingsIn(plan, b))
+    for (let x = cx0 + range(r, 0, 60); x < cx1; x += range(r, 22, 90)) {
+      const bunch = 0.5 + 0.5 * wobble(x, seed + 51, 260);
+      if (bunch < 0.35) continue;
+      const kx = tornK(b, e, x, cy + 40);
+      if (kx < 0.15) continue;
+      const len = (40 + 300 * bunch * r() ** 1.6) * (0.4 + 0.6 * kx);
+      const sway = range(r, -1, 1) * len * 0.12;
+      const line = [x, cy - 12, x + sway * 0.4, cy + len * 0.5, x + sway, cy + len];
+      const w0 = range(r, 3, 10);
+      p.solid(strand(chaikin2(line), w0, 0.7), r() < 0.4 ? T.grain : T.root, B.backH + 0.12, { bark: 0.5 });
+      p.tint(
+        strand(
+          chaikin2(line).map((v, j) => (j % 2 ? v : v - w0 * 0.25)),
+          w0 * 0.3,
+          0.7,
+        ),
+        T.rootLit,
+        0.35,
+      );
     }
-  }
   // Splits: long dark cracks along the grain, a lit lip under each.
   for (let k = 0; k < Math.max(1, Math.round((b.w * b.h) / 1400000)); k++) {
     const x0 = b.x + range(r, 0, 0.7) * b.w;
@@ -1494,6 +1509,20 @@ function softGrad(
   }
 }
 
+/** Back i lies inside another (bigger, or equal and earlier) back. */
+function innerBack(backs: readonly Rect[], i: number): boolean {
+  const b = backs[i] as Rect;
+  return backs.some(
+    (o, j) =>
+      j !== i &&
+      b.x >= o.x &&
+      b.y >= o.y &&
+      b.x + b.w <= o.x + o.w &&
+      b.y + b.h <= o.y + o.h &&
+      (o.w * o.h > b.w * b.h || j < i),
+  );
+}
+
 /** The heartwood's grain angle for a room (radians off the horizontal: the giant lies diagonal across the frame). */
 export function heartAngle(plan: InteriorPlan): number {
   const r = rngFor(plan.backs.length, Math.round((plan.backs[0]?.x ?? 0) + (plan.backs[0]?.w ?? 0) * 3), 83);
@@ -1571,6 +1600,9 @@ export function drawDeepBack(
 ): void {
   const T = plan.tone;
   plan.backs.forEach((b0, i) => {
+    // (r19: the heartwood's far wall is busy; a small back inside a big one painted its own padded rect over it, a
+    // ruled rectangle. The big one covers it.)
+    if (plan.look === 'heartwood' && innerBack(plan.backs, i)) return;
     const b = { x: b0.x - pad, y: b0.y - pad, w: b0.w + pad * 2, h: b0.h + pad * 2 };
     const r = rngFor(seed, b0.x, b0.y, 71);
     g.rect(b.x, b.y, b.w, b.h).fill({ color: T.deep });
@@ -1629,63 +1661,8 @@ export function drawDeepBack(
         }
       }
     } else if (plan.look === 'heartwood') {
-      // Inside the fallen giant (review r5 #7: full-width horizontal bands and concentric rings read as sepia striped
-      // wallpaper and a target): the grain runs along the giant, diagonal to the frame (one lean per room), in broken
-      // panels 300-900 px long with dark splits between; light from above through cracks. No rings (a cut end shows
-      // them: the fallen burls).
-      const ang = heartAngle(plan);
-      const ca = Math.cos(ang);
-      const sa = Math.sin(ang);
-      // Panels, laid in lanes across the grain, staggered along it.
-      const diag = Math.hypot(b.w, b.h);
-      const cx0 = b.x + b.w / 2;
-      const cy0 = b.y + b.h / 2;
-      for (let v = -diag / 2; v < diag / 2; v += range(r, 70, 190)) {
-        let u = -diag / 2 - range(r, 0, 500);
-        const wd = range(r, 50, 170);
-        while (u < diag / 2) {
-          const len = range(r, 300, 900);
-          const pts: number[] = [];
-          const lo: number[] = [];
-          for (let q = 0; q <= 12; q++) {
-            const t = q / 12;
-            const uu = u + len * t;
-            const half =
-              (wd / 2) * Math.sin(Math.PI * t) ** 0.35 * (0.8 + 0.3 * wobble(uu, seed + Math.round(v), 160));
-            const px = cx0 + uu * ca - v * sa;
-            const py = cy0 + uu * sa + v * ca;
-            pts.push(px + half * sa, py - half * ca);
-            lo.push(px - half * sa, py + half * ca);
-          }
-          for (let q = lo.length / 2 - 1; q >= 0; q--) pts.push(lo[q * 2] as number, lo[q * 2 + 1] as number);
-          const lit = r() < 0.4;
-          g.poly(pts).fill({
-            color: lit ? T.deepLit : T.grain,
-            alpha: lit ? range(r, 0.14, 0.3) : range(r, 0.18, 0.36),
-          });
-          // Grain inside the panel, along it.
-          for (let q = 0; q < 2; q++) {
-            const vv = v + range(r, -0.3, 0.3) * wd;
-            const line: number[] = [];
-            for (let t = 0; t <= 8; t++) {
-              const uu = u + len * (0.1 + 0.8 * (t / 8));
-              line.push(cx0 + uu * ca - vv * sa, cy0 + uu * sa + vv * ca + 4 * wobble(uu, seed + q, 90));
-            }
-            g.poly(strand(line, range(r, 2, 5), 0.3)).fill({ color: T.grain, alpha: 0.3 });
-          }
-          u += len + range(r, 30, 160);
-        }
-      }
-      // Light from above: a soft glow at the top and a few cracks letting it in, slanting down.
-      softGrad(g, b.x, b.x + b.w, b0.y + b0.h * 0.5, b0.y - pad * 0.5, T.deepLit, 0.3, seed + i * 41);
-      for (let k = 0; k < Math.max(1, Math.round(b.w / 1400)); k++) {
-        const x = b.x + range(r, 0.1, 0.9) * b.w;
-        const len = range(r, 300, 900);
-        const line: number[] = [];
-        for (let t = 0; t <= 10; t++)
-          line.push(x + (t / 10) * len * 0.35 + range(r, -6, 6), b0.y - 40 + (t / 10) * len);
-        g.poly(strand(line, range(r, 5, 12), 0.6)).fill({ color: T.nearLit, alpha: 0.22 });
-      }
+      // Inside the fallen giant (review r18 #1: a flat orange card): the far wall of a hollow trunk, heartwood.ts.
+      drawHeartDeep(g, T, b, b0, heartAngle(plan), seed + i * 41);
     } else {
       // Strata: long soft lenses across the earth, broken, of uneven thickness. (Not in the den: canopy review r7 #10,
       // its back read as flat fog with lenses; its shapes are in the mid plane.)
@@ -1837,8 +1814,8 @@ export function drawDeepBack(
         }
       }
     }
-    // Dim great roots crossing, far off.
-    for (let k = 0; k < Math.max(1, Math.round(b.w / 1100)); k++) {
+    // Dim great roots crossing, far off. (Not in the giant: straight down its diagonal grain they read as posts.)
+    for (let k = 0; k < (plan.look === 'heartwood' ? 0 : Math.max(1, Math.round(b.w / 1100))); k++) {
       const x = b.x + range(r, 0, b.w);
       const line: number[] = [];
       for (let t = 0; t <= 10; t++) line.push(x + range(r, -40, 40) * t * 0.2, b.y + (b.h * t) / 10);
@@ -1907,6 +1884,8 @@ export function backEdgeShade(plan: InteriorPlan, seed: number): Array<{ pts: nu
   const steps = 7;
   const reach = 300;
   plan.backs.forEach((b, i) => {
+    // (r19: a back inside another has no edge on open air; its bands drew a ruled rectangle in the giant.)
+    if (innerBack(plan.backs, i)) return;
     const e = plan.edges[i] as BackEdges;
     const bite = backBite(plan, i, seed);
     const st = 20;
@@ -1962,7 +1941,11 @@ function mixC(c0: number, c1: number, t: number): number {
  * - den: roots hanging from the roof and old shells.
  */
 export function drawMidBack(
-  g: { poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown } },
+  g: {
+    poly(pts: number[]): { fill(o: { color: number; alpha?: number }): unknown };
+    circle(x: number, y: number, r: number): { fill(o: { color: number; alpha?: number }): unknown };
+    rect(x: number, y: number, w: number, h: number): { fill(o: { color: number; alpha?: number }): unknown };
+  },
   plan: InteriorPlan,
   seed: number,
   pad: number,
@@ -1976,7 +1959,8 @@ export function drawMidBack(
   const col = plan.look === 'shaft' ? mixC(col0, 0x4a6e70, 0.3) : col0;
   const dark = mixC(massBody, T.fog, v * 0.55);
   const lit = mixC(massBody, T.fog, Math.min(0.85, v + 0.25));
-  plan.backs.forEach((b0) => {
+  plan.backs.forEach((b0, i) => {
+    if (plan.look === 'heartwood' && innerBack(plan.backs, i)) return;
     const b = { x: b0.x - pad, y: b0.y - pad, w: b0.w + pad * 2, h: b0.h + pad * 2 };
     const r = rngFor(seed, b0.x, b0.y, 97);
     const area = b.w * b.h;
@@ -1988,47 +1972,18 @@ export function drawMidBack(
     };
     let guard = 0;
     if (plan.look === 'heartwood') {
-      const ang = heartAngle(plan);
-      const ca = Math.cos(ang);
-      const sa = Math.sin(ang);
-      while (covered < want && guard++ < 400) {
-        const cx = b.x + r() * b.w;
-        const cy = b.y + r() * b.h;
-        const len = range(r, 380, 980);
-        const wd = range(r, 90, 240);
-        const up: number[] = [];
-        const lo: number[] = [];
-        for (let q = 0; q <= 14; q++) {
-          const t = q / 14;
-          const u = (t - 0.5) * len;
-          const half = (wd / 2) * Math.sin(Math.PI * t) ** 0.4 * (0.75 + 0.35 * wobble(u, seed + q, 140));
-          const px = cx + u * ca;
-          const py = cy + u * sa;
-          up.push(px + half * sa, py - half * ca);
-          lo.push(px - half * sa, py + half * ca);
-        }
-        const pts = [...up];
-        for (let q = lo.length / 2 - 1; q >= 0; q--) pts.push(lo[q * 2] as number, lo[q * 2 + 1] as number);
-        fill(pts, r() < 0.3 ? lit : col, 0.9, len * wd * 0.7);
-        // A split down its length, dark.
-        const sp: number[] = [];
-        const off = range(r, -0.25, 0.25) * wd;
-        for (let q = 1; q < 10; q++) {
-          const u = (q / 10 - 0.5) * len * 0.85;
-          sp.push(cx + u * ca - off * sa, cy + u * sa + off * ca + 5 * wobble(u, seed + 5, 80));
-        }
-        g.poly(strand(sp, range(r, 5, 12), 0.2)).fill({ color: dark, alpha: 0.9 });
-        // A sap-lit knot now and then.
-        if (r() < 0.35) {
-          const kx = cx + range(r, -0.3, 0.3) * len * ca;
-          const ky = cy + range(r, -0.3, 0.3) * len * sa;
-          g.poly(chaikin(blob(kx, ky, 18, 12, seed + guard, 0.3, 12), 1)).fill({ color: dark, alpha: 0.95 });
-          g.poly(chaikin(blob(kx, ky + 2, 7, 5, seed + guard + 1, 0.3, 10), 1)).fill({
-            color: INTERIOR.sap,
-            alpha: 0.5,
-          });
-        }
-      }
+      // (Review r18 #1: lenses across the frame read as three soft blobs.) Torn slabs, fungi, fibre: heartwood.ts.
+      // (Darker than the other looks' mid: the far wall is the light; this plane stands nearer, against it.)
+      drawHeartMid(
+        g,
+        b,
+        topsIn(plan, b0),
+        ceilingsIn(plan, b0),
+        seed + guard,
+        mixC(massBody, T.fog, 0.1),
+        mixC(massBody, T.grain, 0.6),
+        mixC(T.deepLit, T.nearLit, 0.3),
+      );
     } else if (plan.look === 'shaft') {
       // (Review r6 #9: wide pale root arches over the fog read as brush marks on the glass. Canopy review r7 #8: lobed
       // mounds stacked in columns read as cartoon cumulus or smoke stacks.) The shaft's far walls as ribs running off

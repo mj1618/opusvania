@@ -35,6 +35,7 @@ import {
 import { SAFE_H, SAFE_W } from '../../contract';
 import { shareTexture } from '../../lifecycle';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
+import { barkLip, splinters } from '../lib/fx-bark';
 import { fxDebug } from '../lib/fx-debug';
 import {
   archRoot,
@@ -48,6 +49,7 @@ import {
 } from '../lib/fx-foliage';
 import { zoneWeights } from '../lib/fx-zones';
 import { PALETTE, prng, wind } from '../lib/look';
+import { gradeLookOf } from '../lib/looks';
 import { isGroveKit, LOOK } from '../lib/room-look';
 
 export const FOREGROUND = {
@@ -166,6 +168,8 @@ export const FOREGROUND = {
     /** Top boughs stay this far (px) off the moon's disc. */
     moonClear: 70,
   },
+  /** Inside a hollow trunk (an enclosed heartwood room, r19): the bark lips' span (px) and drop (share of a bough's). */
+  hollow: { span: [380, 700] as const, drop: 0.75 },
 };
 
 const WALK_STEP = 16;
@@ -307,12 +311,19 @@ export class ForegroundLayer implements EnvModule {
     const top = this.groundTop;
     const bottom = this.groundTop + SAFE_H;
 
-    // Near, top: big leafy boughs that fill a corner.
+    // Near, top: big leafy boughs that fill a corner. (Inside a hollow trunk, r19: torn lips of bark.)
+    const hollow = gradeLookOf(ctx.scene) === 'heartwood';
     const [n0, n1] = span(FOREGROUND.near.parallax);
     for (let x = n0 + rnd() * 300; x < n1; x += 250 + rnd() * 170) {
       const dir = rnd() < 0.5 ? -1 : 1;
       const drop = 330 + rnd() * 130;
-      add('near', 'top', x, top - 40, drop + 200, (g) => leafBranch(g, rnd, 520 + rnd() * 260, drop, dir));
+      if (hollow) {
+        const h = FOREGROUND.hollow;
+        add('near', 'top', x, top - 40, drop + 200, (g) =>
+          barkLip(g, rnd, h.span[0] + rnd() * (h.span[1] - h.span[0]), drop * h.drop, dir),
+        );
+      } else
+        add('near', 'top', x, top - 40, drop + 200, (g) => leafBranch(g, rnd, 520 + rnd() * 260, drop, dir));
     }
     if (!isGroveKit()) {
       // The wood (high in the canopy): nothing grows up from a floor. Leafy twigs of a nearer limb
@@ -321,10 +332,13 @@ export class ForegroundLayer implements EnvModule {
       for (let x = n0 + rnd() * 400; x < n1; x += w.every[0] + rnd() * (w.every[1] - w.every[0])) {
         const dir = rnd() < 0.5 ? -1 : 1;
         const drop = w.size[0] + rnd() * (w.size[1] - w.size[0]);
-        add('near', 'bottom', x, bottom + 40, drop + 160, (g) => {
-          g.scaleTransform(1, -1);
-          leafBranch(g, rnd, 420 + rnd() * 220, drop, dir);
-        });
+        if (hollow)
+          add('near', 'bottom', x, bottom + 40, drop + 160, (g) => splinters(g, rnd, drop * 0.9, dir));
+        else
+          add('near', 'bottom', x, bottom + 40, drop + 160, (g) => {
+            g.scaleTransform(1, -1);
+            leafBranch(g, rnd, 420 + rnd() * 220, drop, dir);
+          });
       }
     }
     // Near, bottom: one big designed silhouette per spot (never the same kind twice running).
@@ -424,13 +438,16 @@ export class ForegroundLayer implements EnvModule {
       const o = FOREGROUND.wood.opening;
       const ro = prng(o.seed);
       const px = o.screenX - SAFE_W / 2 + anchor.x + (o.camX - anchor.x) * FOREGROUND.near.parallax;
-      add('near', 'bottom', px, bottom + 70, o.size * 0.9, (g) => {
-        broadLeaves(g, ro, o.size);
-      });
-      add('near', 'bottom', px - o.size * 0.5, bottom + 40, o.size, (g) => {
-        g.scaleTransform(1, -1);
-        leafBranch(g, ro, o.size * 1.4, o.size * 0.8, 1);
-      });
+      if (hollow) add('near', 'bottom', px, bottom + 40, o.size, (g) => splinters(g, ro, o.size * 1.1, 1));
+      else {
+        add('near', 'bottom', px, bottom + 70, o.size * 0.9, (g) => {
+          broadLeaves(g, ro, o.size);
+        });
+        add('near', 'bottom', px - o.size * 0.5, bottom + 40, o.size, (g) => {
+          g.scaleTransform(1, -1);
+          leafBranch(g, ro, o.size * 1.4, o.size * 0.8, 1);
+        });
+      }
     }
     this.pieces = pieces;
     for (const plane of ['far', 'near'] as const) {
