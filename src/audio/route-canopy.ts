@@ -12,6 +12,7 @@
  * `cageRelease`) are read loosely: they sound when the sim lands them.
  */
 import { noteOf } from './bake-music';
+import { CREAK_S } from './bake-play';
 import { dbToGain, hash01, salt } from './dsp';
 import type { PlayEvent } from './route-play';
 import {
@@ -25,7 +26,7 @@ import {
   panOf,
   type RouteContext,
 } from './router';
-import { AUDIO, bedOf } from './tuning';
+import { AUDIO, bedOf, LAMP_BEAT, LAMP_HZ } from './tuning';
 
 type Loose = PlayEvent & {
   x: number;
@@ -37,7 +38,46 @@ type Loose = PlayEvent & {
   flag?: string;
   id?: string;
   presses?: number;
+  phase?: string;
+  n?: number;
+  of?: number;
+  lure?: string;
+  why?: string;
+  frames?: number;
+  sweep?: boolean;
+  on?: boolean;
+  hitX?: number;
+  hitY?: number;
+  x0?: number;
+  x1?: number;
 };
+
+/** The lamp kind's hum row for a lure kind (route-play's rule: the ring and great lamps share the great's). */
+const humKey = (kind: string): keyof typeof LAMP_HZ =>
+  kind === 'wick' ? 'wick' : kind === 'lantern' ? 'lantern' : 'great';
+
+/** The firefly's alarm: a burst of fast bright pings (its light flashing). */
+function alarm(
+  x: number,
+  y: number,
+  n: number,
+  db: number,
+  i: number,
+  snap: AudioSnap,
+  ctx: RouteContext,
+): Cue[] {
+  return Array.from({ length: n }, (_, k) =>
+    cue('fireflyBlink', 'lantern', ctx, snap.frame, i * 8 + k, {
+      x,
+      y,
+      db: db - k * 0.6,
+      delay: k * 0.065 + hash01(ctx.seed, snap.frame, k, salt('alarm')) * 0.012,
+      variant: 0,
+      cents: 700 + (k % 2) * 500,
+      priority: 4,
+    }),
+  );
+}
 const BOSS_KINDS = new Set(['oldBurrback', 'keeper']);
 
 /** The firefly's call: three short, one long (`gap` s between the shorts). */
@@ -97,6 +137,79 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
       ];
     case 'fireflyEnd':
       return call(q.x, q.y, C.callDb - 4, 0.34, 0.6, i, snap, ctx);
+    // The chase (moment 4): the alarm on its bolt, a short alarm while it waits for her, two pings as it goes on; at
+    // the nest the music stops dead (score.ts) and its one slow call goes up the shaft, nothing answering.
+    case 'fireflyChase':
+      if (q.phase === 'start') return alarm(q.x, q.y, 7, C.callDb + 1, i, snap, ctx);
+      if (q.phase === 'wait') return alarm(q.x, q.y, 3, C.callDb - 3, i, snap, ctx);
+      if (q.phase === 'go') return alarm(q.x, q.y, 2, C.callDb - 2, i, snap, ctx);
+      if (q.phase === 'call') return call(q.x, q.y, C.callDb, 0.55, 0.55, i, snap, ctx);
+      if (q.phase === 'gone')
+        return [at('mothRush', 'lantern', AUDIO.lamp.rushDb - 8, { cents: 600, far: 0.6, priority: 2 })];
+      return [];
+    // A hook catches fire as it passes: a struck match of glass and the hum swelling in (its phrase note is the
+    // score's, score.ts `stings`).
+    case 'fireflyKindle':
+      return [
+        at('fireflyKindle', 'lantern', C.kindleDb + 1, { priority: 4 }),
+        at('slowIn', 'lantern', AUDIO.lamp.slowDb - 6, { cents: 700, delay: 0.05, priority: 2 }, 1),
+      ];
+    // The trap is set (moment 5): each moth caught out of the stream is a flutter and a tick at the cage's own
+    // out-of-tune pitch, falling into the hum's beat: the first ones anywhere, the last exactly on it (quantised to
+    // ever coarser divisions of `LAMP_BEAT`): you hear them caught. Full, the den answers from below.
+    case 'trapFill': {
+      const kind = humKey(snap.fill?.kind ?? 'wick');
+      const T = 1 / LAMP_BEAT[kind];
+      const k = clamp01((q.n ?? 0) / Math.max(1, q.of ?? 1));
+      const div = k < 0.3 ? 8 : k < 0.55 ? 4 : k < 0.8 ? 2 : 1;
+      const g = T / div;
+      const now = f / 60;
+      const loose = (1 - k) ** 2 * g * 0.9 * (hash01(ctx.seed, f, q.n ?? 0, salt('fill')) - 0.5);
+      const delay = Math.max(0, Math.ceil(now / g - 1e-6) * g - now + loose);
+      const cents = 1200 * Math.log2((LAMP_HZ[kind] * (kind === 'wick' ? 2 : 4)) / 880);
+      return [
+        at('wing', 'lantern', C.fillWingDb + 4 * k, { delay, cents: 1000, far: 0.3 * (1 - k), priority: 1 }),
+        at(
+          'glintNote',
+          'lantern',
+          C.fillTickDb + 5 * k,
+          { delay, cents, dur: 0.12, release: 0.08, priority: 2 },
+          1,
+        ),
+      ];
+    }
+    case 'denStir':
+      return [
+        at('slam', 'creatures', AUDIO.creatures.slamDb - 2, {
+          place: 'fixed',
+          pan: 0.3,
+          cents: -600,
+          far: 0.6,
+          delay: 0.35,
+          priority: 5,
+        }),
+        at(
+          'rumble',
+          'creatures',
+          AUDIO.creatures.rumbleDb,
+          { place: 'fixed', pan: 0.2, cents: -1100, far: 0.5, delay: 0.4, priority: 3 },
+          1,
+        ),
+        at('trickle', 'world', C.trickleDb + 8, { delay: 0.9, far: 0.3, priority: 2 }, 2),
+      ];
+    // Moonlight for two (moment 3): the kin's wings open, two soft sheets of felt, the torn one catching short.
+    case 'kinSit':
+      return [
+        at('wingOpen', 'hero', C.kinWingDb, { place: 'hero', cents: -200, delay: 0.5, priority: 3 }),
+        at(
+          'wingOpen',
+          'hero',
+          C.kinWingDb - 2,
+          { place: 'hero', cents: 150, delay: 0.62, dur: 0.07, release: 0.04, priority: 3 },
+          1,
+        ),
+        at('scrape', 'hero', C.kinWingDb - 6, { place: 'hero', delay: 0.7, priority: 2 }, 2),
+      ];
     // The arena's root gates: a heavy thud shutting her in; drawing back with a groan.
     case 'gateShut':
       return [
@@ -120,19 +233,7 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
       return [at('clang', 'combat', AUDIO.combat.clangDb - 2, { place: 'hero', cents: 500, priority: 4 })];
     case 'lureHit':
       return q.trap ? [at('clink', 'lantern', C.clinkDb + 2, { place: 'hero', priority: 3 })] : [];
-    case 'flagSet':
-      // The warning's second beat: something enormous shifts in the den below.
-      return q.flag === 'cn-tunnel-beat2'
-        ? [
-            at('slam', 'creatures', AUDIO.creatures.slamDb - 4, {
-              place: 'fixed',
-              pan: 0.6,
-              cents: -500,
-              far: 0.7,
-              priority: 4,
-            }),
-          ]
-        : [];
+    // (The warning's deep slam from the den moved to `denStir`, round 13: the cage full.)
     // The boss's rams: the falling fourth in the bass (on the score bus, so it sits in the music).
     case 'enemyCharge':
       if (!BOSS_KINDS.has(q.kind ?? '') || snap.fight?.stage !== 'fight') return [];
@@ -176,7 +277,79 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
         ),
       );
     }
+    // The Keeper r13: a cut it shrugs off (`gate`: a dull knock and a snort) or one the light gives away (`lit`: the
+    // dome rings dull; the score's stab comes with its sight); its lunge's in-breath; its turn to guard the cage; the
+    // cage's bars under its claws or let go; the sweep's tell (claws drawn back across the floor) and the claws.
+    case 'keeperGlance':
+      return q.why === 'gate'
+        ? [
+            at('thump', 'combat', AUDIO.combat.clangDb - 3, {
+              x: q.hitX ?? q.x,
+              y: q.hitY ?? q.y,
+              cents: -500,
+              priority: 4,
+            }),
+            at(
+              'exhale',
+              'creatures',
+              AUDIO.creatures.rearDb - 6,
+              { cents: -900, delay: 0.12, priority: 3 },
+              1,
+            ),
+          ]
+        : [
+            at('clang', 'combat', AUDIO.combat.clangDb - 2, {
+              x: q.hitX ?? q.x,
+              y: q.hitY ?? q.y,
+              cents: -1100,
+              priority: 4,
+            }),
+          ];
+    case 'keeperLunge':
+      return [
+        at('catchBreath', 'creatures', AUDIO.creatures.rearDb + 1, { cents: -1000, priority: 5 }),
+        at('scrape', 'creatures', AUDIO.creatures.rearDb - 4, { cents: -700, delay: 0.05, priority: 3 }, 1),
+      ];
+    case 'keeperGuard':
+      return [
+        at('rear', 'creatures', AUDIO.creatures.rearDb, { variant: 0, cents: -300, priority: 5 }),
+        at('clang', 'combat', AUDIO.combat.clangDb - 6, { cents: -700, delay: 0.05, priority: 3 }, 1),
+      ];
+    case 'cageGuard':
+      return q.on
+        ? [
+            at('clink', 'lantern', C.clinkDb + 2, { cents: -900, priority: 3 }),
+            at(
+              'scrape',
+              'creatures',
+              AUDIO.creatures.rearDb - 6,
+              { cents: -400, delay: 0.08, priority: 2 },
+              1,
+            ),
+          ]
+        : [
+            at('clink', 'lantern', C.clinkDb + 4, { cents: 0, priority: 4 }),
+            at('clink', 'lantern', C.clinkDb + 3, { cents: 702, delay: 0.14, priority: 4 }, 1),
+          ];
+    case 'keeperSweep':
+      return [
+        at('dive', 'creatures', AUDIO.creatures.diveDb + 4, {
+          x: ((q.x0 ?? q.x) + (q.x1 ?? q.x)) / 2,
+          cents: -900,
+          priority: 5,
+        }),
+        at('scrape', 'creatures', AUDIO.creatures.rearDb - 2, { cents: -600, delay: 0.04, priority: 4 }, 1),
+        at('mothRush', 'lantern', AUDIO.lamp.rushDb + 2, { cents: 500, delay: 0.08, priority: 4 }, 2),
+      ];
     case 'keeperEat':
+      if (q.sweep)
+        return [
+          at('creak', 'creatures', AUDIO.creatures.creakDb + 2, {
+            variant: nearestS(CREAK_S, (q.frames ?? 30) / 60),
+            cents: -1200,
+            priority: 5,
+          }),
+        ];
       return [
         at('crunch', 'creatures', AUDIO.combat.crunchDb - 8, { cents: -1100, priority: 3 }),
         at('exhale', 'creatures', AUDIO.creatures.rearDb - 8, { cents: -700, delay: 0.3, priority: 2 }, 1),
@@ -250,6 +423,15 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
     default:
       return [];
   }
+}
+
+/** The index of the nearest length in `xs` to `s`. */
+function nearestS(xs: readonly number[], s: number): number {
+  let best = 0;
+  xs.forEach((x, k) => {
+    if (Math.abs(x - s) < Math.abs((xs[best] as number) - s)) best = k;
+  });
+  return best;
 }
 
 /** The Canopy's world by itself on this sim frame. */
@@ -372,6 +554,13 @@ export function canopyLayers(snap: AudioSnap, cam: AudioCam, clock: number, ctx:
     out.river = ramp > 0 ? dbToGain(C.riverDb[0] + (C.riverDb[1] - 4 - C.riverDb[0]) * k) * ramp : 0;
     out.riverPan = 0.55 * Math.sin((2 * Math.PI * clock) / 7.5);
     out.riverHz = 1700 + 600 * k;
+  }
+  // The trap being set: the far stream's wings, thinning as the cage takes them.
+  const fl = snap.fill;
+  if (fl && out.river < 1e-5) {
+    out.river = dbToGain(C.streamDb) * (1 - 0.7 * clamp01(fl.n / Math.max(1, fl.of)));
+    out.riverPan = panOf(fl.x, cam) * 0.7;
+    out.riverHz = 1900;
   }
   // The valley's false lights far below the promise lip.
   if (room === 'cn-hatch' && snap.hero.x > C.valleyFromX)

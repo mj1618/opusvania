@@ -1,8 +1,8 @@
 # Audio (src/audio)
 
-Brief: `docs/audio-direction.md` (the rules) and `docs/design/look-and-sound.md` §6 (the plan). **Muted by default;
-Matt has not approved any of it yet** (M toggles, kept in localStorage; `?audio` on, `?audio=0` off). Web Audio
-only, no samples, no dependencies. The greybox-era pass (2026-10-18) is what plays in the wood and the labs; the
+Brief: `docs/audio-direction.md` (the rules) and `docs/design/look-and-sound.md` §6 (the plan). **On by default
+since 5736e23: Matt approved the first pass's taste 2026-10-31** (M toggles, a remembered M wins; `?manual` pages
+stay quiet unless `?audio`; `?audio=0` off). Web Audio only, no samples, no dependencies. The greybox-era pass (2026-10-18) is what plays in the wood and the labs; the
 test grove keeps its old lantern / giving sounds.
 
 ## How it fits
@@ -21,7 +21,7 @@ test grove keeps its old lantern / giving sounds.
 - `conductor.ts` is shared by live and offline; `engine.ts` + `graph.ts` + `voices/`. Buses **world** (the bed),
   **hero**, **combat**, **lantern** (bowls, lamps, moths), **creatures**; each with room and far sends; roll-off
   9 kHz (lantern 15 kHz); `graph.duck` (the bed's gain: held moments) and `graph.muffle` (a low-pass over all but
-  the lantern bus: her hurt, the aim) are layer targets; a limiter at -2 dB a normal mix never reaches.
+  the lantern bus: her hurt, the aim) are layer targets; the master goes through a glue compressor and a limiter (round 13, below).
 - `bake.ts` (+ `bake-lib.ts` helpers, **`bake-play.ts`** the greybox-era recipes): every one-shot in plain JS,
   1-8 seeded variants, peak 0.9, a 2 ms fade, all but glass rolled off above 7 kHz; ~350 ms to bake at 48 kHz now
   (in idle callbacks live). **`creak` / `rear` variants are lengths** (`CREAK_S`, `REAR_S`): the router picks the
@@ -127,7 +127,7 @@ the pool, root steam and violet glass air, and giving (memory/giving.md): offer 
 breath answers (exhale / settle), calm breaths slowing, sleep breaths, the carried chord (A4 E5 B5 D5 by seen
 level) and its catch, rest notes falling. Git history (e31bab6 .. 875ba79) has the prologue's score.
 
-## The release (the Canopy r11, route-play.ts `release`, still muted)
+## The release (the Canopy r11, route-play.ts `release`)
 A trap's `lureSnuff` (`trap`): `cageBreak` on the cut (in the hold: 9 brittle inharmonic rings 1.7-4.3 kHz in 25 ms
 over a 150 / 318 Hz knock, a pink breath 600 -> 2.1 kHz, 12 tinks of bars landing over 1.3 s), `releaseSwell` once the
 hold lets go (D4 A4 D5 E5 coming in 0.32 s apart, in tune, a rising air band 380 -> 1.9 kHz, 3.4 s), one `glintNote`
@@ -136,7 +136,7 @@ last, and a `mothRush` panned toward the moon as they leave her (two for the gre
 down). Timed by render/lantern/release.ts (audio reads it, render never imports audio). Levels `AUDIO.lamp.release`.
 The hub's release with the bed: -25.7 LUFS, -7.9 dBTP, 0 clipped (`clips/r11-release-hub-audio.mp4`).
 
-## The score and the Canopy (2026-10-31, round 1; still muted, Matt has not judged it)
+## The score and the Canopy (2026-10-31, round 1; Matt approved the taste)
 Brief: docs/design/levels/canopy-moments.md §5 (the director's sound plan) over this file's rules. **Silence is the
 default**: no music in a room walked. Clips: `playtest-reports/canopy-audio-r1/` (README there has the numbers).
 - **score.ts**: a stateful director inside the conductor (live and offline alike; fed every step, muted or not;
@@ -192,6 +192,58 @@ default**: no music in a room walked. Clips: `playtest-reports/canopy-audio-r1/`
   now switch the scene per room (`sceneOf`: materials, pools and lure kinds were the render-time room's before).
   Windows agree to -46..-56 dB where they overlap, except a bed whose noise phase hangs on when its engine was
   made (v12's first seam, in the fork: uncorrelated, so the 0.5 s cross-fade dips ~3 dB, not heard).
-- **Not yet** (round 13 in the plan): the chase cue, the capture (wings falling into the hum's beat: `trapFill`), the
-  crown's duet (`kinSit`), the collapse's escape; the hub's music is the cage's hum and the bed only (the director's
-  plan, not the original brief's "theme at the hub").
+- The hub's music is the cage's hum and the bed only (the director's plan, not the original brief's "theme at the hub").
+
+## Round 13 (2026-10-31): loud enough, the Keeper retimed, the chase, the trap, the duet
+Clips and numbers: `playtest-reports/canopy-audio-r13/README.md`.
+- **Loudness.** A whole playthrough measured -24.4 LUFS integrated, -2.3 dBTP (too quiet on a phone). The master is
+  now `AUDIO.master` 20 into a **glue compressor** (threshold -10 dBFS, 10 dB knee, 3:1, 12 ms / 300 ms) and a
+  limiter (-1.5, 20:1, 1 ms / 100 ms), each one's automatic make-up taken back by `trim` (graph.ts `makeup`; it
+  matches Chromium's within a dB), so the master alone sets the level. Whole route (6 min): -24.4 LUFS / -2.3 dBTP
+  before, **-16.0 LUFS / -4.2 dBTP after** (LRA 8.3); clips -18..-14.6. The duet sits 5 dB under (`duetDb`).
+  **How it was tuned without 6-minute renders**: render the route's WAV once (route-clips `--wav`), then run that
+  WAV through candidate chains in Chromium's OfflineAudioContext (a plain-node playwright script: tsx's `__name`
+  helper breaks `page.evaluate` of a typed arrow) and measure with ffmpeg `ebur128=peak=true`; the simulation
+  agreed with the real render to ~0.8 LU. A glue threshold of -22 squashed (+9 dB of master bought +2.6 LU).
+- **The last hit's silence** tails in: the ring held 22 f, then `hush` falls as (1-k)^2.2 over `tailFrames` 48 (the
+  den, the hall and the room ringing out), silence to 150 f, the breath, the world back over `returnFrames` 50
+  (score.ts `shape`, frame by frame; engine's hush glide is 0.05 s now).
+- **The Keeper** (score.ts `boss`, retimed to 16 hp / P1 two drops / P2 >= 756 f / P3 three sweeps): P1 over a D
+  pedal (Dm, Gm/D, Eb/D, A: the flat second's dread), growing with the bars (col legno eighths from bar 2,
+  sixteenths from bar 5). P2's bar is one swing (`cageSwing.period` / 4 = 63 f): a **three-swing phrase**, her
+  motif sinking A D E F | E Eb | D C# (strings, then felt octaves on the next cycle). P3 four bars, a bass ostinato
+  from bar 5. **Seen** (`snap.seen` = `boss.lit`): `player.lit` is ~0 all through P2 even in the cone (measured on
+  the keeper tape: seen 38% of P2's frames, 12 flips, `player.lit` > 0.3 on 16 frames), so the r12 muffle by
+  `snap.lit` was dark the whole phase. Now the world's low-pass (`darkHz` 950) AND the score's own (`graph.scoreTone`,
+  layer `scoreHz`, `darkScoreHz` 1700) close in the dark and open when it sees her; `keeperSight lit` stabs the
+  score (drum, the D, a high E-F tremolo, Eb strings; one a `stabGap` 90 f). Events (route-canopy.ts):
+  `keeperGlance` gate = a dull thump + snort, lit = a dull clang; `keeperLunge` = a sharp in-breath + scrape (+ the
+  score's struck D; the windup's creak is route-play's); `keeperGuard` = a short rear + clang; `cageGuard` on =
+  claws on bars, off = two bright clinks a fifth apart (now you can cut); `keeperEat sweep` = a creak sized to the
+  tell; `keeperSweep` = a low dive, scrape and a panicked moth rush.
+- **The chase** (piece `chase`, `chaseBeat` 24 f): the call's rhythm (three short, one long, twice a bar) in celesta
+  38 cents sharp; while it flies a felt pulse in tune under it (D A D E), close (`chase.lead` < `chaseClosePx` 520)
+  her harp runs the forest's chord; each `fireflyKindle` adds a held sharp glass tone of `CHASE_CHORD` (D A E B F#
+  C#: the forest's fifths overreached) and plays it as the phrase's next note (score.ts `stings`); `wait` = the
+  alarm alone. `fireflyChase` start = 7 bright pings, wait 3, go 2; **nest = a dead stop** (cut 0); `call` = one
+  slow call. `snap.chase {beat, lead}`.
+- **The trap** (`trapFill`, 40 moths over 180 f): each a wing flutter and a glintNote at the cage's sharp pitch,
+  delayed onto the hum's beat grid (`LAMP_BEAT`), the grid coarsening 1/8 -> 1/4 -> 1/2 -> whole beats as it fills,
+  the early ones jittered (irregular), the last exact; the far stream is the river voice at `streamDb`, thinning;
+  a `clear` / `glade` gives way to silence on the first moth. `denStir` = the deep slam far below (moved from the
+  `cn-tunnel-beat2` flag), a rumble, grit. `snap.fill`.
+- **The duet** (piece `duet`, 3/4 at `duetBeat` 42, `Piece.meter`): on `kinSit` (once), the bed ducked to
+  `duetDuckDb` -22; her motif on harp, the kin's line (F E F A G F E ...) on felt a bar behind, a third above, a note
+  ~20 cents flat twice and one that catches and is struck again; ends on her E over its D; kept across a room
+  change (it finishes). The kin's wings: `wingOpen` twice, the second cut short.
+- **Grants** (piece `grant`, 4 bars): `gladeGrant` and every `hollowGrant` but a `moonShard` always get their moment
+  (they bypass `gladeGapS` and cut a glade); a shard is a glade find.
+- **Cheap fixes of the r1 weaknesses**: the theme's A section was i-VI-iv-V (the commonest minor progression): now D
+  Dorian (G/B, the forest's B natural), Bbmaj7#11, and A with its second, not its C# (only the vista's last turn
+  keeps a C#). The bowed section: a body of seven resonances instead of two formant bands, each player scooping into
+  the note, drifting a few cents and leaning on the bow unevenly. Still wavetable saws underneath.
+- **Gotcha: the gap's dark hooks were relit and put out again every frame** (`lureRelight` x5 a frame, 3,878 in the
+  route before the chase: sim, `tickLures` vs the `after` lamps): 259 slowIn swells in 13 s. route-play now sounds
+  a relight only if that flame is still burning in the step's snap.
+- **Scratch dirs**: the orchestrator's scratchpad is shared by every agent: use a unique subdir (a `route/` there
+  held another agent's stale head.txt / wip.diff).

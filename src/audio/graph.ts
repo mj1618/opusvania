@@ -3,7 +3,7 @@
  * darker one as sends, a roll-off above 9 kHz on everything but the glass, the master gain and a
  * gentle limiter that should never touch a normal mix (it is there for pile-ups).
  *
- *   voice -> bus.in -> roll-off -> bus.vol -> muffle -> sum -> fader -> master -> limiter -> trim -> out
+ *   voice -> bus.in -> roll-off -> bus.vol -> muffle -> sum -> hush -> fader -> master -> glue -> limiter -> trim -> out
  *        \-> roomIn ------------------> the convolver ------^
  *        \-> farIn  -> dull, delayed, fed back -^
  *
@@ -27,9 +27,17 @@ export interface Bus {
   far: GainNode;
 }
 
-/** The limiter's settings and the make-up gain Web Audio adds for them, which `trim` takes back. */
-const LIMIT = { threshold: -2, knee: 0, ratio: 20, attack: 0.003, release: 0.25 };
-const MAKEUP_DB = 0.6 * -(LIMIT.threshold - LIMIT.threshold / LIMIT.ratio);
+/**
+ * The master's dynamics (round 13: the game played at -24.7 LUFS, too quiet on a phone; now ~-16): a gentle glue
+ * compressor (a soft 10 dB knee from -15 dBFS, 3:1, slow enough to keep the blade's attack) so the bed and the score come up with the
+ * master, then a brick-wall limiter for the pile-ups. Web Audio adds a make-up gain for each (Chromium: the gain
+ * that brings a 0 dBFS input back to 0 dBFS, to the power 0.6); `trim` takes it back, so `AUDIO.master` alone sets
+ * the level.
+ */
+const GLUE = { threshold: -10, knee: 10, ratio: 3, attack: 0.012, release: 0.3 };
+const LIMIT = { threshold: -1.5, knee: 0, ratio: 20, attack: 0.001, release: 0.1 };
+const makeup = (c: { threshold: number; ratio: number }) => 0.6 * -(c.threshold - c.threshold / c.ratio);
+const MAKEUP_DB = makeup(GLUE) + makeup(LIMIT);
 
 export class AudioGraph {
   readonly buses: Record<BusId, Bus>;
@@ -43,6 +51,8 @@ export class AudioGraph {
   readonly muffle: BiquadFilterNode;
   /** Everything at once (the boss's last hit: total silence, then its breath). A layer target. */
   readonly hush: GainNode;
+  /** A low-pass over the score (a layer target, `scoreHz`): closed in the Keeper's dark, open in its light. */
+  readonly scoreTone: BiquadFilterNode;
   /** The score's own reverb: a longer, brighter hall than the forest (it is not in the world). */
   readonly hallIn: GainNode;
   /** Muting a bus for an A/B (offline: the take without the bed). */
@@ -55,6 +65,7 @@ export class AudioGraph {
   ) {
     const sum = new GainNode(ctx);
     this.master = new GainNode(ctx, { gain: dbToGain(AUDIO.master) });
+    const glue = new DynamicsCompressorNode(ctx, GLUE);
     const limiter = new DynamicsCompressorNode(ctx, LIMIT);
     const trim = new GainNode(ctx, { gain: dbToGain(-MAKEUP_DB) });
     this.fader = new GainNode(ctx, { gain: 0 });
@@ -63,11 +74,14 @@ export class AudioGraph {
       .connect(this.hush)
       .connect(this.fader)
       .connect(this.master)
+      .connect(glue)
       .connect(limiter)
       .connect(trim)
       .connect(out);
     this.muffle = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0 });
     this.muffle.connect(sum);
+    this.scoreTone = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0 });
+    this.scoreTone.connect(sum);
     this.duck = new GainNode(ctx);
 
     const bus = (id: BusId, hz: number, to: AudioNode): Bus => {
@@ -88,8 +102,9 @@ export class AudioGraph {
       // Glass may ring above the roll-off; the lamps are never muffled (caught, the hum dominates).
       lantern: bus('lantern', 15000, sum),
       creatures: bus('creatures', AUDIO.rolloff, this.muffle),
-      // The score is not in the world: never muffled or ducked, its own hall (below).
-      score: bus('score', 12000, sum),
+      // The score is not in the world: never muffled or ducked, its own hall (below). Its own tone (`scoreTone`):
+      // the Keeper's P2 closes it in the dark and opens it when the light finds her.
+      score: bus('score', 12000, this.scoreTone),
     };
     this.duck.connect(this.muffle);
 

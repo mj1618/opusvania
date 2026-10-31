@@ -206,11 +206,24 @@ function bowed(sr: number, r: () => number, m: number, d: number, bow: Bow): Flo
     const start = Math.round(r() * 0.03 * sr);
     let ph = r() * size;
     let inc = 0;
+    // (Round 13, the strings sounded synthetic: each player now scoops into the note from a little flat, drifts a
+    // few cents, and leans on the bow unevenly: slow random pressure, not a sine.)
+    const scoop = -(6 + r() * 10);
+    let drift = 0;
+    let press = 0;
+    let pressTo = 0;
     for (let i = start; i < n; i++) {
       const t = i / sr;
       if (((i - start) & 15) === 0) {
         const vibK = clamp((t - bow.vibIn) / 0.7, 0, 1);
-        const c = det + depth * vibK * Math.sin(2 * Math.PI * rate * t + vph);
+        drift += ((r() - 0.5) * 0.9 - drift * 0.002) * 0.25;
+        if (((i - start) & 1023) === 0) pressTo = (r() - 0.5) * 0.22;
+        press += (pressTo - press) * 0.01;
+        const c =
+          det +
+          scoop * Math.exp(-(t - start / sr) / 0.07) +
+          clamp(drift, -4, 4) +
+          depth * vibK * Math.sin(2 * Math.PI * rate * t + vph);
         inc = ((f0 * 2 ** (c / 1200)) / sr) * size;
       }
       ph += inc;
@@ -218,10 +231,13 @@ function bowed(sr: number, r: () => number, m: number, d: number, bow: Bow): Flo
       const j = ph | 0;
       const fr = ph - j;
       const s = (tab[j] as number) + ((tab[j + 1] as number) - (tab[j] as number)) * fr;
-      x[i] = (x[i] as number) + s * (1 + 0.07 * Math.sin(2 * Math.PI * wob * t + wph));
+      x[i] = (x[i] as number) + s * (1 + press + 0.03 * Math.sin(2 * Math.PI * wob * t + wph));
     }
   }
-  // The body: a low-pass that opens a little with pitch, two formant bands over it, nothing under 55 Hz.
+  // The body: a low-pass that opens a little with pitch, and a wooden box's resonances over it (round 13: two
+  // formant bands read as a synth pad). An instrument's body is a comb of uneven peaks, so each note's partials land
+  // on different ones: the air mode, the main wood modes, the bridge hill; scaled down for the low register (a
+  // section of cellos and basses under violins). Nothing under 55 Hz.
   const lp = biquad(
     biquad(x.slice(), sr, 'lowpass', Math.min(sr * 0.42, 1700 + 2.4 * f0), 0.7),
     sr,
@@ -229,13 +245,22 @@ function bowed(sr: number, r: () => number, m: number, d: number, bow: Bow): Flo
     Math.min(sr * 0.42, 3200 + 2 * f0),
     0.6,
   );
-  const f1 = biquad(x.slice(), sr, 'bandpass', 480, 1.3);
-  const f2 = biquad(x.slice(), sr, 'bandpass', 1400, 2.2);
   normalize([lp]);
-  normalize([f1]);
-  normalize([f2]);
-  mixInto(lp, f1, 0.45);
-  mixInto(lp, f2, 0.22);
+  const scale = m < 48 ? 0.45 : m < 60 ? 0.7 : 1;
+  const BODY: Array<[number, number, number]> = [
+    [275, 4, 0.3],
+    [460, 6, 0.32],
+    [540, 7, 0.2],
+    [700, 5, 0.16],
+    [1050, 6, 0.12],
+    [2350, 2.2, 0.16],
+    [3100, 3, 0.07],
+  ];
+  for (const [hz, q, g] of BODY) {
+    const b = biquad(x.slice(), sr, 'bandpass', Math.min(sr * 0.42, hz * scale), q);
+    normalize([b]);
+    mixInto(lp, b, g);
+  }
   biquad(lp, sr, 'highpass', 55);
   normalize([lp]);
   // Bow hair on the string: a breathy band that follows the bow, rough at the attack.
