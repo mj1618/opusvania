@@ -96,7 +96,8 @@ export type BossEvent =
   /**
    * The Canopy r13: a cut glanced off the Keeper's dome for a boss reason (an `enemyBlock` comes with it): `lit` =
    * P2, she stands in the cage's light (only the dark, or its eat, lets her hurt it); `gate` = the phase is not done
-   * with her yet (its time or its moths: it shrugs the blow off; render: the dome's crust flashes, no crack).
+   * with her yet (its time or its moths: it shrugs the blow off; render: the dome's crust flashes, no crack); `sweep`
+   * (r14) = P3's sweep tell (reared, claws up: not an opening).
    */
   | {
       type: 'keeperGlance';
@@ -105,7 +106,7 @@ export type BossEvent =
       y: number;
       hitX: number;
       hitY: number;
-      why: 'lit' | 'gate';
+      why: 'lit' | 'gate' | 'sweep';
     }
   /**
    * P2's new move (r13): it waited in the dark at the light's rim and the swing brought her into it: a short, fast
@@ -124,7 +125,27 @@ export type BossEvent =
    * it (the boss's blade box, `boss.hit*`, for `frames`).
    */
   | { type: 'keeperSweep'; id: string; x0: number; x1: number; y: number; frames: number }
-  /** Round 13 (the full escape; not sent yet): a rock falls at (`x`, `y`) after `tell` frames of trickling grit. */
-  | { type: 'rockfall'; x: number; y: number; tell: number }
-  /** Round 13 (not sent yet): the collapse front's top (`y`) rising behind her. */
-  | { type: 'collapseFront'; y: number };
+  /**
+   * The Canopy r14 (review r13 #3): P1's beat before its rams speed up. After the first moth of P1 is gone (eaten or
+   * caught) it stops, rears (`rear`: creature mode `rear` for `frames`), and slams once (`slam`: no floor wave);
+   * from then on every eye stays lit (`boss.angry` 1) and its rams are the fast ones.
+   */
+  | { type: 'keeperRage'; id: string; x: number; y: number; phase: 'rear' | 'slam'; frames: number }
+  /**
+   * The Canopy r14 (review r13 #2): P3's sweep tell, nothing like eating: it rears its front half, claws up (creature
+   * mode `sweep`, NOT open: every cut glances, `keeperGlance sweep`), for `frames`; then the claws come down over the
+   * floor `x0`..`x1` at `y` (`keeperSweep`), and only then it eats, open (`keeperEat sweep: true`). `boss.sweep` is the
+   * stage (1 tell, 2 claws, 3 open), `boss.tellX0` / `tellX1` the claws' span through the tell.
+   */
+  | { type: 'keeperSweepTell'; id: string; x0: number; x1: number; y: number; frames: number }
+  /**
+   * The Canopy r14 (review r13 #1): the death roll carries the carcass clear of the fallen cage: from `x` it rolls to
+   * `toX` (centre) over `frames` (the creature's box moves with it), so the cage is open to see and to cut.
+   */
+  | { type: 'keeperRoll'; id: string; x: number; y: number; toX: number; frames: number }
+  /**
+   * The Canopy r14 (review r13 #7): its health has reached the phase's floor and the phase is not done (`why`:
+   * `moths` P1's falls, `time` P2's swings, `sweeps` P3's): every cut glances until it is (`boss.gated` 1 meanwhile,
+   * `keeperGlance gate` on each). `on` false when the gate lets go.
+   */
+  | { type: 'keeperGate'; id: string; x: number; y: number; on: boolean; why: 'moths' | 'time' | 'sweeps' };

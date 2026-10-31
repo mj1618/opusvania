@@ -293,45 +293,66 @@ function sight(c: BossCtx, e: EnemyState): void {
   else if (e.hitFrame === c.state.frame) e.seekX = pc;
 }
 
-/** P3: it sweeps the low cloud at the fallen cage between rams. */
+/**
+ * P3: it sweeps the low cloud at the fallen cage between rams (r14, review r13 #2: a tell that is not an opening).
+ * `boss.sweep` 1: the tell, reared, claws up (creature mode `sweep`: every cut glances), `tellX0`..`tellX1` where they
+ * land; 2: the claws through the cloud (`keeperSweep`, the blade box); 3: it eats, head down, open (`eat`).
+ */
 function sweep(c: BossCtx, e: EnemyState): void {
   const b = c.boss;
   const K = c.t.keeper;
-  if (b.moth === 4) {
+  if (b.sweep === 1) {
     b.mothT++;
-    // (Cut in its tell: the sweep comes to nothing.)
-    if (e.mode !== 'eat') {
-      b.moth = 0;
-      b.sweepCd = frames(K.sweepEvery, 1);
+    b.tellFrames = Math.max(0, frames(K.sweepTell, 1) - b.mothT);
+    // (Turned on her before the claws came (a guard ram): the sweep comes to nothing.)
+    if (e.mode !== 'sweep') {
+      endSweep(c);
       return;
     }
-    if (b.mothT >= frames(K.sweepTell, 1)) {
-      const n = Math.min(b.left, Math.max(0, Math.round(K.sweepEat)));
-      b.left -= n;
-      b.eaten += n;
-      b.moth = 0;
-      b.sweeps++;
-      b.sweepCd = frames(K.sweepEvery, 1);
-      const m = mouth(e);
-      if (n > 0) c.events.push({ type: 'mothEaten', enemy: e.id, x: m.x, y: m.y, n, left: b.left });
-      // (r13: its claws go through the cloud: she is hurt if she stands in it.)
-      b.sweepHit = frames(K.sweepHitFrames, 1);
-      c.events.push({
-        type: 'keeperSweep',
-        id: e.id,
-        x0: Math.round(b.cageX - K.sweepHitPx),
-        x1: Math.round(b.cageX + K.sweepHitPx),
-        y: floorY(c),
-        frames: b.sweepHit,
-      });
-      // (r13, review r12 #2: the cage lay under its claws until now: its bars are hers to cut from this sweep on.)
-      const g = cage(c);
-      const live = c.state.lures.live;
-      if (live && g.i >= 0 && live.free[g.i] !== 1 && b.cageCuts < Math.round(K.cageCuts)) {
-        live.free[g.i] = 1;
-        c.events.push({ type: 'cageGuard', lure: c.spec.heart, x: b.cageX, y: b.cageY, on: false });
-      }
+    if (b.mothT < frames(K.sweepTell, 1)) return;
+    const n = Math.min(b.left, Math.max(0, Math.round(K.sweepEat)));
+    b.left -= n;
+    b.eaten += n;
+    b.moth = 0;
+    b.sweeps++;
+    b.sweep = 2;
+    b.tell = '';
+    b.tellFrames = 0;
+    b.sweepCd = frames(K.sweepEvery, 1);
+    const m = mouth(e);
+    if (n > 0) c.events.push({ type: 'mothEaten', enemy: e.id, x: m.x, y: m.y, n, left: b.left });
+    // (r13: its claws go through the cloud: she is hurt if she stands in it.)
+    b.sweepHit = frames(K.sweepHitFrames, 1);
+    c.events.push({
+      type: 'keeperSweep',
+      id: e.id,
+      x0: Math.round(b.cageX - K.sweepHitPx),
+      x1: Math.round(b.cageX + K.sweepHitPx),
+      y: floorY(c),
+      frames: b.sweepHit,
+    });
+    // (r13, review r12 #2: the cage lay under its claws until now: its bars are hers to cut from this sweep on.)
+    const g = cage(c);
+    const live = c.state.lures.live;
+    if (live && g.i >= 0 && live.free[g.i] !== 1 && b.cageCuts < Math.round(K.cageCuts)) {
+      live.free[g.i] = 1;
+      c.events.push({ type: 'cageGuard', lure: c.spec.heart, x: b.cageX, y: b.cageY, on: false });
     }
+    return;
+  }
+  if (b.sweep === 2) {
+    if (e.mode !== 'sweep') {
+      endSweep(c);
+      return;
+    }
+    if (b.sweepHit > 0) return;
+    // (The claws are through: now it eats, head down, open.)
+    b.sweep = 3;
+    eat(c, e, frames(K.sweepOpen, 1), true);
+    return;
+  }
+  if (b.sweep === 3) {
+    if (e.mode !== 'eat') b.sweep = 0;
     return;
   }
   if (b.sweepCd > 0) {
@@ -349,8 +370,36 @@ function sweep(c: BossCtx, e: EnemyState): void {
     e.facing = b.cageX < e.x + e.w / 2 ? -1 : 1;
     b.moth = 4;
     b.mothT = 0;
-    eat(c, e, frames(K.sweepTell + K.sweepOpen, 1), true);
+    b.sweep = 1;
+    b.tell = 'sweep';
+    b.tellFrames = frames(K.sweepTell, 1);
+    b.tellX0 = Math.round(b.cageX - K.sweepHitPx);
+    b.tellX1 = Math.round(b.cageX + K.sweepHitPx);
+    e.feedX = -1;
+    e.vx = 0;
+    e.rx = 0;
+    e.stunned = false;
+    e.braced = false;
+    setMode(e, 'sweep', b.tellFrames);
+    c.events.push({
+      type: 'keeperSweepTell',
+      id: e.id,
+      x0: b.tellX0,
+      x1: b.tellX1,
+      y: floorY(c),
+      frames: b.tellFrames,
+    });
   }
+}
+
+/** A sweep cut short (it turned on her): back to its rounds. */
+function endSweep(c: BossCtx): void {
+  const b = c.boss;
+  b.moth = 0;
+  b.sweep = 0;
+  b.tell = '';
+  b.tellFrames = 0;
+  b.sweepCd = frames(c.t.keeper.sweepEvery, 1);
 }
 
 /** P3: a cut on the fallen cage frees a third of what is in it (the lure's hp is the cut count's tell). */
@@ -402,11 +451,16 @@ function fall(c: BossCtx): void {
 }
 
 /** Beaten: the cage takes one cut more and frees every moth saved; the boss waits for that release. */
-function beaten(c: BossCtx): void {
+function beaten(c: BossCtx, e: EnemyState): void {
   const b = c.boss;
   const g = cage(c);
   const live = c.state.lures.live;
   b.moth = 0;
+  b.sweep = 0;
+  b.tell = '';
+  b.tellFrames = 0;
+  b.gated = 0;
+  startRoll(c, e);
   if (live && g.i >= 0 && (c.state.lures.hp[g.i] ?? 0) > 0) {
     live.free[g.i] = 1;
     live.moths[g.i] = b.saved + b.left;
@@ -469,6 +523,134 @@ function gates(c: BossCtx, e: EnemyState): void {
     if (e.hp <= g && b.moth !== 4) b.sweepCd = Math.min(b.sweepCd, frames(K.gateSoon, 1));
   }
   e.gate = g;
+  // (r14, review r13 #7: the gate as state and an event, so render can give its glance its own look.)
+  const on = g > 0 && e.hp <= g ? 1 : 0;
+  if (on !== b.gated) {
+    b.gated = on;
+    c.events.push({
+      type: 'keeperGate',
+      id: e.id,
+      x: Math.round(e.x + e.w / 2),
+      y: Math.round(e.y + e.h / 2),
+      on: on === 1,
+      why: b.phase === 1 ? 'moths' : b.phase === 2 ? 'time' : 'sweeps',
+    });
+  }
+}
+
+/**
+ * P1's beat (r14, review r13 #3: the rams sped up with nothing said): its first rams are the slow, long-told ones
+ * until the first moth of P1 is gone; then, once it is free, it rears (`keeperRage rear`, mode `rear`) and slams once
+ * with no wave (`keeperRage slam`), and from then on its eyes stay lit and its rams are the fast ones (`angry` 2).
+ */
+function rage(c: BossCtx, e: EnemyState): void {
+  const b = c.boss;
+  const K = c.t.keeper;
+  if (b.angry === 2) return;
+  if (b.phase >= 2) {
+    angry(c, e);
+    return;
+  }
+  if (b.angry === 0) {
+    // (Calm: its rams are its first, slow ones.)
+    e.rams = 0;
+    e.slams = 0;
+    if (b.phase !== 1 || b.drops < 1 || b.moth !== 0 || !idle(e) || e.feedX >= 0) return;
+    b.angry = 1;
+    b.tell = 'rage';
+    b.tellFrames = frames(K.rageRear, 1);
+    e.vx = 0;
+    e.rx = 0;
+    e.braced = false;
+    e.chargeLeft = 0;
+    // (Its own count: the creature's rear would slam with a wave at its end.)
+    setMode(e, 'rear', b.tellFrames + 9999);
+    c.events.push({
+      type: 'keeperRage',
+      id: e.id,
+      x: Math.round(e.x + e.w / 2),
+      y: Math.round(e.y + e.h / 2),
+      phase: 'rear',
+      frames: b.tellFrames,
+    });
+    return;
+  }
+  if (e.mode !== 'rear') {
+    // (Struck out of it: angry all the same.)
+    angry(c, e);
+    return;
+  }
+  e.vx = 0;
+  if (--b.tellFrames > 0) return;
+  const n = frames(K.rageAfter, 1);
+  setMode(e, 'pause', n);
+  e.strikeCd = Math.max(e.strikeCd, n);
+  c.events.push({
+    type: 'keeperRage',
+    id: e.id,
+    x: Math.round(e.x + e.w / 2),
+    y: Math.round(e.fromY),
+    phase: 'slam',
+    frames: n,
+  });
+  angry(c, e);
+}
+
+/** From now on, angry: every eye lit, the fast rams. */
+function angry(c: BossCtx, e: EnemyState): void {
+  const b = c.boss;
+  const B = c.t.oldBurrback;
+  b.angry = 2;
+  b.tell = '';
+  b.tellFrames = 0;
+  e.rams = Math.max(e.rams, Math.round(B.firstTellRams));
+  e.slams = e.rams;
+}
+
+/** The death roll (r14, review r13 #1): the carcass rolls clear of the fallen cage, so the cage is in sight. */
+function startRoll(c: BossCtx, e: EnemyState): void {
+  const b = c.boss;
+  const K = c.t.keeper;
+  const a = c.spec.arena;
+  const cx = e.x + e.w / 2;
+  const lo = a.x + e.w / 2 + 16;
+  // (Not past the taproot: its foot stops a body.)
+  const root = c.scene.enemies?.find((q) => q.id === e.id)?.taproot?.[0] ?? a.x + a.w;
+  const hi = Math.min(a.x + a.w, root) - e.w / 2 - 16;
+  const d = K.rollClearPx;
+  let to = cx;
+  if (Math.abs(cx - b.cageX) < d) {
+    const side = cx < b.cageX ? -1 : 1;
+    const want = b.cageX + side * d;
+    const other = b.cageX - side * d;
+    to = want >= lo && want <= hi ? want : other >= lo && other <= hi ? other : cx;
+  }
+  b.rollX = Math.round(to);
+  b.rollT = 0;
+  b.rollFrom = Math.round(cx);
+  e.knockVx = 0;
+  e.vx = 0;
+  c.events.push({
+    type: 'keeperRoll',
+    id: e.id,
+    x: Math.round(cx),
+    y: Math.round(e.y + e.h / 2),
+    toX: b.rollX,
+    frames: frames(K.rollFrames, 1),
+  });
+}
+
+/** One step of the roll: eased out over `rollFrames`. */
+function rollStep(c: BossCtx, e: EnemyState): void {
+  const b = c.boss;
+  const n = frames(c.t.keeper.rollFrames, 1);
+  if (b.rollT >= n || e.mode !== 'dead') return;
+  b.rollT++;
+  const k = b.rollT / n;
+  const ease = 1 - (1 - k) * (1 - k);
+  e.knockVx = 0;
+  e.vx = 0;
+  e.x = Math.round(b.rollFrom + (b.rollX - b.rollFrom) * ease - e.w / 2);
 }
 
 /** A cut glanced off it for the boss's reason this step (r13): `keeperGlance` (`lit`, or its phase's `gate`). */
@@ -479,9 +661,10 @@ function glances(c: BossCtx, e: EnemyState): void {
     const q = c.events[i];
     if (q?.type !== 'enemyBlock' || q.id !== e.id) continue;
     const gate = e.gate > 0 && e.hp <= e.gate;
-    const lit = !gate && b.phase === 2 && e.blind === 0 && e.mode !== 'eat';
+    const reared = !gate && e.mode === 'sweep';
+    const lit = !gate && !reared && b.phase === 2 && e.blind === 0 && e.mode !== 'eat';
     b.glanceSeq = e.hitBy;
-    if (!gate && !lit) return;
+    if (!gate && !lit && !reared) return;
     c.events.push({
       type: 'keeperGlance',
       id: e.id,
@@ -489,7 +672,7 @@ function glances(c: BossCtx, e: EnemyState): void {
       y: Math.round(e.y + e.h / 2),
       hitX: Math.round(q.hitX),
       hitY: Math.round(q.hitY),
-      why: gate ? 'gate' : 'lit',
+      why: gate ? 'gate' : reared ? 'sweep' : 'lit',
     });
     return;
   }
@@ -555,6 +738,8 @@ export const keeperRules: BossRules = {
     }
     const e = creature(c);
     if (e) e.keep = 1;
+    // (r14: beaten on an earlier visit, it is not there: a re-entry (or a Continue mid-escape) found it awake again.)
+    if (e && down) e.gone = true;
     // (A retry finds the den's lamp burning again: phase 3 plants it out.)
     const snuffs = scene.enemies?.find((q) => q.id === spec.creature)?.snuffs;
     const si = lureIndex(scene, snuffs);
@@ -594,6 +779,7 @@ export const keeperRules: BossRules = {
       return;
     }
     if (b.stage === 'end') {
+      rollStep(c, e);
       // (The great release: the roof gives. The fallback: groan and dust, the rubble's slope, no hazards.)
       const l = c.scene.lures?.[cage(c).i];
       if (b.collapse < 0 && l?.sets && c.state.save.flags.includes(l.sets)) {
@@ -609,11 +795,12 @@ export const keeperRules: BossRules = {
     claws(c);
     if (b.stage === 'fight' && e.mode === 'dead') {
       e.gate = 0;
-      beaten(c);
+      beaten(c, e);
       return;
     }
     if (b.phase <= 2) moths(c, e);
     if (b.stage !== 'fight') return;
+    rage(c, e);
     if (b.phase === 2) sight(c, e);
     if (b.phase === 3) {
       sweep(c, e);
@@ -623,6 +810,7 @@ export const keeperRules: BossRules = {
     const info = stepInfo(c);
     if (e.gate > 0) return;
     if (b.phase === 1 && e.hp <= Math.round(K.p2Hp)) {
+      if (b.angry !== 2) angry(c, e);
       keeperPhase(e, info, 2);
       shift(c, 'p1end');
     } else if (b.phase === 2 && e.hp <= Math.round(K.p3Hp)) {

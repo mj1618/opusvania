@@ -1,8 +1,9 @@
 /**
  * The Keeper's fight as an input tape for a clip (the Canopy r13): headless from the den's balcony (claws and glide,
  * after `--pre` settle frames, as `npm run clip -- --room cn-den --at 300,320` starts), the den's plan with a
- * person's `--lag`, until the release and the rubble. Prints the DSL tape; the fight's events on stderr.
- *   npx tsx tools/playtest/keeper-tape.ts [--lag=15] [--pre=30]
+ * person's `--lag`, until the release and the rubble (r14 `--escape`: and the escape out onto the clifftop, careful, the
+ * same lag). Prints the DSL tape; the fight's events on stderr.
+ *   npx tsx tools/playtest/keeper-tape.ts [--lag=15] [--pre=30] [--escape]
  */
 import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
@@ -12,6 +13,7 @@ import { ActionBit } from '../../src/sim/input';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { withShortcuts } from '../../src/sim/world';
+import { EscapePlan } from './escape-plan';
 import { fightTactics } from './fight';
 import type { Line } from './lines';
 
@@ -34,7 +36,24 @@ const go = (m: number) => {
   step(s, m, t, withShortcuts(den, s.save), e, W);
   tape.push(m);
   for (const q of e)
-    if (['bossLock', 'bossPhase', 'hurt', 'fade', 'bossDefeat', 'lureSnuff', 'denCollapse'].includes(q.type))
+    if (
+      [
+        'bossLock',
+        'bossPhase',
+        'hurt',
+        'fade',
+        'bossDefeat',
+        'lureSnuff',
+        'denCollapse',
+        'keeperRage',
+        'keeperSweepTell',
+        'keeperRoll',
+        'escapeStart',
+        'escapeHit',
+        'escapeEnd',
+        'rockfall',
+      ].includes(q.type)
+    )
       log.push(`${tape.length} ${q.type}`);
 };
 for (let k = 0; k < pre; k++) step(s, 0, t, withShortcuts(den, s.save), [], W);
@@ -68,7 +87,13 @@ for (let n = 0; n < 900 && !s.save.flags.includes('cn-den-freed'); n++) {
   const dx = (s.boss?.cageX ?? 0) - (s.player.x + s.player.w / 2);
   go(Math.abs(dx) > 60 ? (dx < 0 ? L : R) : n % 8 === 0 ? A | U : 0);
 }
-for (let n = 0; n < 420; n++) go(0);
+// (r14: then the escape, played as a careful person with the same lag, out onto the clifftop.)
+if (process.argv.includes('--escape')) {
+  while (!s.save.flags.includes('cn-den-collapse') && tape.length < 20000) go(0);
+  const plan = new EscapePlan(den, { careful: true, lag });
+  for (let n = 0; n < 3600 && s.room === 'cn-den' && !s.exit; n++) go(plan.act(s));
+  for (let n = 0; n < 240; n++) go(0);
+} else for (let n = 0; n < 420; n++) go(0);
 const letters: Array<[number, string]> = [
   [L, 'L'],
   [R, 'R'],

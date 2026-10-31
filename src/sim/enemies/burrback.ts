@@ -1442,6 +1442,12 @@ export const burrback: KindRules = {
     }
     // (The Keeper, the Canopy r12: going for a moth, and head down over it, open: its boss says when.)
     if (e.mode === 'feed') return feed(e, info, B);
+    // (The Canopy r14: P3's sweep tell, reared with its claws up: it stands; its boss ends it.)
+    if (e.mode === 'sweep') {
+      e.vx = 0;
+      if (e.knockVx !== 0) knock(e, scene, B);
+      return false;
+    }
     if (e.mode === 'eat') {
       e.vx = 0;
       if (e.knockVx !== 0) knock(e, scene, B);
@@ -1871,6 +1877,8 @@ export const burrback: KindRules = {
       // (The Keeper, the Canopy r13: at its phase's gate every blow glances; in P2's light it shrugs off every cut
       // but its eat's: only the dark lets her hurt it.)
       if (e.keep > 0 && e.gate > 0 && e.hp <= e.gate) return true;
+      // (r14: reared for its sweep, claws up: not an opening.)
+      if (e.keep > 0 && e.mode === 'sweep') return true;
       if (e.keep > 0 && e.phase === 2 && e.blind === 0 && e.mode !== 'eat') return true;
       if (e.stunned) return false;
       // (The Keeper blind in P2's dark: a cut from behind it lands.)

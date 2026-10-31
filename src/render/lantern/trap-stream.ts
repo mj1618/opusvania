@@ -25,9 +25,20 @@ export const TRAP_STREAM = {
   under: 330,
   size: [10, 15] as const,
   color: 0xe4e8f0,
-  /** A caught moth: seconds to swerve and spiral into the orbit, the orbit's radius (px) it ends on. */
-  bend: 1.3,
+  /**
+   * A caught moth: seconds to swerve and spiral into the orbit, the orbit's radius (px) it ends on. (Review r13 #10:
+   * at 8 px, warm, they read as dark flecks round the cage. Now 13 px, moonlit pale like the stream (`sheen`) until
+   * the lamp's warmth takes them at the end, a pale trail behind, the lamp's pull drawn as a warm thread to it, and
+   * the cage's light gulps as each arrives (`gulp` s, `gulpA`).)
+   */
+  bend: 1.5,
   orbit: 70,
+  caught: 13,
+  sheen: 0xeef2ff,
+  warm: 0xffe0b0,
+  trail: 4,
+  gulp: 0.45,
+  gulpA: 0.32,
   /** The slam's dust off the lintel (`denStir`): grains, how far along (px), their colour. */
   dust: 46,
   dustW: 260,
@@ -60,6 +71,7 @@ export class TrapStream {
   private readonly lure: number;
   private readonly bends: Bend[] = [];
   private readonly grains: Grain[] = [];
+  private readonly gulps: number[] = [];
   /** Moths the stream has lost to the cage (render's own count: each `trapFill` is one). */
   private taken = 0;
   private clock = 0;
@@ -182,6 +194,7 @@ export class TrapStream {
       const u = b.t / S.bend;
       if (u >= 1 || !l) {
         this.bends.splice(i, 1);
+        if (l) this.gulps.push(0);
         continue;
       }
       const e = u * u * (3 - 2 * u);
@@ -193,8 +206,42 @@ export class TrapStream {
       const y = b.y0 + (cy - b.y0) * e - Math.sin(Math.PI * u) * 60;
       // Its beat falls into the lamp's: from its own flutter to the cage's steady one.
       const flap = Math.abs(Math.sin(clock * (14 + 6 * b.seed) * (1 - e) + clock * 18 * e));
-      moth(f, x, y, 8, flap, Math.cos(turn) > 0 ? -1 : 1, 0xf0e2c4, 0.95);
-      this.glow.add(x, y, 22, 0xffd8a0, 0.18 * e);
+      // The pull: a warm thread from the lamp to it, strongest as it leaves the stream.
+      f.moveTo(x, y)
+        .lineTo(l.x, l.y)
+        .stroke({
+          color: S.warm,
+          width: 1.5,
+          // (Long, it read as a laser line across the frame: only near the lamp.)
+          alpha:
+            0.28 *
+            Math.sin(Math.PI * Math.min(1, u * 1.4)) *
+            Math.max(0, 1 - Math.hypot(x - l.x, y - l.y) / 320),
+        });
+      // A pale trail behind it along its swerve.
+      for (let q = 1; q <= S.trail; q++) {
+        const uq = Math.max(0, u - q * 0.035);
+        const eq = uq * uq * (3 - 2 * uq);
+        const tq = b.seed * 6.28 + uq * 9;
+        const rq = S.orbit * (1 + 2.5 * (1 - eq));
+        const qx = b.x0 + (l.x + Math.cos(tq) * rq - b.x0) * eq;
+        const qy = b.y0 + (l.y + Math.sin(tq) * rq * 0.55 - b.y0) * eq - Math.sin(Math.PI * uq) * 60;
+        this.glow.add(qx, qy, 14 - q * 2, S.sheen, 0.2 * (1 - q / (S.trail + 1)));
+      }
+      const col = mixRGB(S.sheen, S.warm, Math.max(0, (u - 0.6) / 0.4));
+      moth(f, x, y, S.caught, flap, Math.cos(turn) > 0 ? -1 : 1, col, 0.97);
+      this.glow.add(x, y, 30, col, 0.22);
+    }
+    // The cage's light gulps as each one joins it.
+    for (let i = this.gulps.length - 1; i >= 0; i--) {
+      const t = (this.gulps[i] as number) + dt;
+      this.gulps[i] = t;
+      if (t >= S.gulp || !l) {
+        this.gulps.splice(i, 1);
+        continue;
+      }
+      const v = t / S.gulp;
+      if (l) this.glow.add(l.x, l.y, 90 + 90 * v, S.warm, S.gulpA * (1 - v));
     }
     this.drawGrains(dt);
     this.glow.end();
@@ -239,4 +286,15 @@ export class TrapStream {
       this.front.circle(q.x, q.y, q.s).fill({ color: S.dustColor, alpha: 0.75 * (1 - q.t / q.life) });
     }
   }
+}
+
+/** Two 0xRRGGBB colours mixed `t` of the way. */
+function mixRGB(a: number, b: number, t: number): number {
+  const k = Math.max(0, Math.min(1, t));
+  const ch = (s: number): number => {
+    const x = (a >> s) & 255;
+    const y = (b >> s) & 255;
+    return Math.round(x + (y - x) * k) << s;
+  };
+  return ch(16) | ch(8) | ch(0);
 }

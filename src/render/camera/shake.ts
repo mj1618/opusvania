@@ -140,6 +140,13 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       default:
         // The Canopy r13, moment 5: the cage full, something under the den answers (a deep slam).
         if ((e.type as string) === 'denStir') add += B.denStir;
+        // The Canopy r14, moment 7: the escape.
+        else if ((e.type as string) === 'escapeStart') add += B.escapeStart;
+        else if ((e.type as string) === 'escapeHit') add += B.escapeHit;
+        else if ((e.type as string) === 'rockfall') {
+          const ph = (e as unknown as { phase: string }).phase;
+          add += ph === 'land' ? B.rockLand : ph === 'fall' ? B.rockFall : 0;
+        }
     }
   }
   return add;
@@ -156,6 +163,14 @@ export class CameraShake {
 
   reset(): void {
     this.trauma = this.x = this.y = 0;
+  }
+
+  /**
+   * A floor under the trauma this frame (a rumble that does not drain while its cause lasts: the escape's collapse).
+   * 0 = none.
+   */
+  floor(k: number): void {
+    if (k > this.trauma) this.trauma = Math.min(1, k);
   }
 
   /** Adds trauma directly (capped at 1). */
@@ -181,4 +196,15 @@ export class CameraShake {
     this.y = s * valueNoise(u + 17.3, 2);
     this.trauma = Math.max(0, this.trauma - S.decay * dt);
   }
+}
+
+/**
+ * The escape's rumble (the Canopy r14): the trauma floor while the collapse runs, building from its start over
+ * `rumbleSecs` (`t` = the escape's frames since it began or since her last return). 0 when it is not running.
+ */
+export function escapeRumble(on: boolean, t: number, ct: CameraTuning = cameraTuning): number {
+  if (!on) return 0;
+  const B = ct.shake.budget;
+  const u = Math.min(1, Math.max(0, t / 60 / B.rumbleSecs));
+  return B.rumble[0] + (B.rumble[1] - B.rumble[0]) * u;
 }

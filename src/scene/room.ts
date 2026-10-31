@@ -112,6 +112,11 @@ export interface CameraZone {
   after?: string;
   /** Frames the view slides into it (Lanternroot's chambers: 20). */
   frames?: number;
+  /**
+   * The Canopy r14: the view's centre leans `k` (0..1) of the way from her to (`x`, `y`): the den's `den-end` (the
+   * fallen cage after the kill), the crown's `crown-sit` (the pair and the moon).
+   */
+  lean?: { x: number; y: number; k: number };
 }
 
 /** One of the art kit's mood stops: from world x on, the room leans this way (blended between stops). */

@@ -198,10 +198,10 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
         // The slam's floor wave on its way to her: a person jumps it (r13: the den's plan never did, and with a
         // person's lag it was P3's main hurt).
         if (p.grounded && waveComing(s, e, lead)) return J;
-        // The Keeper's P3 sweep (r13): its tell (head down at the cage), its claws through the low cloud: out of the
-        // cloud until they have passed, then in to cut it while it eats.
-        const sweepTell =
-          !!boss && boss.phase === 3 && boss.moth === 4 && boss.mothT < defaultTuning.keeper.sweepTell + 2;
+        // The Keeper's P3 sweep (r13): its tell (r14: reared, claws up, the arc lit on the floor: `boss.tell`
+        // 'sweep'), its claws through the low cloud: out of the cloud until they have passed, then in to cut it while
+        // it eats.
+        const sweepTell = !!boss && boss.phase === 3 && (boss.tell === 'sweep' || boss.sweep === 2);
         if (sweepTell || (boss && boss.sweepHit > 0)) {
           const cx = boss?.cageX ?? c.x;
           const off = defaultTuning.keeper.sweepHitPx + 70;

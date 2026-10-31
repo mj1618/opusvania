@@ -47,6 +47,13 @@ export class LineTimer {
   private t = 1e6;
   /** Cut short by a fight: the alpha it is fading from (0 = not cutting). */
   private cutA = 0;
+  /** Seconds a staged moment keeps lines down for, as a fight does (the great release's column: review r13 #1). */
+  private holdT = 0;
+
+  /** Keep lines down for `secs` (a moment on screen that text must not sit over); a line up is cut as by a fight. */
+  hold(secs: number): void {
+    this.holdT = Math.max(this.holdT, secs);
+  }
 
   /** A new line (it replaces the one up). */
   show(text: string): void {
@@ -59,11 +66,14 @@ export class LineTimer {
   clear(): void {
     this.t = 1e6;
     this.cutA = 0;
+    this.holdT = 0;
   }
 
   /** Advances `dt` s with a fight near or not; returns the line's alpha (0..1). */
-  update(dt: number, fight: boolean): number {
+  update(dt: number, fightNow: boolean): number {
     const L = LINE_TIME;
+    const fight = fightNow || this.holdT > 0;
+    this.holdT = Math.max(0, this.holdT - dt);
     if (this.cutA > 0) {
       // A fight came while it was up: it goes over `cut` s, and comes back whole after the fight if it was cut in
       // its first half.

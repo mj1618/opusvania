@@ -48,6 +48,11 @@ type Of<K extends SimEvent['type']> = Extract<SimEvent, { type: K }>;
 const den = getRoom('cn-den');
 const cageIx = (den.lures ?? []).findIndex((l) => l.id === 'trap-den');
 const burr = (s: GameState) => s.enemies.find((e) => e.id === 'old-burr') as GameState['enemies'][number];
+/** Where she stands to cut the fallen cage at `cx` from the side away from the Keeper (r14: a cut on it is its own). */
+const farSide = (s: GameState, cx: number): number => {
+  const e = burr(s);
+  return e.x + e.w / 2 < cx ? cx + 40 : cx - 40;
+};
 
 /** She is on the den's floor (the lock), the fight under way, phase 1. */
 function fight(x = 1000): { s: GameState; ev: SimEvent[] } {
@@ -185,7 +190,7 @@ describe("the Keeper's length and bite (r13, review r12 #1, #2)", () => {
     const ev3: SimEvent[] = [];
     for (let n = 0; n < 6 && !ev3.some((q) => q.type === 'cageRelease'); n++) {
       s.player.invuln = 60;
-      placePlayer(s, cx - 30, 1344, t, withShortcuts(den, s.save), []);
+      placePlayer(s, farSide(s, cx), 1344, t, withShortcuts(den, s.save), []);
       run(s, U | A, 1, ev3);
       run(s, U, 24, ev3);
     }
@@ -233,7 +238,8 @@ describe("the Keeper's length and bite (r13, review r12 #1, #2)", () => {
 
 // --- Moment 4: the firefly's flight.
 const gap = getRoom('cn-gap');
-const HOOKS = ['hook-1', 'hook-2', 'hook-3', 'hook-4', 'hook-5', 'hook-6'];
+// (r14: a seventh hook off hook-6's down-left line: its left fling is the way into the roost's mouth.)
+const HOOKS = ['hook-1', 'hook-2', 'hook-3', 'hook-4', 'hook-5', 'hook-6', 'hook-7'];
 const ix = (id: string) => (gap.lures ?? []).findIndex((l) => l.id === id);
 
 /** In the air in reach of `from`: the Lamp, `aim`, let go; then on until `next` is in reach (or she lands). */
@@ -294,22 +300,22 @@ describe("the firefly's flight (r13, moment 4)", () => {
     let n = 0;
     while (flingTarget(s, withShortcuts(gap, s.save), t) !== ix('hook-1') && n++ < 40) run(s, J, 1, ev);
     expect(flingTarget(s, withShortcuts(gap, s.save), t)).toBe(ix('hook-1'));
-    // The S: up, up, west, down-west, down-east, down-west to the chain; up-west into the roost's mouth.
+    // The S: up, up, west, down-west, down-east, down-west; west into the roost's mouth.
     const plan: Array<[number, string]> = [
       [U, 'hook-2'],
       [U, 'hook-3'],
       [L, 'hook-4'],
       [D | L, 'hook-5'],
       [D | R, 'hook-6'],
-      [D | L, 'chain'],
+      [D | L, 'hook-7'],
     ];
     for (const [aim, next] of plan) {
       expect(fling(s, aim, next, ev)).toBe(true);
       // (Each hook is lit by the time she reaches it: the firefly is ahead.)
-      if (next !== 'chain') expect(s.lures.hp[ix(next)]).toBeGreaterThan(0);
+      expect(s.lures.hp[ix(next)]).toBeGreaterThan(0);
     }
-    for (let i = 0; i < 4; i++) run(s, U | L | B, 1, ev);
-    run(s, U | L, 1, ev);
+    for (let i = 0; i < 4; i++) run(s, L | B, 1, ev);
+    run(s, L, 1, ev);
     run(s, L, 80, ev);
     // In the pocket (its shelf, 2,944-3,136 x 1,216).
     expect(s.player.y + s.player.h).toBe(1216);

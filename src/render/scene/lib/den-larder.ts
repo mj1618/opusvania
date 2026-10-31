@@ -28,16 +28,19 @@ export const LARDER = {
   stone: { per: 100_000 * 2.2, r: [12, 30] as const },
   /** Root hair: strands per 100k px², length (px). */
   hair: { per: 7, len: [70, 280] as const },
-  /** The cells: how many, their half width (px), the wrapped moths in each. */
-  cell: { n: 3, w: [110, 160] as const, wraps: [3, 6] as const },
-  /** Old cages buried in the wall: how many, their height (px). */
-  cage: { n: 2, h: [110, 160] as const },
+  /**
+   * The cells: how many, their half width (px), the wrapped moths in each. (Review r13 #8: three 60-80 px niches were
+   * specks at play zoom; HK's chamber tells its story in a few big shapes. Two, 1.6x.)
+   */
+  cell: { n: 2, w: [190, 240] as const, wraps: [5, 8] as const },
+  /** Old cages buried in the wall: how many, their height (px). (r14: twice the size, so a cage reads as one.) */
+  cage: { n: 2, h: [230, 300] as const },
   /** Ribs on the near wall: count per 1000 px of floor, width at the roof (px). */
   rib: { per: 1.2, w: [26, 44] as const },
   /** Thick roots hanging into the den's air: count per 1000 px, length (px). */
   hang: { per: 2.2, len: [180, 460] as const, w: [16, 30] as const },
   /** Colours of what is kept: the silk's pale, its wrap lines, the old cages' bronze. */
-  silk: 0x5a4c40,
+  silk: 0x62533f,
   silkDark: 0x2a2018,
   bronze: 0x4a3626,
   bronzeLit: 0x8a6a46,

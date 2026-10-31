@@ -69,7 +69,8 @@ export const TATTER = {
     goodSpan: 33,
     tornSpan: 25,
     goodOpen: -0.95,
-    tornOpen: -0.15,
+    // (Review r13 #4: at -0.15 the torn one lay along its back, out of sight: half up beside the good one.)
+    tornOpen: -0.6,
   },
   /** Its snapped antenna's length (of a whole one). */
   antenna: 0.5,
@@ -136,8 +137,35 @@ export const TATTER = {
    * `open` s, held; the torn one only half opens: the try's droop), folds them and leans against her (`leanAt`, `lean`
    * rad toward her). If she goes (`leave` px), it stays, looking at the moon.
    */
-  sit: { side: 62, walk: 2.4, lookAt: 2.6, openAt: 3.2, open: 3.4, leanAt: 7.2, lean: 0.16, leave: 360 },
+  // (Review r13 #4: "the kin is a 35 px lump; no wing opening visible". Open for 6 s now (fully ~4.4 s), the good wing
+  // spanning `openSpan` x its rest span (over twice its body), the torn one `tornSpan` and only half up, both edged
+  // with the moon (`rim`); the lean after, held while she stays.)
+  sit: {
+    side: 62,
+    walk: 2.4,
+    lookAt: 2.6,
+    openAt: 3.2,
+    open: 6,
+    leanAt: 9.4,
+    lean: 0.16,
+    leave: 360,
+    openSpan: 2.3,
+    tornSpan: 1.45,
+    rim: 1,
+  },
 } as const;
+const T_SIT = TATTER.sit;
+/** The wings' grade while they are open to the moon (set per frame from `TATTER.grade`). */
+const WING_GRADE: {
+  sat: number;
+  val: number;
+  tint: typeof TATTER.grade.tint;
+  lightSat: number;
+  lightVal: number;
+  lift: number;
+} = {
+  ...TATTER.grade,
+};
 
 type Beat = 'away' | 'keep' | 'wait' | null;
 
@@ -499,7 +527,7 @@ export class Tatter {
     // Its wings to the moon (the sit): open, held a breath, folded.
     const S = T.sit;
     const su = this.sitT >= 0 ? (this.sitT - S.openAt) / S.open : -1;
-    const sw2 = su > 0 && su < 1 ? smoothstep(0, 0.22, su) * (1 - smoothstep(0.8, 1, su)) : 0;
+    const sw2 = su > 0 && su < 1 ? smoothstep(0, 0.14, su) * (1 - smoothstep(0.86, 1, su)) : 0;
     rig.tryWings = Math.max(
       tw * (0.5 + 0.5 * beats) * (0.9 + 0.1 * noise1(clock * 9, 171)),
       T.rest.wings * rk * Math.sin(Math.PI * Math.min(1, this.restT / 1.2)) ** 2,
@@ -823,7 +851,7 @@ export class Tatter {
     // Held open to the moon (the sit): out flat and still, the span a little longer for it.
     const sp = this.spreadK;
     good.ang = good.ang + (this.angFor(W.goodOpen, back) - good.ang) * sp;
-    good.span = W.goodSpan * (1 + 0.4 * sp);
+    good.span = W.goodSpan * (1 + (T_SIT.openSpan - 1) * sp);
     good.lead = back > 0 ? -1 : 1;
     const torn = this.tornPose;
     const tremble = 0.5 + 0.5 * Math.max(0, noise1(clock * 1.3, 191));
@@ -837,15 +865,23 @@ export class Tatter {
       back,
     );
     torn.ang = torn.ang + (this.angFor(W.tornOpen, back) - torn.ang) * sp;
-    torn.span = W.tornSpan * (1 + 0.15 * sp);
+    torn.span = W.tornSpan * (1 + (T_SIT.tornSpan - 1) * sp);
     torn.lead = back > 0 ? -1 : 1;
     const fw = flapWind(this.x, clock);
     p.outline = 1.2;
-    drawMothWing(p, good, WHOLE, clock, 0, fw);
+    // Open to the moon they are seen against its light: the membrane darker (less of the ash lift), the edge silver.
+    const G = TATTER.grade;
+    WING_GRADE.lift = (G.lift ?? 0) * (1 - 0.8 * sp);
+    WING_GRADE.val = G.val * (1 - 0.25 * sp);
+    p.grade = WING_GRADE;
+    drawMothWing(p, good, WHOLE, clock, 0, fw, sp * T_SIT.rim);
+    p.grade = TATTER.grade;
     p.outline = 1.5;
     drawVesper(p, this.rig.frame, this.view, clock);
     p.outline = 1.2;
-    drawMothWing(p, torn, TORN, clock, tremble, fw);
+    p.grade = WING_GRADE;
+    drawMothWing(p, torn, TORN, clock, tremble, fw, sp * T_SIT.rim);
+    p.grade = TATTER.grade;
     p.outline = 0;
     p.end(this.me.cx, this.me.feetY - 40);
   }

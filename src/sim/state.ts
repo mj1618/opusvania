@@ -497,7 +497,8 @@ export type EnemyMode =
   | 'curl'
   | 'roll'
   | 'feed'
-  | 'eat';
+  | 'eat'
+  | 'sweep';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
@@ -1076,6 +1077,20 @@ export interface BossState {
   sweeps: number;
   glanceSeq: number;
   sweepHit: number;
+  /**
+   * The Canopy r14 (review r13 #2, #3, #7): `angry` P1's beat (0 calm: its slow rams; 1 the rear and slam under way;
+   * 2 angry: every eye lit, the fast rams, to the end of the fight); `gated` 1 while its health sits at the phase's
+   * floor with the phase not done (`keeperGate`); `sweep` P3's sweep stage (0 none, 1 the tell: reared, claws up, not
+   * open; 2 the claws; 3 eating, open). Through a sweep's tell `tell` = 'sweep', `tellFrames` the frames left and
+   * `tellX0` / `tellX1` where the claws will land; through the rage `tell` = 'rage'.
+   */
+  angry: number;
+  gated: number;
+  sweep: number;
+  /** The death roll (r14): from `rollFrom` to `rollX` (its centre), `rollT` frames in (`keeperRoll`). */
+  rollX: number;
+  rollFrom: number;
+  rollT: number;
 }
 
 /** The part of the state that belongs to the room: rebuilt by every room entry (src/sim/world.ts). */

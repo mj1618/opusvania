@@ -16,7 +16,7 @@
  */
 import type { SimEvent } from './events';
 import type { FireflyPass, Roost } from './kit-data';
-import { flameAt, lureHpMax } from './lures';
+import { flameAt, lureHpMax, relightEmbers } from './lures';
 import type { Scene } from './scene';
 import type { GameState, SaveState } from './state';
 import type { Tuning } from './tuning';
@@ -42,10 +42,33 @@ export interface FireflyState {
   her: number;
   px: number;
   py: number;
+  /**
+   * The Canopy r14 (review r13 #5): the lure (index in `scene.lures`) of the last hook she flung off in the chase (-1
+   * none): a fall puts her back there, drifting in its reach for `hold` frames (`lessonK` eases in as at the first
+   * fling: time thickens round the flame).
+   */
+  hook: number;
+  hold: number;
+  /** 1 once she has flung off `hook` since she was last put back there (a landing then is a fall). */
+  used: number;
 }
 
 export function createFirefly(): FireflyState {
-  return { pass: -1, frame: 0, x: 0, y: 0, beat: -1, t: 0, d: 0, her: 0, px: 0, py: 0 };
+  return {
+    pass: -1,
+    frame: 0,
+    x: 0,
+    y: 0,
+    beat: -1,
+    t: 0,
+    d: 0,
+    her: 0,
+    px: 0,
+    py: 0,
+    hook: -1,
+    hold: 0,
+    used: 0,
+  };
 }
 
 /** The point `d` px along `path` (into `out`). */
@@ -223,10 +246,13 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
     fireflyAt(f, 0, AT);
     ff.x = AT.x;
     ff.y = AT.y;
-    if (!starts(state, scene, f)) return;
-    state.save.flags.push(f.flag);
+    const again = state.save.flags.includes(f.flag);
+    if (again ? !onTrigger(state, f) : !starts(state, scene, f)) return;
+    if (!again) {
+      state.save.flags.push(f.flag);
+      events.push({ type: 'flagSet', flag: f.flag, by: f.id, x: AT.x, y: AT.y });
+    }
     events.push({ type: 'fireflyStart', id: f.id, x: AT.x, y: AT.y, frames: f.frames });
-    events.push({ type: 'flagSet', flag: f.flag, by: f.id, x: AT.x, y: AT.y });
     ff.beat = 1;
     ff.t = 0;
     ff.d = 0;
@@ -241,7 +267,40 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
   // Her progress: the nearest point of the stretch of path behind the firefly, while she is near it (a fall to the
   // floor keeps the last).
   project(path, p.x + p.w / 2, p.y + p.h / 2, PJ, ff.her - K.nearPx, ff.d + 1);
-  if (PJ.dist <= K.nearPx && p.faded === 0) ff.her = PJ.d;
+  // (r14, review r13 #5: not while she falls (out of a fling's aim, sinking): a fall past the line is no progress.)
+  // (Her progress is made on the line, in the air: standing on the shelf under the S is none.)
+  const falling = (!p.grounded && p.fling < 0 && p.vy > K.fallVy) || !!state.caught;
+  // (r14, first-timer ft14chase: gliding low into the nest, her nearest point clamped at the firefly's own and pushed
+  // it on, a ratchet to the nest while the S was never flown. At the clamp she must be close to it.)
+  const clamped = PJ.d >= ff.d - 1 && PJ.dist > K.edgePx;
+  if (PJ.dist <= K.nearPx && p.faded === 0 && !falling && !p.grounded && !clamped) ff.her = PJ.d;
+  if (ff.hold > 0) ff.hold--;
+  // (The last hook she flung off: a fall puts her back there.)
+  const lures = scene.lures ?? [];
+  const line = [...c.kindles, ...(f.relights ?? [])];
+  for (const q of events) {
+    if (q.type !== 'fling' || !line.includes(q.id)) continue;
+    ff.hook = lures.findIndex((l) => l.id === q.id);
+    ff.used = 1;
+  }
+  // (r14: a landing mid-chase, off a hook past the first and short of the nest, is a fall: held a beat, then back at
+  // that hook (src/sim/index.ts's catch calls `chaseBack`). Once only: landed again without a fling, she stays.)
+  const first = lures.findIndex((q) => q.id === c.kindles[0]);
+  if (
+    (ff.beat === 2 || ff.beat === 3) &&
+    p.grounded &&
+    !state.caught &&
+    p.faded === 0 &&
+    ff.used === 1 &&
+    ff.hook >= 0 &&
+    ff.hook !== first &&
+    ff.her < total - K.nestPx
+  ) {
+    const frames = Math.max(1, Math.round(t.room.catchFrames));
+    const id = `chase:${lures[ff.hook]?.id ?? ''}`;
+    state.caught = { id, frames: 0 };
+    events.push({ type: 'fallCatch', id, x: Math.round(p.x + p.w / 2), y: Math.round(p.y + p.h), frames });
+  }
   if (ff.beat === 2 || ff.beat === 3) {
     // Its goal: its lead ahead of her, but never past a stop she is not yet near.
     let goal = Math.min(total, ff.her + c.lead[1]);
@@ -284,7 +343,6 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
         kindle(state, scene, f, id, t, events);
     }
     // (And the chain's lamps it passes burn again if she put them out before: its line is always lit ahead of her.)
-    const lures = scene.lures ?? [];
     for (const id of f.relights ?? []) {
       const i = lures.findIndex((q) => q.id === id);
       const l = lures[i];
@@ -295,7 +353,8 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
       events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
       events.push({ type: 'fireflyRelight', id: f.id, lure: l.id, x: l.x, y: l.y });
     }
-    if (ff.d >= total - 0.5) {
+    // (r14: never into the nest while she falls: it waits at the path's end until she is flying or down.)
+    if (ff.d >= total - 0.5 && !falling) {
       ff.beat = 4;
       ff.t = 0;
       say('nest');
@@ -335,6 +394,53 @@ function chaseStep(state: GameState, scene: Scene, f: FireflyPass, t: Tuning, ev
     ff.beat = -1;
     ff.frame = 0;
   }
+}
+
+/**
+ * Where a fall in a chase puts her back (the Canopy r14, review r13 #5: a fall from the S sent her to the start
+ * shelf): at the last hook she flung off, her centre on its flame, drifting in its reach for `backHold` frames (the
+ * lesson's thickened air) so the press is hers again. The hook burns. Null when no chase is on or she used none.
+ */
+export function chaseBack(
+  state: GameState,
+  scene: Scene,
+  t: Tuning,
+  events: SimEvent[],
+): { x: number; y: number } | null {
+  const ff = state.kit.firefly;
+  const f = scene.fireflies?.[ff.pass];
+  if (!f?.chase || ff.beat < 2 || ff.beat > 4 || ff.hook < 0) return null;
+  const l = scene.lures?.[ff.hook];
+  if (!l) return null;
+  const s = state.lures;
+  // (Every hook of the chain she left smoulders no more: they burn again, springboards as before.)
+  relightEmbers(state, scene, t, events);
+  if ((s.hp[ff.hook] ?? 0) <= 0) {
+    s.hp[ff.hook] = lureHpMax(l, t);
+    s.out[ff.hook] = 0;
+    events.push({ type: 'lureRelight', id: l.id, x: l.x, y: l.y, by: 'firefly' });
+  }
+  ff.hold = Math.max(1, Math.round(t.kit.firefly.backHold));
+  ff.used = 0;
+  events.push({
+    type: 'fireflyChase',
+    id: f.id,
+    phase: 'back',
+    x: Math.round(ff.x),
+    y: Math.round(ff.y),
+    lure: l.id,
+  });
+  return { x: l.x, y: Math.round(l.y + t.body.height / 2) };
+}
+
+/** Is she standing in pass `f`'s trigger (a chase's restart: she is back on its shelf)? */
+function onTrigger(state: GameState, f: FireflyPass): boolean {
+  const p = state.player;
+  const r = f.trigger;
+  if (!r || !p.grounded || p.faded > 0) return false;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  return cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
 }
 
 /** Does pass `f` start this step (its flag not saved, none under way)? */
@@ -389,20 +495,9 @@ export function updateFireflies(state: GameState, scene: Scene, t: Tuning, event
       ff.d = 0;
       ff.her = 0;
       fireflyAt(f, 0, AT);
-      // (A chase she left before its end (a fall down the drop, a fade): it waits for her at its last stop.)
-      const c = f.chase;
-      if (c && state.save.flags.includes(f.flag)) {
-        const last = c.waits.length > 0 ? (c.waits[c.waits.length - 1] as number) : 0;
-        ff.d = pointD(f.path, last);
-        ff.her = 0;
-        ff.beat = 3;
-        along(f.path, ff.d, AT);
-        // (The hooks behind that stop burn.)
-        for (const id of c.kindles) {
-          const l = (scene.lures ?? []).find((q) => q.id === id);
-          if (l?.after && !state.save.flags.includes(l.after)) state.save.flags.push(l.after);
-        }
-      }
+      // (A chase she left before its end (a fall down the drop, out by the roost's shaft, a fade): r14, first-timer
+      // ft14chase: it used to wait at its last stop by the nest, and a player back in the roost ended it unflown. Now it
+      // perches at its start again and bolts when she is back on the shelf; the hooks it lit stay lit.)
       ff.x = ff.px = AT.x;
       ff.y = ff.py = AT.y;
       // (Its first hook is the light it is hanging: lit already.)

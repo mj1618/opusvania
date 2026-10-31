@@ -108,6 +108,17 @@ export const cameraTuning = {
       bossOpen: 0.25,
       /** The trap is set (moment 5): the den's deep slam under the floor as the cage fills. */
       denStir: 0.3,
+      /**
+       * The escape (moment 7, the Canopy r14): it begins (`escapeStart`), a rock lets go and lands (`rockfall`
+       * fall / land), a hazard catches her (`escapeHit`). Under them a rumble that builds (`rumble`: a floor on the
+       * trauma, from `rumble[0]` at its start to `rumble[1]` by `rumbleSecs`, while the collapse runs).
+       */
+      escapeStart: 0.45,
+      rockFall: 0.08,
+      rockLand: 0.28,
+      escapeHit: 0.4,
+      rumble: [0.16, 0.34] as const,
+      rumbleSecs: 18,
     },
   },
   /**
@@ -241,7 +252,7 @@ export const CAMERA_OPEN = { above: 60, step: 0.9, out: 1.8 };
 
 export const PREMISE_CAM = {
   release: { zoom: 1.06, pan: 0.12, in: 0.4, hold: 0.55, out: 1.0 },
-  great: { zoom: 0.88, pan: 0.3, lift: 260, in: 0.9, hold: 3.6, out: 1.8 },
+  great: { zoom: 0.88, pan: 0.3, lift: 260, in: 0.9, hold: 5.6, out: 1.8 },
   firefly: { pan: 0.4, max: 340, in: 0.3, hold: 1.6, out: 0.9 },
   /** The chase (moment 4): the view a little wider while it runs, so the firefly 450-600 px ahead stays in it. */
   chaseZoom: 0.9,

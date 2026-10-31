@@ -47,6 +47,12 @@ export const RELEASE = {
   barOut: [180, 420] as const,
   barFall: 900,
   barLife: 2.6,
+  /**
+   * Seconds after the great cage's snuff before a line may show (its column has risen out through the roof: keeper.ts
+   * `KEEPER.column`, launched over 2.8 s, ~3.5 s to climb, after the 22-frame hold). Review r13 #1: "A new light
+   * kindles." sat over the burst.
+   */
+  greatClear: 7.4,
 };
 
 /** Is a trap of `moths` the great cage? */

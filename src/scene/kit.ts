@@ -122,6 +122,57 @@ export const KIT_FIELDS = {
     )
     .optional(),
   roosts: z.array(z.object({ ...rect, lure: id, leaves: id.optional() }).strict()).optional(),
+  // --- The Canopy r14, moment 7: the full escape (src/sim/escape.ts).
+  escape: z
+    .object({
+      id,
+      after: id,
+      sets: id,
+      area: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+      end: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+      path: z.array(z.tuple([int, int])).min(2),
+      checkpoints: z
+        .array(
+          z
+            .object({
+              id,
+              x: int,
+              y: int,
+              at: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+            })
+            .strict(),
+        )
+        .min(1),
+      rocks: z.array(
+        z
+          .object({
+            id,
+            x: int,
+            w: int.positive(),
+            y0: int,
+            y1: int,
+            when: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict(),
+            tell: int.min(1).max(240),
+            cp: int.min(0),
+          })
+          .strict(),
+      ),
+      front: z
+        .object({
+          x0: int,
+          x1: int,
+          y0: int,
+          top: int,
+          lag: int.positive(),
+          near: int.positive(),
+          speed: z.number().positive(),
+          creep: z.number().min(0),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict()
+    .optional(),
   // --- Finds (src/sim/finds.ts).
   mothStones: z.array(z.object({ id, x: int, y: int, area: id }).strict()).optional(),
   signs: z
@@ -191,6 +242,14 @@ export const CAMERA_ZONES = z
         until: z.string().min(1).optional(),
         /** Only once this story flag is saved (the Canopy r13: the crown's sit with the kin, `crown-sit`). */
         after: z.string().min(1).optional(),
+        /**
+         * The Canopy r14: the view's centre leans `k` (0..1) of the way from her to (`x`, `y`) (the den's `den-end`: the
+         * fallen cage after the kill; the crown's `crown-sit`: the pair and the moon). Render's camera reads it.
+         */
+        lean: z
+          .object({ x: int, y: int, k: z.number().min(0).max(1) })
+          .strict()
+          .optional(),
         /** Frames the view takes to slide into this zone (Lanternroot's chambers: 20; default the camera's own). */
         frames: int.min(1).max(120).optional(),
       })

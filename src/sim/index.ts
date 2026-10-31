@@ -7,7 +7,9 @@ import { ABILITIES, normalizeAbilities } from './abilities';
 import { lureArc } from './arc';
 import { lockedScene, resetBoss, updateBoss } from './boss/index';
 import { contactDamage, enemyTouched, resetEnemies, updateEnemies } from './enemies';
+import { escapeBack } from './escape';
 import type { SimEvent } from './events';
+import { chaseBack } from './firefly';
 import { markOfferTarget, updateOffer } from './giving';
 import { goalHolds, goalReformed, heldInput, restPoint, updateGoal } from './goal';
 import { createHatch, updateHatch } from './hatch';
@@ -414,9 +416,12 @@ export function step(
         ? S.thorns?.find((q) => `thorns:${q.id}` === id)
         : undefined;
     const arena = bed ? arenaReturn(state.player.groundX, state.player.groundY, bed, S, t) : null;
-    const safe = zoneBack ?? arena ?? returnPoint(state.player.groundX, state.player.groundY, S, t);
+    // (The Canopy r14: an escape's hazard puts her back on its last checkpoint; a fall in a chase at her last hook.)
+    const fixed = id.startsWith('escape:') ? escapeBack(state, S, events) : chaseBack(state, S, t, events);
+    const safe = fixed ?? zoneBack ?? arena ?? returnPoint(state.player.groundX, state.player.groundY, S, t);
     // (Not where her natural next jump carries her straight back into thorns.)
-    const back = clearOfThorns(state, safe.x, safe.y, arena ? safe.x : state.player.groundX, S, t, P);
+    const back =
+      fixed ?? clearOfThorns(state, safe.x, safe.y, arena ? safe.x : state.player.groundX, S, t, P);
     const x = back.x;
     const y = back.y;
     const from = state.player;

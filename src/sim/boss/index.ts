@@ -113,6 +113,12 @@ function freshBoss(spec: BossSpec): BossState {
     sweeps: 0,
     glanceSeq: -1,
     sweepHit: 0,
+    angry: 0,
+    gated: 0,
+    sweep: 0,
+    rollX: 0,
+    rollFrom: 0,
+    rollT: 0,
   };
 }
 

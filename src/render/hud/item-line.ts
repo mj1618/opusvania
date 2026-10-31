@@ -8,6 +8,7 @@
 import { Container, Text } from 'pixi.js';
 import type { SimView } from '../contract';
 import { SAFE_H, SAFE_W } from '../contract';
+import { RELEASE, releaseGreat } from '../lantern/release';
 import { fightNear, LineTimer } from './line-logic';
 
 /** What each grant says. Glide: the hold has to last into the fall (a held jump only opens the wings once she drops). */
@@ -90,8 +91,15 @@ export class ItemLine {
       // A moonseed (the Downwood's keys): how many she holds now.
       else if (e.type === 'seedTaken') this.timer.show(seedLine(e.count));
       else if (e.type === 'roomEnter' && e.from === 'load') this.timer.clear();
+      // The great cage's release: no line over its column until it has gone (review r13 #1).
+      if (e.type === 'lureSnuff' && e.trap) {
+        const l = (sim.scene.lures ?? []).find((q) => q.id === e.id);
+        if (l && releaseGreat(l.moths ?? 0)) this.timer.hold(RELEASE.greatClear);
+      }
     }
-    const a = this.timer.update(dt, fightNear(sim));
+    // (The escape is a fight with the roof: no line over it. The Canopy r14, moment 7.)
+    const esc = (sim.kit as unknown as { escape?: { on: number } }).escape;
+    const a = this.timer.update(dt, fightNear(sim) || esc?.on === 1);
     if (this.text.text !== this.timer.text) this.text.text = this.timer.text;
     this.root.visible = a > 0.003;
     this.root.alpha = ITEM_LINE.alpha * a;

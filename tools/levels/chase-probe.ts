@@ -1,7 +1,7 @@
 /**
  * The chase's high line as an input tape (the Canopy r13, moment 4): from the gap's shelf (feet 4300, 1344, claws and
  * glide, after `--pre` settle frames), walk in (the alarm), under the first hook, jump into its reach, then the S
- * fling by fling (each let go once the next hook is in reach) and up-west into the roost's mouth, then wait for the
+ * fling by fling (each let go once the next hook is in reach), off the seventh (r14) west into the roost's mouth, then wait for the
  * call. Prints the tape in the input DSL for `npm run clip -- --room cn-gap --at 4300,1344 --script "<tape>"`, and
  * the events it met.
  *   npx tsx tools/levels/chase-probe.ts [--pre=30] [--fall]
@@ -21,6 +21,13 @@ const W = getWorld('canopy');
 const gap = getRoom('cn-gap');
 const BEAT = Number(process.argv.find((a) => a.startsWith('--beat='))?.slice(7) ?? 0);
 const CLOSEST = process.argv.includes('--closest');
+const AIM7 =
+  (
+    { L: ActionBit.left, UL: ActionBit.up | ActionBit.left, DL: ActionBit.down | ActionBit.left } as Record<
+      string,
+      number
+    >
+  )[process.argv.find((a) => a.startsWith('--aim7='))?.slice(7) ?? 'L'] ?? ActionBit.left;
 const pre = Number(process.argv.find((a) => a.startsWith('--pre='))?.slice(6) ?? 30);
 const kit = ['wallJump', 'glide'] as never;
 const s = createState(1, t, gap, [], kit, newSave(kit));
@@ -58,15 +65,13 @@ if (process.argv.includes('--fall')) {
     [L, 'hook-4'],
     [D | L, 'hook-5'],
     [D | R, 'hook-6'],
-    [D | L, 'chain'],
-    [U | L, ''],
+    [D | L, 'hook-7'],
+    [AIM7, ''],
   ];
   for (const [aim, next] of plan) {
     run(aim | B, 4);
     run(aim);
-    // (Down off the last hook she meets the chain's first or second lamp: either flings into the mouth.)
-    const got = () =>
-      next === 'chain' ? reach() === ix('wick-gap-1') || reach() === ix('wick-gap-2') : reach() === ix(next);
+    const got = () => reach() === ix(next);
     for (let k = 0; k < 160 && (next === '' || !got()); k++) {
       run(aim & (L | R));
       if (next === '' && s.player.grounded && k > 4) break;
@@ -74,7 +79,7 @@ if (process.argv.includes('--fall')) {
     // (A person's beat between seeing the lamp in reach and pressing: `--beat`, while it stays in reach; `--closest`:
     // she presses as the lamp is nearest, the way one aims at it.)
     for (let k = 0; k < BEAT && got(); k++) run(aim & (L | R));
-    if (CLOSEST && next !== '' && next !== 'chain') {
+    if (CLOSEST && next !== '') {
       const lid = reach();
       const l = (gap.lures ?? [])[lid];
       const dist = () =>

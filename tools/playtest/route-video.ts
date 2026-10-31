@@ -375,12 +375,14 @@ export const ROUTE: Leg[] = [
     max: 9000,
   },
   // v9 (r12): the Keeper (the old burrback on the boss framework: the falling moths, the swinging light, the fallen
-  // cage); the cage it ripped down lies on the floor, cut open standing; the roof gives (the fallback: groan, dust,
-  // the rubble's slope) and the way out is up the slope through the roof onto the clifftop (the vista).
+  // cage); the cage it ripped down lies on the floor, cut open standing. v10 (r14): the roof gives and the escape is
+  // on (the rocks, the earth rising under her): up the torn roots, east under the falling roof, the claws up the wall
+  // over the heap, out onto the clifftop (the vista). The column's ~3.5 s first, nothing moving.
   { name: 'cn-den: the Keeper', kind: 'fight', ids: ['old-burr'], seconds: 300 },
   { name: 'cn-den: the great cage cut open', kind: 'cage', lure: 'trap-den' },
-  { name: 'cn-den: the roof gives', kind: 'script', script: '.420' },
-  { name: 'cn-den: up through the roof', kind: 'exit', exit: 'out', max: 16000 },
+  { name: 'cn-den: the column, then the roof gives', kind: 'script', script: '.240' },
+  { name: 'cn-den: the escape', kind: 'goal', test: flag('cn-den-escaped'), max: 16000 },
+  { name: 'cn-den: out onto the clifftop', kind: 'exit', exit: 'out', max: 6000 },
   { name: 'cn-out: the vista', kind: 'script', script: '.200' },
   // The ledge after the boss: down the chimney, a rotten wall in the way out's foot, a great in the room behind it.
   { name: 'cn-out: down the chimney', kind: 'goal', test: near(1088, 1856, 200), max: 12000, optional: true },
@@ -1258,7 +1260,7 @@ function eventText(e: SimEvent): string | null {
           : null;
     case 'fireflyStart':
       return x.id === 'firefly-gap'
-        ? 'The firefly: it relights the lamps behind her'
+        ? 'The firefly bolts: its hooks catch fire'
         : x.id === 'firefly-warn'
           ? 'The firefly, at the den'
           : x.id === 'firefly-den'
@@ -1304,6 +1306,16 @@ function eventText(e: SimEvent): string | null {
                   : x.flag === 'cn-out-vista'
                     ? 'The valley of lamps, the moon, the mountain'
                     : null;
+    case 'escapeStart':
+      return x.x === undefined ? null : 'The roof gives: out, ahead of it';
+    case 'escapeEnd':
+      return 'Out from under the den';
+    case 'fireflyChase':
+      return x.phase === 'back'
+        ? 'A fall: back at her last hook'
+        : x.phase === 'nest'
+          ? 'Into the nest'
+          : null;
     case 'fade':
       return 'She fades';
     default:

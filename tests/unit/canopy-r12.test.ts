@@ -54,6 +54,11 @@ type Of<K extends SimEvent['type']> = Extract<SimEvent, { type: K }>;
 const den = getRoom('cn-den');
 const cageIx = (den.lures ?? []).findIndex((l) => l.id === 'trap-den');
 const burr = (s: GameState) => s.enemies.find((e) => e.id === 'old-burr') as GameState['enemies'][number];
+/** Where she stands to cut the fallen cage at `cx` from the side away from the Keeper (r14: a cut on it is its own). */
+const farSide = (s: GameState, cx: number): number => {
+  const e = burr(s);
+  return e.x + e.w / 2 < cx ? cx + 40 : cx - 40;
+};
 
 /** (r13: P1 ends once two moths have fallen as well as at its health; P2 after two swings.) */
 function toP2(s: GameState): void {
@@ -233,9 +238,10 @@ describe('the Keeper (r12, moment 6)', () => {
     const left0 = s.boss?.left ?? 0;
     placePlayer(s, (fall?.x ?? 0) - 30, 1344, t, withShortcuts(den, s.save), []);
     const cuts: Of<'cageRelease'>[] = [];
-    for (let n = 0; n < 8; n++) {
+    for (let n = 0; n < 24 && cuts.length < t.keeper.cageCuts + 1; n++) {
       s.player.invuln = 60;
-      placePlayer(s, (fall?.x ?? 0) - 30, 1344, t, withShortcuts(den, s.save), []);
+      // (r14: from the cage's side away from the Keeper: a cut that meets it is its own, not the cage's.)
+      placePlayer(s, farSide(s, fall?.x ?? 0), 1344, t, withShortcuts(den, s.save), []);
       const q = run(s, U | A, 1);
       run(s, U, 24, q);
       cuts.push(...(q.filter((z) => z.type === 'cageRelease') as Of<'cageRelease'>[]));
@@ -282,7 +288,7 @@ describe('the Keeper (r12, moment 6)', () => {
 });
 
 describe("the ending's fallback (r12, moment 7)", () => {
-  it('after the release the roof groans, dust falls, the rubble lands into a slope and stays; the roosts empty', () => {
+  it('after the release the roof groans, dust falls, the rubble lands (r14: for the escape) and stays; the roosts empty', () => {
     const r = runKeeper({ frames: 5 * 3600 });
     const ev = r.events;
     const phases = ev.filter((e) => e.type === 'denCollapse').map((e) => (e as Of<'denCollapse'>).phase);
@@ -294,7 +300,9 @@ describe("the ending's fallback (r12, moment 7)", () => {
     expect(s.save.flags).toContain('cn-den-collapse');
     expect(s.boss?.stage).toBe('down');
     const rubble = (den.gates ?? []).filter((g) => g.id.startsWith('rubble-'));
-    expect(rubble.length).toBeGreaterThan(3);
+    // (r14: the escape's heap and torn roots, not r12's staircase.)
+    expect(rubble.map((g) => g.id)).toContain('rubble-heap');
+    expect(rubble.length).toBeGreaterThanOrEqual(6);
     for (const g of rubble) expect(gateShut(g, s.save.flags)).toBe(true);
     const root = (den.gates ?? []).find((g) => g.id === 'taproot');
     expect(root && gateShut(root, s.save.flags)).toBe(false);

@@ -83,6 +83,8 @@ export interface Climb {
   fails?: Plan[];
   /** The abilities she has. */
   kit?: string[];
+  /** Story flags saved before the climb (the Canopy r14: the den's escape, after the roof gives). */
+  flags?: string[];
 }
 
 export interface Result {
@@ -126,7 +128,9 @@ export function runClimb(
   const scene = climbScene(c.room, margin, o.creatures);
   const W = getWorld('canopy');
   const kit = (c.kit ?? ['wallJump']) as never;
-  const s = createState(1, t, scene, [], kit, newSave(kit));
+  const save = newSave(kit);
+  save.flags.push(...(c.flags ?? []));
+  const s = createState(1, t, scene, [], kit, save);
   placePlayer(s, plan.at ?? x, c.y, t, withShortcuts(scene, s.save), []);
   s.player.dj = 0;
   const STAND = 40 + (plan.wait ?? 0);
@@ -331,6 +335,17 @@ export const CLIMBS: Climb[] = [
     fails: [
       { name: 'W face only', first: -1, back: true, jumpAt: [992, 992, 992], legs: [{ mode: 'face' }] },
     ],
+  },
+  {
+    id: 'den-escape',
+    room: 'cn-den',
+    note: "the escape's last climb (r14): off the heap up the den's east wall, through the roof's gate, the earth rising",
+    xs: [3008, 3072, 3136],
+    y: 768,
+    // (On the passage's floor: her centre may stand on its lip, over the gate's hole.)
+    goal: { x0: 3220, x1: 3840, y: 384 },
+    flags: ['cn-den-met', 'cn-den-fed', 'cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
+    plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
   },
   {
     id: 'fork-face',

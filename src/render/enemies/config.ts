@@ -762,7 +762,19 @@ export const BOSS = {
     edge: 0xffb46a,
     crest: 0x5a3c28,
     spot: 0xff3420,
+    /** Its underside (review r13 #8: the pale burrback belly read as a white slab on the rear): mid-tone, <= 150 luma. */
+    belly: 0x6a5444,
+    bellyLow: 0x231912,
+    /** Its plates' seams opening (winded, struck): a dull ember, not the burrback's pale (pale bands read as slabs). */
+    seamOpen: 0x5a2c1c,
   },
+  /** The Keeper's underside: segmented plates (`plates` dark seams at `seam` alpha) and `wings` stuck in it. */
+  belly: { plates: 6, seam: 0.85, wings: 3 },
+  /**
+   * P3's sweep (review r13 #2; keeper-tells.ts): its tell rears the front half (`rear` rad of lean, a tremble of
+   * `shake`), claws up (lantern/keeper.ts draws them); the strike throws the front down `strikeLean`.
+   */
+  sweep: { rear: 0.62, shake: 0.035, strikeLean: 0.22 },
   /** The wake (1.5 s on her drop into the arena, the sim's `wake`): eyes open by this frame, risen by this one. */
   wake: { eyes: 18, rise: 60, shake: 0.06, dust: 10 },
   /**

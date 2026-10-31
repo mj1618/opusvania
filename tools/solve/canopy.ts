@@ -447,14 +447,31 @@ const CLAIMS: Claim[] = [
     reach: ['out', 'place:roof'],
     not: ['tunnel'],
   },
-  // (r12, the ending's fallback: the roof gave, the rubble's slope reaches the roof's shaft with no claws: from the
-  // balcony, a drop and the slope, out onto the clifftop. The east wall's climb was untaught, first-timer r11.)
+  // (r14, the full escape: the roof gave; the heap shuts the floor off the east wall, and the torn roots are the way:
+  // up the west side, east under the roof, the claws up the wall over the heap, out. Live (the rocks and the front
+  // on) from the fallen cage, and as the caved den's way from the balcony once the escape is over; not without claws.)
+  {
+    room: 'cn-den',
+    from: [1856, 1344],
+    kit: [C, G],
+    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
+    // (The torn roots reach the balcony's shoulder too: the caved den is a way both ways.)
+    reach: ['out', 'place:roof', 'tunnel'],
+  },
+  {
+    room: 'cn-den',
+    from: [300, 320],
+    kit: [C],
+    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse', 'cn-den-escaped'],
+    reach: ['out', 'place:roof'],
+  },
   {
     room: 'cn-den',
     from: [300, 320],
     kit: [],
-    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
-    reach: ['out', 'place:roof'],
+    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse', 'cn-den-escaped'],
+    reach: ['place:floor'],
+    not: ['out', 'place:roof'],
   },
   {
     room: 'cn-out',

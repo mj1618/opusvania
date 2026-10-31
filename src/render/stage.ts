@@ -33,7 +33,7 @@ import { OpenCamera } from './camera/open-cam';
 import { PremiseCamera } from './camera/premise-cam';
 import { ReformShot } from './camera/reform';
 import { RoomFade } from './camera/room-fade';
-import { CameraShake } from './camera/shake';
+import { CameraShake, escapeRumble } from './camera/shake';
 import { StageCamera } from './camera/stage-cam';
 import { type CameraTuning, cameraFor } from './camera/tuning';
 import { CharacterRenderer } from './character/index';
@@ -319,6 +319,9 @@ export class RenderStage {
     const events = this.pending;
     this.pending = [];
     this.kick.update(dt, events);
+    // (The escape's collapse rumbles under every blow while it runs, building: the Canopy r14, moment 7.)
+    const esc = (this.game.state.kit as { escape?: { on: number; t: number } }).escape;
+    this.shake.floor(escapeRumble(esc?.on === 1 && !this.game.state.caught, esc?.t ?? 0, this.ct));
     this.shake.update(dt, events);
     this.hurtVignette.update(dt, events, vs);
     const st = this.game.state;

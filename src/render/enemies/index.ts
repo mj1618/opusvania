@@ -31,6 +31,7 @@ import {
   topHit,
 } from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
+import { keeperAngry, type SweepRead, sweepRead } from './keeper-tells';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
 import { Painter, type RGB, rgb, type Shade } from './paint';
@@ -154,6 +155,8 @@ export class EnemyRenderer {
   private readonly rigs: BurrRig[] = [];
   /** The Keeper's body once dead (the sim drops it; the renderer keeps it on its back): by enemy index. */
   private readonly corpses: Array<EnemyState | null> = [];
+  /** The Keeper's sweep this frame (keeper-tells.ts). */
+  private readonly sweep: SweepRead = { tell: -1, strike: -1 };
   /** Moth wings let go off the Keeper's coat as it rolls over, drifting down (world px, render s). */
   private readonly wings: Array<{
     x: number;
@@ -589,6 +592,19 @@ export class EnemyRenderer {
         }
         if (rig)
           for (let k = 0; k < 6; k++) this.dust(rig.x + (k - 2.5) * 40, rig.y, (k - 2.5) * 50, 1.8, 1.5);
+      } else if ((ev.type as string) === 'keeperGlance') {
+        // Shrugged off at its phase's gate (review r13 #7): the plates heave, not a block's flinch.
+        const g = ev as unknown as { id: string; why: string };
+        const i = this.byId.get(g.id);
+        if (i !== undefined && g.why === 'gate') this.rigs[i]?.shrug();
+      } else if ((ev.type as string) === 'keeperRage') {
+        // P1's rage (review r13 #3): its burrs go up as it rears; dust off its whole width as it slams.
+        const r = ev as unknown as { id: string; phase: string; x: number; y: number };
+        const i = this.byId.get(r.id);
+        const rig = i === undefined ? undefined : this.rigs[i];
+        if (rig && r.phase === 'rear') rig.bristle.v += 50;
+        if (rig && r.phase === 'slam')
+          for (let k = 0; k < 10; k++) this.dust(rig.x + (k - 4.5) * 46, rig.y, (k - 4.5) * 70, 2.4, 2.2);
       } else if (ev.type === 'enemyTurn' && (ev.cause as string) === 'drop') {
         // It turns to hurry out from under her: a start and a look up.
         const i = this.byId.get(ev.id);
@@ -921,6 +937,12 @@ export class EnemyRenderer {
       if (e.gone) {
         rig.deadStage = 3;
         continue;
+      }
+      if (rig.big) {
+        sweepRead(sim.boss, e, tuning.keeper, this.sweep);
+        rig.sweepTell = this.sweep.tell;
+        rig.sweepStrike = this.sweep.strike;
+        rig.angry = keeperAngry(sim.boss);
       }
       rig.update(
         e,
