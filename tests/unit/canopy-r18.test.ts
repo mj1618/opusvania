@@ -148,3 +148,21 @@ describe("the Canopy r18: the giant's juvenile sleeps again once she has left it
     );
   });
 });
+
+describe("the Canopy r18: the giant's juvenile wakes under her blade harmless (ft18a)", () => {
+  it('in at the door, she walks straight to it and cuts: no hit for its wake and the beat after', () => {
+    const { s, scene } = at('cn-trunk', 3136, 384, ['wallJump']);
+    const ev: SimEvent[] = [];
+    run(s, scene, 0, 4, ev);
+    let k = 0;
+    while (s.player.x + s.player.w / 2 > 2862 && k++ < 200) run(s, scene, ActionBit.left, 1, ev);
+    // Waits a beat over it, then cut, cut, as ft18a did (`L60 .30`, `L4 A8 .10 A8 .20`).
+    run(s, scene, 0, 30, ev);
+    run(s, scene, ActionBit.left, 4, ev);
+    run(s, scene, ActionBit.attack, 8, ev);
+    run(s, scene, 0, 10, ev);
+    run(s, scene, ActionBit.attack, 8, ev);
+    run(s, scene, 0, 20, ev);
+    expect(ev.filter((q) => q.type === 'hurt')).toEqual([]);
+  });
+});

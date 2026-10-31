@@ -943,6 +943,8 @@ export const defaultTuning = withVariants({
      */
     sleepAgainFrames: 90,
     sleepAgainAbovePx: 260,
+    /** One placed `asleep` is harmless this long after its wake ends (it got up under her blade: ft18a). */
+    wakeSafeFrames: 45,
     /**
      * The wake's last `wakeTurnFrames` it turns to her (the Canopy r11, review r10 #10: it rises first, facing the way
      * it slept, then turns, then hunts); 0 = it faces her as it wakes.
@@ -2167,6 +2169,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // the giant's, between two arrivals, never meets her on her arrival.)
       wakePx: 200,
       wakeFrames: 50,
+      // (Getting up it shoulders her out of its body, so she is never inside it when it can hurt.)
+      risePush: 5,
       domeShoulder: 0.58,
       value: 0,
       valueFinisher: 0,

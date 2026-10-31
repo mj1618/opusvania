@@ -1409,6 +1409,7 @@ export const burrback: KindRules = {
     const p = info.state.player;
     if (e.alertCd > 0) e.alertCd--;
     if (e.strikeCd > 0) e.strikeCd--;
+    if (e.wander > 0 && scene.enemies?.[index]?.asleep === true) e.wander--;
     if (e.roused > 0) e.roused--;
     if (e.stirred > 0) e.stirred--;
     if (e.phase > 0) waveStep(e, info, B);
@@ -1437,6 +1438,9 @@ export const burrback: KindRules = {
       e.dozing = true;
       if ((B.asleep || scene.enemies?.[index]?.asleep === true) && !e.dispersed && wakes(e, info, B)) {
         const n = frames(B.wakeFrames, 1);
+        // (The Canopy r18, ft18a: she walked up to it asleep and cut; it woke under her blade and its first touch hurt.
+        // One placed asleep is harmless through its wake and `wakeSafeFrames` after, cut or not.)
+        if (scene.enemies?.[index]?.asleep === true) e.wander = n + frames(B.wakeSafeFrames);
         setMode(e, 'wake', n);
         e.dozing = false;
         // (It rises facing the way it slept, and turns to her for the wake's last `wakeTurnFrames`: r11.)
@@ -1886,6 +1890,8 @@ export const burrback: KindRules = {
 
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */
   harmless(e, info) {
+    // (The Canopy r18: one placed asleep, just up: `wakeSafeFrames`.)
+    if (e.wander > 0 && info.scene.enemies?.find((q) => q.id === e.id)?.asleep === true) return true;
     // (Round 4: only its ram hurts (`bodyHarmless`); the body shoulders her out instead.)
     if (rowOf(info.t, e).bodyHarmless && e.mode !== 'charge' && e.mode !== 'feint' && e.mode !== 'roll')
       return true;
