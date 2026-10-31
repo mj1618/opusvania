@@ -263,7 +263,26 @@ describe('the score', () => {
   it("the duet on the kin's sit: her motif and its answer, ending on her E over its D", () => {
     const s = new Score({ ...ctx, scene: { ...scene, id: 'cn-crown' } });
     const sit = { type: 'kinSit', id: 'kin', x: 0, y: 0 } as unknown as PlayEvent;
-    const r = run(s, 0, 60 * 30, () => ({ room: 'cn-crown' }), { 10: [sit] });
+    // (r15: its notes come on the sit's beats, `kinBeat`.)
+    const beats: Record<number, PlayEvent[]> = { 10: [sit] };
+    let at = 10;
+    for (const [phase, frames] of [
+      ['come', 90],
+      ['look', 60],
+      ['open', 50],
+      ['try', 64],
+      ['fail', 36],
+      ['turn', 120],
+      ['answer', 72],
+      ['fold', 48],
+      ['lean', 180],
+      ['stay', 0],
+    ] as const) {
+      const e = { type: 'kinBeat', id: 'kin', phase, frames, x: 0, y: 0, her: 1 } as unknown as PlayEvent;
+      beats[at] = [...(beats[at] ?? []), e];
+      at += frames;
+    }
+    const r = run(s, 0, 60 * 30, () => ({ room: 'cn-crown' }), beats);
     expect(r.pieces[100]).toBe('duet');
     const harp = notes(r.cues, 'harp').map((c) => Math.round(midi(c)));
     expect(harp.slice(0, 5)).toEqual(MOTIF);

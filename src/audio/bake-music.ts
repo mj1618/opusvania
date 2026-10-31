@@ -16,7 +16,19 @@
  * No voice and nothing blown (docs/audio-direction.md: Wing never vocalises; formants belong to things that eat).
  */
 import { at, click, exp, len, type Recipe, rubbed } from './bake-lib';
-import { arEnv, biquad, type Mode, mixInto, modes, normalize, pink, saturate, shape, white } from './dsp';
+import {
+  arEnv,
+  biquad,
+  brown,
+  type Mode,
+  mixInto,
+  modes,
+  normalize,
+  pink,
+  saturate,
+  shape,
+  white,
+} from './dsp';
 import { LAMP_HZ } from './tuning';
 
 /** A baked instrument: MIDI range, semitones between baked notes, and the rate divisor (sr / slow). */
@@ -73,6 +85,12 @@ export const MUSIC_SOUNDS = {
   sweepTell: 2,
   rootSnap: 3,
   rockLand: 3,
+  // The Canopy r15: the slam's crack opening at its feet and its fronts grinding along the floor, the pull onto a
+  // chase's hook, the kin's torn wing trying.
+  fissure: 2,
+  waveGrit: 4,
+  hookPull: 2,
+  kinTry: 2,
 } as const;
 export type MusicSoundId = keyof typeof MUSIC_SOUNDS;
 
@@ -90,6 +108,7 @@ export const MUSIC_SLOW: Partial<Record<MusicSoundId, number>> = {
   gateThud: 2,
   gateGroan: 2,
   roar: 2,
+  waveGrit: 2,
 };
 /** Glass rings above the roll-off. */
 export const MUSIC_GLASS: readonly MusicSoundId[] = ['celesta', 'glass', 'fireflyBlink'];
@@ -765,5 +784,122 @@ export const MUSIC_RECIPES: Record<MusicSoundId, Recipe> = {
     biquad(x, sr, 'lowpass', 6000);
     for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.5);
     return [normalize([shape(x, sr, arEnv(0.001, 0, 1e3, d))])[0] as Float32Array];
+  },
+  /**
+   * r15, the slam's wave: the crack opening at its feet before the fronts go (`keeper.waveDelay` 12 frames). Splits in
+   * the earth coming faster (45 -> 7 ms apart), each a short knock of stone and grit 300-1500 Hz over a low groan
+   * swelling (60-110 Hz), louder to the end, then let go: the fronts' start is its own sound. 0.24 s.
+   */
+  fissure(sr, r) {
+    const d = 0.24;
+    const n = len(sr, d + 0.12);
+    const x = new Float32Array(n);
+    let t = 0.004;
+    while (t < d) {
+      const k = t / d;
+      const g = white(len(sr, 0.03), r);
+      biquad(g, sr, 'bandpass', 300 + 1200 * r(), 1.6);
+      shape(g, sr, arEnv(0.001, 0.003, 0.008, 0.03));
+      mixInto(x, g, (0.25 + 0.75 * k ** 1.3) * (0.6 + 0.4 * r()), at(sr, t));
+      modes(x, sr, [{ f: 120 + 180 * r(), tau: 0.02, amp: 0.25 * k, ph: r() }], at(sr, t), 0.0006);
+      t += exp(0.045, 0.007, k) * (0.75 + 0.5 * r());
+    }
+    const groan = brown(n, r);
+    biquad(groan, sr, 'lowpass', (i) => exp(60, 160, i / sr / d));
+    biquad(groan, sr, 'lowpass', 220);
+    shape(groan, sr, (u) => (u < d ? (u / d) ** 1.5 : Math.max(0, 1 - (u - d) / 0.1)));
+    normalize([x]);
+    normalize([groan], 0.8);
+    mixInto(x, groan);
+    biquad(x, sr, 'lowpass', 5200);
+    for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.4);
+    return [normalize([shape(x, sr, arEnv(0.002, 0, 1e3, d + 0.12))])[0] as Float32Array];
+  },
+  /**
+   * r15: one stretch of a wave's front running along the floor (played every few frames where each front is, so it
+   * travels and pans): earth grinding (brown noise through 90-260 Hz), gravel kicked up (6-10 clicks 0.6-2.6 kHz)
+   * and a low shove. 0.16 s; the variants overlap into one moving grind.
+   */
+  waveGrit(sr, r) {
+    const d = 0.16;
+    const n = len(sr, d);
+    const body = brown(n, r);
+    biquad(body, sr, 'bandpass', 110 + 120 * r(), 0.9);
+    shape(body, sr, arEnv(0.012, 0.02, 0.05, d));
+    const x = new Float32Array(n);
+    mixInto(x, normalize([body], 0.9)[0] as Float32Array);
+    const grit = new Float32Array(n);
+    const m = 6 + Math.floor(r() * 5);
+    for (let g = 0; g < m; g++)
+      modes(
+        grit,
+        sr,
+        [{ f: 600 + 2000 * r(), tau: 0.004, amp: 0.4 + 0.6 * r(), ph: r() }],
+        at(sr, 0.005 + 0.1 * r()),
+        0.0004,
+      );
+    mixInto(x, normalize([grit], 0.35)[0] as Float32Array);
+    modes(x, sr, [{ f: 62 + 14 * r(), tau: 0.04, amp: 0.5, ph: r() }], 0, 0.006);
+    biquad(x, sr, 'lowpass', 4200);
+    for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.3);
+    return [normalize([shape(x, sr, arEnv(0.004, 0, 1e3, d))])[0] as Float32Array];
+  },
+  /**
+   * r15, the chase: a press pulls her onto the hook's flame. Air drawn in toward it (a pink band rising 350 Hz ->
+   * 2.2 kHz and swelling over 0.26 s), then the catch: her wings snapping open on the flame (a membrane click at
+   * 1.5 kHz, a short bright tear) and a low push under it. Unpitched (hers); the score plays the hook's note. 0.5 s.
+   */
+  hookPull(sr, r) {
+    const d = 0.5;
+    const pull = 0.24 + 0.04 * r();
+    const n = len(sr, d);
+    const air = pink(n, r);
+    biquad(air, sr, 'bandpass', (i) => exp(350, 2200, i / sr / pull), 1.4);
+    shape(air, sr, (u) => (u < pull ? (u / pull) ** 2.2 : Math.exp(-(u - pull) / 0.05)));
+    const x = new Float32Array(n);
+    mixInto(x, normalize([air], 0.7)[0] as Float32Array);
+    const snap = white(len(sr, 0.06), r);
+    biquad(snap, sr, 'bandpass', 1500 + 300 * r(), 2.2);
+    shape(snap, sr, arEnv(0.0008, 0.004, 0.012, 0.06));
+    mixInto(x, normalize([snap], 0.8)[0] as Float32Array, 1, at(sr, pull));
+    const tear = pink(len(sr, 0.12), r);
+    biquad(tear, sr, 'bandpass', (i) => exp(2600, 900, i / sr / 0.1), 1.2);
+    shape(tear, sr, arEnv(0.003, 0.01, 0.03, 0.12));
+    mixInto(x, normalize([tear], 0.45)[0] as Float32Array, 1, at(sr, pull + 0.004));
+    modes(x, sr, [{ f: 88 + 10 * r(), tau: 0.05, amp: 0.55, ph: r() }], at(sr, pull), 0.004);
+    biquad(x, sr, 'lowpass', 6500);
+    return [normalize([shape(x, sr, arEnv(0.01, 0, 1e3, d))])[0] as Float32Array];
+  },
+  /**
+   * r15, the kin's sit (`kinBeat try`): its torn wing lifts and trembles and cannot hold. A membrane fluttering
+   * unevenly (grains 11 -> 19 a second, each a band 650 -> 1.3 kHz), swelling with the strain, twice catching where it
+   * is torn (a gap, then a dry scrape), the last of it already failing. Unpitched (it never vocalises). 1.1 s.
+   */
+  kinTry(sr, r) {
+    const d = 1.1;
+    const n = len(sr, d + 0.1);
+    const x = new Float32Array(n);
+    const catches = [0.5 + 0.08 * r(), 0.8 + 0.06 * r()];
+    let t = 0.02;
+    while (t < d) {
+      const k = t / d;
+      const caught = catches.some((c) => t > c && t < c + 0.07);
+      if (!caught) {
+        const g = pink(len(sr, 0.05), r);
+        biquad(g, sr, 'bandpass', exp(650, 1300, k) * (0.85 + 0.3 * r()), 2.4);
+        shape(g, sr, arEnv(0.006, 0.006, 0.012, 0.05));
+        const swell = k < 0.75 ? 0.3 + 0.7 * (k / 0.75) : 1 - 1.6 * (k - 0.75);
+        mixInto(x, g, Math.max(0.05, swell) * (0.45 + 0.55 * r()), at(sr, t));
+      }
+      t += 1 / exp(11, 19, Math.min(1, k * 1.3)) + 0.012 * (r() - 0.5);
+    }
+    for (const c of catches) {
+      const s = white(len(sr, 0.05), r);
+      biquad(s, sr, 'bandpass', 1800 + 900 * r(), 3);
+      shape(s, sr, arEnv(0.002, 0.008, 0.012, 0.05));
+      mixInto(x, s, 0.5, at(sr, c + 0.07));
+    }
+    biquad(x, sr, 'lowpass', 4500);
+    return [normalize([shape(x, sr, arEnv(0.02, 0, 1e3, d + 0.1))])[0] as Float32Array];
   },
 };

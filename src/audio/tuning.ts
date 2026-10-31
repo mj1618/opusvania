@@ -426,7 +426,14 @@ export const AUDIO = {
      */
     columnBeat: 24,
     escapeBeat: 24,
-    escapeNearPx: 380,
+    /** (r15: the front keeps 240 under her and creeps to 200 while she lingers: the scream is for the creep.) */
+    escapeNearPx: 222,
+    /**
+     * Round 15. The escape's climb (the chimney, the front on) changes phrase as the earth rises (`escape.rise`) past
+     * these. The quiet moments: the bed (dB) by why, and what a find's music waits for (the sit, the column).
+     */
+    climbRise: [0.3, 0.62] as [number, number],
+    quietBedDb: { column: -8, sit: -12, vista: -6 } as Record<string, number>,
   },
   /** The Canopy's world (route-canopy.ts): levels (dB peaks; layers RMS). */
   canopy: {
@@ -482,8 +489,24 @@ export const AUDIO = {
     checkpointDb: -27,
     backWingDb: -30,
     collapseDb: -27,
-    collapseNearPx: 180,
-    collapseFarPx: 700,
+    collapseNearPx: 170,
+    collapseFarPx: 330,
+    /**
+     * Round 15. The escape before the front: the roof coming down behind her (the collapse voice far and dull, RMS
+     * dB). The slam's wave: the crack opening at its feet, each stretch of a front running (peaks; every `waveEvery`
+     * frames per front, dropping `waveFallDb` over `waveFadePx` run). The chase: the air thickening at a hook, the
+     * pull onto its flame. The sit: the torn wing's try. Quiet moments: the release's count chimes under the column.
+     */
+    behindDb: -36,
+    fissureDb: -15,
+    waveDb: -21,
+    waveEvery: 3,
+    waveFallDb: 9,
+    waveFadePx: 1400,
+    catchAirDb: -34,
+    hookPullDb: -21,
+    kinTryDb: -29,
+    quietChimeDb: -6,
   },
   /** Held moments (the fling's aim, a story hold, a fade): the world bed ducks by up to this (dB). */
   duckDb: -10,
