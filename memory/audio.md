@@ -192,6 +192,11 @@ default**: no music in a room walked. Clips: `playtest-reports/canopy-audio-r1/`
   now switch the scene per room (`sceneOf`: materials, pools and lure kinds were the render-time room's before).
   Windows agree to -46..-56 dB where they overlap, except a bed whose noise phase hangs on when its engine was
   made (v12's first seam, in the fork: uncorrelated, so the 0.5 s cross-fade dips ~3 dB, not heard).
+  **v15 video** (route-video v10, 6:19, frozen `vite build` + `vite preview` on its own port, url `.../opusvania`):
+  -16.3 LUFS, -4.3 dBTP, 0 clipped; parts at crf 25 run ~0.2 MB/s, so <= ~85 s per part stays under 19 MB. The
+  still-cut used to chop the column, the sit and the last hit's silence (it cut any 1.5 s where her box did not
+  move): render now holds quiet moments, the sit, story holds and `boss.stage === 'end'`. The great cage's break
+  sounds ~0.35 s after its picture when cut inside the hush (`silenceFrames`): the hush wins, by design.
 - The hub's music is the cage's hum and the bed only (the director's plan, not the original brief's "theme at the hub").
 
 ## Round 13 (2026-10-31): loud enough, the Keeper retimed, the chase, the trap, the duet
