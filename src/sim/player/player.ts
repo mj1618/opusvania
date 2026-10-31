@@ -16,6 +16,7 @@ import {
   lurePull,
   slashLures,
   tickLures,
+  trapNear,
 } from '../lures';
 import {
   type Body,
@@ -1418,7 +1419,18 @@ function fling(c: Ctx): boolean {
     if (p.flingCd > 0 || p.mode === 'dash' || p.stagger > 0) return false;
     const i = flingTarget(c.state, c.scene, t);
     const l = i >= 0 ? c.scene.lures?.[i] : undefined;
-    if (!l) return false;
+    if (!l) {
+      // (The Canopy r16: a press by a cage, which is never a springboard, is answered: "not like that".)
+      if (c.pressed(ActionBit.lamp)) {
+        const k = trapNear(c.state, c.scene, t);
+        const q = k >= 0 ? c.scene.lures?.[k] : undefined;
+        if (q) {
+          const f = flameAt(c.state.lures, k, q, c.state.frame, t, FLAME);
+          c.events.push({ type: 'lureRefuse', id: q.id, x: f.x, y: f.y, side: c.fx < f.x ? -1 : 1 });
+        }
+      }
+      return false;
+    }
     p.flingBuf = 0;
     p.lampArmed = false;
     // (The lesson's drift ends with the press: the flight she aims is the flight she gets, as the arc shows it.)

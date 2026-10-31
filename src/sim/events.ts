@@ -80,6 +80,13 @@ export type SimEvent =
    * off, no cut taken (render: a clang, sparks off the bars).
    */
   | { type: 'lureGuarded'; id: string; x: number; y: number; dir: SlashDir }
+  /**
+   * The Lamp pressed by a cage (the Canopy r16: a first-timer flung at the hub's cage and "nothing happens"): a trap is
+   * never a springboard, so with no other flame in reach a press within `lures.trapRefusePx` of a burning cage says
+   * "not like that": the cage rattles toward her, the moths beat at the bars (render), a dull rattle (audio).
+   * `side` = the side she is on (-1 west, 1 east).
+   */
+  | { type: 'lureRefuse'; id: string; x: number; y: number; side: number }
   | {
       type: 'lureSnuff';
       id: string;
@@ -155,6 +162,11 @@ export type SimEvent =
   | { type: 'gladeGrant'; id: string; ability: AbilityId; x: number; y: number }
   /** She opened a shortcut from its open side (`x, y` = its centre): it stays open for good. */
   | { type: 'shortcutOpen'; id: string; x: number; y: number }
+  /**
+   * She pushed a shut shortcut from the side that does not open it (the Canopy r16): `x` its centre, `y` where she
+   * met it, `side` the side she is on (-1 west, 1 east). Render: it shudders, dust; audio: a dull knock.
+   */
+  | { type: 'shortcutShut'; id: string; x: number; y: number; side: number }
   /**
    * She fell into a catch zone (`scene.catches`, `id`): it costs nothing. She is held (no input) for
    * `frames` (= `tuning.room.catchFrames`), then `fallReturn` puts her back on her last safe ground.

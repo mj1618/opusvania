@@ -296,6 +296,32 @@ export function flingTarget(state: GameState, scene: Scene, t: Tuning): number {
 }
 
 /**
+ * The burning cage (a trap lamp) nearest her centre within `lures.trapRefusePx` (-1 = none): a Lamp press there with
+ * no flame in reach says "not like that" (`lureRefuse`, the Canopy r16).
+ */
+export function trapNear(state: GameState, scene: Scene, t: Tuning): number {
+  const list = scene.lures;
+  if (!list) return -1;
+  const p = state.player;
+  const cx = centreX(p);
+  const cy = centreY(p);
+  const r = Math.max(0, t.lures.trapRefusePx);
+  let best = -1;
+  let bd = r * r;
+  for (let i = 0; i < list.length; i++) {
+    const l = list[i];
+    if (!l?.trap || (state.lures.hp[i] ?? 0) <= 0) continue;
+    const f = flameAt(state.lures, i, l, state.frame, t, F);
+    const d = (f.x - cx) * (f.x - cx) + (f.y - cy) * (f.y - cy);
+    if (d <= bd) {
+      bd = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
  * The unit direction the fling sends her (into `out`): the held direction, exactly (8-way); with nothing
  * held, straight out from the flame through her (Up at its very centre).
  */

@@ -7,7 +7,7 @@
  */
 import { normalizeAbilities } from './abilities';
 import type { SimEvent } from './events';
-import { type InputFrame, wasPressed } from './input';
+import { ActionBit, type InputFrame, wasPressed } from './input';
 import type { MoonPatch, Scene } from './scene';
 import type { GameState } from './state';
 import type { Tuning } from './tuning';
@@ -143,7 +143,13 @@ export function updateGlades(state: GameState, scene: Scene, events: SimEvent[])
  * the room's own scene (the shortcuts are listed there; the solids she collides with come from
  * `withShortcuts`).
  */
-export function updateShortcuts(state: GameState, scene: Scene, events: SimEvent[]): void {
+export function updateShortcuts(
+  state: GameState,
+  scene: Scene,
+  events: SimEvent[],
+  live: InputFrame = 0,
+  prev: InputFrame = 0,
+): void {
   const list = scene.shortcuts;
   if (!list) return;
   const p = state.player;
@@ -153,6 +159,22 @@ export function updateShortcuts(state: GameState, scene: Scene, events: SimEvent
     if (state.save.opened.includes(key)) continue;
     const alongX = p.x < sc.x + sc.w && sc.x < p.x + p.w;
     const alongY = p.y < sc.y + sc.h && sc.y < p.y + p.h;
+    // (The Canopy r16, first-timer ft15fix: "gates on both sides of the well floor that won't open". Pushed from the
+    // side that does not open it, it says so: `shortcutShut` as the push starts, and every 45 frames held.)
+    if (alongY && (sc.opens === 'w' || sc.opens === 'e')) {
+      const fromEast = p.x === sc.x + sc.w;
+      const fromWest = p.x + p.w === sc.x;
+      const wrong = sc.opens === 'w' ? fromEast : fromWest;
+      const bit = fromEast ? ActionBit.left : ActionBit.right;
+      if (wrong && (live & bit) !== 0 && ((prev & bit) === 0 || state.frame % 45 === 0))
+        events.push({
+          type: 'shortcutShut',
+          id: sc.id,
+          x: sc.x + sc.w / 2,
+          y: Math.max(sc.y, Math.min(sc.y + sc.h, p.y + p.h / 2)),
+          side: fromEast ? 1 : -1,
+        });
+    }
     const touch =
       sc.opens === 'w'
         ? alongY && p.x + p.w === sc.x

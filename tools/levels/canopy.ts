@@ -1176,8 +1176,12 @@ const HX = 3520;
 const HUB_TRAP = 'trap-crossing';
 /** The den's great release (the great cage's `sets`): the roof opens, the roosts' moths go on (r12). */
 const DEN_FREED = 'cn-den-freed';
-/** The hub's cage (r11): under the landing limb, in the drop's frame. */
-const HUB_CAGE: [number, number] = [6300, 1400];
+/**
+ * The hub's cage (r11): under the landing limb, in the drop's frame. (r16, first-timer ft15fix: "cutting it and using
+ * the Lamp did nothing", 200 over the floor only an up cut or a jump's cut reached it: it hangs at her head now, 120
+ * over the floor, so the cut a player makes walking up to it lands, standing or in the air.)
+ */
+const HUB_CAGE: [number, number] = [6300, 1480];
 const GROVE_TRAP = 'trap-grove';
 const WARN_TRAP = 'trap-warn';
 
@@ -1243,7 +1247,10 @@ function hub(): Json {
     end: 'snap',
     flat: [[2496 + HX, 2816 + HX]],
   });
-  r.limb('east', 3168 + HX, 3712 + HX, 1280, { parent: 'lampoak', grows: 'east', end: 'knee', calm: true });
+  // (r16, first-timer ft15fix: "the wall at the right end lets me cling but every kick drops me back": the limb ran
+  // into the bank's corner, a roof 227 over the floor under the bank's lip. It stops 288 short now: the bank's west
+  // face is a plain 256 step under open sky, a full jump or the claws, and the way east reads from the floor.)
+  r.limb('east', 3168 + HX, 3424 + HX, 1280, { parent: 'lampoak', grows: 'east', end: 'knee', calm: true });
   r.oneWay(2368 + HX, 1376, 192, 'branch');
   // The clearing (r7, review r6 #10: stripped; v6 had four knuckles, three pods and a thorn pit here): the root floor,
   // two low swellings, the save and the kin.
@@ -1252,7 +1259,9 @@ function hub(): Json {
   // The kin's lamp is the map station (r9, review r8 #9: nothing to stop for, the hub crossed three times): resting at
   // the save beside it shows the map of what she has walked, and the moth-stones she has read are hung on the kin's
   // lamp, one more each time she comes back (flags `cn-stone-*`: the hub changes as she goes; render draws them).
-  r.patch('p-crossing', 2960, 1600, {
+  // (r16, first-timer ft15fix: "the campfire looks exactly like a save spot; up, down: nothing". The save was 260 px
+  // east of the kin's fire. It is at the fire now, the kin a step past it.)
+  r.patch('p-crossing', 2740, 1600, {
     map: true,
     hangs: [
       { stone: 'cn-well:stone-west', flag: 'cn-stone-west' },
@@ -1346,8 +1355,9 @@ function hub(): Json {
     // (r11, review r10 #4: on her first landing the kin waits under the cage, on the floor below the landing, looking
     // up at the moths: the drop's frame holds the cage, the kin and the sky. Once she has walked off the landing it is
     // back by its light, out of her sight.)
-    tatter: { x: 5780, y: 1600, facing: 1, want: HUB_CAGE, until: 'cn-hub-left' },
-    stage: { tatters: [{ x: 2780, y: 1600, facing: 1, want: [1920 + HX, 1600], when: 'cn-hub-left' }] },
+    // (r16: beside the cage, its want at arm's length: it reaches for it, and the player sees a cage that answers.)
+    tatter: { x: 6150, y: 1600, facing: 1, want: HUB_CAGE, until: 'cn-hub-left' },
+    stage: { tatters: [{ x: 2880, y: 1600, facing: 1, want: [1920 + HX, 1600], when: 'cn-hub-left' }] },
     // (r8: the kin in three places, wordless: here it watches her and turns away; in the bower's chamber it keeps a
     // light; at the way out it waits, after the den.)
     notes: [
@@ -1463,6 +1473,9 @@ function trunk(): Json {
   r.dangler('dang-t2', 700, 768, 1);
   r.cover('rot-shaft', 1024, 1152, 320, 768, 'rot-door');
   r.landmark('giant-wall', 'teach', 1504, 704);
+  // (r16, first-timer ft15fix: the map's arrow down was "behind a column that won't break": the rotten wall over the
+  // column reads as rot now, as the giant's wall does, so the arrow leads to a thing to climb to and cut.)
+  r.landmark('rot-door', 'teach', 1056, 1344);
   r.place('top', 2900, 384);
   r.place('t1', 2500, 704);
   r.place('t2', 800, 1024);
@@ -1487,10 +1500,12 @@ function trunk(): Json {
   // The bed and its two knuckles (a run off the top's lip at full speed lands ~190 px out, east of the bed: v5's
   // gotcha, no thorns where a drop lands; a knuckle by the lip was a hop up to the top, the claws' lock); a pod on each.
   r.thorns('thorn-t1', TRUNK_BED[0], 768, TRUNK_BED[1] - TRUNK_BED[0]);
-  r.oneWay(1728, 576, 128, 'branch');
-  r.oneWay(1984, 576, 128, 'branch');
-  r.pod('pod-t1', 1792, 576, 1200, 'sit');
-  r.pod('pod-t3', 2048, 576, 1200, 'sit');
+  // (r16, first-timer ft15fix: "the stones are small and the pit punishes every miss", two fades here: the knuckles
+  // are 192 wide and 96 over the floor (were 128 and 128), gaps 48 / 160 / 48.)
+  r.oneWay(1712, 608, 192, 'branch');
+  r.oneWay(2064, 608, 192, 'branch');
+  r.pod('pod-t1', 1808, 608, 1200, 'sit');
+  r.pod('pod-t3', 2160, 608, 1200, 'sit');
   // A fling line (review r6 #4): a lamp in the drop's shaft, a jump over tier 2's floor: flung up from it she is back
   // in the wall's chamber (the clawed return, `t2 -> t1`, now has a second way; the hall's way out stays the claws').
   r.lamp('wick-drop', TRUNK_WICK[0], TRUNK_WICK[1]);

@@ -599,7 +599,7 @@ export function step(
   }
   if (state.player.faded > 0 && hasEmbers(state)) relightEmbers(state, S, t, events);
   // Progress (memory/world.md): shortcuts she pushes open, glades, the moon patch she stands in.
-  updateShortcuts(state, scene, events);
+  updateShortcuts(state, scene, events, live, state.prevInput);
   updateGlades(state, scene, events);
   updatePatches(state, scene, live, state.prevInput, t, events);
   if (!state.exit && !state.caught) {
