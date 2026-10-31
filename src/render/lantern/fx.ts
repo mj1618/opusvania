@@ -29,6 +29,8 @@ export const FX = {
   silver: 0xdfeaff,
   glow: 0xbfe0ff,
   clang: 0xe8f0ff,
+  /** A blocked cut's shield (the Canopy r19): an arc of `r` px for `life` s, and `sparks` more thrown back at her. */
+  shield: { r: 34, life: 0.28, sparks: 8 },
   wood: 0xb08050,
   chip: 0x5a3a24,
   hurt: 0xffffff,
@@ -57,7 +59,19 @@ interface Particle {
   life: number;
   size: number;
   color: number;
-  kind: 'spark' | 'chip' | 'mote' | 'home' | 'ring' | 'star' | 'line' | 'flash' | 'pour' | 'puff' | 'link';
+  kind:
+    | 'spark'
+    | 'chip'
+    | 'mote'
+    | 'home'
+    | 'ring'
+    | 'star'
+    | 'line'
+    | 'flash'
+    | 'pour'
+    | 'puff'
+    | 'link'
+    | 'shield';
   /** Ring / line: radius / angle; home: delay before it flies. */
   a: number;
   b: number;
@@ -226,7 +240,39 @@ export class Fx {
         case 'enemyBlock': {
           const x = ev.hitX as number;
           const y = ev.hitY as number;
-          this.clang(x, y, -(((ev.dir as number) || 1) as number), FX.clang, false);
+          const back = -(((ev.dir as number) || 1) as number);
+          this.clang(x, y, back, FX.clang, false);
+          // (The Canopy r19: players kept cutting a braced burrback's front, "it shoves into me mid-swing". The front is
+          // a shield: a bright arc of it stands up where the blade met it, facing her, and more sparks fly back.)
+          if (ev.slash !== 'down')
+            this.add({
+              kind: 'shield',
+              x,
+              y,
+              vx: 0,
+              vy: 0,
+              life: FX.shield.life,
+              size: FX.shield.r,
+              color: FX.clang,
+              a: back,
+              b: 0,
+            });
+          for (let k = 0; k < FX.shield.sparks; k++) {
+            const a = (back > 0 ? 0 : Math.PI) + (this.r() - 0.5) * 1.2;
+            const sp = 320 + this.r() * 420;
+            this.add({
+              kind: 'spark',
+              x,
+              y,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp - 140,
+              life: 0.2 + this.r() * 0.15,
+              size: 2,
+              color: k % 2 ? FX.clang : 0xffe8b0,
+              a: 0,
+              b: 0,
+            });
+          }
           break;
         }
         case 'kitClang': {
@@ -856,6 +902,25 @@ export class Fx {
             .circle(q.x, q.y, q.size * (0.3 + 0.7 * (1 - (1 - u) * (1 - u))))
             .stroke({ color: q.color, width: 3 * (1 - u) + 0.5, alpha: 0.9 * (1 - u) });
           break;
+        case 'shield': {
+          // A raised shield: an arc bowed toward her (`a` = her side), bright and thick, opening a little as it fades.
+          const side = q.a || 1;
+          const r = q.size * (1 + 0.25 * u);
+          const c = q.x - side * q.size * 0.55;
+          const pts: number[] = [];
+          for (let k = 0; k <= 12; k++) {
+            const t = -0.9 + (1.8 * k) / 12;
+            pts.push(c + side * Math.cos(t) * r, q.y + Math.sin(t) * r);
+          }
+          front
+            .poly(pts, false)
+            .stroke({ color: q.color, width: 7 * (1 - u) + 1.5, alpha: 0.95 * (1 - u), cap: 'round' });
+          front
+            .poly(pts, false)
+            .stroke({ color: 0xffffff, width: 2.4 * (1 - u) + 0.5, alpha: 1 - u, cap: 'round' });
+          glow.add(q.x, q.y, r * 1.4, q.color, 0.55 * (1 - u));
+          break;
+        }
         case 'star': {
           const r = q.size * (0.6 + 0.4 * u);
           const pts: number[] = [];

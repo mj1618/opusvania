@@ -268,6 +268,8 @@ export const AUDIO = {
     crackShellDb: -20,
     /** The blade glancing off a braced shell or a seed-case. */
     clangDb: -21,
+    /** A side cut off a braced shell rings this much louder than a clang (the Canopy r19: a shield struck). */
+    shieldDb: 4,
     /** Her hurt (the mix low-passes for the stagger: `muffleHz`). */
     hurtDb: -18,
     muffleHz: 650,
