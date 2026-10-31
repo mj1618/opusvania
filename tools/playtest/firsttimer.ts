@@ -3,7 +3,7 @@
  * short burst at a time, looks at screenshots, and writes down what it understood. One command per turn;
  * a small server keeps the browser between commands (memory/playtest-harness.md "First-timer agent").
  *
- *   npm run firsttimer -- start --name s1 [--room wood-hatch] [--abilities glide] [--size 1280x720]
+ *   npm run firsttimer -- start --name s1 [--world canopy] [--room wood-hatch] [--abilities glide] [--size 1280x720]
  *   npm run firsttimer -- act "R60 R+J20 .30 {Tab}" [--every 2]   # real keys in real time, then the game pauses
  *   npm run firsttimer -- look                             # a screenshot now (the game stays paused)
  *   npm run firsttimer -- note "I think the moths want me to follow them" [--mood lost|unfair|fun|stuck|ok]
@@ -23,6 +23,9 @@
  * A first-timer sees what a player sees: the greybox designer labels and room notes are off (every room turns
  * them on again; the session turns them off), and the designer keys (G, F2, the panel) are refused. `--labels`
  * keeps the labels, `--dev` allows those keys: only when the orchestrator asks.
+ *
+ * `--world <id>` (the Canopy r11, review r10 #7): plays that world (`?world=<id>`) from its start room as the game
+ * (`&fresh`, autosave, R = back to its last save); `--room` then defaults to the world's start.
  *
  * It plays a **pinned clean build**: `start` makes a detached git worktree of HEAD (`.scratch/playtest-snap-<sha>`,
  * node_modules linked), checks that its rooms and world load (a broken commit is named, nothing starts), serves it
@@ -56,7 +59,8 @@ const { values: args, positionals } = parseArgs({
   args: rest,
   allowPositionals: true,
   options: {
-    room: { type: 'string', default: 'wood-hatch' },
+    room: { type: 'string' },
+    world: { type: 'string' },
     name: { type: 'string' },
     abilities: { type: 'string' },
     size: { type: 'string', default: '1280x720' },
@@ -131,7 +135,9 @@ async function call(path: string, body: unknown = {}): Promise<string> {
 // ---- The server: one browser page, commands one at a time.
 
 async function serve(): Promise<void> {
-  const { GAME_WORLD } = await import('../../src/scene/world');
+  const { GAME_WORLD, getWorld } = await import('../../src/scene/world');
+  const W = args.world ? getWorld(args.world) : GAME_WORLD;
+  const room = args.room ?? W.start;
   const { launch, openGame } = await import('../lib/browser');
   const { drawRoom } = await import('./heatmap');
   const { reportMarkdown } = await import('./report');
@@ -143,7 +149,10 @@ async function serve(): Promise<void> {
   const journal = join(dir, 'journal.md');
   const [w = 1280, h = 720] = (args.size ?? '').split('x').map(Number);
   const browser = await launch();
-  const base = args.url ?? DEFAULT_URL;
+  const base0 = args.url ?? DEFAULT_URL;
+  const base = args.world
+    ? `${base0}${base0.includes('?') ? '&' : '?'}world=${encodeURIComponent(args.world)}`
+    : base0;
   const url = args.abilities
     ? `${base}${base.includes('?') ? '&' : '?'}abilities=${encodeURIComponent(args.abilities)}`
     : base;
@@ -151,7 +160,7 @@ async function serve(): Promise<void> {
   // save as a player's does. A ?room= page is a test boot: the slot is never read or written, and R starts that
   // room over with its own kit (round 4: R in the roots put her in glade 2 with wall jump and a new tally).
   // Each session has its own browser and a new context, so its storage (the slot) is its own: never another's.
-  const asGame = (args.room ?? GAME_WORLD.start) === GAME_WORLD.start;
+  const asGame = room === W.start;
   const gameUrl = asGame ? `${url}${url.includes('?') ? '&' : '?'}fresh` : url;
   const page: Page = await openGame(
     browser,
@@ -159,7 +168,7 @@ async function serve(): Promise<void> {
     { width: w, height: h },
     1,
     true,
-    asGame ? undefined : args.room,
+    asGame ? undefined : room,
   );
   page.setDefaultTimeout(0);
   // A fresh run from the room's start, labels off, its telemetry recorded from the first frame; the game waits.
@@ -201,10 +210,10 @@ async function serve(): Promise<void> {
   )) as { stored: unknown; autosave: boolean };
   const saveLine = asGame
     ? `Save: ${save0.stored ? "a slot was there at start (unexpected: this browser is the session's own)" : 'a new game, the slot empty'}; autosave ${save0.autosave ? 'on' : 'OFF'}; R = back to the last save (this session's own).`
-    : `Save: none (a test boot in ${args.room}: the slot is never read or written); R starts ${args.room} over with its own kit.`;
+    : `Save: none (a test boot in ${room}: the slot is never read or written); R starts ${room} over with its own kit.`;
   appendFileSync(
     journal,
-    `# First-timer journal: ${args.name} in ${args.room}\n\nBuild: ${build}.\n\n${saveLine}\n\n`,
+    `# First-timer journal: ${args.name} in ${args.world ? `the world ${args.world}, ` : ''}${room}\n\nBuild: ${build}.\n\n${saveLine}\n\n`,
   );
   let last = '';
   const handlers: Record<string, (b: Record<string, string>) => Promise<string>> = {
@@ -282,7 +291,7 @@ async function serve(): Promise<void> {
       writeFileSync(join(dir, 'trace.json'), JSON.stringify(trace));
       const files = ['trace.json', 'journal.md'];
       for (const room of new Set(trace.rooms.map((r) => r.room))) {
-        const sc = GAME_WORLD.rooms[room]?.scene;
+        const sc = W.rooms[room]?.scene;
         if (!sc) continue;
         writeFileSync(join(dir, `heatmap-${room}.png`), drawRoom(sc, trace));
         files.push(`heatmap-${room}.png`);
@@ -290,7 +299,7 @@ async function serve(): Promise<void> {
       const md = reportMarkdown(trace, {
         when: new Date().toISOString().slice(0, 16).replace('T', ' '),
         abilities: null,
-        targets: loadTargets(Object.keys(GAME_WORLD.rooms), join(ROOT, 'docs/design/regions')),
+        targets: loadTargets(Object.keys(W.rooms), join(ROOT, 'docs/design/regions')),
         files,
         command: 'npm run firsttimer',
         lostAfter: 10,
@@ -358,7 +367,9 @@ async function start(): Promise<void> {
   const snap = args.tree ? null : await snapshot();
   const url = snap ? `http://localhost:${snap.port}` : (args.url ?? DEFAULT_URL);
   const argv = ['tsx', 'tools/playtest/firsttimer.ts', 'serve', '--dir', dir, '--root', ROOT, '--url', url];
-  argv.push('--room', args.room ?? 'wood-hatch', '--name', name, '--size', args.size ?? '1280x720');
+  if (args.world) argv.push('--world', args.world);
+  if (args.room || !args.world) argv.push('--room', args.room ?? 'wood-hatch');
+  argv.push('--name', name, '--size', args.size ?? '1280x720');
   if (args.abilities) argv.push('--abilities', args.abilities);
   if (snap) argv.push('--build', snap.sha);
   if (args.labels) argv.push('--labels');
