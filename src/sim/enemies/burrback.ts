@@ -575,6 +575,13 @@ function desperate(e: EnemyState, info: StepInfo, B: Row, cause: string): void {
     e.streak = 0;
     e.timer = frames(B.p3RestFrames, 1);
     e.strikeCd = e.timer + 1;
+    // (The Keeper, the Canopy r13: after its pair it stands winded, open: the pair's answer.)
+    if (e.keep > 0) {
+      e.stunned = true;
+      e.taken = 0;
+      e.timer = frames(info.t.keeper.p3PairRest, 1);
+      e.strikeCd = e.timer + 1;
+    }
   }
 }
 

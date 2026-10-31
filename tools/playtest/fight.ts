@@ -195,6 +195,9 @@ function denTactic(scene: Scene, i: number, lead: number): Candidate {
           if (p.facing !== face) return dirBit(face);
           return prev & A ? 0 : A;
         }
+        // The slam's floor wave on its way to her: a person jumps it (r13: the den's plan never did, and with a
+        // person's lag it was P3's main hurt).
+        if (p.grounded && waveComing(s, e, lead)) return J;
         // The Keeper's P3 sweep (r13): its tell (head down at the cage), its claws through the low cloud: out of the
         // cloud until they have passed, then in to cut it while it eats.
         const sweepTell =

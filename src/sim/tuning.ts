@@ -1475,12 +1475,13 @@ export const defaultTuning = withVariants({
   keeper: {
     // (r13, review r12 #1: 25 s from the first ram to the kill was a factor 3-6 short of the references. 16 hp (the
     // den's spawn), 6 / 5 / 5 a phase, and each phase gated on its moths or time as well as its hits: P1 ends once
-    // `p1Drops` moths have fallen, P2 after `p2MinFrames` (two swings), P3 not before `p3Sweeps` sweeps. At its gate a
-    // cut glances (`keeperGlance gate`) and the gating thing is brought forward (`gateSoon`).)
+    // `p1Drops` moths have fallen, P2 after `p2MinFrames` (three swings), P3 not before `p3Sweeps` sweeps. At its gate a
+    // cut glances (`keeperGlance gate`) and the gating thing is brought forward (`gateSoon`). P2: three swings (the bots
+    // took two in 9 s).)
     p2Hp: 10,
     p3Hp: 5,
     p1Drops: 2,
-    p2MinFrames: 504,
+    p2MinFrames: 756,
     p3Sweeps: 3,
     gateSoon: 40,
     // --- The falling moths (P1, P2). One at a time: it leaves the orbit (`dropTell`: a pale flutter), then falls
@@ -1521,7 +1522,8 @@ export const defaultTuning = withVariants({
     // (r13: P2's new move: the light finds her within `lungePx` of it, and it lunges at once: a `lungeTell` frame tell
     // and a `lungeRamPx` ram. Not within `lungeCooldown` of its last.)
     lungePx: 460,
-    lungeTell: 18,
+    // (24: a 15-frame person's reaction must still fit in it: 18 was 3 frames to answer.)
+    lungeTell: 24,
     lungeRamPx: 380,
     lungeCooldown: 90,
     // --- P3, the fallen cage. The rip: the cage falls `fallFrames` after the cue. The low cloud: it sweeps it every
@@ -1532,13 +1534,15 @@ export const defaultTuning = withVariants({
     sweepFirst: 150,
     sweepEvery: 330,
     sweepReachPx: 150,
-    sweepTell: 30,
+    // (r13: 36 (was 30): its claws now hurt, so the tell is one a person sees coming while at the cage.)
+    sweepTell: 36,
     // (r13, review r12 #2: the low cloud halves after two sweeps (was 3 a sweep).)
     sweepEat: 7,
-    sweepOpen: 60,
+    // (r13: 90 (was 60): out of the claws' way and back in, then two cuts.)
+    sweepOpen: 90,
     // (r13: the sweep's claws go through the cloud: `sweepHitPx` each side of the cage, `sweepHitH` over the floor,
     // live `sweepHitFrames` at the end of the tell. One who stands cutting the cage there is hit.)
-    sweepHitPx: 200,
+    sweepHitPx: 170,
     sweepHitH: 150,
     sweepHitFrames: 10,
     cageCuts: 3,
@@ -1551,6 +1555,8 @@ export const defaultTuning = withVariants({
     // (r13: P3's rams are shorter and come in pairs (the old burrback's are 640 px, three in a row).)
     p3ChargePx: 420,
     p3Streak: 2,
+    // (After its pair it stands winded this long, open for two cuts.)
+    p3PairRest: 64,
     // --- The ending's collapse (the fallback, round 12: no hazards), frames from the great release.
     // (r13, review r12 #7: the rubble at +150 (was +330: 7 s of waiting before a staircase).)
     collapseGroan: 40,

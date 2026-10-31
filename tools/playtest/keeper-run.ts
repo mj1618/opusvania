@@ -11,7 +11,9 @@ import { Game } from '../../src/game';
 import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
+import { cloneState } from '../../src/sim/index';
 import { ActionBit } from '../../src/sim/input';
+import type { GameState } from '../../src/sim/state';
 import { newSave } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { fightTactics } from './fight';
@@ -28,13 +30,14 @@ export interface KeeperRun {
   saved: number;
   eaten: number;
   freed: number;
+  hurtBy: Record<string, number>;
   game: Game;
   events: Array<SimEvent & { f: number }>;
 }
 
 /** Plays the den from the balcony; `catches` / `cage` add a person's choices to the den's controller. */
 export function runKeeper(
-  opts: { lead?: number; catches?: boolean; cage?: boolean; frames?: number } = {},
+  opts: { lead?: number; lag?: number; catches?: boolean; cage?: boolean; frames?: number } = {},
 ): KeeperRun {
   const t = cloneTuning(defaultTuning);
   const world = getWorld('canopy');
@@ -53,6 +56,9 @@ export function runKeeper(
   const events: Array<SimEvent & { f: number }> = [];
   const phaseAt: Record<number, number> = {};
   let hurts = 0;
+  const hurtBy: Record<string, number> = {};
+  // (`lag`: she decides from the state that many frames old, as keeper-live.ts does in the page.)
+  const seen: GameState[] = [];
   let fades = 0;
   let lockAt = -1;
   let f = 0;
@@ -61,7 +67,14 @@ export function runKeeper(
     g.stepOnce();
     f++;
     for (const e of ev) {
-      if (e.type === 'hurt') hurts++;
+      if (e.type === 'hurt') {
+        hurts++;
+        const b = g.state.boss;
+        const k = g.state.enemies.find((q) => q.id === 'old-burr');
+        const why = b && b.sweepHit > 0 ? 'claws' : k?.waveHit ? 'wave' : (k?.mode ?? '?');
+        const key = `P${b?.phase ?? 0}:${why}`;
+        hurtBy[key] = (hurtBy[key] ?? 0) + 1;
+      }
       if (e.type === 'fade') fades++;
       if (e.type === 'bossLock' && lockAt < 0) lockAt = f;
       if (e.type === 'bossPhase') phaseAt[e.phase] = f;
@@ -117,7 +130,9 @@ export function runKeeper(
       line = tac?.make() ?? null;
       k = 0;
     }
-    const m = line ? line.act(s, k++, prev) : 0;
+    seen.push(opts.lag ? cloneState(s) : s);
+    while (seen.length > (opts.lag ?? 0) + 1) seen.shift();
+    const m = line ? line.act(seen[0] ?? s, k++, prev) : 0;
     prev = m;
     push(m);
   }
@@ -149,6 +164,7 @@ export function runKeeper(
     saved: b?.saved ?? 0,
     eaten: b?.eaten ?? 0,
     freed: g.state.save.moths,
+    hurtBy,
     game: g,
     events,
   };
@@ -159,6 +175,7 @@ if (process.argv[1]?.endsWith('keeper-run.ts')) {
   const val = (k: string, d: number) => Number(arg(k)?.split('=')[1] ?? d);
   const r = runKeeper({
     lead: val('lead', 0),
+    lag: val('lag', 0),
     catches: !!arg('catch'),
     cage: !!arg('cage'),
     frames: val('minutes', 6) * 3600,
@@ -193,6 +210,6 @@ if (process.argv[1]?.endsWith('keeper-run.ts')) {
     .map(([n, at]) => `P${n} ${((at - r.lockAt) / 60).toFixed(1)} s`)
     .join(', ');
   console.log(
-    `${r.won ? 'WON' : 'lost'} in ${((r.frames - r.lockAt) / 60).toFixed(1)} s from the lock (${ph}); hits ${r.hurts}, fades ${r.fades}; moths saved ${r.saved}, eaten ${r.eaten}, freed in all ${r.freed}${r.released ? ' (released)' : ''}`,
+    `${r.won ? 'WON' : 'lost'} in ${((r.frames - r.lockAt) / 60).toFixed(1)} s from the lock (${ph}); hits ${r.hurts}, fades ${r.fades}; moths saved ${r.saved}, eaten ${r.eaten}, freed in all ${r.freed}${r.released ? ' (released)' : ''}; hurt by ${JSON.stringify(r.hurtBy)}`,
   );
 }
