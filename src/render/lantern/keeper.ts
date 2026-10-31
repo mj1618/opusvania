@@ -249,6 +249,8 @@ export class KeeperStage {
   private readonly puffs: Mote[] = [];
   private readonly dust: Mote[] = [];
   private groanT = -1;
+  private readonly glances: Array<{ x: number; y: number; t: number; lit: boolean }> = [];
+  private readonly sweeps: Array<{ x0: number; x1: number; y: number; t: number; secs: number }> = [];
   private feedT = -1;
   private feedX = 0;
   private feedY = 0;
@@ -378,6 +380,25 @@ export class KeeperStage {
           this.feedX = e.x ?? 0;
           this.feedY = e.y ?? 0;
           this.scales(this.feedX, this.feedY - 30, 14, 0.9);
+          break;
+        case 'keeperGlance': {
+          // (Review r12 #10: a blocked cut was unreadable. The dome's crust flashes amber where the blade met it;
+          // in P2's light the flash is the cage's own colour: it saw her.)
+          const hx = (e.hitX as number) ?? e.x ?? 0;
+          const hy = (e.hitY as number) ?? e.y ?? 0;
+          this.glances.push({ x: hx, y: hy, t: 0, lit: (e.why as string) === 'lit' });
+          this.scales(hx, hy, 5, 0.4);
+          break;
+        }
+        case 'keeperSweep':
+          // P3's sweep: its claws through the low cloud, a pale arc of dust along the floor it reaches.
+          this.sweeps.push({
+            x0: (e.x0 as number) ?? 0,
+            x1: (e.x1 as number) ?? 0,
+            y: e.y ?? this.floorY,
+            t: 0,
+            secs: Math.max(0.3, ((e.frames as number) ?? 20) / 60),
+          });
           break;
         case 'mothEaten':
           this.scales(e.x ?? 0, e.y ?? 0, 6 + 4 * ((e.n as number) ?? 1), 0.8);
@@ -525,6 +546,7 @@ export class KeeperStage {
     this.drawMoon(dt, clock, sim, cam);
     this.drawDust(dt);
     this.drawPuffs(dt);
+    this.drawGlances(dt);
     this.pool.end();
     this.glowFront.end();
     this.beam.end();
@@ -889,6 +911,39 @@ export class KeeperStage {
       g.circle(d.x, d.y, d.s).fill({ color: KEEPER.dust.color, alpha: 0.7 * (1 - d.t / d.life) });
       // A trail of finer grit behind each.
       g.rect(d.x - 0.6, d.y - d.vy * 0.05, 1.2, d.vy * 0.05).fill({ color: KEEPER.dust.color, alpha: 0.35 });
+    }
+  }
+
+  /** A glance off the dome (an amber flash and a short arc) and the sweep's arc of dust along the floor. */
+  private drawGlances(dt: number): void {
+    for (let i = this.glances.length - 1; i >= 0; i--) {
+      const q = this.glances[i] as (typeof this.glances)[number];
+      q.t += dt;
+      const u = q.t / 0.28;
+      if (u >= 1) {
+        this.glances.splice(i, 1);
+        continue;
+      }
+      const col = q.lit ? 0xffc070 : 0xffa040;
+      this.glowFront.add(q.x, q.y, 70 * (0.6 + u), col, 0.55 * (1 - u));
+      this.front
+        .arc(q.x, q.y, 26 + 30 * u, -Math.PI * 0.9, -Math.PI * 0.1)
+        .stroke({ color: col, width: 3 * (1 - u), alpha: 0.9 * (1 - u) });
+    }
+    for (let i = this.sweeps.length - 1; i >= 0; i--) {
+      const w = this.sweeps[i] as (typeof this.sweeps)[number];
+      w.t += dt;
+      const u = w.t / w.secs;
+      if (u >= 1.6) {
+        this.sweeps.splice(i, 1);
+        continue;
+      }
+      const a = u < 1 ? Math.sin(Math.PI * Math.min(1, u * 1.4)) : Math.max(0, 1.6 - u) / 0.6;
+      const reach = w.x0 + (w.x1 - w.x0) * Math.min(1, u * 1.3);
+      for (let x = Math.min(w.x0, reach); x < Math.max(w.x0, reach); x += 26) {
+        const h = hash01('sw', Math.round(x));
+        this.front.ellipse(x, w.y - 8 - 10 * h, 18 + 10 * h, 7).fill({ color: 0xcfc4ae, alpha: 0.32 * a });
+      }
     }
   }
 
