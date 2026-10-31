@@ -1135,15 +1135,15 @@ function eventText(e: SimEvent): string | null {
       return 'Moth-stone: the map is drawn';
     case 'enemyDie':
       return x.id === 'old-burr'
-        ? 'The old burrback is down'
+        ? 'The Keeper is down'
         : x.id === 'wing-am' || /^burr-am|juv-am/.test(x.id as string)
           ? null
           : null;
     case 'enemyPhase':
       return x.phase === 2
-        ? 'Phase 2: the slam, then it rolls'
+        ? 'Phase 2: the cage swings; it sees only in its light'
         : x.phase === 3
-          ? 'Phase 3: the desperate rams, in the dark'
+          ? 'Phase 3: the cage torn down; it feeds on the spilled moths'
           : null;
     case 'gateOpen':
       return x.id === 'seed-door'
