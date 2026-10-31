@@ -358,3 +358,9 @@ Clips and numbers: `playtest-reports/canopy-audio-r15/README.md`. Tests: `tests/
   The climb's strings are still the boss's wavetable section. The duet's beats are short (0.6-2 s): phrases overlap
   the next beat's by design, untested by a human ear.
 
+## The Canopy r18 cues
+- The hatch's swarm ramps over 90 frames (the black is 1 s). A shut root door's knock adds a low creak from beyond
+  (0.22 s). A cut into the face under a rotten wall: a crunch at the wall and a scrape of chips (route-canopy
+  `slashTerrain`, same 24 / 520 px rule as render's `KIT.sill`; it does not know if the wall is already broken).
+- A beetle laid open by a ram that missed (`enemyRecover`, not `touch`): a long breath, `catchBreath` -900 cents. A
+  lampwing's tell (`enemyNotice`): three `buzzUp` at 0, 0.45 and 0.75 of its frames, each higher and louder.

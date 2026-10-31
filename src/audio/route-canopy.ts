@@ -257,11 +257,32 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
             at('clink', 'lantern', C.clinkDb - 6, { cents: -500, delay: 0.42, priority: 2 }, 1),
           ]
         : [];
+    // (r18) A cut into the face under a rotten wall: the rot up there answers, a soft crunch and chips falling from it
+    // (render's `KIT.sill`: within 24 px of its sides, 520 under its foot).
+    case 'slashTerrain': {
+      const b = (ctx.scene.bark ?? []).find(
+        (r) =>
+          !r.floor &&
+          (q.x ?? 0) >= r.x - 24 &&
+          (q.x ?? 0) <= r.x + r.w + 24 &&
+          (q.y ?? 0) - (r.y + r.h) >= 0 &&
+          (q.y ?? 0) - (r.y + r.h) <= 520,
+      );
+      if (!b) return [];
+      const bx = b.x + b.w / 2;
+      const by = b.y + b.h / 2;
+      return [
+        at('crunch', 'world', C.clinkDb - 4, { x: bx, y: by, cents: -300, delay: 0.05, priority: 3 }),
+        at('scrape', 'world', C.clinkDb - 10, { x: bx, y: b.y + b.h, delay: 0.3, priority: 2 }, 1),
+      ];
+    }
     // A shut root door pushed from its far side (r16): a dull knock of wood and a little grit falling.
     case 'shortcutShut':
       return [
         at('thock', 'world', C.clinkDb - 1, { cents: -700, priority: 3 }),
         at('scrape', 'world', C.clinkDb - 9, { delay: 0.08, priority: 2 }, 1),
+        // (r18: and the silk drawn taut on the far side: a low creak a beat later, from beyond it.)
+        at('creak', 'world', C.clinkDb - 7, { cents: -500, delay: 0.22, priority: 2 }, 2),
       ];
     // The Lamp pressed by a cage (r16): not like that. The cage rattles, three dull knocks of bars, no flame's answer.
     case 'lureRefuse':
@@ -934,10 +955,11 @@ export function canopyLayers(snap: AudioSnap, cam: AudioCam, clock: number, ctx:
     out.earth =
       dbToGain(C.earthDb + bed.earth) *
       (0.7 + 0.2 * Math.sin((2 * Math.PI * clock) / 9.3) + 0.1 * Math.sin(clock * 0.37));
-  // The swarm over the hatch, heard before it is seen: out of the black over 3 s, closer with each press.
+  // The swarm over the hatch, heard before it is seen: out of the black (1 s since r18) and on up over 1.5 s, closer
+  // with each press.
   const ht = snap.hatch;
   if (ht && !ht.done) {
-    const ramp = clamp01(ht.frames / 180);
+    const ramp = clamp01(ht.frames / 90);
     const k = 0.55 * ramp + 0.45 * clamp01(ht.presses / 3);
     out.river = ramp > 0 ? dbToGain(C.riverDb[0] + (C.riverDb[1] - 4 - C.riverDb[0]) * k) * ramp : 0;
     out.riverPan = 0.55 * Math.sin((2 * Math.PI * clock) / 7.5);

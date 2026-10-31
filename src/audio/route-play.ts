@@ -317,13 +317,31 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
             }),
           ]
         : [];
-    case 'enemyRecover':
-      // A ram into a wall: a thud and the shell ringing.
+    case 'enemyRecover': {
+      // A ram into a wall: a thud and the shell ringing. (The Canopy r18, "I couldn't tell when it was open": any ram
+      // that did not touch her lays a beetle open, and it is heard: a long winded breath out of the soft belly.)
+      const open =
+        BEETLES.has(e.kind) && e.cause !== 'touch'
+          ? [beast('catchBreath', AUDIO.giving.sniffDb + 2, { cents: -900, delay: 0.12 }, 2)]
+          : [];
       return e.cause === 'wall'
-        ? [beast('thumpWood', K.wallDb), beast('clang', K.wallDb - 4, { cents: -900, delay: 0.02 }, 1)]
-        : [];
+        ? [
+            beast('thumpWood', K.wallDb),
+            beast('clang', K.wallDb - 4, { cents: -900, delay: 0.02 }, 1),
+            ...open,
+          ]
+        : open;
+    }
     case 'enemyNotice':
-      if (FLYERS.has(e.kind)) return [beast('buzzUp', K.buzzDb, { cents: e.kind === 'lampwing' ? 500 : 0 })];
+      // (The Canopy r18: a lampwing's tell is counted out, three rising buzzes quickening to the dive, as its lamp
+      // flashes; ft17d "didn't see a wind-up I could read in time".)
+      if (e.kind === 'lampwing') {
+        const s = e.frames / 60;
+        return [0, 0.45, 0.75].map((u, k) =>
+          beast('buzzUp', K.buzzDb - 2 + k * 2, { cents: 500 + k * 300, delay: u * s }, k),
+        );
+      }
+      if (FLYERS.has(e.kind)) return [beast('buzzUp', K.buzzDb, { cents: 0 })];
       if (BEETLES.has(e.kind)) return [beast('catchBreath', AUDIO.giving.sniffDb, { cents: -300 })];
       return [];
     case 'enemyDive':

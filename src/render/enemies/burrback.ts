@@ -75,6 +75,7 @@ const C = {
   struck: v3(0),
   hitFlash: v3(0),
   rimPale: v3(0),
+  openLight: v3(0),
   star: v3(0),
 };
 
@@ -163,6 +164,7 @@ export function loadColors(): void {
   set(C.struck, BURR.hit.struck);
   set(C.hitFlash, BURR.hit.flashColor);
   set(C.rimPale, BURR.ram.rimPale);
+  set(C.openLight, BURR.ram.open.color);
   set(C.star, BURR.ram.star);
 }
 loadColors();
@@ -352,6 +354,8 @@ export class BurrRig {
   beatNew = false;
   /** Seconds since the ram was let go (the release flash). */
   relT = 9;
+  /** Seconds since its shell laid open (a spent that was not a touch: the Canopy r18's open flash). */
+  openT = 9;
   /** Stunned (stopped dead by a wall, a ledge, a light), 0..1 eased: a harder daze than spent. */
   stunK = 0;
   /** A cut glanced off its shell: the shudder (1, dying) and the seconds since. */
@@ -773,10 +777,12 @@ export class BurrRig {
     const stunned = spentM && this.spentCause === 'wall';
     this.stunK += ((stunned ? gather : 0) - this.stunK) * approach(stunned ? 20 : 7, dt);
     this.stopped = '';
+    this.openT += dt;
     if (this.spentNew) {
       this.spentNew = false;
       const cause = this.spentCause;
       this.stopped = cause;
+      if (cause !== 'touch') this.openT = 0;
       if (this.spentBroken) {
         // Its brace broken by a blow: it drops where it stands, no skid.
         this.rock.v -= this.d * 2;
@@ -1962,6 +1968,39 @@ export function drawBurrback(
       rot,
       22,
     );
+
+  // --- Open (the Canopy r18, ft17a / ft17c: "it flipped red once but I couldn't tell when it was open"): spent, its
+  // soft belly and opened seams glow warm and pale, breathing with its pants: the window, lit like a lamp. As it lays
+  // open, one bright pale flash.
+  const openK = spentK * (1 - braceK);
+  if (openK > 0.03) {
+    const O = R.open;
+    const breath = 0.5 + 0.5 * Math.sin(clock * R.pant);
+    p.glow(
+      bx(ccx, ccy),
+      by(ccx, ccy) + O.low,
+      O.r,
+      C.openLight as unknown as RGB,
+      openK * (O.k + O.kBreath * breath),
+      O.r * 0.7,
+      rot,
+      20,
+    );
+  }
+  if (rig.openT < 0.45 && !dead) {
+    const O = R.open;
+    const u = rig.openT / 0.45;
+    p.glow(
+      bx(ccx, ccy),
+      by(ccx, ccy),
+      O.flashR * (0.6 + 0.6 * u),
+      C.openLight as unknown as RGB,
+      O.flashK * (1 - u) * (1 - u),
+      O.flashR * 0.7 * (0.6 + 0.6 * u),
+      rot,
+      22,
+    );
+  }
 
   // --- Signature outline, drawn under the shell so the bases are hidden: a short upturned horn on
   // the brow, a row of blunt burrs along the ridge, a raised lip at the tail.

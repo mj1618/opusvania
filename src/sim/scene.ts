@@ -179,6 +179,17 @@ export interface EnemySpawn {
   trail?: Array<[number, number]>;
   follow?: string;
   phase?: number;
+  /**
+   * A burrback kind that starts asleep where it stands (the Canopy r18, the giant's juvenile: both ends of its floor
+   * are arrivals): curled and harmless until she is down on its ground within its row's `sleepWakePx`, then it wakes
+   * over `wakeFrames` (harmless) and hunts as usual. A cut wakes it too.
+   */
+  asleep?: boolean;
+  /**
+   * Lampwing: its first tell this life (no dive yet) is this many times `curiousFrames` (the Canopy r18, ft17d: "I
+   * didn't see a wind-up I could read in time"); the ones after keep the rhythm.
+   */
+  firstTell?: number;
   /** Old burrback: the den's taproot (a root column, a solid in the room): its x span, `[x0, x1]`. */
   taproot?: [number, number];
   /** Old burrback: the story flag set as its phase 2 begins (the plug first cracks: staging's `crack`). */

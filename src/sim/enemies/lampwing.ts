@@ -685,7 +685,11 @@ function tell(e: EnemyState, info: StepInfo): void {
   if (heldUnseen(e, p)) return;
   // (Nor into silver light: Lanternroot's moonwicks make it shy.)
   if (shyOf(e, info, p.x + p.w / 2, p.y + p.h / 2)) return;
-  const n = frames(rowOf(info.t, e).curiousFrames, 1);
+  // (The Canopy r18, ft17d: "glowed red then hit me ... I didn't see a wind-up I could read in time": a placement may
+  // make the first tell of its life longer, `firstTell` x; the ones after keep the rhythm.)
+  const first =
+    e.dives === 0 ? Math.max(1, info.scene.enemies?.find((q) => q.id === e.id)?.firstTell ?? 1) : 1;
+  const n = frames(rowOf(info.t, e).curiousFrames * first, 1);
   setMode(e, 'curious', n);
   e.targetX = p.x + p.w / 2;
   e.targetY = p.y + p.h / 2;

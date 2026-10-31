@@ -7,10 +7,10 @@
  * A room with `camera.fadeIn` (src/scene/room.ts) also comes up from black over that many seconds at
  * boot and at every restart (`fadeIn()`, called by stage.ts), and after a room exit.
  */
-import { Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import { SAFE_VIEW, type ViewSize } from '../contract';
-import { type CameraTuning, cameraTuning } from './tuning';
+import { type CameraTuning, cameraTuning, OPEN_GLIMMER } from './tuning';
 
 function ease(t: number): number {
   const k = Math.min(1, Math.max(0, t));
@@ -18,7 +18,12 @@ function ease(t: number): number {
 }
 
 export class RoomFade {
-  readonly layer: Sprite;
+  readonly layer: Container;
+  private readonly sheet: Sprite;
+  /** Her light in the opening's black (the Canopy r18), over it. */
+  private readonly glim: Graphics;
+  private glimT = 0;
+  private stirT = 9;
   /** 0..1 now. */
   k = 0;
   private from = 0;
@@ -30,11 +35,47 @@ export class RoomFade {
 
   /** `roomFadeIn`: the room's fade up from black, s (0 = none: a room exit lifts over `exitLift`). */
   constructor(private roomFadeIn = 0) {
-    this.layer = new Sprite(Texture.WHITE);
+    this.layer = new Container();
     this.layer.label = 'room-fade';
-    this.layer.tint = 0x000000;
     this.layer.eventMode = 'none';
     this.layer.visible = false;
+    this.sheet = new Sprite(Texture.WHITE);
+    this.sheet.tint = 0x000000;
+    this.glim = new Graphics();
+    this.glim.blendMode = 'add';
+    this.glim.visible = false;
+    this.layer.addChild(this.sheet, this.glim);
+  }
+
+  /**
+   * Her light in the opening's black (the Canopy r18, `OPEN_GLIMMER`): `at` = where her cocoon hangs in logical view
+   * px (null: no cocoon, or she is out), `zoom` the view's. Breathes on render time; a press (`hatchStir`) stirs it.
+   * Call after `update` in the frame.
+   */
+  glimmer(dt: number, events: readonly SimEvent[], at: { x: number; y: number } | null, zoom: number): void {
+    const G = OPEN_GLIMMER;
+    for (const e of events) if (e.type === 'hatchStir' && !e.auto) this.stirT = 0;
+    this.glimT += dt;
+    this.stirT += dt;
+    const g = this.glim;
+    g.clear();
+    const k = this.sheet.alpha * (this.layer.visible ? 1 : 0);
+    if (!at || k < 0.03) {
+      g.visible = false;
+      return;
+    }
+    g.visible = true;
+    const breathe = 0.5 + 0.5 * Math.sin((this.glimT * 2 * Math.PI) / G.period - Math.PI / 2);
+    const stir = Math.exp(-this.stirT * G.decay);
+    const a = k * G.alpha * (0.55 + 0.45 * breathe + G.stir * stir);
+    const r = G.r * zoom * (1 + 0.12 * breathe + G.grow * stir);
+    // Rings of light thickening to the middle: a soft round glow, no texture.
+    const n = 18;
+    for (let i = n; i >= 1; i--) {
+      const u = (i / n) ** 1.6;
+      g.ellipse(at.x, at.y, r * u * 0.78, r * u).fill({ color: G.color, alpha: a * 0.075 });
+    }
+    g.ellipse(at.x, at.y, r * 0.12, r * 0.18).fill({ color: 0xffffff, alpha: Math.min(1, a * 0.9) });
   }
 
   /** The room changed (memory/world.md): its own fade up from black, s. */
@@ -113,9 +154,9 @@ export class RoomFade {
       if (this.t >= this.dur) this.dur = 0;
     }
     this.layer.visible = this.k > 0.002;
-    this.layer.alpha = Math.min(1, this.k);
+    this.sheet.alpha = Math.min(1, this.k);
     // Over the whole visible view, 2 px to spare at every edge.
-    this.layer.position.set(v.left - 2, v.top - 2);
-    this.layer.setSize(v.w + 4, v.h + 4);
+    this.sheet.position.set(v.left - 2, v.top - 2);
+    this.sheet.setSize(v.w + 4, v.h + 4);
   }
 }

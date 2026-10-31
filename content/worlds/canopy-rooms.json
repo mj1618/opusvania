@@ -635,7 +635,7 @@
           "w": 384
         },
         "open": {
-          "black": 180,
+          "black": 60,
           "zooms": [1.5, 1.25, 1],
           "title": "LAMPFALL",
           "titleAfter": 150,
@@ -2127,9 +2127,10 @@
         "x": 2836,
         "y": 384,
         "facing": -1,
-        "radius": 40,
+        "radius": 220,
         "senses": "always",
-        "fenced": true
+        "fenced": true,
+        "asleep": true
       },
       {
         "id": "dang-t2",
@@ -2902,6 +2903,7 @@
         "y": 1580,
         "facing": -1,
         "senses": "always",
+        "firstTell": 1.6,
         "radius": 160,
         "wakes": "wallJump",
         "dives": 1
@@ -2939,6 +2941,7 @@
         "y": 820,
         "facing": -1,
         "senses": "always",
+        "firstTell": 1.6,
         "radius": 220,
         "wakes": "cn-well-ambush",
         "sets": "cn-well-clear",
@@ -7559,6 +7562,7 @@
         "y": 1360,
         "facing": -1,
         "senses": "always",
+        "firstTell": 1.6,
         "radius": 120,
         "sight": 360,
         "wakes": "cn-grove-beat2",
@@ -7571,6 +7575,7 @@
         "y": 900,
         "facing": 1,
         "senses": "always",
+        "firstTell": 1.6,
         "radius": 220
       },
       {
@@ -11775,6 +11780,7 @@
         "y": 1560,
         "facing": 1,
         "senses": "always",
+        "firstTell": 1.6,
         "radius": 140,
         "sight": 360,
         "wakes": "cn-tunnel-wave",
@@ -11788,6 +11794,7 @@
         "y": 1520,
         "facing": -1,
         "senses": "always",
+        "firstTell": 1.6,
         "radius": 120,
         "sight": 360,
         "wakes": "cn-tunnel-wave",

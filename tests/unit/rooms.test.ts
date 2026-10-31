@@ -186,13 +186,14 @@ describe('the hatching', () => {
     const s = sim(WOOD_HATCH);
     const x0 = s.state.player.x;
     const ev = s.run(J, 10).concat(s.run(0, 90), s.run(R, 20), s.run(0, 60), s.run(J, 20), s.run(0, 40));
-    expect(ev.filter((e) => e.type === 'hatchStir' && !e.auto)).toHaveLength(3);
-    // (The third press at 181; since the Canopy r12 it listens from 210 (3 s of black first): it breaks then.)
-    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({
-      auto: false,
-      frames: Math.max(181, s.t.hatch.listenFrom + 1),
-    });
-    expect(ev.some((e) => e.type === 'jump')).toBe(false);
+    // (Since the Canopy r18 it listens from 90 (1 s of black): the jump in the black stirs it, the move key at 101 is a
+    // fresh press once it listens and breaks it.)
+    expect(s.t.hatch.listenFrom).toBeLessThan(100);
+    expect(ev.filter((e) => e.type === 'hatchStir' && !e.auto)).toHaveLength(2);
+    expect(ev.find((e) => e.type === 'hatch')).toMatchObject({ auto: false, frames: 101 });
+    // (Nothing she pressed before the break moved her; the later jump is her own.)
+    const upTo = ev.findIndex((e) => e.type === 'hatch');
+    expect(ev.slice(0, upTo + 1).some((e) => e.type === 'jump')).toBe(false);
     // Three quick presses during the fade-up count, and the cocoon breaks as it starts to listen.
     const q = sim(WOOD_HATCH);
     const early = q.run(J, 1).concat(q.run(0, 2), q.run(R, 1), q.run(0, 2), q.run(J, 1));

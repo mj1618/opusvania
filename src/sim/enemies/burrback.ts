@@ -1378,8 +1378,8 @@ export const burrback: KindRules = {
     e.fromY = Math.round(spawn.y);
     e.targetX = spawn.taproot ? spawn.taproot[0] : -1;
     e.targetY = spawn.taproot ? spawn.taproot[1] : -1;
-    // (The old burrback sleeps in its den until she comes down to it.)
-    if (rowOf(t, e).asleep) {
+    // (The old burrback sleeps in its den until she comes down to it; a spawn may ask it too: the Canopy r18.)
+    if (rowOf(t, e).asleep || spawn.asleep === true) {
       e.mode = 'sleep';
       e.dozing = true;
     }
@@ -1403,12 +1403,13 @@ export const burrback: KindRules = {
     return 'sleep';
   },
 
-  update(e, _index, info) {
+  update(e, index, info) {
     const { scene, events, stir } = info;
     const B = rowOf(info.t, e);
     const p = info.state.player;
     if (e.alertCd > 0) e.alertCd--;
     if (e.strikeCd > 0) e.strikeCd--;
+    if (e.wander > 0 && scene.enemies?.[index]?.asleep === true) e.wander--;
     if (e.roused > 0) e.roused--;
     if (e.stirred > 0) e.stirred--;
     if (e.phase > 0) waveStep(e, info, B);
@@ -1435,8 +1436,11 @@ export const burrback: KindRules = {
     if (e.mode === 'sleep') {
       e.vx = 0;
       e.dozing = true;
-      if (B.asleep && !e.dispersed && wakes(e, info, B)) {
+      if ((B.asleep || scene.enemies?.[index]?.asleep === true) && !e.dispersed && wakes(e, info, B)) {
         const n = frames(B.wakeFrames, 1);
+        // (The Canopy r18, ft18a: she walked up to it asleep and cut; it woke under her blade and its first touch hurt.
+        // One placed asleep is harmless through its wake and `wakeSafeFrames` after, cut or not.)
+        if (scene.enemies?.[index]?.asleep === true) e.wander = n + frames(B.wakeSafeFrames);
         setMode(e, 'wake', n);
         e.dozing = false;
         // (It rises facing the way it slept, and turns to her for the wake's last `wakeTurnFrames`: r11.)
@@ -1517,6 +1521,30 @@ export const burrback: KindRules = {
     if (e.phase > 0) {
       const r = phaseStep(e, info, B);
       if (r !== null) return r;
+    }
+    // (The Canopy r18: one placed asleep sleeps again where it stands once she has been off its ground, or far along
+    // it, for `sleepAgainFrames`: she never comes back up onto its floor (the giant's lip) to find it awake.)
+    if (scene.enemies?.[index]?.asleep === true && !e.dispersed) {
+      const near =
+        Math.abs(p.x + p.w / 2 - (e.x + e.w / 2)) <= 2 * B.wakePx &&
+        e.y + e.h - (p.y + p.h) <= B.sleepAgainAbovePx &&
+        p.y + p.h - (e.y + e.h) <= B.strikeAbovePx &&
+        p.hp > 0 &&
+        p.faded <= 0;
+      e.lost = near ? 0 : e.lost + 1;
+      if (
+        free &&
+        e.roused === 0 &&
+        e.stirred === 0 &&
+        e.tuck === 0 &&
+        e.lost >= frames(B.sleepAgainFrames, 1)
+      ) {
+        setMode(e, 'sleep', 0);
+        e.vx = 0;
+        e.dozing = true;
+        e.lost = 0;
+        return false;
+      }
     }
     // Dispersed and out of any fight: back to sleep.
     if (e.dispersed && free && e.roused === 0 && e.stirred === 0 && e.tuck === 0) {
@@ -1862,6 +1890,8 @@ export const burrback: KindRules = {
 
   /** Inside a lit lantern's sanctuary (it was there when the lantern caught, or was shoved in): harmless. */
   harmless(e, info) {
+    // (The Canopy r18: one placed asleep, just up: `wakeSafeFrames`.)
+    if (e.wander > 0 && info.scene.enemies?.find((q) => q.id === e.id)?.asleep === true) return true;
     // (Round 4: only its ram hurts (`bodyHarmless`); the body shoulders her out instead.)
     if (rowOf(info.t, e).bodyHarmless && e.mode !== 'charge' && e.mode !== 'feint' && e.mode !== 'roll')
       return true;

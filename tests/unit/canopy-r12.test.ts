@@ -325,7 +325,8 @@ describe("the opening's hooks (r12, moment 1)", () => {
   it('the break sets the kin-try flag, never before the black has passed', () => {
     const hatch = getRoom('cn-hatch');
     const open = hatch.marks?.stage?.open;
-    expect(open?.black).toBe(180);
+    // (r18: 1 s of black, her light breathing in it; was 3 s.)
+    expect(open?.black).toBe(60);
     expect(open?.zooms.length).toBe(t.hatch.presses);
     expect((hatch.marks?.tatter as { tryOn?: string } | undefined)?.tryOn).toBe('cn-hatched');
     const save = newSave([] as never);
@@ -430,10 +431,11 @@ describe("the first-timer's r11 findings (r12)", () => {
     const trunk = getRoom('cn-trunk');
     const j = (trunk.enemies ?? []).find((e) => e.id === 'juv-t1');
     expect(j?.y).toBe(384);
-    // (r17: both ends of the top are arrivals, the door (3,200) and the climb's lip (2,624): its walk keeps 320 px
-    // from the door and 160 from the lip.)
-    const r = (j as { radius?: number } | undefined)?.radius ?? 0;
-    expect((j?.x ?? 0) - r - 2624).toBeGreaterThanOrEqual(160);
-    expect(3200 - ((j?.x ?? 0) + r)).toBeGreaterThanOrEqual(320);
+    // (r17: both ends of the top are arrivals, the door (3,200) and the climb's lip (2,560). r18: it sleeps at its spot,
+    // 300+ px from the door and 270+ from the lip, until she is down near it (canopy-r18.test.ts); awake it walks the
+    // top's middle.)
+    expect((j as { asleep?: boolean } | undefined)?.asleep).toBe(true);
+    expect((j?.x ?? 0) - 2560).toBeGreaterThanOrEqual(270);
+    expect(3136 - (j?.x ?? 0)).toBeGreaterThanOrEqual(300);
   });
 });

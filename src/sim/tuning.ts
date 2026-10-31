@@ -938,6 +938,14 @@ export const defaultTuning = withVariants({
     wakePx: 0,
     wakeFrames: 60,
     /**
+     * A spawn placed `asleep` (the Canopy r18) sleeps again once she has been off its ground for this long: further
+     * than 2 x `wakePx` along it, more than `sleepAgainAbovePx` over its feet or `strikeAbovePx` under them.
+     */
+    sleepAgainFrames: 90,
+    sleepAgainAbovePx: 260,
+    /** One placed `asleep` is harmless this long after its wake ends (it got up under her blade: ft18a). */
+    wakeSafeFrames: 45,
+    /**
      * The wake's last `wakeTurnFrames` it turns to her (the Canopy r11, review r10 #10: it rises first, facing the way
      * it slept, then turns, then hunts); 0 = it faces her as it wakes.
      */
@@ -2011,9 +2019,10 @@ export const defaultTuning = withVariants({
    */
   hatch: {
     presses: 3,
-    // (The Canopy r12, moment 1: 3 s of black first (`marks.stage.open.black` 180), then the close frame: the break
-    // comes after it, every press still counted.)
-    listenFrom: 210,
+    // (The Canopy r12, moment 1: black first (`marks.stage.open.black`), then the close frame: the break comes after
+    // it, every press still counted. r18: the black is 1 s (was 3: every first-timer read "a black screen, didn't
+    // know to press"), her light breathing in it; it listens half a second into the fade-up.)
+    listenFrom: 90,
     /** A press made before it listens breaks it this many frames into the close frame (r17: one jump in the black). */
     pressedAfter: 45,
     autoFrames: 720,
@@ -2156,6 +2165,12 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // staggered by a cut, and after its touch it turns and wanders off, calm, for 2.5 s: one pip a meeting.)
       hurtSafeFrames: 30,
       touchCalmFrames: 150,
+      // (The Canopy r18: one placed `asleep` wakes once she is down on its ground this near, over 50 frames, harmless:
+      // the giant's, between two arrivals, never meets her on her arrival.)
+      wakePx: 200,
+      wakeFrames: 50,
+      // (Getting up it shoulders her out of its body, so she is never inside it when it can hurt.)
+      risePush: 5,
       domeShoulder: 0.58,
       value: 0,
       valueFinisher: 0,

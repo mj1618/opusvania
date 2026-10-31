@@ -150,7 +150,7 @@ test('the default boot is scene 1 (wood-hatch): shut in the cocoon, then running
     g.load();
     const s0 = g.state();
     const x0 = s0.player.x;
-    // Wait out the fade-up (the hatch listens from `tuning.hatch.listenFrom`, 210 since the Canopy r12's black), then
+    // Wait out the fade-up (the hatch listens from `tuning.hatch.listenFrom`, 90 since the Canopy r18's shorter black), then
     // the first press breaks the cocoon (the Canopy r17: one stir and the break; the later presses are her own).
     g.step(215);
     g.input('J1 .3 A1 .3 J1 .3');

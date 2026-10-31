@@ -154,6 +154,7 @@ export function updateShortcuts(
   if (!list) return;
   const p = state.player;
   if (p.faded > 0) return;
+  let pushing = false;
   for (const sc of list) {
     const key = `${scene.id}:${sc.id}`;
     if (state.save.opened.includes(key)) continue;
@@ -166,7 +167,12 @@ export function updateShortcuts(
       const fromWest = p.x + p.w === sc.x;
       const wrong = sc.opens === 'w' ? fromEast : fromWest;
       const bit = fromEast ? ActionBit.left : ActionBit.right;
-      if (wrong && (live & bit) !== 0 && ((prev & bit) === 0 || state.frame % 45 === 0))
+      // (r18, ft17a: run into it with the key already held, the first knock waited for a frame divisible by 45, and
+      // a cut in between reset the run: "pushed into it: nothing at all". The push's own count now.)
+      const push = wrong && (live & bit) !== 0;
+      if (push) pushing = true;
+      const k = state.kit.shutPush;
+      if (push && ((prev & bit) === 0 || k === 0 || k % 45 === 0))
         events.push({
           type: 'shortcutShut',
           id: sc.id,
@@ -187,6 +193,7 @@ export function updateShortcuts(
     state.save.opened.push(key);
     events.push({ type: 'shortcutOpen', id: sc.id, x: sc.x + sc.w / 2, y: sc.y + sc.h / 2 });
   }
+  state.kit.shutPush = pushing ? state.kit.shutPush + 1 : 0;
 }
 
 /** One thing of the room to note as seen if it is in view of her (`map.seeX` x `map.seeY` from her centre). */

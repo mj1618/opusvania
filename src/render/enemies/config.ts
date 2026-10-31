@@ -264,6 +264,12 @@ export const BURR = {
    * one by one and it keeps its head in a little (`wary`).
    */
   ram: {
+    /**
+     * Its window, lit (the Canopy r18): spent (not braced), a warm pale glow over its soft belly and seams, `low` px
+     * under its middle, `r` px, strength `k` + `kBreath` with its pant; the instant it lays open a flash `flashR` px at
+     * `flashK`. (Red = braced, shut; pale gold = open: cut now.)
+     */
+    open: { color: 0xffd27a, r: 58, low: 4, k: 0.6, kBreath: 0.35, flashR: 96, flashK: 1 },
     light: 0xff3c26,
     pitch: 0.42,
     /** The wedge stands taller by this share of its height (stretched up off the ground, rear highest). */

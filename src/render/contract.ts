@@ -148,6 +148,11 @@ export interface SimView {
   readonly boss: Readonly<BossState> | null;
   /** Lanternroot's light pieces (moss, bells, the gust: `LightView`); absent in other rooms. Read only. */
   readonly light?: LightView;
+  /**
+   * The keys held in the latest sim step (`ActionBit` mask, the sim's `prevInput` after it): what render may show a
+   * press or a held direction would do now (the Canopy r18: the fling's way, before the press). Absent: none held.
+   */
+  readonly input?: number;
 }
 
 /** Services every renderer gets at construction. */

@@ -886,7 +886,17 @@ class Wood extends RoomBuilder {
     facing: 1 | -1,
     more: Json = {},
   ): this {
-    return this.enemy({ id, kind, x, y, facing, senses: 'always', ...more });
+    // (r18: a lampwing's first tell is 1.6 x (0.96 s): ft17d jumped at one and was hit inside the 0.6 s one.)
+    return this.enemy({
+      id,
+      kind,
+      x,
+      y,
+      facing,
+      senses: 'always',
+      ...(kind === 'lampwing' ? { firstTell: 1.6 } : {}),
+      ...more,
+    });
   }
 
   /** A dangler tied under the roof near `under` (the lowest underside over x within 320 px above it: a bitten roof). */
@@ -1137,10 +1147,11 @@ function hatch(): Json {
       tatter: { ...(marks.tatter as Json), tryOn: 'cn-hatched' },
       stage: {
         ...((marks.stage as Json | undefined) ?? {}),
-        // (r12, moment 1, render's: 3 s of black, the cocoon close and a widen a press, the title over the moon as the
-        // river's tail crosses it, the tail gone from the sky 8 s after the break.)
+        // (r12, moment 1, render's: black, the cocoon close and a widen a press, the title over the moon as the
+        // river's tail crosses it, the tail gone from the sky 8 s after the break. r18: 1 s of black, not 3, with her
+        // light breathing in it where the cocoon will be: four first-timers in four took the black for a hang.)
         open: {
-          black: 180,
+          black: 60,
           zooms: [1.5, 1.25, 1],
           title: 'LAMPFALL',
           titleAfter: 150,
@@ -1499,7 +1510,10 @@ function trunk(): Json {
   // see it"; moved to the west end, ft17d topped out of the climb onto it. Both ends of the top are arrivals and the
   // room's spawn wants 300 px clear (`ENEMY_SPAWN_CLEAR`): it keeps r16's spot on a shorter walk (2,796-2,876), its
   // back to the door, so it turns (its 30-frame tell) before it comes. Not solved: the top is 576 px wide.)
-  r.juvenile('juv-t1', 2836, 384, -1, 40, { fenced: true });
+  // (r18: solved by its wake: it sleeps curled at its spot (`asleep`) until she is down on the top within 200 px, wakes
+  // over 50 frames harmless, then tells and comes. Arriving at either end (300 / 276 px off) is never a hit.)
+  // Awake it walks the top's middle (2,616-3,056); she gone from the top 1.5 s, it sleeps again where it stands.
+  r.juvenile('juv-t1', 2836, 384, -1, 220, { fenced: true, asleep: true });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);
