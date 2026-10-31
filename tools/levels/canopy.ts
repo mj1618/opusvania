@@ -1224,6 +1224,9 @@ function hub(): Json {
   // a place, 768 x 448).
   r.hole(192, 832, 960, 1280);
   r.bark('high-wall', 960, 1088, 64, 192);
+  // (r17, ft16c / ft17d dropped into the chamber from the limbs' vent and read it as a closed pocket: its way out is
+  // this wall. It reads as rot from both sides now, as the giant's does.)
+  r.landmark('high-wall', 'teach', 992, 1184);
   // (The chamber's west end steps down into a covered vent under the upper limbs' floor: review r5 #10, a hidden
   // route.)
   r.hole(0, 1280, 256, 1472);
@@ -1492,9 +1495,11 @@ function trunk(): Json {
   // (r12, first-timer r11: "that bug pops up right where I land": on the hall's 320 px of floor east of the bed both
   // ends are landings (the drop from the top, the knuckles back east). It walks the top's floor now, seen from the
   // door (260 px off: its 30-frame tell plays before it can reach her), clear of the shaft's lip.)
-  // (r17, ft16a / ft16c: at 2,830 it hit them as they came through the door, "before I could see it". It walks the
-  // top's west end now, by the drop, 440 px from the door and facing it: she sees it come before it reaches her.)
-  r.juvenile('juv-t1', 2720, 384, 1, 44, { fenced: true });
+  // (r17, ft16a / ft16c: at 2,830 walking 2,760-2,900 it hit them as they came through the door, "before I could
+  // see it"; moved to the west end, ft17d topped out of the climb onto it. Both ends of the top are arrivals and the
+  // room's spawn wants 300 px clear (`ENEMY_SPAWN_CLEAR`): it keeps r16's spot on a shorter walk (2,796-2,876), its
+  // back to the door, so it turns (its 30-frame tell) before it comes. Not solved: the top is 576 px wide.)
+  r.juvenile('juv-t1', 2836, 384, -1, 40, { fenced: true });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);

@@ -1304,6 +1304,12 @@
       ],
       "landmarks": [
         {
+          "id": "high-wall",
+          "kind": "teach",
+          "x": 992,
+          "y": 1184
+        },
+        {
           "id": "seed-door",
           "kind": "goal",
           "x": 5440,
@@ -2118,10 +2124,10 @@
       {
         "id": "juv-t1",
         "kind": "juvenileBurrback",
-        "x": 2720,
+        "x": 2836,
         "y": 384,
-        "facing": 1,
-        "radius": 44,
+        "facing": -1,
+        "radius": 40,
         "senses": "always",
         "fenced": true
       },
