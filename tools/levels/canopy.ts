@@ -1403,15 +1403,17 @@ const TRUNK_BED: [number, number] = [1664, 2304];
 const TRUNK_WICK: [number, number] = [1184, 800];
 
 function trunk(): Json {
-  const r = new Wood('cn-trunk', 'The fallen giant', [2900, 384], 7202, { back: true, mood: 'deep' });
+  const r = new Wood('cn-trunk', 'The fallen giant', [3136, 384], 7202, { back: true, mood: 'deep' });
   r.cave(2560, 128, 3200, 384, { ceil: 64, w: 0, e: 0, corner: 0 });
   // Tier 1: the hall inside the giant (its roof bitten).
   r.cave(1536, 192, 2624, 704, { ceil: 128, w: 0, e: 0 });
   // The hall's west end: a low corridor shut by rotten heartwood (the wall that teaches breaking), and behind it a
   // chamber over the drop, the seed in an alcove up in its roof over a root burl (the wall pays at once: the seed
   // is behind it, not before it; orchestrator r4).
-  r.hole(1472, 512, 1536, 704);
-  r.bark('giant-wall', 1472, 512, 64, 192);
+  // (r12, first-timer r11: "a full jump bonks the trunk": the root hanging over the wall came down to 512, 16 px over
+  // a jump onto the burl west of it; only a short hop got through. The wall is 320 tall now, its top at 384.)
+  r.hole(1472, 384, 1536, 704);
+  r.bark('giant-wall', 1472, 384, 64, 320);
   r.cave(1088, 320, 1472, 704, { ceil: 0, w: 0, e: 0, corner: 64 });
   r.hole(1152, 160, 1344, 320);
   // The drop to tier 2; tier 2 under a low roof.
@@ -1438,7 +1440,10 @@ function trunk(): Json {
   // A root column carries the shaft's east face down to 192 over tier 3's floor: with the claws she climbs back up
   // (v3's shaft started 448 over the floor: tier 3 was a pocket the bots wandered for minutes).
   r.mass(640, 1216, 64, 256);
-  r.juvenile('juv-t1', 2496, 704, -1, 96, { fenced: true });
+  // (r12, first-timer r11: "that bug pops up right where I land": on the hall's 320 px of floor east of the bed both
+  // ends are landings (the drop from the top, the knuckles back east). It walks the top's floor now, seen from the
+  // door (260 px off: its 30-frame tell plays before it can reach her), clear of the shaft's lip.)
+  r.juvenile('juv-t1', 2830, 384, -1, 70, { fenced: true });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);
@@ -1682,6 +1687,9 @@ function well(): Json {
   return r.finish();
 }
 
+/** The limbs' gap (r12): a root knuckle west of the second limb ([x, top, w]). */
+const LIMB_KNUCKLE: [number, number, number] = [1376, 720, 96];
+
 function limbs(): Json {
   const r = new Wood('cn-limbs', 'The upper limbs', [200, 768], 7204, { back: true, art: { anchorY: 800 } });
   r.cave(384, 256, 2880, 1280, { ceil: 128, w: 0, e: 0, skip: [[1344, 2944]] });
@@ -1712,7 +1720,14 @@ function limbs(): Json {
   // The high line (review r6 #4): two lamps over the bed, the first a jump off the first limb's end, the second a
   // jump off the second limb; flung up from it she is in the niche over the second limb (three glints: the claws
   // reach it too, up the tall trunk's face and along the roof).
-  r.lamp('wick-limb-1', 1240, 600);
+  // (r12, first-timer r11: four deaths here, 5-7 thorn hits a bot; "when I grab it and press V I don't go far enough
+  // right". The gap was past any jump (384 across, ~200 up), and the fling only crossed aimed up-right. Now: a root
+  // knuckle under the second limb's west end (48 up, 288 across: a running jump), up from it onto the limb; and the
+  // lamp let go with no direction held flings up-right onto the limb, as the hatch's first lamp does. Held right it
+  // lands on the knuckle.)
+  // (A root mass, not a one-way: the route's spread counts one-ways, and the limbs sit in its quiet stretch.)
+  r.mass(LIMB_KNUCKLE[0], LIMB_KNUCKLE[1], LIMB_KNUCKLE[2], 48);
+  r.lamp('wick-limb-1', 1240, 600, { aim: [1, -1] });
   r.lamp('wick-limb-2', 1640, 450);
   r.hoard('niche-', 1920, 220, 240, 40, 2);
   r.cover('niche-cover', 1664, 64, 640, 320);

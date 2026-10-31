@@ -433,6 +433,15 @@ const CLAIMS: Claim[] = [
     reach: ['out', 'place:roof'],
     not: ['tunnel'],
   },
+  // (r12, the ending's fallback: the roof gave, the rubble's slope reaches the roof's shaft with no claws: from the
+  // balcony, a drop and the slope, out onto the clifftop. The east wall's climb was untaught, first-timer r11.)
+  {
+    room: 'cn-den',
+    from: [300, 320],
+    kit: [],
+    flags: ['cn-den-down', 'cn-den-freed', 'cn-den-collapse'],
+    reach: ['out', 'place:roof'],
+  },
   {
     room: 'cn-out',
     from: [300, 1344],
