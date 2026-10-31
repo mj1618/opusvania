@@ -443,7 +443,10 @@ export class Kit {
         // (Moonlit once the roof's shaft is open: canopy review r12 #3, "a moonlit rubble face".)
         const roof = (S.gates ?? []).findIndex((q) => q.id.endsWith('roof'));
         heapLit = roof >= 0 && (sim.kit.gates[roof] ?? 0) > 0;
-        heap.push({ x: g.x, y: g.y, w: g.w, h: g.h, fall, id: g.id });
+        // (The Canopy r14: a thin rubble gate is a slab of the roof come down, wedged as a ledge on the way out; only
+        // the ones on the floor are the heap.)
+        if (g.h <= 96) this.fallenSlab(back, g.x, g.y, g.w, g.h, fall, heapLit, g.id);
+        else heap.push({ x: g.x, y: g.y, w: g.w, h: g.h, fall, id: g.id });
       } else if (g.h >= g.w && wood) this.rootGate(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (g.h >= g.w) this.curtain(back, glow, g.x, g.y, g.w, g.h, clock, fall, g.id);
       else if (wood) this.rootMat(back, glow, g.x + kx, g.y, g.w, g.h, clock, 1 - fall, g.id);
@@ -1127,6 +1130,80 @@ export class Kit {
    * posts either side and a lintel root over it, moonlight seeping through the weave from beyond. Opening, the roots
    * draw up into the lintel and the light pours out.
    */
+  /**
+   * A slab of the roof come down in the collapse (the Canopy r14, a thin `rubble-*` gate): a chunk of earth and roots
+   * wedged where it fell, its top the walked lip (dusty, moonlit once the roof is open), its underside ragged with
+   * roots hanging and clods dropping off its ends. It drops in from above as it shuts (`fall` 1 -> 0).
+   */
+  private fallenSlab(
+    g: Graphics,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    fall: number,
+    lit: boolean,
+    id: string,
+  ): void {
+    const a = 1 - fall;
+    if (a <= 0.01) return;
+    const h1 = (k: number): number => hash01(id, k);
+    const dy = -fall * fall * 320;
+    const top = y + dy;
+    const tilt = (h1(1) - 0.5) * 10;
+    // (A deep sag drew bowls on stalks: a chunk only a little deeper than its gate, its underside broken, not round.)
+    const deep = h + 8 + 14 * h1(2);
+    // The body: a ragged chunk, its top on the walk, its underside torn.
+    const pts: number[] = [];
+    const n = Math.max(5, Math.round(w / 22));
+    for (let q = 0; q <= n; q++) {
+      const u = q / n;
+      pts.push(x - 6 + (w + 12) * u, top + 1 + tilt * (u - 0.5) + (h1(10 + q) - 0.5) * 4);
+    }
+    for (let q = n; q >= 0; q--) {
+      const u = q / n;
+      const sag = Math.min(1, Math.sin(Math.PI * u) * 3) * deep;
+      pts.push(x + w * u + (h1(40 + q) - 0.5) * 12, top + 8 + sag * (0.55 + 0.6 * h1(60 + q)));
+    }
+    g.poly(pts).fill({ color: 0x0c0907, alpha: a });
+    // Strata of the old roof in it, and clods in its outer band.
+    for (let k = 0; k < 3; k++) {
+      const yy = top + 14 + k * (deep * 0.22);
+      g.moveTo(x + w * 0.12, yy + (h1(80 + k) - 0.5) * 6)
+        .lineTo(x + w * 0.88, yy + (h1(90 + k) - 0.5) * 6 + tilt * 0.3)
+        .stroke({ color: 0x1e1610, width: 3, alpha: 0.8 * a });
+    }
+    for (let k = 0; k < Math.round(w / 30); k++) {
+      const u = h1(100 + k);
+      const r = 6 + 6 * h1(110 + k);
+      g.ellipse(x + w * u, top + 8 + r * 0.6, r, r * 0.6).fill({
+        color: mix(0x16110c, 0x2a2018, h1(120 + k)),
+        alpha: a,
+      });
+    }
+    // Torn rootlets out of its underside (short and many: one long root under the middle read as a table's stalk).
+    for (let k = 0; k < 5; k++) {
+      const rx = x + w * (0.08 + 0.84 * h1(130 + k));
+      const ry = top + deep * (0.5 + 0.3 * h1(140 + k));
+      const len = 10 + 22 * h1(150 + k);
+      g.moveTo(rx, ry)
+        .quadraticCurveTo(
+          rx + (h1(160 + k) - 0.5) * 30,
+          ry + len * 0.6,
+          rx + (h1(170 + k) - 0.5) * 20,
+          ry + len,
+        )
+        .stroke({ color: 0x1a120c, width: 4 - 2 * h1(180 + k), cap: 'round', alpha: a });
+    }
+    // The walked lip: dust along it, moonlit once the roof is open.
+    const lip: number[] = [];
+    for (let q = 0; q <= n; q++)
+      lip.push(x - 4 + (w + 8) * (q / n), top + tilt * (q / n - 0.5) - 1 + (h1(200 + q) - 0.5) * 3);
+    for (let q = n; q >= 0; q--)
+      lip.push(x - 4 + (w + 8) * (q / n), top + tilt * (q / n - 0.5) + 6 + 2 * h1(220 + q));
+    g.poly(lip).fill({ color: lit ? 0xb4c6e0 : 0x6a5c4c, alpha: (lit ? 0.75 : 0.55) * a });
+  }
+
   /**
    * The taproot's top half (the Canopy r14, `rubble-root`): left hanging from the roof once the collapse snapped it, a
    * twisted bundle of strands thinning down to a splintered break, the splinters pale where they tore.

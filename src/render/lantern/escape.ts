@@ -54,6 +54,12 @@ export const ESCAPE = {
   cloud: { n: 70, speed: 420, size: [8, 12] as const, color: 0xe8eeff, behind: 120 },
   /** The goal's glow at the path's end (px, alpha). */
   goal: { r: 420, a: 0.22, color: 0xcfe0ff },
+  /**
+   * The den goes dark behind the play plane as the roof comes in (moments.md: "the cloud as the only light"): a dark
+   * over the back, to `dark` alpha over `darkSecs`, so the moonlight, the cloud and the rims read.
+   */
+  dark: 0.5,
+  darkSecs: 6,
 };
 
 interface Grain {
@@ -101,6 +107,8 @@ export class EscapeStage {
   private readonly glow = new GlowPool('escape-glow');
   private readonly glowBack = new GlowPool('escape-glow-back');
   private readonly root = new Container({ label: 'escape' });
+  private readonly shade = new Graphics({ label: 'escape-dark' });
+  private shadeK = 0;
   private readonly grains: Grain[] = [];
   private readonly heaps: Array<{ x: number; y: number; w: number; seed: number }> = [];
   private dustAcc = 0;
@@ -128,6 +136,7 @@ export class EscapeStage {
       L += Math.hypot(b[0] - a[0], b[1] - a[1]);
       this.pathLen.push(L);
     }
+    ctx.layers.get('airBack').addChild(this.shade);
     ctx.layers.get('goal').addChild(this.glowBack.container, this.back);
     this.root.addChild(this.front, this.glow.container);
     ctx.layers.air.addChild(this.root);
@@ -238,6 +247,14 @@ export class EscapeStage {
       y0: cam.y - cam.h / 2 / cam.zoom - 100,
       y1: cam.y + cam.h / 2 / cam.zoom + 100,
     };
+    // The dark over the back while it runs.
+    const want = running ? Math.min(1, (s?.t ?? 0) / 60 / ESCAPE.darkSecs) : 0;
+    this.shadeK += (want - this.shadeK) * Math.min(1, dt * 2);
+    this.shade.clear();
+    if (this.shadeK > 0.003)
+      this.shade
+        .rect(view.x0 - 400, view.y0 - 400, view.x1 - view.x0 + 800, view.y1 - view.y0 + 800)
+        .fill({ color: 0x040306, alpha: ESCAPE.dark * this.shadeK });
     // Heaps a rock left (for good while she is in the room).
     for (const h of this.heaps) this.heap(b, h.x, h.y, h.w * ESCAPE.land.heap, h.seed);
     if (s && running) {
@@ -416,9 +433,13 @@ export class EscapeStage {
       b.poly([cx - w / 2, yTop, cx + w / 2, yTop, cx + w * 0.62 + sway, top, cx - w * 0.62 + sway, top]).fill(
         {
           color: C.edge,
-          alpha: 0.32,
+          alpha: 0.55,
         },
       );
+      // Its edge catches the moonlight from above.
+      b.moveTo(cx - w / 2, yTop)
+        .lineTo(cx - w * 0.62 + sway, top)
+        .stroke({ color: C.lit, width: 2, alpha: 0.35 });
       // Streaks falling in it.
       for (let k = 0; k < 10; k++) {
         const ph = (clock * (0.9 + 0.5 * hash01('cs', c * 17 + k)) + hash01('cso', c * 13 + k)) % 1;

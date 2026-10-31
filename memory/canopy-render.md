@@ -600,3 +600,70 @@ gap's path so the chase advances, `deathrec.js`).
   rear shows the pale belly plate as a white slab; the tunnel's stream is at the frame's top edge in the default
   framing (its mark lies in the roof); the kin's open wings are grey on the moon's pale disc (little contrast); the
   vista glide's moths include thin dark dashes (edge-on moths in `goal`).
+
+## Round 14: the payoffs and the misreads, the escape (review r13 #1, #2, #4, #6, #7, #8, #9, #10)
+Clips `clips/r14-release-{960x540,960x600,1260x540}.mp4`, `r14-sweep.mp4`, `r14-slam.mp4`, `r14-escape.mp4`,
+`r14-duet.mp4`, `r14-trap.mp4`; sheets in `shots/canopy-r14-render/`. Scratch tools `.scratch/r14-render/` (probe /
+rec as r13 on `PORT` 5212; `until.js` `__until(pred)` / `__k()` / `__ks()` (the state's enemy: `enemies().list` has no
+`wave`), `setup3.js` (P3 after the intro), `kill.js`, `cut.js` `__cut()`, `collapse.js`, `walk.js` `__walk(k, n)` (her
+along `scene.escape.path`), `relprobe.sh`, `escprobe.sh`, `den2.sh`, `trap.sh`, `recall.sh` (every clip)). A detached
+worktree at the round's base on 5216 (`scratchpad/r14-before`) gave the before shots.
+- **The column** (keeper.ts `KEEPER.column` / `anchor` / `after`): the great release rises STRAIGHT UP off the fallen
+  cage: >= 220 moths whatever the count (a floor; 1.8x the count up to 300), launched over 2.8 s, 250 px wide narrowing
+  to 110 at the roof, a slow helix, out through a hole that opens in the roof over the cage's old anchor (the roots
+  that held the chain part: `anchorX` = the lure's x, `roofY` = the underside over it). Moonlight falls straight down
+  the hole onto the column and the floor (`drawAnchor`), for good after (`cn-den-freed`). The roof gate's beam in the
+  east stays as the escape's goal. Gotchas: even additive bands made a lit tube with the moths lost in it (white on
+  white): the bands fade down their length (12 segments), alpha ~0.07, and the moths in it are only 0.35 silvered (they
+  stay the brightest things); a pale scalloped disc for the hole read as a lamp or a cloud: dark night blue with a
+  small pale core. A partial release (`cageRelease`) rises the same way, thinner, and spreads under the roof.
+- **After the kill** the cage's light swells back and pulses slowly (`after`), the low cloud lifts to head height and
+  circles tighter (`drawLow`); `won` = stage `end` / `down` or `cn-den-down` (the sim's stage is `end` after the kill).
+- **The line waits** (hud/line-logic.ts `LineTimer.hold`, item-line.ts): the great cage's `lureSnuff` holds lines for
+  `RELEASE.greatClear` 7.4 s (a hold counts as a fight: a waiting line waits, one up is cut), and no line while
+  `kit.escape.on === 1`. The camera's great pull-out holds 5.6 s (`PREMISE_CAM.great.hold`).
+- **The Keeper's tells** (enemies/keeper-tells.ts, pure: `sweepRead`, `keeperAngry`, `keeperGated`; read loosely so the
+  r13 `moth === 4` tell still works): the sweep's tell rears it (the rig's `rearK` takes it too, so its lights go red and
+  `rearUp` lifts it about its hind end; `BOSS.sweep.rear` 0.62) and keeper.ts draws two mantis claws off its front
+  (`KEEPER.sweep`: dark limbs bowed back, a serrated sickle, an amber rim brightening through the tell; the strike swings
+  them down onto the floor), a lit arc of three rake marks on the floor over the claws' span (`boss.tellX0/1`, else the
+  cage +- `sweepHitPx`) and dust lifting in it. The slam's wave (`drawWaveCrack`): a dark split with a lit line behind
+  each front, light leaking up from it every third segment, a hot glow at the front, dust thrown up, the floor's rim
+  flashing 0.2 s across the arena (also on `keeperRage slam`, which has no wave). P1's rage: `rig.angry` keeps every eye
+  and flank light at the ram's red from `boss.angry` on. The gate (`keeperGlance gate`): `rig.shrug()` (plates heave,
+  burrs on end), a pale flare over the whole dome, sparks scraped along the floor; while `boss.gated` a slow pale sheen
+  breathes on the dome.
+- **The Keeper's underside** (review r13 #8, "a white slab"): `BOSS.look.belly/bellyLow` mid-tone (0x6a5444), six dark
+  seams, three wings stuck in it (`BOSS.belly`), and `seamOpen` a dull ember: the burrback's pale open seams were the
+  white bands across its dome and under its front in every pose.
+- **The escape** (lantern/escape.ts `EscapeStage`, from `scene.escape` and `kit.escape`): each rock's tell (a crack
+  spreading in the roof, a clod shaking loose, a thick grit trickle lit down its line, its shadow darkening where it
+  will hit), its fall (a clod with roots and a dust trail at `rockY`), its land (a burst, a little heap kept); the
+  collapse front at `kit.escape.front`: an opaque near-black body with a churning lit lip, lumps and roots tumbling,
+  clods thrown up, a dust bank, and curtains of earth pouring off the roof into it BEHIND her (in `goal`: over her they
+  hid her); roof grit over the view building over 16 s; the freed cloud streaming along `escape.path` ahead of her; a
+  cool goal glow at the path's end; the back goes dark (`ESCAPE.dark` 0.5 over 6 s, a rect in `airBack`) so the
+  moonbeams, the cloud and the rims are what reads. The shake: `CameraShake.floor(escapeRumble(...))` (camera/shake.ts, budget
+  `rumble` 0.16 -> 0.34 over 18 s) under `escapeStart` / `rockfall` / `escapeHit` blows. Rubble (kit.ts): a thin
+  `rubble-*` gate (h <= 96) is a fallen roof slab (`fallenSlab`: a ragged chunk only a little deeper than its gate,
+  strata, short torn rootlets, a walked lip; a deep sag with one long root under it drew bowls on stalks);
+  `rubble-root` the taproot's broken top half (`brokenRoot`); only the tall ones make the heap, whose east side now
+  slumps (a vertical edge read as a box). The level kept changing the den through the round: check `cn-den`'s gates.
+- **Camera zones** (camera/zones.ts): `after` was never read by the render camera (the crown's zone was always on, so
+  `kinSit` changed nothing); now it is, `lean {x, y, k}` shifts the view's centre `k` of the way to the point (then the
+  bounds), and a zone's `frames` also slows its zoom (`zoneZoomFrames`: the crown's 2 s push-in to 1.3).
+- **The duet** (tatter.ts `TATTER.sit`, tatter-wing.ts `rimK`): open 6 s (fully ~4.4), the good wing 2.3x its span, the
+  torn one 1.45x and raised to -0.6 (at -0.15 it lay along its back unseen); open, the wings take a darker grade
+  (`WING_GRADE`: the ash lift x0.2, value x0.75) so they read dark against the disc, with a silver fringe; the lean
+  after 9.4 s.
+- **The larder** (den-larder.ts): two cells at 1.6x (190-240 half width, 5-8 wrapped moths), old cages 230-300 px; the
+  floor (keeper.ts `litter`): a heap of three old cages 150-230 px by the arena's west end, a deeper drift of bigger
+  wings under the cage. **The trap** (trap-stream.ts): a caught moth is 13 px, moonlit pale until the lamp's warmth
+  takes it, a pale trail, the lamp's pull a warm thread to it (only within 320 px: long, it read as a laser), the cage's light gulping as each
+  arrives. The cage's own
+  cloud stays dark cut-outs on the halo (moths.ts, the porch-light read).
+- Console: no errors; the 15 `[BindGroup] textureSource destroyed while still bound` warnings per room change are the
+  same at the round's base (pre-existing teardown, not this round's).
+- Weak still: the collapse front's dust bank reads as a horizontal fog band more than earth thrown up; the escape clip
+  is teleport-driven (her climb is not played); the kin is still small at the 960 px clip size even at 1.3; the
+  column's moths sparkle more than they flutter at play zoom; the trap stream's framing is the level's (`look`).

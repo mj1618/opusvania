@@ -209,7 +209,15 @@ export class TrapStream {
       // The pull: a warm thread from the lamp to it, strongest as it leaves the stream.
       f.moveTo(x, y)
         .lineTo(l.x, l.y)
-        .stroke({ color: S.warm, width: 1.5, alpha: 0.28 * Math.sin(Math.PI * Math.min(1, u * 1.4)) });
+        .stroke({
+          color: S.warm,
+          width: 1.5,
+          // (Long, it read as a laser line across the frame: only near the lamp.)
+          alpha:
+            0.28 *
+            Math.sin(Math.PI * Math.min(1, u * 1.4)) *
+            Math.max(0, 1 - Math.hypot(x - l.x, y - l.y) / 320),
+        });
       // A pale trail behind it along its swerve.
       for (let q = 1; q <= S.trail; q++) {
         const uq = Math.max(0, u - q * 0.035);
