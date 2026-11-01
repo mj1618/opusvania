@@ -69,9 +69,9 @@ export const BOMB = {
   spin: 15,
   fadeFrames: 28,
   /** Droplet look. */
-  dropR: 6.5,
-  dropGlowR: 20,
-  trail: 7,
+  dropR: 8.5,
+  dropGlowR: 30,
+  trail: 10,
   steamEvery: 0.035,
 };
 
@@ -838,7 +838,7 @@ export class BombFx {
       y,
       BOMB.dropGlowR * (bat ? 1.4 : 1),
       glow,
-      bat ? 0.75 : 0.55,
+      bat ? 0.85 : 0.8,
       BOMB.dropGlowR * (bat ? 1.4 : 1),
       0,
       18,
