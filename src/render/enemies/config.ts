@@ -847,3 +847,19 @@ export const DEN_READ = {
   back: [1.0, 0.74, 0.48] as [number, number, number],
   backA: 0.34,
 };
+
+/**
+ * The juvenile burrback (the first creature she meets, cn-hatch) on the burrback's rig, drawn at `BEETLE_SCALE` 0.85
+ * (kinds.ts; was 0.72): the young of the same beetle, a little paler (readability pass 2, memory/enemies-render.md).
+ * Its shell mixes this far toward `shellTo`, the zone's rim light toward white, its crest brightens and widens, its
+ * flank lights glow brighter. The silhouette, burrs, lights and acting stay the burrback's.
+ */
+export const YOUNG = {
+  shell: 0.3,
+  shellTo: 0x6e5068,
+  edge: 0.45,
+  crest: 1.15,
+  crestW: 1.35,
+  spots: 1.45,
+  spotGlow: 1.5,
+};

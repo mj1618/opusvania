@@ -457,6 +457,17 @@ end (legs more), else the box grows.
   creature: she is level across the gap), `ahead` (in front of a walker), `hold` (she is put back every frame).
   Lineups (`lineup-rest.png`, `lineup-tell.png`) are built from every kind dir in the out dir. Current:
   `shots/bestiary/{before,after}/`, `shots/bestiary/before-after-{rest,tell}.png`.
-- Still weak: the jumper's body is a muddy mid brown in the amber rooms (it reads by size, eyes and fringe, not by
-  value); the ants are still small beside her (~52 px) and the galleries crowd them against the jumper; the juvenile
-  burrback (the dark blob with violet eye dots in the galleries, often mistaken for the jumper) was not touched.
+- **Pass 2 (same day; sheets `shots/bestiary/after2/`, `shots/bestiary/before-after2-{rest,tell}.png`):**
+  - Jumper: **velvet near-black** (body 0x231d26, low 0x0b090d; head / abdomen shades rim 0.35-0.4, form 0.12 so the
+    key does not lift it to brown) with **white Phidippus marks** (basal band, a big central spot, a pair of side spots
+    set down the flank, smaller toward the spinnerets; marks at 0.95), a pale grey fringe (0xa89c8a), brighter
+    iridescent fangs (0x1fc9a0). Legs jointed, not tubes (`JUMP.leg`): widths hip 1 / mid-femur 1.2 / knee 0.82 /
+    mid-tibia 0.52 / tip 0.2 x `legs.w`, a dark knee joint (`color.joint`), white rings just past the knee and at the
+    tarsus, 3 stiff hairs a segment swept toward the tip. Seen in amber (galleries, trunk), khaki (cellar), blue (hub)
+    and teal (well) via the bestiary's `as` staging (a burrback re-kinded in the page: `jumperBlue`, `jumperTeal`).
+  - Juvenile burrback: `BEETLE_SCALE` 0.72 -> **0.85**, and `YOUNG` (config.ts) through `youngColors(on)`
+    (burrback.ts, like `bossColors`): shell 30% toward 0x6e5068, the zone rim 45% toward white, crest x1.15 and 1.35x
+    wider, flank lights x1.45 and their halo x1.5. Same silhouette and acting: the young of the same beetle.
+  - Fixed on the way: a faded flung body `continue`d past `bossColors(false)` (the Keeper's colours could leak).
+- Still weak: the ants are still small beside her (~52 px) and the galleries crowd them against the jumper; the
+  juvenile still sinks half into the hatch's moss bumps at play zoom.

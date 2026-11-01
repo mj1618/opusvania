@@ -50,6 +50,11 @@ interface Entry {
   flags?: string[];
   /** A wall creature: she is put this far across the gap it faces, level with its box centre (`off` is ignored). */
   across?: number;
+  /**
+   * Staging only: the creature `id` is turned into this kind in the page (its live record, through a wrapped
+   * `__enemies.update`; box resized about its feet), to see a kind in a room grade it is not placed in.
+   */
+  as?: { kind: string; w: number; h: number };
   /** Frames into a tell before it is taken (default 14): late in the tell, its deepest pose. */
   tellAt?: number;
   /** She stands this far ahead of it the way it faces (a walker coming at her; `off` is ignored). */
@@ -65,6 +70,21 @@ const ENTRIES: Record<string, Entry> = {
   bombardier: { room: 'cn-hub', id: 'bomb-bank', off: [-330, 0], frames: 320 },
   jumper: { room: 'cn-galleries', id: 'jump-g1', off: [-260, 0] },
   jumperTrunk: { room: 'cn-trunk', id: 'jump-t3', off: [260, 0], tellAt: 21 },
+  jumperCellar: { room: 'cn-cellar', id: 'jump-c', off: [-260, 0], tellAt: 21 },
+  jumperBlue: {
+    room: 'cn-hub',
+    id: 'burr-floor',
+    off: [-260, 0],
+    tellAt: 21,
+    as: { kind: 'jumper', w: 58, h: 42 },
+  },
+  jumperTeal: {
+    room: 'cn-well',
+    id: 'burr-gallery',
+    off: [-260, 0],
+    tellAt: 21,
+    as: { kind: 'jumper', w: 58, h: 42 },
+  },
   huntsman: { room: 'cn-elder', id: 'hunt-elder-1', off: [0, 0], across: 230, hold: true, frames: 360 },
   huntsmanWell: { room: 'cn-well', id: 'hunt-chimney', off: [0, 0], across: 200, hold: true, frames: 360 },
   lampwing: { room: 'cn-grove', id: 'wing-a', off: [-150, 260], zoom: 2.2 },
@@ -124,7 +144,7 @@ async function main(): Promise<void> {
   try {
     for (const kind of kinds) {
       const E = ENTRIES[kind];
-      const simKind = kind.replace(/(Well|Trunk)$/, '');
+      const simKind = kind.replace(/(Well|Trunk|Cellar|Blue|Teal)$/, '');
       if (!E) throw new Error(`no entry for ${kind}`);
       const page = await openGame(
         browser,
@@ -143,8 +163,32 @@ async function main(): Promise<void> {
           for (const f of E.flags ?? []) g.flag(f);
           g.step(2);
           const list = g.enemies().list as any[];
-          const e = list.find((q) => (E.id ? q.id === E.id : q.kind === kind && !q.gone));
+          let e = list.find((q) => (E.id ? q.id === E.id : q.kind === kind && !q.gone));
           if (!e) return null;
+          if (E.as) {
+            // (The renderer's update gets the live sim view: its `enemies` are the state's records.)
+            const en = (window as any).__enemies;
+            const orig = en.update.bind(en);
+            const as = E.as;
+            en.update = (...args: any[]) => {
+              const rec = (args[3]?.enemies as any[] | undefined)?.find((q) => q.id === E.id);
+              if (rec && rec.kind !== as.kind) {
+                const feet = rec.y + rec.h;
+                const cx = rec.x + rec.w / 2;
+                rec.kind = as.kind;
+                rec.w = as.w;
+                rec.h = as.h;
+                rec.x = Math.round(cx - as.w / 2);
+                rec.y = feet - as.h;
+                rec.mode = 'sit';
+                rec.modeFrames = 0;
+              }
+              return orig(...args);
+            };
+            g.render();
+            g.step(1);
+            e = (g.enemies().list as any[]).find((q) => q.id === E.id);
+          }
           (window as any).__bx = e.id;
           const at = E.across
             ? [e.box.x + e.box.w / 2 + e.facing * E.across, e.box.y + e.box.h / 2 + 40]

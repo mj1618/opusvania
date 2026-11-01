@@ -36,7 +36,8 @@ export interface LookKey {
 /** The beetle rig's scale per kind in a painted room (the old burrback is 256 x 154 against the burrback's 52 x 34). */
 export const BEETLE_SCALE: Partial<Record<EnemyKind, number>> = {
   burrback: 1,
-  juvenileBurrback: 0.72,
+  // (0.85 since readability pass 2, was 0.72: the first creature she meets was a small dark blob. Its colours: YOUNG.)
+  juvenileBurrback: 0.85,
   oldBurrback: 4.4,
 };
 

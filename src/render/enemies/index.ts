@@ -31,6 +31,7 @@ import {
   loadColors,
   stepFeelers,
   topHit,
+  youngColors,
 } from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
 import { DragonArt } from './dragonfly';
@@ -1382,11 +1383,17 @@ export class EnemyRenderer {
         if (rig.big) bossColors(true);
         // (A flung body fades once it has lain its while.)
         const fade = rig.flung && fl ? fl.alpha : 1;
-        if (fade <= 0.001) continue;
+        if (fade <= 0.001) {
+          if (rig.big) bossColors(false);
+          continue;
+        }
+        const young = e.kind === 'juvenileBurrback';
+        if (young) youngColors(true);
         p.alphaK = pf.alphaK = fade;
         if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
         p.alphaK = pf.alphaK = 1;
         if (rig.big) bossColors(false);
+        if (young) youngColors(false);
       }
       // Its wake: as its eyes open, dust and grit pour off its back and its burrs shiver up.
       if (rig.wakeNew) {

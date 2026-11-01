@@ -27,7 +27,7 @@ import {
   sat,
   smoothstep,
 } from '../character/math';
-import { BOSS, BURR } from './config';
+import { BOSS, BURR, YOUNG } from './config';
 import { bobAt, foot, footAt, LEG_ROW, LEG_SIDE, rockAt } from './gait';
 import type { Painter, RGB, Shade } from './paint';
 
@@ -118,6 +118,34 @@ export function bossColors(on: boolean): void {
     set(C.crest[i]!, L.crest);
     set(C.spot[i]!, L.spot);
   }
+}
+
+/**
+ * The juvenile's colours (`YOUNG`) over the burrback's while it is drawn; `false` puts the burrback's back. Same
+ * species: only paler, its rim and crest lighter, its lights brighter.
+ */
+let youngCrestW = 1;
+let youngGlow = 1;
+export function youngColors(on: boolean): void {
+  if (!on) {
+    youngCrestW = 1;
+    youngGlow = 1;
+    loadColors();
+    return;
+  }
+  const Y = YOUNG;
+  const to = v3(Y.shellTo);
+  for (let k = 0; k < 3; k++) {
+    C.shellTop[k] = C.shellTop[k]! + (to[k]! - C.shellTop[k]!) * Y.shell;
+    C.shellLow[k] = C.shellLow[k]! + (to[k]! - C.shellLow[k]!) * Y.shell * 0.5;
+    for (let i = 0; i < 3; i++) {
+      C.edge[i]![k] = C.edge[i]![k]! + (1 - C.edge[i]![k]!) * Y.edge;
+      C.crest[i]![k] = Math.min(1, C.crest[i]![k]! * Y.crest);
+      C.spot[i]![k] = C.spot[i]![k]! * Y.spots;
+    }
+  }
+  youngCrestW = Y.crestW;
+  youngGlow = Y.spotGlow;
 }
 
 export function loadColors(): void {
@@ -2126,7 +2154,7 @@ export function drawBurrback(
         topHit.y = p.py[k]!;
       }
     }
-    p.pw[k] = Cr.w * (1 + (Cr.wLeft - 1) * zw[0]!) * Math.sin(Math.PI * u) ** 0.45 * (1 + wv);
+    p.pw[k] = Cr.w * youngCrestW * (1 + (Cr.wLeft - 1) * zw[0]!) * Math.sin(Math.PI * u) ** 0.45 * (1 + wv);
   }
   if (bestD > 1e8) {
     topHit.x = bx(ccx, top);
@@ -2357,7 +2385,16 @@ export function drawBurrback(
           );
         }
         p.ellipse(wx, wy, rr * (0.5 + 0.5 * ad), rr, rot, SH_SPOT, 10);
-        p.glow(wx, wy, r * S.halo, sc as unknown as RGB, S.glow * br * flank * whole, r * S.halo, 0, 12);
+        p.glow(
+          wx,
+          wy,
+          r * S.halo,
+          sc as unknown as RGB,
+          S.glow * youngGlow * br * flank * whole,
+          r * S.halo,
+          0,
+          12,
+        );
       }
     }
   }

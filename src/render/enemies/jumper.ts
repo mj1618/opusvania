@@ -27,20 +27,22 @@ export const JUMP = {
    */
   scale: 1.35,
   color: {
-    body: 0x3b302b,
-    bodyLow: 0x18131a,
-    // (Paler than the body: the fringe is its rim against dark ground, the way a real one's hairs catch light.)
-    fur: 0x8f7a62,
-    pale: 0xeee2c8,
+    // (Second readability pass: velvet near-black, not mid brown: under the amber key a brown body went to the air's own
+    // value. Black with white marks (Phidippus audax) separates in every grade; the pale fringe is its rim.)
+    body: 0x231d26,
+    bodyLow: 0x0b090d,
+    fur: 0xa89c8a,
+    pale: 0xf4eee2,
     eye: 0x05060a,
     eyeRing: 0x3f97b0,
     glint: 0xffffff,
-    fang: 0x1fa58c,
-    fangGlint: 0xb8fff0,
+    fang: 0x1fc9a0,
+    fangGlint: 0xc8fff2,
     palp: 0xf1e6cc,
-    legNear: 0x30261f,
-    legFar: 0x17120f,
-    band: 0xd2bf9e,
+    legNear: 0x29222b,
+    legFar: 0x120f13,
+    band: 0xe6ddcc,
+    joint: 0x060508,
     flash: 0xfff2dc,
     // (The hunt colour of every r22 creature's tell: coral-orange, never her lamp's gold.)
     hunt: 0xff7444,
@@ -65,6 +67,8 @@ export const JUMP = {
   },
   /** A head twitch: how often (s), how far it snaps (px), how fast. */
   twitch: { every: 0.55, px: 2.2, rate: 46 },
+  /** Leg widths along it (x `legs.w`): hip, mid-femur, knee, mid-tibia, tip; stiff hairs a segment and their length. */
+  leg: { hip: 1, femur: 1.2, knee: 0.82, tibia: 0.52, tip: 0.2, hairs: 3, hairLen: 2.8 },
   /** The tell: crouch depth px, tremble px, how far the rear feet bunch in, front legs raised px. */
   /** The tell (its beats are the sim's `tuning.jumper.tellBeats`: the ticks sound on them). */
   /** (raise: the front pair lifts off the ground and up in front of the face, a threat a player reads at play zoom.) */
@@ -89,6 +93,7 @@ const C = {
   legNear: [0, 0, 0] as V3,
   legFar: [0, 0, 0] as V3,
   band: [0, 0, 0] as V3,
+  joint: [0, 0, 0] as V3,
   flash: [0, 0, 0] as V3,
   hunt: [0, 0, 0] as V3,
   shadow: [0, 0, 0] as V3,
@@ -108,8 +113,9 @@ loadJumpColors();
 function shade(rim: number, cool: number, form: number, band: number): Shade & { c0: V3; c1: V3 } {
   return { c0: [0, 0, 0], c1: [0, 0, 0], rim, cool, form, band };
 }
-const SH_ABD = shade(0.55, 0.35, 0.3, 0.35);
-const SH_HEAD = shade(0.6, 0.35, 0.3, 0.3);
+// (Velvet: a thin rim and little form shading, so the key light does not lift the black to mid brown.)
+const SH_ABD = shade(0.35, 0.3, 0.12, 0.3);
+const SH_HEAD = shade(0.4, 0.3, 0.12, 0.28);
 const SH_LEG_N = shade(0.5, 0.3, 0.2, 0.4);
 const SH_LEG_F = shade(0.2, 0.15, 0.1, 0.4);
 const SH_FUR = shade(0.45, 0.3, 0, 0.5);
@@ -120,6 +126,7 @@ const SH_EYE = shade(0.15, 0.55, 0.05, 0.22);
 const SH_FANG = shade(0.4, 0.2, 0.25, 0.3);
 const SH_PALP = shade(0.3, 0.15, 0.1, 0.4);
 const SH_BAND = shade(0.2, 0.1, 0.05, 0.4);
+const SH_JOINT = shade(0.1, 0.1, 0, 0.4);
 
 /** Mixes `src` toward the flash by `k` into `out`. */
 function lit(out: V3, src: V3, k: number, dim = 1): V3 {
@@ -419,31 +426,71 @@ function leg(
   const ky = ikOut.y;
   const ex = ikOut.ex;
   const ey = ikOut.ey;
+  // (A jointed leg, not a tube (second readability pass): a femur that swells past the hip, a knee narrower than it,
+  // a tibia that thins fast to a fine tip.)
+  const L = JUMP.leg;
   p.px[0] = ax;
   p.py[0] = ay;
-  p.pw[0] = w;
-  p.px[1] = kx;
-  p.py[1] = ky;
-  p.pw[1] = w * 0.95;
-  p.px[2] = kx + (ex - kx) * 0.5;
-  p.py[2] = ky + (ey - ky) * 0.5;
-  p.pw[2] = w * 0.72;
-  p.px[3] = ex;
-  p.py[3] = ey;
-  p.pw[3] = w * 0.42;
-  p.ribbon(4, sh, true, true);
+  p.pw[0] = w * L.hip;
+  p.px[1] = ax + (kx - ax) * 0.45;
+  p.py[1] = ay + (ky - ay) * 0.45;
+  p.pw[1] = w * L.femur;
+  p.px[2] = kx;
+  p.py[2] = ky;
+  p.pw[2] = w * L.knee;
+  p.px[3] = kx + (ex - kx) * 0.5;
+  p.py[3] = ky + (ey - ky) * 0.5;
+  p.pw[3] = w * L.tibia;
+  p.px[4] = ex;
+  p.py[4] = ey;
+  p.pw[4] = w * L.tip;
+  p.ribbon(5, sh, true, true);
   if (band) {
-    // Pale bands round the leg past the knee and at the tarsus (the legs read banded: Phidippus).
+    // The knee: a dark joint, then a pale ring just past it and one at the tarsus (Phidippus's banded legs).
+    p.ellipse(kx, ky, w * L.knee * 0.62, w * L.knee * 0.62, 0, SH_JOINT, 10);
+    // A few stiff hairs along the top of femur and tibia (the leg's outer side: the perpendicular that points up).
+    let tx = kx - ax;
+    let ty = ky - ay;
+    for (let seg = 0; seg < 2; seg++) {
+      const sx = seg === 0 ? ax : kx;
+      const sy = seg === 0 ? ay : ky;
+      if (seg === 1) {
+        tx = ex - kx;
+        ty = ey - ky;
+      }
+      const tl = Math.hypot(tx, ty) || 1;
+      let nx = -ty / tl;
+      let ny = tx / tl;
+      if (ny > 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+      for (let h = 0; h < L.hairs; h++) {
+        const u = (h + 0.6) / (L.hairs + 0.4);
+        const bx = sx + tx * u;
+        const by = sy + ty * u;
+        const len = L.hairLen * SY * (seg === 0 ? 1 : 0.8);
+        const hw = seg === 0 ? w * L.femur : w * L.tibia;
+        p.px[0] = bx + nx * hw * 0.35;
+        p.py[0] = by + ny * hw * 0.35;
+        p.pw[0] = 0.55;
+        // (Swept toward the tip, the way leg hairs lie.)
+        p.px[1] = bx + nx * (hw * 0.35 + len) + (tx / tl) * len * 0.7;
+        p.py[1] = by + ny * (hw * 0.35 + len) + (ty / tl) * len * 0.7;
+        p.pw[1] = 0.05;
+        p.ribbon(2, SH_FUR);
+      }
+    }
     for (const [u0, u1] of [
-      [0.12, 0.22],
-      [0.68, 0.76],
+      [0.1, 0.18],
+      [0.64, 0.7],
     ] as const) {
       p.px[0] = kx + (ex - kx) * u0;
       p.py[0] = ky + (ey - ky) * u0;
-      p.pw[0] = w * (0.98 - 0.5 * u0);
+      p.pw[0] = w * (L.knee - (L.knee - L.tip) * u0) * 1.04;
       p.px[1] = kx + (ex - kx) * u1;
       p.py[1] = ky + (ey - ky) * u1;
-      p.pw[1] = w * (0.98 - 0.5 * u1);
+      p.pw[1] = w * (L.knee - (L.knee - L.tip) * u1) * 1.04;
       p.ribbon(2, SH_BAND);
     }
   }
@@ -487,7 +534,7 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
     }
   lit(SH_PALE.c0, C.pale, flash, dim);
   lit(SH_PALE.c1, C.pale, flash, dim * 0.8);
-  lit(SH_MARK.c0, C.pale, flash, dim * 0.75);
+  lit(SH_MARK.c0, C.pale, flash, dim * 0.95);
   lit(SH_MARK.c1, C.pale, flash, dim * 0.5);
   lit(SH_EYE.c0, C.eye, flash * 0.3, 1);
   lit(SH_EYE.c1, C.eye, flash * 0.3, 1);
@@ -497,6 +544,8 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
   lit(SH_PALP.c1, C.palp, flash, dim * 0.75);
   lit(SH_BAND.c0, C.band, flash, dim);
   lit(SH_BAND.c1, C.band, flash, dim * 0.8);
+  lit(SH_JOINT.c0, C.joint, flash * 0.6, dim);
+  lit(SH_JOINT.c1, C.joint, flash * 0.6, dim);
   const coolK = p.coolK;
   p.alphaK = rig.fade;
   p.glowK = rig.fade;
@@ -616,8 +665,11 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
     }
   }
   blob(p, A.x + 11.5, A.y - 2.5, 2.6, 8.6, SH_PALE, 2, 14);
-  blob(p, A.x + 1, A.y - 10.5, 3.6, 2.2, SH_MARK, 2, 12);
-  blob(p, A.x - 7.5, A.y - 7.8, 1.8, 1.2, SH_MARK, 2, 10);
+  // The Phidippus pattern: the basal band (above), a big central spot, then a pair of side spots, smaller toward the
+  // spinnerets, set down the flank (in a row along the top they read as polka).
+  blob(p, A.x + 1.5, A.y - 9.5, 4.6, 3.1, SH_MARK, 2.4, 14);
+  blob(p, A.x - 5.5, A.y - 3.2, 2.5, 1.9, SH_MARK, 2, 12);
+  blob(p, A.x - 10.5, A.y + 0.5, 1.7, 1.3, SH_MARK, 2, 10);
   if (hb > 0.02) {
     const g = W(A.x + 4, A.y - 6);
     p.glow(g.x, g.y, A.rx * (1 + hb * 0.6), C.hunt, 0.22 * hb, A.rx * 0.9);
