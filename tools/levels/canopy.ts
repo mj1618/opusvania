@@ -2561,7 +2561,15 @@ function bower(): Json {
   // ledge (where she would climb out of the burrback's way), and a juvenile comes back over the run's knuckles behind
   // her. Until all three are down a fade or leaving plays it again from its arrival (`rearm`); cleared, it stays clear.
   const kinFoot = { wakes: 'cn-bower-ambush', sets: 'cn-bower-clear' };
-  r.add('triggers', { id: 'kin-ambush', x: 1600, y: 1216, w: 550, h: 192, sets: 'cn-bower-ambush', rearm: true });
+  r.add('triggers', {
+    id: 'kin-ambush',
+    x: 1600,
+    y: 1216,
+    w: 550,
+    h: 192,
+    sets: 'cn-bower-ambush',
+    rearm: true,
+  });
   r.burrback('burr-kin', 1760, 1408, 1, 260, { ...kinFoot, fenced: true, arrive: [[1600, 1408]] });
   r.flyer('lampwing', 'wing-kin', 2000, 900, -1, { radius: 200, ...kinFoot, arrive: [[1900, 420]] });
   r.juvenile('juv-kin', 2080, 1408, -1, 200, { ...kinFoot, fenced: true, arrive: [[2560, 1216]] });
