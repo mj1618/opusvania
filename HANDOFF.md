@@ -1,4 +1,31 @@
-# Handoff: the Canopy loop, stopped after round 19 (2026-11-01)
+# Handoff: the Canopy loop, stopped after round 20 (2026-11-01)
+
+## Round 20: difficulty (after Matt played: "I feel like it's very easy")
+Deployed. Details are in `memory/canopy.md` v20; the death and healing rules are in `memory/enemies.md` under "Fade and re-form".
+- **Death has stakes.** A fade sends her to the last moon patch she *rested* at (stopping in it, not running through),
+  in any room, else the hatch. She drops all her glints in a cluster, and a second fade loses them. The escape and chase
+  checkpoints are unchanged, and the den balcony saves on a pass so the Keeper's retry is fair.
+- **Healing:**
+  - springboard lamps no longer heal;
+  - cages heal +1;
+  - a rest heals her fully.
+- **Bigger hits:** the old burrback's and the Keeper's ram and slam wave cost 2.
+- **Bot-only grace removed:** juvenile and Keeper windows, and the breathers creatures took after hitting her.
+- **New encounters:**
+  - a hawker over the upper limbs' fling gap;
+  - a mixed ambush in the bower;
+  - carriers and a hawker on the east fork on the way home.
+- **Open after r20:**
+  - **The Keeper is easy once you know the trick:** jump in the brace for 41–48 s and no hits. A first-timer who
+    jumps when the ram starts never leaves phase 1. Add pressure for experts, and teach the brace better.
+  - **The Lamp Grove's locked-in wave:** bots read it as a trap and died on purpose to escape. Thorns there put her back
+    up to 2,700 px, an old round 10 rule.
+  - **Creatures that don't read as creatures:** hawkers and lampwings look like the friendly moths, carriers look like
+    moss, and the dangler hangs over the drop into the giant. This is an art job.
+  - **The hole from the cellar to the fork:** she falls back repeatedly, and one reading gave y 2,728 in a room
+    1,920 tall. Check for a bug.
+  - **The well's moon patch** is hard to see among its moonbeams.
+- **Matt has now played.** Ask him how the new difficulty feels before tuning it further.
 
 Give this file to the next orchestrator agent. It says where the work stands, how the loop ran, and what to do next.
 Read it with `CLAUDE.md`, `memory/README.md` and `PLAN.md`. Note that `STUDIO.md` describes the older greybox loop
@@ -48,8 +75,8 @@ Read it with `CLAUDE.md`, `memory/README.md` and `PLAN.md`. Note that `STUDIO.md
     - leaf texture in the Grove's crowns;
     - moss on walked tops and moss beards under them;
     - the giant's "dark discs" (the `pf-mass` painter).
-- **Matt has not played the Canopy himself yet.** The r14 and r18 reviews both say his playthrough is overdue. His notes
-  outrank everything. Ask him for them before more polish.
+- **Matt's playthrough:** after round 19 he said it felt very easy, which led to round 20. Ask him for fuller notes; his
+  notes outrank everything.
 
 ## Open problems, roughly by impact
 0. **The route after the wall jump (r19 regression):** see above. Also still open:
