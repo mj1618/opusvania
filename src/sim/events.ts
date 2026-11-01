@@ -4,6 +4,7 @@ import type { CreatureEvent } from './creature-events';
 import type { KitEvent, KitTargetKind } from './kit-events';
 import type { LightEvent } from './light-events';
 import type { EnemyKind, LureKind, PickupKind, PodMount } from './scene';
+import type { ShotEvent } from './shot-events';
 import type { AttackDir } from './state';
 
 /**
@@ -37,6 +38,8 @@ export type SimEvent =
   | BossEvent
   /** Lanternroot's light: glow, mend, moonwicks, moss, gust, bells (src/sim/light-events.ts, memory/glow.md). */
   | LightEvent
+  /** Droplets in flight and the bombardier that fires them (src/sim/shot-events.ts). */
+  | ShotEvent
   /** The player was placed (boot, load, teleport): snap cameras and springs, don't interpolate. */
   | { type: 'spawn'; x: number; y: number }
   /**

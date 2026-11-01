@@ -20,6 +20,7 @@ import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { lookOf } from '../scene/lib/looks';
 import { LOOK } from '../scene/lib/room-look';
 import { arrivalView } from './arrive';
+import { BombFx, BombRig, drawBombardier, tipOf } from './bombardier';
 import {
   BurrRig,
   bossColors,
@@ -170,6 +171,9 @@ export class EnemyRenderer {
     len: number;
   }> = [];
   private readonly lamps: (LampRig | undefined)[] = [];
+  /** Bombardiers (bombardier.ts) by enemy index, and their droplets, sparks and steam. */
+  private readonly bombs: (BombRig | undefined)[] = [];
+  private readonly bombFx = new BombFx();
   private readonly scaleC: [number, number, number] = [0, 0, 0];
   private readonly zw: [number, number, number] = [0, 1, 0];
   /** Enemy id -> its index in `sim.enemies`, for the events. */
@@ -690,6 +694,35 @@ export class EnemyRenderer {
   }
 
   /** One lampwing: rig, scales, drawing. Returns true if it was drawn. */
+  /** A bombardier (bombardier.ts): its rig, its spray's jet. False when it is not drawn. */
+  private bombardier(
+    i: number,
+    e: Readonly<EnemyState>,
+    dt: number,
+    clock: number,
+    cam: CameraView,
+    sim: SimView,
+    halfW: number,
+    halfH: number,
+  ): boolean {
+    let r = this.bombs[i];
+    if (!r) {
+      r = new BombRig();
+      this.bombs[i] = r;
+    }
+    if (e.gone) {
+      r.live = false;
+      return false;
+    }
+    r.update(e, sim, dt, clock);
+    if (Math.abs(r.x - cam.x) > halfW || Math.abs(r.y - cam.y) > halfH) return false;
+    if (e.mode === 'spray' && e.hitstop === 0) {
+      const t = tipOf(r);
+      this.bombFx.jet(t.x, t.y, e.facing, dt);
+    }
+    return drawBombardier(this.painter, r, e, clock);
+  }
+
   private lampwing(
     i: number,
     e: Readonly<EnemyState>,
@@ -886,6 +919,10 @@ export class EnemyRenderer {
     let drawn = 0;
     const den = LOOK.kit === 'wood' && lookOf(sim.scene) === 'den';
     this.react(sim);
+    this.bombFx.react(sim.events, (id) => {
+      const k = this.byId.get(id);
+      if (k !== undefined) this.bombs[k]?.fired();
+    });
     for (let i = 0; i < list.length; i++) {
       const e0 = list[i];
       if (!e0) continue;
@@ -896,6 +933,10 @@ export class EnemyRenderer {
       let e = e0.arrive > 0 ? arrivalView(e0, sim, art === 'beetle') : e0;
       if (art === 'moth') {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
+        continue;
+      }
+      if (art === 'bombardier') {
+        if (this.bombardier(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
       }
       if (art !== 'beetle') continue;
@@ -1253,6 +1294,8 @@ export class EnemyRenderer {
     }
 
     this.drawWings(dt, clock, sim);
+    // Droplets in flight, their trails, splashes and the deflect's star: over the grass and her.
+    this.bombFx.draw(pf, sim, dt);
 
     // --- Debris: in front of the grass, except what a blow knocks off (chips, wing scales), which
     // goes with the bodies so her slash is drawn over it.

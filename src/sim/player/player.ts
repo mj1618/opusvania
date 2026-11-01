@@ -31,6 +31,7 @@ import {
 } from '../physics/aabb';
 import { slashPods } from '../pods';
 import type { Scene } from '../scene';
+import { slashShots } from '../shots';
 import type { EnemyState, GameState, Motion, PlayerState } from '../state';
 import type { Tuning } from '../tuning';
 import { type Box, slashBox } from './attack';
@@ -589,7 +590,9 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     P.tuning,
     c.events,
   );
-  const others = foes + pods + lures.hits;
+  // A droplet in flight (src/sim/shots.ts): the slash bats it back at the bombardier that spat it.
+  const shots = slashShots(state, box, p.attackSeq, dir, p.attackFacing, P.tuning, c.events);
+  const others = foes + pods + lures.hits + shots;
   const hits = others + kit.hits;
   // Glanced off a braced shell: no hit, but she feels it (a beat, and a throw back off it). A down
   // cut that glances (a braced or curled burrback's top) still bounces her: the pogo, nothing taken.
@@ -627,6 +630,7 @@ function resolveSlash(c: Ctx, state: GameState, podsT: Tuning['pods']): void {
     pods > 0 ? podStop : 0,
     lureStop,
     kit.hits > 0 ? kit.stop : 0,
+    shots > 0 ? Math.max(0, Math.round(P.tuning.bombardier.deflectHitstop)) : 0,
   );
   if (p.attackHits === 0) {
     const e = c.events[first];

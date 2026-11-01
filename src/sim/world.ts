@@ -183,6 +183,7 @@ export function createLocal(scene: Scene, t: Tuning, save: SaveState, fresh: boo
     entry: null,
     seam: null,
     light: createLight(scene, save),
+    shots: [],
   };
 }
 

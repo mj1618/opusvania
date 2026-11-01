@@ -364,6 +364,11 @@ export const AUDIO = {
     slamDb: -18,
     wallDb: -22,
     skitterDb: -42,
+    /** The bombardier (bake-bomb.ts): its tell's boil, a droplet's pop, a splash's hiss, the deflect's ping. */
+    bombBoilDb: -28,
+    bombPopDb: -27,
+    bombHissDb: -31,
+    bombPingDb: -15,
     /** Ants are heard within this many px of her; a skitter about this often per second while near. */
     skitterPx: 520,
     skitterRate: 2.2,

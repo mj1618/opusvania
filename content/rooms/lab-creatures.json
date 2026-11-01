@@ -1,7 +1,7 @@
 {
   "id": "lab-creatures",
   "title": "Lab: creatures (greybox)",
-  "width": 29000,
+  "width": 31000,
   "height": 1600,
   "spawn": {
     "x": 200,
@@ -159,6 +159,20 @@
       "w": 500,
       "h": 60,
       "kick": false
+    },
+    {
+      "tag": "ground",
+      "x": 29000,
+      "y": 1280,
+      "w": 2000,
+      "h": 320
+    },
+    {
+      "tag": "ledge",
+      "x": 30000,
+      "y": 1080,
+      "w": 700,
+      "h": 200
     }
   ],
   "oneWays": [],
@@ -231,6 +245,13 @@
       "kind": "wick",
       "x": 26600,
       "y": 880,
+      "spin": 1
+    },
+    {
+      "id": "wick-l",
+      "kind": "wick",
+      "x": 29700,
+      "y": 960,
       "spin": 1
     }
   ],
@@ -374,6 +395,14 @@
       "y": 620,
       "facing": -1,
       "guards": "wick-j"
+    },
+    {
+      "id": "bomb-l",
+      "kind": "bombardier",
+      "x": 30200,
+      "y": 1080,
+      "facing": -1,
+      "guards": "wick-l"
     }
   ],
   "marks": {
@@ -427,6 +456,11 @@
         "x": 25400,
         "y": 700,
         "text": "J  glide onto a landing a dangler guards"
+      },
+      {
+        "x": 29600,
+        "y": 700,
+        "text": "L  a bombardier on a step: bat its droplets back, or come at it from behind / above"
       }
     ]
   },
@@ -481,6 +515,11 @@
         "name": "landing",
         "x": 26100,
         "y": 1100
+      },
+      {
+        "name": "bombardier",
+        "x": 30000,
+        "y": 1280
       }
     ]
   }

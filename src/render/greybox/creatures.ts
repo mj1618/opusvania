@@ -20,6 +20,7 @@
  *   A kill: white for the kill's hitstop, then 8 shards and a ring; the body is not drawn after.
  */
 import type { Graphics } from 'pixi.js';
+import { coneBox } from '../../sim/enemies/bombardier';
 import type { SimEvent } from '../../sim/events';
 import type { Scene } from '../../sim/scene';
 import type { EnemyState } from '../../sim/state';
@@ -44,6 +45,10 @@ export const CREATURE = {
   hawker: 0x5f6e86,
   weaver: 0x6e6280,
   dangler: 0x6a6478,
+  /** The bombardier: a dark squat beetle with hot bands, its droplets and spray (hot orange, batted ones near white). */
+  bombardier: 0x48404c,
+  hot: 0xff8a2a,
+  batted: 0xfff1c8,
   other: 0x6b7385,
   belly: 0x2e2a2c,
   /** The danger part at rest, and in a tell / dive / brace (the hunt colour, as the boss view's). */
@@ -265,6 +270,8 @@ function bodyColor(kind: string): number {
       return CREATURE.weaver;
     case 'dangler':
       return CREATURE.dangler;
+    case 'bombardier':
+      return CREATURE.bombardier;
     default:
       return CREATURE.other;
   }
@@ -518,7 +525,107 @@ export class CreatureView {
       if (e.kind === 'carrier' && e.mode === 'under') continue;
       this.creature(e, f, sim, clock, back, front);
     }
+    this.shots(front, sim);
     this.effects(dt, front);
+  }
+
+  /** Droplets in flight (src/sim/shots.ts): hot beads with a short tail along their flight; a batted one near white. */
+  private shots(g: Graphics, sim: SimView): void {
+    for (const q of sim.shots ?? []) {
+      const c = q.reflected ? CREATURE.batted : CREATURE.hot;
+      g.moveTo(q.x - q.vx * 3, q.y - q.vy * 3)
+        .lineTo(q.x, q.y)
+        .stroke({ color: c, width: q.r, alpha: 0.35 });
+      g.circle(q.x, q.y, q.r).fill({ color: c });
+      g.circle(q.x, q.y, q.r * 0.45).fill({ color: CREATURE.flash });
+    }
+  }
+
+  /**
+   * The bombardier: a low wide dome with hot bands and a small head; its tail turret rises over its back for the lob
+   * (the tip counts down in the hunt colour) and swings forward for the spray (the cone drawn while it sprays). Its own
+   * droplet laid it on its back: flipped, legs kicking, a green bar draining.
+   */
+  private bombardier(
+    e: EnemyState,
+    clock: number,
+    back: Graphics,
+    front: Graphics,
+    sq: number,
+    white: boolean,
+  ): void {
+    const w = e.w;
+    const h = e.h;
+    const xf = this.xf.set(e, 'feet', 1 + (SQUASH.x - 1) * sq, 1 + (SQUASH.y - 1) * sq);
+    const open = e.mode === 'recover';
+    if (open) {
+      xf.ay = h / 2;
+      xf.wy = e.y + h / 2;
+      xf.sy = -xf.sy;
+    }
+    const dome = xf.map(
+      domePts(w * 0.8, h * 0.8, 0.5, this.pa).map((v, i) => (i % 2 === 0 ? v : v + h * 0.2)),
+    );
+    for (let k = 0; k < 3; k++) {
+      const lx = w * (0.2 + 0.25 * k) + (open ? Math.sin(clock * 14 + k * 2.1) * 4 : 0);
+      back.rect(xf.x(lx) - 2, xf.y(h * 0.8), 4, h * 0.2 * Math.abs(xf.sy)).fill({ color: CREATURE.belly });
+    }
+    back.poly(dome).fill({ color: open ? CREATURE.stun : CREATURE.bombardier });
+    if (!open)
+      for (let k = 0; k < 3; k++) {
+        const lx = w * (0.16 + 0.18 * k);
+        back.poly(xf.map([lx, h * 0.45, lx + 5, h * 0.42, lx + 5, h * 0.95, lx, h * 0.95])).fill({
+          color: CREATURE.hot,
+          alpha: 0.75,
+        });
+      }
+    // The head, small, in front.
+    back
+      .circle(xf.x(w * 0.9), xf.y(h * 0.7), h * 0.22)
+      .fill({ color: mix(CREATURE.hot, CREATURE.belly, 0.5) });
+    if (open) {
+      back.poly(dome).stroke({ color: CREATURE.open, width: 3 });
+      if (e.timer > 0) {
+        const of = Math.max(e.timer, e.modeFrames + e.timer);
+        const cx = e.x + w / 2;
+        front.rect(cx - w / 2, e.y - 24, w, 4).fill({ color: CREATURE.belly, alpha: 0.6 });
+        front.rect(cx - w / 2, e.y - 24, (w * e.timer) / of, 4).fill({ color: CREATURE.open });
+      }
+      if (white) front.poly(dome).fill({ color: CREATURE.flash, alpha: 0.95 });
+      return;
+    }
+    // The tail turret: tucked low behind at rest; up over the back to lob, forward over the head to spray.
+    const up = e.mode === 'rear' || e.mode === 'spit' ? 1 : 0;
+    const fwd = e.mode === 'windup' || e.mode === 'spray' ? 1 : 0;
+    const tx = up ? w * 0.3 : fwd ? w * 0.85 : -w * 0.05;
+    const ty = up ? -h * 0.6 : fwd ? -h * 0.15 : h * 0.55;
+    const pts = xf.map([
+      w * 0.12,
+      h * 0.5,
+      w * (up || fwd ? 0.0 : -0.05),
+      up || fwd ? -h * 0.3 : h * 0.6,
+      tx,
+      ty,
+    ]);
+    front
+      .moveTo(pts[0] as number, pts[1] as number)
+      .lineTo(pts[2] as number, pts[3] as number)
+      .lineTo(pts[4] as number, pts[5] as number)
+      .stroke({ color: CREATURE.bombardier, width: 7 });
+    const telling = e.mode === 'rear' || e.mode === 'windup';
+    let tip: number = CREATURE.danger;
+    if (telling) {
+      const of = Math.max(1, e.timer + e.modeFrames);
+      const u = 1 - e.timer / of;
+      const on = Math.sin(clock * (8 + 34 * u * u)) > 0;
+      tip = on ? CREATURE.hunt : CREATURE.hot;
+    } else if (e.mode === 'spit' || e.mode === 'spray') tip = CREATURE.flash;
+    front.circle(pts[4] as number, pts[5] as number, 6).fill({ color: tip });
+    if (e.mode === 'spray') {
+      const c = coneBox(e, tuning);
+      front.rect(c.x, c.y, c.w, c.h).fill({ color: CREATURE.hot, alpha: 0.45 });
+    }
+    if (white) front.poly(dome).fill({ color: CREATURE.flash, alpha: 0.95 });
   }
 
   /**
@@ -574,7 +681,12 @@ export class CreatureView {
     else if (f.hitT < f.hitHold + SQUASH.frames * F) sq = 1 - (f.hitT - f.hitHold) / (SQUASH.frames * F);
     const white = f.hitT < f.hitHold;
     const asleep = e.mode === 'sleep' || e.mode === 'leave' || e.dozing || e.roosting;
-    const tell = e.mode === 'curious' || e.mode === 'windup' || e.mode === 'feint' || e.mode === 'wake';
+    const tell =
+      e.mode === 'curious' ||
+      e.mode === 'windup' ||
+      e.mode === 'feint' ||
+      e.mode === 'wake' ||
+      (kind === 'bombardier' && e.mode === 'rear');
     const cx = e.x + e.w / 2;
 
     if (isFlyer(kind)) this.flyer(e, f, sim, clock, back, front, sq, white);
@@ -584,6 +696,7 @@ export class CreatureView {
       if (white) front.rect(e.x, e.y, e.w, e.h).fill({ color: CREATURE.flash, alpha: 0.9 });
     } else if (kind === 'dangler') this.dangler(e, clock, back, front, sq, white);
     else if (kind === 'carrier') this.carrier(e, clock, back, front, sq, white);
+    else if (kind === 'bombardier') this.bombardier(e, clock, back, front, sq, white);
     else if (kind === 'weaver') this.spider(e, clock, back, front, sq, white, false);
     else this.generic(e, back, front, sq, white);
 

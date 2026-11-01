@@ -404,6 +404,7 @@ export class RenderStage {
       pickups: this.game.state.pickups,
       pods: this.game.state.pods,
       enemies: this.game.state.enemies,
+      shots: this.game.state.shots,
       goal: this.game.state.goal,
       lures: this.game.state.lures,
       save: this.game.state.save,

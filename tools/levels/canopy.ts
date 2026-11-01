@@ -787,7 +787,9 @@ class Wood extends RoomBuilder {
     for (const e of this.data.enemies) {
       const x = e.x as number;
       const y = e.y as number;
-      const walker = ['burrback', 'juvenileBurrback', 'oldBurrback', 'carrier'].includes(e.kind as string);
+      const walker = ['burrback', 'juvenileBurrback', 'oldBurrback', 'carrier', 'bombardier'].includes(
+        e.kind as string,
+      );
       const probes: Array<[number, number]> = walker
         ? [
             [x, y - 8],
@@ -885,6 +887,19 @@ class Wood extends RoomBuilder {
       y: this.pad(x, top, 80),
       facing,
       radius,
+      senses: 'always',
+      ...more,
+    });
+  }
+
+  /** A bombardier (r22: the ranged one, src/sim/enemies/bombardier.ts) perched on the top under x: feet on it. */
+  bombardier(id: string, x: number, top: number, facing: 1 | -1, more: Json = {}): this {
+    return this.enemy({
+      id,
+      kind: 'bombardier',
+      x,
+      y: this.pad(x, top, 40),
+      facing,
       senses: 'always',
       ...more,
     });
@@ -1444,6 +1459,10 @@ function hub(): Json {
   r.hoard('cellar-', HUB_CELLAR[0] + 224, 1700, 120, 60, 2);
   r.cover('cellar-cover', HUB_CELLAR[0], 1600, HUB_CELLAR[1] - HUB_CELLAR[0], 256, 'cellar-panel');
   r.ants('ant-m', 240, 880, 1920, 3);
+  // (r22, Matt: "the enemies are boring and monotonous": a ranged one.) On the bank by the way east, the fork's exit: it
+  // lobs across the step up from the east limb and onto the clump's claw face behind it; the way east walks past it
+  // (bat a droplet back, or over it). 340 px east of the hatch's drop: never a landing on it.
+  r.bombardier('bomb-bank', 7700, 1344, -1);
   // (r11: off the landing either way, the first time: its frame lets go, and the kin goes back to its light.)
   r.add('triggers', { id: 'left-west', x: 5376, y: 0, w: 128, h: 1600, sets: 'cn-hub-left' });
   r.add('triggers', { id: 'left-east', x: 7424, y: 0, w: 128, h: 1344, sets: 'cn-hub-left' });
@@ -2159,6 +2178,11 @@ function fork(): Json {
   // and its first pass was empty, "a pretty but empty walk to a wall" (ft21a). The carriers run their trail from the
   // start now; the hawker still comes with the firefly's flight.)
   r.ants('ant-f', 1000, 1560, 1344, 3);
+  // (r22: ranged ones.) On the knoll's west lip over the carriers' floor: it lobs across the long walk in (cover right
+  // under the knoll), so the trail and the arcs come at once. And one on the floor short of the face: it meets her
+  // crossing to the climb, and lobs at her back on the face's lower half (from behind or above: a pogo on the way).
+  r.bombardier('bomb-knoll', 1640, 1088, -1);
+  r.bombardier('bomb-face', 2600, 1344, -1);
   r.flyer('hawker', 'hawk-fork', 1300, 780, -1, { radius: 180, sight: 560, ...after });
   // (r8: two covers, the knoll's chamber behind the panel and the stairs under the floor; v7's one ran over the open
   // way in from the Crossing as well.)
@@ -2292,6 +2316,9 @@ function larder(): Json {
   r.mass(832, 1112, 160, 48);
   r.mass(768, 880, 160, 48);
   r.burrback('burr-larder', 1880, 1536, -1, 300, { fenced: true });
+  // (r22: a ranged one.) On the burl's top over the floor: it watches the burrback's floor and the hollow (east), turns to
+  // one who drops in from the west, and lobs at the root ledges on the way back up.
+  r.bombardier('bomb-larder', 1408, 1344, 1);
   r.ants('ant-l', 900, 1800, 1536, 2);
   r.hollow('drop-larder', 2150, 1536, 'moonShard');
   r.place('in', 200, 640);

@@ -102,7 +102,9 @@ export type EnemyKind =
   | 'juvenileBurrback'
   | 'carrier'
   | 'gloamweaver'
-  | 'mantis';
+  | 'mantis'
+  /** A squat ground beetle on a ledge that lobs boiling droplets (src/sim/enemies/bombardier.ts). */
+  | 'bombardier';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is

@@ -24,7 +24,7 @@ the masher and the reader)**, `lampwing.test.ts`, `lampwing-pilot.test.ts`. Both
   the glint spill queue (`spill / spillTimer / spillGap`), contact and its exclusions, the pogo.
 - `EnemyState` is ONE flat record for all kinds (plain JSON; a field a kind does not use keeps its
   start value). `homeX, homeY` = the centre of its box at the start, for every kind. The state
-  version is 20 (enemies.test pins it). **What they notice and when their touch counts depends on the light she
+  version is 23 (enemies.test pins it; 23 = `state.shots`, the bombardier). **What they notice and when their touch counts depends on the light she
   carries since 2026-10-14 (giving.md)**: empty-handed she is unseen and a creature not in a fight with her does
   her no harm; `KindRules.sees` / `gift` and `aware`, `gift`, `gifts` are the framework's hooks for it. `KindRules.blocks` (optional): a blow glances off (the burrback's
   braced shell): the framework fires `enemyBlock`, takes nothing, and the slash is spent on it.
@@ -520,3 +520,41 @@ fights the burrback takes its dives; the careful one steps out of them and cuts 
   jump from either. The route, pickup, pod and burrback pilots pass with them in place.
 - Gotcha found here: `placePlayer` (teleport) used to reset `attackSeq`, so after a teleport the
   first slash could pass through whatever slash 1 had hit before (`hitBy`). It keeps the count now.
+
+## The bombardier (`kind: 'bombardier'`, round 22; sim `src/sim/enemies/bombardier.ts`, droplets `src/sim/shots.ts`)
+The first ranged creature (HK's Aspid slot; canopy-r22-creatures.md). Tests `tests/unit/bombardier.test.ts`; row
+`tuning.bombardier`. A squat 64 x 30 beetle on a ledge or floor, 3 hp, sight hunter (`seenBy`, `guards` -> `sleep`).
+- **Modes**: `sit` (watching; she is behind it: `turning` + `walkLeft` for `turnFrames` 24, `enemyTurn cause hunt`,
+  every cut from behind lands) -> far: `rear` (the tell, 44 f, `enemyWindup`) -> `spit` (burst of 3, 10 f apart,
+  `shotFire`) -> `pause` (30) -> `sit` + `cooldownFrames` 96. Close in front (`conePx` 110 of its front edge, -90..+40
+  in y): `windup` (16 f) -> `spray` (22 f, `enemySpray`; the cone `coneBox()` hurts her through the framework's
+  `waveHit`). A forward cut from the front during windup / spray lands but does not stagger it (`tough`): from behind
+  or above (`stompable`: a pogo). `recover` = on its back after its own batted droplet (110 f, harmless, `tough`:
+  every cut lands, none stands it up) -> `wake` (24). `dead`: launched along `hitDir` (5, -8 px/f), falls
+  (`deathGravity`), `landed`, gone after 110 f.
+- **Sight**: a straight line from its turret (or its top) to her centre, **or a clear lob** (`lobFor`): a mortar sees
+  over the lip of its ledge. It tells only with a clear lob to her (no burst into the branch she stands under; it
+  looks again every 6 f). `lobFor` tries the usual flight time, then 0.78 / 0.6 (flatter) and 1.25 (higher), each
+  sampled every 3 frames with `segmentBlocked`.
+- **The lob**: each droplet aimed when fired at her centre + `vx * leadFrames` (12, capped 110), the 2nd `spreadPx`
+  64 short, the 3rd 64 past; flight `flightBase` 28 + 0.05/px, clamped 34-62 f; `lobVelocity` is exact for the sim's
+  `vy += g; y += vy` step (g 0.3). From the tell's start to the first splash ~1.5 s: a walk out of it dodges.
+- **Fair**: no tell for `enterCalmFrames` 90 after it is made (room entry and every re-form), `returnCalmFrames` 120
+  after a fall's return, none at one held helpless who never saw it (`heldUnseen`). Droplets are cleared on
+  `reform`, `fallReturn`, `roomEnter`. A droplet passes through her while she cannot be hurt (invuln, kindling,
+  aiming a fling, a Moonstep dash).
+- **Droplets** (`GameState.shots: ShotState[]`, also in `RoomLocal`, `[]` on every room entry; state version 23):
+  `{id (frame*256 + owner), owner (enemy index), x, y (centre, fractional), vx, vy, g, r, age, hold, reflected, hitBy}`.
+  `updateShots` runs in the step after the creatures and contact (skipped on fling-slowed frames): sub-steps of <= 6
+  px; splash on solids / the room's closed edges / a one-way it falls onto; hurt her (`hurtK` 0.75 of its radius
+  inside her box, 1 damage, source `{kind: 'bombardier', id}`); gone after `shotLife`. Events `shotSplash {on:
+  ground | her | creature | out}`.
+- **The deflect** (`slashShots`, called from `resolveSlash` beside `slashEnemies`): any slash area that meets a
+  droplet bats it back (`shotDeflect`): `reflected`, straight at its owner's centre at `reflectSpeed` 14 (no gravity),
+  held `deflectHitstop` 7 with her (counts as a hit: her hitstop, recoil, a pogo off it). A batted droplet hits the
+  first creature it meets (`shotHit`; not webs and bosses): its owner goes `recover` (1 hp off), any other takes it
+  as a cut (`hurt`, `enemyHit` / `enemyDie`). Her hitstop `reflectHerHitstop` 3 on that hit.
+- **Placement (Canopy)**: `bomb-bank` (cn-hub 7700,1344, the bank by the fork exit, 340 px east of the hatch's
+  drop), `bomb-knoll` (cn-fork 1640,1088, the knoll's west lip over the carriers' floor), `bomb-face` (cn-fork
+  2600,1344, short of the face: lobs at her back on the climb), `bomb-larder` (cn-larder 1408,1344, the burl's top,
+  facing the burrback's floor). Lab: station L of `lab-creatures` (30200,1080). Generator helper `Wood.bombardier`.

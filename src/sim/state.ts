@@ -521,7 +521,10 @@ export type EnemyMode =
   | 'roll'
   | 'feed'
   | 'eat'
-  | 'sweep';
+  | 'sweep'
+  /** The bombardier (src/sim/enemies/bombardier.ts): its burst of droplets, and its hot spray up close. */
+  | 'spit'
+  | 'spray';
 
 /**
  * One enemy (src/sim/enemies.ts). `GameState.enemies[i]` belongs to `scene.enemies[i]`. One flat
@@ -772,6 +775,29 @@ export interface EnemyState {
    * `keeperGlance gate`): the phase is not done with her yet (P1's moths, P2's time, P3's sweeps). 0 = none.
    */
   gate: number;
+}
+
+/**
+ * A droplet in flight (src/sim/shots.ts, memory/enemies.md "The bombardier"): the bombardier's boiling spray, lobbed
+ * on a ballistic arc. Plain JSON, one record per droplet in `GameState.shots`, removed when it splashes or leaves.
+ * `x, y` = its centre (room px, fractional), `vx, vy` px/f, `g` its gravity px/f² (`vy += g` then the move each
+ * step), `r` its radius. `owner` = the index in `GameState.enemies` of who fired it. `reflected`: a slash batted it
+ * back (it flies at its owner, hurts creatures, never her). `hold` = frames it is frozen by a deflect's hitstop.
+ * `hitBy` = the last slash (`attackSeq`) that met it. `age` = frames since it was fired.
+ */
+export interface ShotState {
+  id: number;
+  owner: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  g: number;
+  r: number;
+  age: number;
+  hold: number;
+  reflected: boolean;
+  hitBy: number;
 }
 
 /** One moth-lantern (src/sim/goal.ts). `GameState.goal.lanterns[i]` belongs to `scene.lanterns[i]`. */
@@ -1153,10 +1179,12 @@ export interface RoomLocal {
   seam: { exit: string; frames: number } | null;
   /** Lanternroot's light pieces (src/sim/light.ts): the gust in the air, moonmoss, the bells, regrowing pods. */
   light: LightState;
+  /** Droplets in flight (src/sim/shots.ts): the bombardiers' spray. Empty on every room entry. */
+  shots: ShotState[];
 }
 
 export interface GameState {
-  version: 22;
+  version: 23;
   /** The room (scene id) this state belongs to. */
   room: string;
   /** Sim steps taken. The sim's only clock. */
@@ -1195,6 +1223,8 @@ export interface GameState {
   seam: { exit: string; frames: number } | null;
   /** Lanternroot's light pieces (src/sim/light.ts): the gust in the air, moonmoss, the bells, regrowing pods. */
   light: LightState;
+  /** Droplets in flight (src/sim/shots.ts): the bombardiers' spray. Empty on every room entry. */
+  shots: ShotState[];
 }
 
 export function cloneState(s: GameState): GameState {
@@ -1260,6 +1290,7 @@ export function cloneState(s: GameState): GameState {
     entry: s.entry ? { ...s.entry } : null,
     seam: s.seam ? { ...s.seam } : null,
     light: cloneLight(s.light),
+    shots: (s.shots ?? []).map((q) => ({ ...q })),
   };
 }
 
