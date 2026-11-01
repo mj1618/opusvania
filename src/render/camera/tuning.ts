@@ -106,7 +106,10 @@ export const cameraTuning = {
       gateShut: 0.22,
       hardLand: 0.2,
       finisher: 0.16,
-      hit: 0.07,
+      // (r22 first-timer: ordinary hits felt small; 0.1, was 0.07.)
+      hit: 0.1,
+      /** A nest's door opening as its last creature dies (r22: first-timers missed it). */
+      nestOpen: 0.3,
       heavy: 0.25,
       slam: 0.45,
       bigSlam: 0.65,

@@ -84,6 +84,10 @@ export function traumaFor(events: readonly SimEvent[], ct: CameraTuning = camera
       case 'barkBreak':
         add += B.barkBreak;
         break;
+      case 'gateOpen':
+        // A nest's door letting go as its last creature dies (Canopy r22: first-timers missed it opening).
+        if (e.id === 'nest-door') add += B.nestOpen;
+        break;
       case 'gateShut':
         // An arena's root gate growing shut behind her (canopy review r7 #8).
         add += B.gateShut;

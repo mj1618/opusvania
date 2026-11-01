@@ -97,14 +97,16 @@ export const HITFX = {
       size: 0.8,
     },
   } as Record<IchorFamily, FamilyLook>,
-  /** Drops per blow by weight; + `finisher` on the finisher; a kill x `killK` + `kill`; a pogo x `pogoK`. */
-  drops: { light: 5, medium: 7, heavy: 11, finisher: 3, killK: 1.3, kill: 5, pogoK: 0.7 },
+  /**
+   * (r22 first-timer: "ordinary hits are small orange sparks": more drops, a wider, longer cut, a stronger flash.)
+   * Drops per blow by weight; + `finisher` on the finisher; a kill x `killK` + `kill`; a pogo x `pogoK`. */
+  drops: { light: 8, medium: 10, heavy: 14, finisher: 4, killK: 1.3, kill: 5, pogoK: 0.7 },
   /** Drop speed (px/s, a kill x `killSpeed`), the fan's half-angle (rad), a lift added (px/s), radius (px). */
   speed: [300, 760] as const,
   killSpeed: 1.25,
   fan: 0.55,
   lift: 260,
-  radius: [1.4, 3.1] as const,
+  radius: [1.8, 3.6] as const,
   /** Longest a drop flies (s); the most drops and splats alive. */
   flight: 1.2,
   maxDrops: 180,
@@ -115,9 +117,9 @@ export const HITFX = {
    */
   cut: {
     len: { light: 64, medium: 84, heavy: 150 },
-    width: 3.6,
+    width: 5,
     bow: 0.14,
-    frames: 3,
+    frames: 4,
     finLen: 1.35,
     finWidth: 1.6,
     finFrames: 4,
@@ -127,9 +129,9 @@ export const HITFX = {
      * A warm light over the struck body for `flashFrames` (its rig goes near white too: BURR.hit.white): `flash` x
      * the cut's length is its radius, `flashK` its strength. Every kind gets it, rig or not.
      */
-    flash: 0.42,
-    flashK: 0.55,
-    flashFrames: 3,
+    flash: 0.5,
+    flashK: 0.8,
+    flashFrames: 5,
   },
   /** The kill: a flash `flash` px (x weight) for `flashS` s, a ring from 0.3 to `ring` x that over `ringS` s. */
   kill: {

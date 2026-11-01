@@ -20,6 +20,7 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 | crack (`enemyCrack`), a ram into a wall, a bark break | 0.3 | 4.9 |
 | hard landing (`land.hard`) | 0.2 | 2.7 |
 | the finisher (`impact` power 2) | 0.12 | 1.2 |
+| a nest's door opening (`gateOpen` id `nest-door`, r22) | 0.3 | 4.9 |
 | a clang (`enemyBlock` not a down cut, `kitClang`), a cap bounce | 0.1 | 0.9 |
 | a cut into a wall (`slashTerrain`) | 0.05 | 0.3 |
 
@@ -135,3 +136,9 @@ and rejected looks: enemies-render.md "The hit layer".
 - The hero's own crescent covers the creature on the contact frame, so the creature's white reads on frames 2-3, as a
   pale body rather than HK's pure white (the zone grade and the shell's rims pull it down). The cut streak (hitfx) is
   hard to tell from her crescent at play zoom when the two lie along the same angle (canopy r22).
+
+
+## Round 22, after the first-timer ("ordinary hits are small orange sparks")
+Ordinary hits got more: `HITFX.drops` light 8 / medium 10 / heavy 14 (was 5 / 7 / 11), drop radius 1.8-3.6, the cut streak
+5 px wide for 4 frames, the body flash 0.8 for 5 frames; `shake.budget.hit` 0.1 (was 0.07). A nest's door opening
+shakes (`nestOpen` 0.3): first-timers missed gates opening off screen.
