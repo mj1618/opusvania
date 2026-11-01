@@ -877,6 +877,14 @@ export class Acts {
     )?.landmarks;
     for (const l of lms ?? []) {
       if (l.kind !== 'door' && l.kind !== 'doorWarm') continue;
+      // (The Canopy r19, first-timer ft19a: the Crossing's warm west door drew her back west four times, the way on
+      // east never found for 5.5 min. A warm way out is a first visit's welcome: once the room beyond has been seen it
+      // is an ordinary opening.)
+      if (l.kind === 'doorWarm' && warmSeen(sim, l)) {
+        const lt = this.reg.get(`door-${l.id}`);
+        if (lt) lt.intensity = 0;
+        continue;
+      }
       const moon = l.kind === 'doorWarm' ? D.warm : D.moon;
       const core = l.kind === 'doorWarm' ? D.warmCore : D.core;
       // Out is toward the nearer side wall of the room.
@@ -1452,4 +1460,14 @@ export class Acts {
     for (const id of this.lights) this.reg.remove(id);
     this.lights.length = 0;
   }
+}
+
+/** Has she been through the side exit a warm door marks (its span holds the landmark's y)? */
+function warmSeen(sim: SimView, l: { x: number; y: number }): boolean {
+  const side = l.x > sim.scene.width / 2 ? 'e' : 'w';
+  const exits =
+    (sim.scene as { exits?: Array<{ id: string; edge: string; from: number; to: number }> }).exits ?? [];
+  const e = exits.find((q) => q.edge === side && l.y >= q.from - 64 && l.y <= q.to + 64);
+  if (!e) return false;
+  return sim.save.visited.some((v) => v === e.id || v === `cn-${e.id}` || v.endsWith(`-${e.id}`));
 }

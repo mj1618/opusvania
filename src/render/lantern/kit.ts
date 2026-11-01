@@ -76,11 +76,6 @@ export const KIT = {
   /** Seconds a cut's dust hangs. */
   dust: 0.6,
   /**
-   * A rotten wall answers a cut into the face under it (r18): a cut within `side` px of its sides and `below` px under
-   * its foot shakes it, and `chips` of rot fall from its sill (at `fall` px/s² ).
-   */
-  sill: { side: 24, below: 520, chips: 9, fall: 900 },
-  /**
    * Seconds a shut root door answers a knock (the Canopy r17: "no response at all"): it shudders, dust falls from its
    * head, its bands strain toward the stake beyond and the ties jerk, for this long. (r19, review r18: r17-r18's lit
    * seams, light spilt at her feet and rings at the knots read as interface; they went.)
@@ -203,11 +198,6 @@ export class Kit {
   private readonly readT = new Map<number, number>();
   /** Caps squashed by a bounce (seconds since). */
   private readonly capT = new Map<number, number>();
-  /**
-   * Chips of rot shaken off a wall's sill by a cut into the face under it (the Canopy r18): where they start, the floor
-   * they fall to (the cut's height), seconds since.
-   */
-  private readonly sillDrops: Array<{ x: number; y: number; to: number; t: number; seed: number }> = [];
 
   onEvents(events: readonly SimEvent[], sim: SimView): void {
     const S = sim.scene;
@@ -220,7 +210,6 @@ export class Kit {
         this.bellT.clear();
         this.readT.clear();
         this.knock.clear();
-        this.sillDrops.length = 0;
         continue;
       }
       // A cut made standing on a door that counts moonseeds (a floor: the blade meets no face, so no `slashTerrain`).
@@ -243,23 +232,9 @@ export class Kit {
             if (q.x >= g.x - 16 && q.x <= g.x + g.w + 16 && q.y >= g.y - 40 && q.y <= g.y + g.h + 16)
               this.seedKnock.set(gi, 0);
           });
-          // (r18, ft17d: cut the column under the giant's rot door 15+ times, "no response at all". A rotten wall
-          // answers a cut into the face under it: it shakes, its crack leaks, and chips of rot fall from its sill.)
-          (S.bark ?? []).forEach((b, i) => {
-            if (b.floor || (sim.kit.bark[i] ?? 0) <= 0) return;
-            if (q.x < b.x - KIT.sill.side || q.x > b.x + b.w + KIT.sill.side) return;
-            const below = q.y - (b.y + b.h);
-            if (below < 0 || below > KIT.sill.below) return;
-            this.hits.set(i, { t: 0, dir: 0 });
-            for (let k = 0; k < KIT.sill.chips; k++)
-              this.sillDrops.push({
-                x: b.x + b.w * (0.15 + 0.7 * hash01(`${b.id}sill${sim.frame}`, k)),
-                y: b.y + b.h,
-                to: q.y + 40,
-                t: -0.07 * k,
-                seed: sim.frame * 7 + k,
-              });
-          });
+          // (r19: r18's answer to a cut under a rotten wall (chips falling from its sill) went: ft19a cut the column
+          // under the giant's rot door for 2 min, "sure it would break", and review r18 counted it among the answers
+          // that read as interface. The wall answers a cut into itself.)
           for (const sc of S.shortcuts ?? []) {
             if (sim.save.opened.includes(`${S.id}:${sc.id}`)) continue;
             if (q.x >= sc.x - 12 && q.x <= sc.x + sc.w + 12 && q.y >= sc.y - 12 && q.y <= sc.y + sc.h + 12)
@@ -519,31 +494,6 @@ export class Kit {
       if ((b as { heartwood?: boolean }).heartwood) this.heartwood(back, b.x + ox * 0.4, b.y, b.w, b.h, b.id);
       else this.bark(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
     });
-
-    // Chips of rot falling from a wall's sill (r18): pale flakes tumbling to the floor under it.
-    for (let k = this.sillDrops.length - 1; k >= 0; k--) {
-      const d = this.sillDrops[k] as (typeof this.sillDrops)[number];
-      d.t += dt;
-      if (d.t < 0) continue;
-      const yy = d.y + 0.5 * KIT.sill.fall * d.t * d.t;
-      if (yy > d.to) {
-        this.sillDrops.splice(k, 1);
-        continue;
-      }
-      const sz = 5 + 5 * hash01('sd', d.seed);
-      const a = d.t * (6 + 4 * hash01('sa', d.seed));
-      const xx = d.x + Math.sin(d.t * 5 + d.seed) * 6;
-      front
-        .poly([
-          xx + Math.cos(a) * sz,
-          yy + Math.sin(a) * sz,
-          xx + Math.cos(a + 2.2) * sz * 0.8,
-          yy + Math.sin(a + 2.2) * sz * 0.8,
-          xx + Math.cos(a + 4) * sz * 0.6,
-          yy + Math.sin(a + 4) * sz * 0.6,
-        ])
-        .fill({ color: KIT.rot.bloom, alpha: 0.95 });
-    }
 
     // Shortcuts (closed): a root door lashed shut, its knot on the side that opens it (the Canopy r16: a bark plug
     // read as a wall to cut, and from the well's floor nothing said which side opened). Knocked, it shudders.

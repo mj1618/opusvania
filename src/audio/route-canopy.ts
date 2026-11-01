@@ -257,25 +257,6 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
             at('clink', 'lantern', C.clinkDb - 6, { cents: -500, delay: 0.42, priority: 2 }, 1),
           ]
         : [];
-    // (r18) A cut into the face under a rotten wall: the rot up there answers, a soft crunch and chips falling from it
-    // (render's `KIT.sill`: within 24 px of its sides, 520 under its foot).
-    case 'slashTerrain': {
-      const b = (ctx.scene.bark ?? []).find(
-        (r) =>
-          !r.floor &&
-          (q.x ?? 0) >= r.x - 24 &&
-          (q.x ?? 0) <= r.x + r.w + 24 &&
-          (q.y ?? 0) - (r.y + r.h) >= 0 &&
-          (q.y ?? 0) - (r.y + r.h) <= 520,
-      );
-      if (!b) return [];
-      const bx = b.x + b.w / 2;
-      const by = b.y + b.h / 2;
-      return [
-        at('crunch', 'world', C.clinkDb - 4, { x: bx, y: by, cents: -300, delay: 0.05, priority: 3 }),
-        at('scrape', 'world', C.clinkDb - 10, { x: bx, y: b.y + b.h, delay: 0.3, priority: 2 }, 1),
-      ];
-    }
     // A shut root door pushed from its far side (r16): a dull knock of wood and a little grit falling.
     case 'shortcutShut':
       return [
