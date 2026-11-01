@@ -154,7 +154,8 @@ describe('the blade', () => {
       snap,
       ctx,
     );
-    expect(sounds(block)).toEqual(['clang']);
+    // (The Canopy r19: a shield struck, a clank and its ring.)
+    expect(sounds(block)).toEqual(['clang', 'clang']);
     const hurt = { ...snap, hero: { ...snap.hero, stagger: 12 } };
     expect(layers(hurt, CAM, 0, ctx).muffleHz).toBeLessThan(1000);
     expect(layers(snap, CAM, 0, ctx).muffleHz).toBeGreaterThan(15000);

@@ -212,7 +212,12 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       // The blade glances off a braced shell: chitin rings; a down cut that glances still bounces her.
       return e.slash === 'down'
         ? [blow('clang', e.hitX, e.hitY, C.clangDb - 2), blow('pogo', h.x, h.y, C.pogoDb - 2, {}, 1)]
-        : [blow('clang', e.hitX, e.hitY, C.clangDb, { cents: jitter('clang', 0, 50) })];
+        : [
+            // (The Canopy r19: players kept cutting a braced front. A side cut that glances is a shield struck: a
+            // louder clank, and its ring a fifth up a beat after.)
+            blow('clang', e.hitX, e.hitY, C.clangDb + C.shieldDb, { cents: jitter('clang', 0, 50) }),
+            blow('clang', e.hitX, e.hitY, C.clangDb - 5, { cents: 700, delay: 0.05 }, 1),
+          ];
     case 'kitClang':
       return [blow('clang', e.hitX, e.hitY, C.clangDb, { cents: 300 + jitter('clang', 0, 50) })];
     case 'barkBreak':

@@ -1477,6 +1477,42 @@
         }
       ]
     },
+    "camera": {
+      "headroom": 0,
+      "anchorY": 0.4,
+      "zones": [
+        {
+          "id": "clearing",
+          "x": 1760,
+          "y": 960,
+          "w": 2400,
+          "h": 640,
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "w": 8000,
+            "h": 1840
+          },
+          "frames": 45
+        },
+        {
+          "id": "landing",
+          "x": 5600,
+          "y": 0,
+          "w": 1760,
+          "h": 1600,
+          "zoom": 0.9,
+          "bounds": {
+            "x": 5200,
+            "y": 480,
+            "w": 2240,
+            "h": 1280
+          },
+          "until": "cn-hub-left",
+          "frames": 45
+        }
+      ]
+    },
     "exits": [
       {
         "id": "hatch",
@@ -1578,41 +1614,6 @@
         ]
       }
     ],
-    "camera": {
-      "anchorY": 0.4,
-      "zones": [
-        {
-          "id": "clearing",
-          "x": 1760,
-          "y": 960,
-          "w": 2400,
-          "h": 640,
-          "bounds": {
-            "x": 0,
-            "y": 0,
-            "w": 8000,
-            "h": 1840
-          },
-          "frames": 45
-        },
-        {
-          "id": "landing",
-          "x": 5600,
-          "y": 0,
-          "w": 1760,
-          "h": 1600,
-          "zoom": 0.9,
-          "bounds": {
-            "x": 5200,
-            "y": 480,
-            "w": 2240,
-            "h": 1280
-          },
-          "until": "cn-hub-left",
-          "frames": 45
-        }
-      ]
-    },
     "roosts": [
       {
         "id": "roost-crossing",
@@ -2271,10 +2272,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "hub",
@@ -3096,6 +3097,7 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0,
       "zones": [
@@ -3130,7 +3132,6 @@
         }
       ]
     },
-    "roof": true,
     "exits": [
       {
         "id": "trunk",
@@ -3817,10 +3818,21 @@
         }
       ]
     },
-    "camera": {
-      "headroom": 0
-    },
     "roof": true,
+    "camera": {
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "gap-bed",
+          "x": 640,
+          "y": 256,
+          "w": 1600,
+          "h": 1024,
+          "zoom": 1,
+          "below": 260
+        }
+      ]
+    },
     "exits": [
       {
         "id": "hub",
@@ -4218,10 +4230,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "trunk",
@@ -4622,10 +4634,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "rot",
@@ -4890,10 +4902,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "crawl",
@@ -5293,10 +5305,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "webs",
@@ -5719,6 +5731,9 @@
           "h": 832
         }
       ]
+    },
+    "camera": {
+      "headroom": 0
     },
     "exits": [
       {
@@ -6178,10 +6193,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "fork",
@@ -6631,10 +6646,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "cellar",
@@ -7076,10 +7091,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "galleries",
@@ -7722,6 +7737,20 @@
         }
       ]
     },
+    "camera": {
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "arena",
+          "x": 1472,
+          "y": 1088,
+          "w": 2368,
+          "h": 512,
+          "fit": true,
+          "until": "cn-grove-clear"
+        }
+      ]
+    },
     "exits": [
       {
         "id": "fork",
@@ -7829,19 +7858,6 @@
         "upgrade": "moonShard"
       }
     ],
-    "camera": {
-      "zones": [
-        {
-          "id": "arena",
-          "x": 1472,
-          "y": 1088,
-          "w": 2368,
-          "h": 512,
-          "fit": true,
-          "until": "cn-grove-clear"
-        }
-      ]
-    },
     "triggers": [
       {
         "id": "pit-wave",
@@ -8396,10 +8412,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "grove",
@@ -8712,10 +8728,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "spire",
@@ -9026,10 +9042,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "spire",
@@ -9552,10 +9568,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "spire",
@@ -10010,6 +10026,27 @@
         }
       }
     },
+    "camera": {
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "crown-sit",
+          "x": 1640,
+          "y": 464,
+          "w": 720,
+          "h": 624,
+          "zoom": 1.3,
+          "frames": 120,
+          "lean": {
+            "x": 1700,
+            "y": 860,
+            "k": 0.5
+          },
+          "after": "cn-kin-sat",
+          "until": "cn-firefly-gap"
+        }
+      ]
+    },
     "exits": [
       {
         "id": "bower",
@@ -10075,27 +10112,7 @@
         "from": "in",
         "to": "glade-glide"
       }
-    ],
-    "camera": {
-      "zones": [
-        {
-          "id": "crown-sit",
-          "x": 1640,
-          "y": 464,
-          "w": 720,
-          "h": 624,
-          "zoom": 1.3,
-          "frames": 120,
-          "lean": {
-            "x": 1700,
-            "y": 860,
-            "k": 0.5
-          },
-          "after": "cn-kin-sat",
-          "until": "cn-firefly-gap"
-        }
-      ]
-    }
+    ]
   },
   {
     "id": "cn-attic",
@@ -10283,10 +10300,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "bower",
@@ -10697,7 +10714,8 @@
         "after": "cn-gap-hook-7",
         "relight": 240,
         "moths": 0,
-        "hook": true
+        "hook": true,
+        "aim": [-1, 0]
       }
     ],
     "marks": {
@@ -10741,6 +10759,27 @@
           "y": 1856,
           "w": 384,
           "h": 448
+        }
+      ]
+    },
+    "camera": {
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "chase",
+          "x": 3328,
+          "y": 0,
+          "w": 1024,
+          "h": 1344,
+          "zoom": 0.8,
+          "bounds": {
+            "x": 2752,
+            "y": 0,
+            "w": 1600,
+            "h": 1600
+          },
+          "after": "cn-firefly-gap",
+          "until": "cn-firefly-gap-done"
         }
       ]
     },
@@ -10827,26 +10866,6 @@
         }
       }
     ],
-    "camera": {
-      "zones": [
-        {
-          "id": "chase",
-          "x": 3328,
-          "y": 0,
-          "w": 1024,
-          "h": 1344,
-          "zoom": 0.8,
-          "bounds": {
-            "x": 2752,
-            "y": 0,
-            "w": 1600,
-            "h": 1600
-          },
-          "after": "cn-firefly-gap",
-          "until": "cn-firefly-gap-done"
-        }
-      ]
-    },
     "shots": {
       "wide": [
         {
@@ -11121,10 +11140,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "gap",
@@ -11991,6 +12010,7 @@
         }
       }
     },
+    "roof": true,
     "camera": {
       "headroom": 0,
       "zones": [
@@ -12011,7 +12031,6 @@
         }
       ]
     },
-    "roof": true,
     "exits": [
       {
         "id": "hub",
@@ -12659,10 +12678,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "tunnel",
@@ -13039,6 +13058,7 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0,
       "zones": [
@@ -13104,7 +13124,6 @@
         }
       ]
     },
-    "roof": true,
     "exits": [
       {
         "id": "tunnel",
@@ -13916,6 +13935,30 @@
         }
       ]
     },
+    "camera": {
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "escape",
+          "x": 0,
+          "y": 0,
+          "w": 1792,
+          "h": 2304,
+          "zoom": 1,
+          "below": 180,
+          "after": "cn-den-collapse",
+          "until": "cn-den-escaped"
+        },
+        {
+          "id": "valley",
+          "x": 1792,
+          "y": 0,
+          "w": 2048,
+          "h": 1600,
+          "zoom": 0.85
+        }
+      ]
+    },
     "exits": [
       {
         "id": "den",
@@ -13966,13 +14009,6 @@
         "h": 28
       },
       {
-        "id": "thorn-o2",
-        "x": 1252,
-        "y": 880,
-        "w": 28,
-        "h": 104
-      },
-      {
         "id": "thorn-o3",
         "x": 896,
         "y": 384,
@@ -13987,29 +14023,6 @@
         "y": 384
       }
     ],
-    "camera": {
-      "zones": [
-        {
-          "id": "escape",
-          "x": 0,
-          "y": 0,
-          "w": 1792,
-          "h": 2304,
-          "zoom": 1,
-          "below": 180,
-          "after": "cn-den-collapse",
-          "until": "cn-den-escaped"
-        },
-        {
-          "id": "valley",
-          "x": 1792,
-          "y": 0,
-          "w": 2048,
-          "h": 1600,
-          "zoom": 0.85
-        }
-      ]
-    },
     "triggers": [
       {
         "id": "way-on",
@@ -14531,10 +14544,10 @@
         }
       ]
     },
+    "roof": true,
     "camera": {
       "headroom": 0
     },
-    "roof": true,
     "exits": [
       {
         "id": "out",

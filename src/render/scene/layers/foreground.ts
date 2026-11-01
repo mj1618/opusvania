@@ -35,6 +35,7 @@ import {
 import { SAFE_H, SAFE_W } from '../../contract';
 import { shareTexture } from '../../lifecycle';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
+import { barkLip, splinters } from '../lib/fx-bark';
 import { fxDebug } from '../lib/fx-debug';
 import {
   archRoot,
@@ -48,7 +49,9 @@ import {
 } from '../lib/fx-foliage';
 import { zoneWeights } from '../lib/fx-zones';
 import { PALETTE, prng, wind } from '../lib/look';
+import { gradeLookOf } from '../lib/looks';
 import { isGroveKit, LOOK } from '../lib/room-look';
+import { THICKET } from '../lib/thicket';
 
 export const FOREGROUND = {
   seed: 0xf09e,
@@ -166,6 +169,8 @@ export const FOREGROUND = {
     /** Top boughs stay this far (px) off the moon's disc. */
     moonClear: 70,
   },
+  /** Inside a hollow trunk (an enclosed heartwood room, r19): the bark lips' span (px) and drop (share of a bough's). */
+  hollow: { span: [380, 700] as const, drop: 0.75 },
 };
 
 const WALK_STEP = 16;
@@ -247,6 +252,8 @@ export class ForegroundLayer implements EnvModule {
   private walkLow = new Float32Array(0);
   /** The corner veils behind the bottom plants (`FOREGROUND.haze`): left, right. */
   private haze: Sprite[] = [];
+  /** Both bottom corners keep their near plants (an open wood room with a floor: the hub). */
+  private bothCorners = false;
   /** Playfield rects [x0, y0, x1, y1] the top plants keep out of (`FOREGROUND.keep`). */
   private keep: Array<[number, number, number, number]> = [];
 
@@ -307,12 +314,19 @@ export class ForegroundLayer implements EnvModule {
     const top = this.groundTop;
     const bottom = this.groundTop + SAFE_H;
 
-    // Near, top: big leafy boughs that fill a corner.
+    // Near, top: big leafy boughs that fill a corner. (Inside a hollow trunk, r19: torn lips of bark.)
+    const hollow = gradeLookOf(ctx.scene) === 'heartwood';
     const [n0, n1] = span(FOREGROUND.near.parallax);
     for (let x = n0 + rnd() * 300; x < n1; x += 250 + rnd() * 170) {
       const dir = rnd() < 0.5 ? -1 : 1;
       const drop = 330 + rnd() * 130;
-      add('near', 'top', x, top - 40, drop + 200, (g) => leafBranch(g, rnd, 520 + rnd() * 260, drop, dir));
+      if (hollow) {
+        const h = FOREGROUND.hollow;
+        add('near', 'top', x, top - 40, drop + 200, (g) =>
+          barkLip(g, rnd, h.span[0] + rnd() * (h.span[1] - h.span[0]), drop * h.drop, dir),
+        );
+      } else
+        add('near', 'top', x, top - 40, drop + 200, (g) => leafBranch(g, rnd, 520 + rnd() * 260, drop, dir));
     }
     if (!isGroveKit()) {
       // The wood (high in the canopy): nothing grows up from a floor. Leafy twigs of a nearer limb
@@ -321,16 +335,23 @@ export class ForegroundLayer implements EnvModule {
       for (let x = n0 + rnd() * 400; x < n1; x += w.every[0] + rnd() * (w.every[1] - w.every[0])) {
         const dir = rnd() < 0.5 ? -1 : 1;
         const drop = w.size[0] + rnd() * (w.size[1] - w.size[0]);
-        add('near', 'bottom', x, bottom + 40, drop + 160, (g) => {
-          g.scaleTransform(1, -1);
-          leafBranch(g, rnd, 420 + rnd() * 220, drop, dir);
-        });
+        if (hollow)
+          add('near', 'bottom', x, bottom + 40, drop + 160, (g) => splinters(g, rnd, drop * 0.9, dir));
+        else
+          add('near', 'bottom', x, bottom + 40, drop + 160, (g) => {
+            g.scaleTransform(1, -1);
+            leafBranch(g, rnd, 420 + rnd() * 220, drop, dir);
+          });
       }
     }
     // Near, bottom: one big designed silhouette per spot (never the same kind twice running).
     const [s0, s1] = FOREGROUND.nearSize;
     let last = -1;
-    for (let x = n0 + rnd() * 300; x < (isGroveKit() ? n1 : n0); x += 190 + rnd() * 110) {
+    // (An open wood room with a floor, the hub's clearing, r19: its corners framed like the Grove's.)
+    const floored = isGroveKit() || THICKET.rooms.includes(ctx.scene.id);
+    // (The Grove's diagonal mirror is placed for its own composition; elsewhere both bottom corners stand.)
+    this.bothCorners = floored && !isGroveKit();
+    for (let x = n0 + rnd() * 300; x < (floored ? n1 : n0); x += 190 + rnd() * 110) {
       let kind = Math.floor(rnd() * 5);
       if (kind === last) kind = (kind + 1 + Math.floor(rnd() * 4)) % 5;
       last = kind;
@@ -388,10 +409,19 @@ export class ForegroundLayer implements EnvModule {
       // `GroundProfile` gives the water surface, and plants stood in the pool up to it).
       const floors = ctx.scene.solids.filter((s) => s.tag === 'ground' || s.tag === 'pool');
       const n = Math.ceil(ctx.scene.width / WALK_STEP) + 1;
+      // (An open wood room with a floor, the hub: its floors are root masses; the walk line at x is the highest top
+      // of the low ones, those in the room's lower half.)
+      const roots = this.bothCorners
+        ? ctx.scene.solids.filter((s) => s.tag === 'root' && s.y >= ctx.scene.height * 0.5)
+        : [];
       const raw = Float32Array.from({ length: n }, (_, i) => {
         const x = i * WALK_STEP;
         let y = 0;
         for (const s of floors) if (x >= s.x - WALK_STEP && x <= s.x + s.w + WALK_STEP) y = Math.max(y, s.y);
+        let top = Number.POSITIVE_INFINITY;
+        for (const s of roots)
+          if (x >= s.x - WALK_STEP && x <= s.x + s.w + WALK_STEP) top = Math.min(top, s.y);
+        if (Number.isFinite(top)) y = Math.max(y, top);
         return y || ctx.scene.height;
       });
       const at = (a: Float32Array, i: number): number => a[Math.min(n - 1, Math.max(0, i))] as number;
@@ -424,13 +454,16 @@ export class ForegroundLayer implements EnvModule {
       const o = FOREGROUND.wood.opening;
       const ro = prng(o.seed);
       const px = o.screenX - SAFE_W / 2 + anchor.x + (o.camX - anchor.x) * FOREGROUND.near.parallax;
-      add('near', 'bottom', px, bottom + 70, o.size * 0.9, (g) => {
-        broadLeaves(g, ro, o.size);
-      });
-      add('near', 'bottom', px - o.size * 0.5, bottom + 40, o.size, (g) => {
-        g.scaleTransform(1, -1);
-        leafBranch(g, ro, o.size * 1.4, o.size * 0.8, 1);
-      });
+      if (hollow) add('near', 'bottom', px, bottom + 40, o.size, (g) => splinters(g, ro, o.size * 1.1, 1));
+      else {
+        add('near', 'bottom', px, bottom + 70, o.size * 0.9, (g) => {
+          broadLeaves(g, ro, o.size);
+        });
+        add('near', 'bottom', px - o.size * 0.5, bottom + 40, o.size, (g) => {
+          g.scaleTransform(1, -1);
+          leafBranch(g, ro, o.size * 1.4, o.size * 0.8, 1);
+        });
+      }
     }
     this.pieces = pieces;
     for (const plane of ['far', 'near'] as const) {
@@ -626,7 +659,7 @@ export class ForegroundLayer implements EnvModule {
           ? 1
           : piece.edge === 'top'
             ? side(-1) * (1 - mirror) + side(1) * mirror
-            : piece.plane === 'far'
+            : piece.plane === 'far' || this.bothCorners
               ? Math.max(side(1), side(-1))
               : Math.max(
                   side(1) * (1 - mirror) + side(-1) * mirror,
@@ -652,10 +685,12 @@ export class ForegroundLayer implements EnvModule {
         // The walk line of the playfield behind this plant, in this layer's coordinates.
         // The lowest one under the plant's whole width, not just its middle: the big near plants are
         // wider than twice `walkReach`, and their flanks stood in the pool at the frame's edge.
-        let low = 0;
+        // (With both corners standing, the hub: the highest line under it, so no floor she walks is ever hidden.)
+        let low = this.bothCorners ? Number.POSITIVE_INFINITY : 0;
         for (let q = 0; q <= 6; q++) {
           const lx = piece.x + sx + piece.b.x + (piece.b.width * q) / 6;
-          low = Math.max(low, this.walkLowAt(cam.x + lx - (vis.x + vis.w / 2)));
+          const at = this.walkLowAt(cam.x + lx - (vis.x + vis.w / 2));
+          low = this.bothCorners ? Math.min(low, at) : Math.max(low, at);
         }
         const line = vis.y + vis.h / 2 + (low - cam.y);
         // (A line far under the frame's bottom edge has nothing on it to hide: let go of it.)

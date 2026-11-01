@@ -63,7 +63,19 @@ describe('wood looks', () => {
         1,
         300,
       );
-      expect(rects, r.id).toBe(plan.backs.length);
+      // (The heartwood paints a back inside another only once, as part of the bigger one: canopy r19.)
+      const inner = (b: (typeof plan.backs)[number], i: number) =>
+        plan.backs.some(
+          (o, j) =>
+            j !== i &&
+            b.x >= o.x &&
+            b.y >= o.y &&
+            b.x + b.w <= o.x + o.w &&
+            b.y + b.h <= o.y + o.h &&
+            (o.w * o.h > b.w * b.h || j < i),
+        );
+      const painted = plan.look === 'heartwood' ? plan.backs.filter((b, i) => !inner(b, i)) : plan.backs;
+      expect(rects, r.id).toBe(painted.length);
     }
   });
 

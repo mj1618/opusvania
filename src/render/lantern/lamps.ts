@@ -44,9 +44,9 @@ const AT = { x: 0, y: 0 };
 
 /**
  * A flame that wants her (the Canopy r17: every first-timer fell 6-10 times under the hatch's first flame before
- * pressing the Lamp by it): a burning springboard leans toward her on its thread as she comes near, brightens, and
- * once she is in its fling reach a ring of light breathes out of it in time (her press would catch it now). Cages
- * never answer so (a trap is never a springboard).
+ * pressing the Lamp by it): a burning springboard leans toward her on its thread as she comes near and brightens, and
+ * its flame streams out the way a fling would throw her (r19: r17's ring breathing out of it in reach went, read as
+ * interface). Cages never answer so (a trap is never a springboard).
  */
 export const READY = {
   /** She is noticed this many fling radii out (it eases in from there to the reach). */
@@ -55,23 +55,20 @@ export const READY = {
   lean: 12,
   bright: 0.45,
   halo: 0.6,
-  /** In reach: a ring every `pulse` s, out to `ring` px, the core's flare. */
-  pulse: 0.7,
-  ring: 64,
-  ringColor: 0xffd9a0,
   /** Seconds it takes to turn toward her (and away). */
   ease: 0.25,
   /**
-   * In reach, the way a fling would throw her now (the Canopy r18, ft17b: "~35 s of fiddling to understand" the aim;
-   * ft17a: "sometimes up, sometimes sideways-down"): a tongue of the flame's light leans out along it, the held
-   * direction, else the lamp's own aim, else out from the flame through her, and sparks run along it. It swings to a
-   * new held direction over `peekTurn` s. `peekLen` px past the flame's edge; sparks every `peekEvery` s.
+   * The way a fling would throw her now (the Canopy r18, ft17b: "~35 s of fiddling to understand" the aim; r19: the
+   * tappers never saw it, and review r18 read r18's wedge as interface): the flame streams out of the lantern's mouth
+   * along it, the held direction, else the lamp's own aim, else out from the flame through her. Out of reach it shows
+   * at `peekFar` of its strength as the lantern wants her; in reach in full. It swings to a new held direction over
+   * `peekTurn` s. `peekLen` px of tongue at full; an ember leaves its tip every `peekEvery` s.
    */
-  peekLen: 92,
-  peekW: 9,
+  peekLen: 64,
+  peekW: 11,
   peekTurn: 0.08,
-  peekEvery: 0.32,
-  peekColor: 0xffe2b0,
+  peekEvery: 0.5,
+  peekFar: 0.7,
 };
 
 interface LampInfo {
@@ -801,16 +798,12 @@ export class Lamps {
         mid.add(x, y + s * 0.12, s * 0.5 * flick, LR.lamp.core, 0.55 * flick, s * 0.62 * flick);
         // The halo (bloom carries it further).
         glow.add(x, y, s * 2.4 * flick * (1 + READY.halo * wantK), LR.lamp.halo, 0.3);
-        // In her reach: a ring of light breathes out of it in time (a press would catch it now).
+        // (The Canopy r19, review r18: the ring that breathed out of it in reach read as interface. Gone: what tells
+        // her now is the flame itself, which leans out of the lantern's mouth the way a fling would throw her, from
+        // as soon as the lantern wants her, fuller in reach: `peekAt`.)
         const rt = this.want.get(i)?.t ?? 0;
-        if (rt > 0) {
-          const u = (rt / READY.pulse) % 1;
-          const r = s * 0.8 + READY.ring * (1 - (1 - u) ** 2);
-          const a = (1 - u) * Math.min(1, rt * 6) * 0.75;
-          front.circle(x, y, r).stroke({ color: READY.ringColor, width: 2.2 * (1 - u) + 0.6, alpha: a });
-          glowFront.add(x, y, s * 1.4, LR.lamp.core, 0.35 * (1 - u) * Math.min(1, rt * 6));
-          this.peekAt(i, l, x, y, s, rt, dt, clock, sim, front, glowFront);
-        } else this.peek.delete(i);
+        if (wantK > 0.02) this.peekAt(i, l, x, y, s, wantK, rt, dt, clock, sim, front, glowFront);
+        else this.peek.delete(i);
         // A room whose lamps are its picture (ROOM_LAMPS): their warmth washes the wood round them.
         if (this.roomK.light > 1)
           glow.add(x, y + 60, 520 * this.roomK.light * 0.5, LR.lamp.halo, 0.1 * flick, 420);
@@ -1130,9 +1123,12 @@ export class Lamps {
   }
 
   /**
-   * In her reach, before the press (READY.peek*): which way a fling would throw her now. The held direction (8-way, as
-   * the sim takes it), else the lamp's own `aim`, else out from the flame through her (`flingAim`'s rule). A tongue of
-   * warm light leans out of the flame that way and sparks run out along it; it swings as the held direction changes.
+   * Before the press (READY.peek*): which way a fling would throw her now, shown by the flame. The held direction
+   * (8-way, as the sim takes it), else the lamp's own `aim`, else out from the flame through her (`flingAim`'s rule).
+   * The flame streams out of the lantern's mouth that way as if a draught pulled it, flickering, an ember or two
+   * leaving its tip; it swings as the held direction changes. `want` (0..1) as the lantern wants her (READY.notice);
+   * `rt` > 0 in reach, where it stands at its full length. (The Canopy r19, review r18: r18's pale wedge, white line
+   * and spark beads read as a UI arrow; this is the flame's own shape and colours, no added light.)
    */
   private peekAt(
     i: number,
@@ -1140,6 +1136,7 @@ export class Lamps {
     x: number,
     y: number,
     s: number,
+    want: number,
     rt: number,
     dt: number,
     clock: number,
@@ -1163,45 +1160,59 @@ export class Lamps {
         if (Math.hypot(dx, dy) < 0.5) dy = -1;
       }
     }
-    const want = Math.atan2(dy, dx);
+    const goal = Math.atan2(dy, dx);
     const was = this.peek.get(i);
-    let ang = want;
+    let ang = goal;
     if (was !== undefined) {
-      let d = want - was;
+      let d = goal - was;
       while (d > Math.PI) d -= 2 * Math.PI;
       while (d < -Math.PI) d += 2 * Math.PI;
       ang = was + d * Math.min(1, dt / READY.peekTurn);
     }
     this.peek.set(i, ang);
-    const k = Math.min(1, rt * 5);
+    const k = Math.min(1, want * (rt > 0 ? 1 : READY.peekFar) + (rt > 0 ? Math.min(1, rt * 5) * 0.3 : 0));
+    if (k <= 0.01) return;
     const ux = Math.cos(ang);
     const uy = Math.sin(ang);
-    const a0 = s * 0.85;
-    const a1 = a0 + READY.peekLen;
-    const w = READY.peekW;
-    // The tongue: wide at the flame, pointed at its end, a hot core down its middle.
-    front
-      .poly([
-        x + ux * a0 - uy * w,
-        y + uy * a0 + ux * w,
-        x + ux * a1,
-        y + uy * a1,
-        x + ux * a0 + uy * w,
-        y + uy * a0 - ux * w,
-      ])
-      .fill({ color: READY.peekColor, alpha: 0.42 * k });
-    front
-      .moveTo(x + ux * a0, y + uy * a0)
-      .lineTo(x + ux * (a1 - 10), y + uy * (a1 - 10))
-      .stroke({ color: 0xfff6e0, width: 2, alpha: 0.75 * k });
-    glow.add(x + ux * (a0 + a1) * 0.5, y + uy * (a0 + a1) * 0.5, READY.peekLen * 0.6, LR.lamp.halo, 0.22 * k);
-    // Sparks running out along it, each a little further and fainter.
-    for (let j = 0; j < 3; j++) {
-      const u = (clock / READY.peekEvery / 3 + j / 3) % 1;
-      const d = a0 + (a1 + 26 - a0) * u;
+    const a0 = s * 0.35;
+    const len = (s * 0.6 + READY.peekLen * k) * (1 + 0.08 * Math.sin(clock * 17 + i));
+    const w = READY.peekW * (0.6 + 0.4 * k);
+    // A flame tongue: wide at the lantern's mouth, its sides wavering, curling to a point; three layers, the paper's
+    // orange outside, hot inside, the white core short.
+    const tongue = (lk: number, wk: number, color: number, alpha: number): void => {
+      const pts: number[] = [];
+      const n = 7;
+      for (let j = 0; j <= n; j++) {
+        const t = j / n;
+        const d = a0 + len * lk * t;
+        const half = w * wk * (1 - t) ** 0.8 * (1 + 0.25 * Math.sin(clock * 13 + t * 6 + i));
+        const sway = 4 * t * t * Math.sin(clock * 9 + i * 2);
+        pts.push(x + ux * d - uy * (half + sway), y + uy * d + ux * (half + sway));
+      }
+      for (let j = n; j >= 0; j--) {
+        const t = j / n;
+        const d = a0 + len * lk * t;
+        const half = w * wk * (1 - t) ** 0.8 * (1 + 0.25 * Math.sin(clock * 11 + t * 5 + i * 3));
+        const sway = 4 * t * t * Math.sin(clock * 9 + i * 2);
+        pts.push(x + ux * d + uy * (half - sway), y + uy * d - ux * (half - sway));
+      }
+      front.poly(pts).fill({ color, alpha });
+    };
+    tongue(1, 1, LR.lamp.paper, 0.75 * k);
+    tongue(0.72, 0.62, LR.lamp.paperHot, 0.85 * k);
+    tongue(0.38, 0.32, LR.lamp.core, 0.9 * k);
+    glow.add(x + ux * (a0 + len * 0.4), y + uy * (a0 + len * 0.4), len * 0.5, LR.lamp.halo, 0.16 * k);
+    // An ember or two leaving its tip along the way.
+    for (let j = 0; j < 2; j++) {
+      const u = (clock / READY.peekEvery / 2 + j / 2 + i * 0.37) % 1;
+      const d = a0 + len * (0.9 + 0.7 * u);
       front
-        .circle(x + ux * d, y + uy * d, 3.2 * (1 - u) + 1)
-        .fill({ color: 0xfff1d0, alpha: 0.9 * k * Math.sin(Math.PI * u) });
+        .circle(
+          x + ux * d - uy * 3 * Math.sin(u * 9 + j),
+          y + uy * d + ux * 3 * Math.sin(u * 9 + j),
+          2.2 * (1 - u) + 0.6,
+        )
+        .fill({ color: LR.lamp.paperHot, alpha: 0.9 * k * (1 - u) });
     }
   }
 

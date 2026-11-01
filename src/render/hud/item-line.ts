@@ -40,8 +40,11 @@ export function itemLine(key: string): string {
 export function shardLine(held: number, per: number): string {
   const n = held % per;
   const words = ['None', 'One', 'Two', 'Three', 'Four', 'Five'];
-  if (n === 0) return `A moon shard. ${words[per] ?? per} of them: a new light kindles.`;
-  return `A moon shard: ${(words[n] ?? String(n)).toLowerCase()} of ${(words[per] ?? String(per)).toLowerCase()}. ${words[per] ?? per} kindle a new light.`;
+  // (The Canopy r19: "one of three" was read as the count on the Crossing's seed door, whose three sockets stayed dark.
+  // The line says what is left to find and what it gives, with no total to match against.)
+  if (n === 0) return 'A moon shard. A new light kindles: she carries one more.';
+  const left = per - n;
+  return `A moon shard. ${words[left] ?? left} more, and a new light kindles.`;
 }
 
 /** Lines for story flags that close an area. */

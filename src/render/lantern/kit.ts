@@ -57,31 +57,23 @@ export const KIT = {
     hole: 0x140a06,
     shelf: 0xd8c49a,
   },
-  /** A shut root door (a side shortcut, the Canopy r16): roots, their lit edge, grain, the silk lashing and knot. */
+  /** A shut root door (a side shortcut, the Canopy r16): roots, their lit edge, grain, the silk lashing and its stake. */
   door: {
     root: 0x2a1c14,
     rootLit: 0x8a6a48,
     grain: 0x120a06,
     silk: 0xd8d0bc,
-    silkGlow: 0xe8e0c8,
-    leak: 0x9ab8e0,
-    /** A knock's light from beyond, its bright core (r17). */
-    leakCore: 0xe4f0ff,
+    /** The stake its bands are wound round, this far out from the door on the side that opens it (r19). */
+    stakeOff: 20,
+    /** On that side and this near (px), the ties' tails stir. */
+    stirPx: 520,
   },
   /** Seconds a cut's dust hangs. */
   dust: 0.6,
   /**
-   * A rotten wall answers a cut into the face under it (r18): a cut within `side` px of its sides and `below` px under
-   * its foot shakes it, and `chips` of rot fall from its sill (at `fall` px/s² ).
-   */
-  sill: { side: 24, below: 520, chips: 9, fall: 900 },
-  /**
-   * Seconds a shut root door answers a knock (the Canopy r17: two first-timers in r16 and one in r17 still saw "no
-   * response at all" from the well's doors): it shudders, its silk bands twang, and the knots on the side that opens it
-   * flare with the light that leaks from beyond, for this long. (r18, ft17a / ft17d still: "nothing at all": the
-   * flare was a few faint lines on a dark post and gone by the time they looked. Now the seams between the roots
-   * always glow a little (an opening plugged, not a post), and a knock blazes them, spills the far side's light over
-   * the floor at her feet, pulls the silk taut toward its knots and rings them three times, over 2.6 s.)
+   * Seconds a shut root door answers a knock (the Canopy r17: "no response at all"): it shudders, dust falls from its
+   * head, its bands strain toward the stake beyond and the ties jerk, for this long. (r19, review r18: r17-r18's lit
+   * seams, light spilt at her feet and rings at the knots read as interface; they went.)
    */
   doorKnock: 2.6,
   heart: { body: 0x2c1410, ring: 0x401c14, ringLit: 0x6a3020, scar: 0xc8a888, sheen: 0x9a5a40 },
@@ -123,7 +115,17 @@ export const KIT = {
   great: { wash: 0xff9a40, core: 0xffd890 },
   scar: { char: 0x0a0605, burn: 0x3a2418, seam: 0xdfe8ff, light: 0xb8d0f0 },
   /** The Downwood's moonseeds and the sockets of the doors that count them. */
-  seed: { body: 0xf2ecd8, wing: 0xc8d8f0, glow: 0xdfe8ff, rim: 0x8a8070 },
+  seed: {
+    body: 0xf2ecd8,
+    wing: 0xc8d8f0,
+    glow: 0xdfe8ff,
+    rim: 0x8a8070,
+    /** A door's sockets (r19): seed-shaped, this far apart, pressed into its face this far under its top. */
+    socketGap: 56,
+    /** A socket's cut face, all round it (the lit lip is `rim`, under it). */
+    cut: 0x52463a,
+    socketDown: 30,
+  },
   /** Bounce caps: a dark teal dome with cyan glow spots, pale gills, a pale stalk (the wood's living light). */
   cap: {
     top: 0x14283a,
@@ -191,11 +193,6 @@ export class Kit {
   private readonly readT = new Map<number, number>();
   /** Caps squashed by a bounce (seconds since). */
   private readonly capT = new Map<number, number>();
-  /**
-   * Chips of rot shaken off a wall's sill by a cut into the face under it (the Canopy r18): where they start, the floor
-   * they fall to (the cut's height), seconds since.
-   */
-  private readonly sillDrops: Array<{ x: number; y: number; to: number; t: number; seed: number }> = [];
 
   onEvents(events: readonly SimEvent[], sim: SimView): void {
     const S = sim.scene;
@@ -208,7 +205,6 @@ export class Kit {
         this.bellT.clear();
         this.readT.clear();
         this.knock.clear();
-        this.sillDrops.length = 0;
         continue;
       }
       // A cut made standing on a door that counts moonseeds (a floor: the blade meets no face, so no `slashTerrain`).
@@ -231,23 +227,9 @@ export class Kit {
             if (q.x >= g.x - 16 && q.x <= g.x + g.w + 16 && q.y >= g.y - 40 && q.y <= g.y + g.h + 16)
               this.seedKnock.set(gi, 0);
           });
-          // (r18, ft17d: cut the column under the giant's rot door 15+ times, "no response at all". A rotten wall
-          // answers a cut into the face under it: it shakes, its crack leaks, and chips of rot fall from its sill.)
-          (S.bark ?? []).forEach((b, i) => {
-            if (b.floor || (sim.kit.bark[i] ?? 0) <= 0) return;
-            if (q.x < b.x - KIT.sill.side || q.x > b.x + b.w + KIT.sill.side) return;
-            const below = q.y - (b.y + b.h);
-            if (below < 0 || below > KIT.sill.below) return;
-            this.hits.set(i, { t: 0, dir: 0 });
-            for (let k = 0; k < KIT.sill.chips; k++)
-              this.sillDrops.push({
-                x: b.x + b.w * (0.15 + 0.7 * hash01(`${b.id}sill${sim.frame}`, k)),
-                y: b.y + b.h,
-                to: q.y + 40,
-                t: -0.07 * k,
-                seed: sim.frame * 7 + k,
-              });
-          });
+          // (r19: r18's answer to a cut under a rotten wall (chips falling from its sill) went: ft19a cut the column
+          // under the giant's rot door for 2 min, "sure it would break", and review r18 counted it among the answers
+          // that read as interface. The wall answers a cut into itself.)
           for (const sc of S.shortcuts ?? []) {
             if (sim.save.opened.includes(`${S.id}:${sc.id}`)) continue;
             if (q.x >= sc.x - 12 && q.x <= sc.x + sc.w + 12 && q.y >= sc.y - 12 && q.y <= sc.y + sc.h + 12)
@@ -508,31 +490,6 @@ export class Kit {
       else this.bark(back, b.x + ox, b.y, b.w, b.h, b.floor === true, max - left, b.id);
     });
 
-    // Chips of rot falling from a wall's sill (r18): pale flakes tumbling to the floor under it.
-    for (let k = this.sillDrops.length - 1; k >= 0; k--) {
-      const d = this.sillDrops[k] as (typeof this.sillDrops)[number];
-      d.t += dt;
-      if (d.t < 0) continue;
-      const yy = d.y + 0.5 * KIT.sill.fall * d.t * d.t;
-      if (yy > d.to) {
-        this.sillDrops.splice(k, 1);
-        continue;
-      }
-      const sz = 5 + 5 * hash01('sd', d.seed);
-      const a = d.t * (6 + 4 * hash01('sa', d.seed));
-      const xx = d.x + Math.sin(d.t * 5 + d.seed) * 6;
-      front
-        .poly([
-          xx + Math.cos(a) * sz,
-          yy + Math.sin(a) * sz,
-          xx + Math.cos(a + 2.2) * sz * 0.8,
-          yy + Math.sin(a + 2.2) * sz * 0.8,
-          xx + Math.cos(a + 4) * sz * 0.6,
-          yy + Math.sin(a + 4) * sz * 0.6,
-        ])
-        .fill({ color: KIT.rot.bloom, alpha: 0.95 });
-    }
-
     // Shortcuts (closed): a root door lashed shut, its knot on the side that opens it (the Canopy r16: a bark plug
     // read as a wall to cut, and from the well's floor nothing said which side opened). Knocked, it shudders.
     for (const sc of S.shortcuts ?? []) {
@@ -543,9 +500,6 @@ export class Kit {
       }
       this.rootDoor(
         back,
-        glow,
-        front,
-        glowFront,
         sc.x,
         sc.y,
         sc.w,
@@ -554,6 +508,7 @@ export class Kit {
         sc.id,
         this.knock.get(sc.id),
         clock,
+        sim.player.cx,
       );
     }
 
@@ -657,23 +612,33 @@ export class Kit {
         const want = Number(g.flag.slice(6));
         const held = seedsHeld(sim.save.flags);
         for (let k = 0; k < want; k++) {
-          const sx = g.x + g.w / 2 + (k - (want - 1) / 2) * 34;
-          const sy = g.y - 18;
-          back.circle(sx, sy, 11).fill(0x0c0a10);
-          back.circle(sx, sy, 11).stroke({ color: KIT.seed.rim, width: 2, alpha: 0.8 });
+          // (The Canopy r19: three round dark dots over the door read as a count of moon shards, "one of three". A
+          // socket is a moonseed's own shape pressed into the door's face: the seed and its wing, hollow, rimmed.)
+          const sx = g.x + g.w / 2 + (k - (want - 1) / 2) * KIT.seed.socketGap;
+          const sy = g.y + KIT.seed.socketDown;
+          this.seedShape(back, sx, sy, 1.5, KIT.seed.rim, 0.75, 3);
           // Cut at: each socket in turn rings out (the empty ones a pale ring opening: "a seed goes here").
           const st = this.seedKnock.get(i);
           if (st !== undefined) {
             const u = (st - k * 0.22) / 0.9;
             if (u > 0 && u < 1) {
-              front
-                .circle(sx, sy, 11 + 36 * u)
-                .stroke({ color: KIT.seed.glow, width: 2.5 * (1 - u) + 0.5, alpha: 0.9 * (1 - u) });
-              glowFront.add(sx, sy, 30, KIT.seed.glow, 0.5 * (1 - u));
+              // (r19, review r18: the rings of light read as interface. The carving answers as wood: dust shaken out
+              // of each socket in turn, its lip flashing pale for a moment.)
+              this.seedShape(front, sx, sy, 1.5, KIT.seed.body, 0.7 * (1 - u), 3);
+              for (let q = 0; q < 4; q++) {
+                const a = hash01(`sk${k}`, q) * Math.PI;
+                front
+                  .circle(
+                    sx + Math.cos(a) * 26 * u,
+                    sy - 6 - Math.sin(a) * 18 * u + 30 * u * u,
+                    2.4 * (1 - u) + 0.6,
+                  )
+                  .fill({ color: KIT.rot.dust, alpha: 0.8 * (1 - u) });
+              }
             }
           }
           if (k < held) {
-            back.ellipse(sx, sy, 5, 7).fill(KIT.seed.body);
+            this.seedShape(back, sx, sy, 1.2, KIT.seed.body, 1);
             glow.add(sx, sy, 26, KIT.seed.glow, 0.5 + 0.1 * Math.sin(clock * 2 + k));
           }
         }
@@ -979,10 +944,6 @@ export class Kit {
    */
   private rootDoor(
     g: Graphics,
-    glow: GlowPool,
-    /** (r17: a knock's light is drawn in front of the room's tint, so it reads.) */
-    fg: Graphics,
-    gf: GlowPool,
     x: number,
     y: number,
     w: number,
@@ -991,6 +952,8 @@ export class Kit {
     id: string,
     knock: { t: number; side: number } | undefined,
     clock: number,
+    /** Her body centre's x: on the side that opens it, its ties stir (a thing to cut). */
+    herX: number,
   ): void {
     const D = KIT.door;
     const kt = knock?.t ?? 9;
@@ -998,44 +961,11 @@ export class Kit {
     // (r17: the answer that stays: the far side's light and the knots flare and ebb over `doorKnock` s; r18 longer and
     // brighter, a hot first flash.)
     const flare = knock ? Math.min(1, kt * 12) * Math.max(0, 1 - kt / KIT.doorKnock) ** 1.1 : 0;
-    const flash = knock ? Math.max(0, 1 - kt / 0.25) : 0;
     const twang = knock ? Math.exp(-kt * 5) * Math.sin(kt * 38) * 9 * -knock.side : 0;
     const open = opens === 'w' ? -1 : 1;
-    // Light from the far side between the roots (cool, breathing a little; a knock makes it blaze). The seams always
-    // show a thread of it (r18): a way plugged, not a post.
-    const idle = 0.16 + 0.05 * Math.sin(clock * 0.8);
-    for (let k = 1; k < 3; k++) {
-      const gx = x + (w * k) / 3;
-      glow.add(
-        gx,
-        y + h * 0.5,
-        26 + 40 * flare,
-        D.leak,
-        0.1 + 0.02 * Math.sin(clock * 0.8 + k) + 0.45 * flare,
-      );
-      fg.moveTo(gx, y + h * 0.04)
-        .lineTo(gx, y + h * 0.96)
-        .stroke({ color: D.leak, width: 6 + 12 * flare, alpha: idle * 0.6 + 0.45 * flare })
-        .moveTo(gx, y + h * 0.08)
-        .lineTo(gx, y + h * 0.92)
-        .stroke({
-          color: D.leakCore,
-          width: 1.4 + 2.2 * flare,
-          alpha: Math.min(1, idle + 0.9 * flare + flash),
-        });
-    }
-    // Knocked: the far side's light spills out under it across the floor at her feet, and over her (a flash).
-    if (flare > 0.02 && knock) {
-      const side = knock.side;
-      const fx = side > 0 ? x + w : x;
-      const fy = y + h;
-      const reach = 150 + 120 * flare;
-      fg.poly([fx, fy - h * 0.55, fx + side * reach, fy - 4, fx + side * reach, fy, fx, fy]).fill({
-        color: D.leak,
-        alpha: 0.22 * flare,
-      });
-      gf.add(fx + side * reach * 0.4, fy - 14, 60 + 80 * flare, D.leak, 0.45 * flare + 0.4 * flash);
-    }
+    // (The Canopy r19, review r18: r18's lit seams read as "a slab with two light slits", its knock's blaze and the
+    // rings at the knots as glowing interface. No light of its own now: roots, bark, rope. A knock is answered by the
+    // wood and the rope: it shudders, dust falls, the bands strain toward the stake beyond and the ties jerk.)
     for (let k = 0; k < 3; k++) {
       const rw = w / 3 + 6;
       const cx = x + (w * (k + 0.5)) / 3 + shake * (0.6 + 0.2 * k);
@@ -1064,41 +994,76 @@ export class Kit {
       }
       g.stroke({ color: D.grain, width: 1, alpha: 0.5 });
     }
-    // Two bands of silk across, and the knot on the opening side (a pale tie with two loose ends).
-    for (const by of [0.3, 0.68]) {
+    // Two bands of silk across, wound round a stake on the side that opens it and tied off there (the Canopy r19:
+    // every r18 first-timer read the old round knots as "two round lights behind bars, maybe they need lighting").
+    // A tie is a lashing, not a light: three turns round the stake, a bow, two loose tails, no glow of its own. Knocked
+    // from the shut side the bands strain toward the stake and the ties jerk (what holds it is over there); from the
+    // side that opens it, near, the tails stir in her draught.
+    const near = (open > 0 ? herX > x + w : herX < x) && Math.abs(herX - (x + w / 2)) < D.stirPx;
+    const stake = (open > 0 ? x + w + D.stakeOff : x - D.stakeOff) + shake;
+    // The stake: a peg of root driven into the floor beside the door, taller than the lashings.
+    g.poly([
+      stake - 8,
+      y + h,
+      stake - 6,
+      y + h * 0.16,
+      stake,
+      y + h * 0.08,
+      stake + 6,
+      y + h * 0.16,
+      stake + 8,
+      y + h,
+    ]).fill(D.root);
+    g.moveTo(stake + open * 3, y + h * 0.16)
+      .lineTo(stake + open * 4, y + h)
+      .stroke({ color: D.rootLit, width: 1.6, alpha: 0.5 });
+    for (const [bi, by] of [0.3, 0.68].entries()) {
       const yy = y + h * by;
-      // (r18: knocked, the silk pulls taut toward its knot: the knot is what holds it, and it is over there.)
+      // (r18: knocked, the silk pulls taut toward its stake: the tie is what holds it, and it is over there.)
       const tug = open * 8 * flare;
-      g.moveTo(x - 4 + shake, yy - 4)
+      const jerk = knock ? Math.exp(-kt * 4) * Math.sin(kt * 30 + bi) * 5 : 0;
+      const stir = near ? Math.sin(clock * 3.1 + bi * 1.7) * 3 : 0;
+      const far = open > 0 ? x - 4 : x + w + 4;
+      g.moveTo(far + shake, yy - 4)
         .quadraticCurveTo(
           x + w / 2 + shake + twang + tug,
           yy + 4 + Math.abs(twang) * 0.5 - 3 * flare,
-          x + w + 4 + shake,
+          stake,
           yy - 3,
         )
         .stroke({ color: D.silk, width: 6, alpha: 0.85 });
-      const kx = (open > 0 ? x + w + 7 : x - 7) + shake;
-      g.circle(kx, yy, 9 + 5 * flare).fill({ color: D.silk, alpha: 0.95 });
-      if (flare > 0.02) {
-        gf.add(kx, yy, 26 + 50 * flare, D.silkGlow, 0.65 * flare);
-        fg.circle(kx, yy, 6 + 6 * flare).fill({ color: D.leakCore, alpha: 0.7 * flare });
-        // Three rings out of the knot, one after another.
-        for (let r = 0; r < 3; r++) {
-          const u = (kt - r * 0.45) / 0.8;
-          if (u <= 0 || u >= 1) continue;
-          fg.circle(kx, yy, 10 + 34 * u).stroke({
-            color: D.leakCore,
-            width: 2.4 * (1 - u) + 0.6,
-            alpha: 0.9 * (1 - u),
-          });
-        }
+      // Three turns round the stake (dark-edged so they read as wound cord, not a glow).
+      for (let k = 0; k < 3; k++) {
+        const ty = yy - 9 + k * 6 + jerk * 0.3;
+        g.moveTo(stake - 10, ty + 3)
+          .lineTo(stake + 10, ty - 3)
+          .stroke({ color: D.grain, width: 5.4, alpha: 0.8 })
+          .moveTo(stake - 9, ty + 3)
+          .lineTo(stake + 9, ty - 3)
+          .stroke({ color: D.silk, width: 3.2, alpha: 0.95 });
       }
-      g.moveTo(kx, yy)
-        .quadraticCurveTo(kx + open * 10, yy + 10, kx + open * 6, yy + 24)
-        .moveTo(kx, yy)
-        .quadraticCurveTo(kx + open * 16, yy + 4, kx + open * 16, yy + 18)
-        .stroke({ color: D.silk, width: 2.4, alpha: 0.85 });
-      glow.add(kx, yy, 22, D.silkGlow, 0.18);
+      // The bow off the stake's far side: two small loops and two tails hanging.
+      const bx = stake + open * 10 + jerk * open;
+      const by2 = yy + 5;
+      for (const sgn of [-1, 1]) {
+        g.moveTo(bx, by2)
+          .quadraticCurveTo(bx + open * 18, by2 + sgn * 14, bx + open * 5, by2 + sgn * 4)
+          .stroke({ color: D.grain, width: 4.6, alpha: 0.7 })
+          .moveTo(bx, by2)
+          .quadraticCurveTo(bx + open * 18, by2 + sgn * 14, bx + open * 5, by2 + sgn * 4)
+          .stroke({ color: D.silk, width: 2.6, alpha: 0.95 });
+      }
+      g.moveTo(bx, by2)
+        .quadraticCurveTo(bx + open * (6 + stir), by2 + 18, bx + open * (3 + stir * 1.5 + jerk), by2 + 36)
+        .moveTo(bx, by2)
+        .quadraticCurveTo(bx + open * (14 + stir), by2 + 10, bx + open * (18 + stir * 2 - jerk), by2 + 30)
+        .stroke({ color: D.silk, width: 2.2, alpha: 0.85 });
+      if (flare > 0.02) {
+        // The strain: the band's last stretch to the stake pulled tight, a taut second strand over it.
+        g.moveTo(x + w / 2 + shake, yy - 1)
+          .lineTo(stake, yy - 4)
+          .stroke({ color: D.silk, width: 2.4, alpha: 0.8 * flare });
+      }
     }
     // Knocked: dust shaken out of its head.
     if (knock && kt < 0.9) this.dust(g, x + w / 2, y + 10 + 60 * kt, w * 1.6, 20, kt / 0.9, `${id}k`);
@@ -1125,6 +1090,50 @@ export class Kit {
         alpha: 0.35 * (1 - t),
       });
     }
+  }
+
+  /**
+   * A moonseed's silhouette, as the seeds in the world are drawn (a pale seed, its wing swept up behind it): filled; with
+   * `rim` px carved into wood (a dark hollow, its lower lip catching the light in `color`). `s` scales it (1 = the
+   * seed's own size).
+   */
+  private seedShape(
+    g: Graphics,
+    x: number,
+    y: number,
+    s: number,
+    color: number,
+    alpha: number,
+    rim = 0,
+  ): void {
+    const shape = (k: number, c: number, a: number): void => {
+      // The wing: a blade from the seed's shoulder, up and back, tapering to a point.
+      g.poly([
+        x - 3 * s,
+        y - 6 * s - k,
+        x - 12 * s - k,
+        y - 14 * s - k,
+        x - 24 * s - k * 1.4,
+        y - 15 * s - k,
+        x - 16 * s,
+        y - 8 * s + k,
+        x - 5 * s + k,
+        y - 1 * s + k,
+      ]).fill({ color: c, alpha: a * 0.9 });
+      g.ellipse(x, y, 7 * s + k, 10 * s + k).fill({ color: c, alpha: a });
+    };
+    if (rim > 0) {
+      // Carved: the cut's lower edge catches the light (the shape set down and right by `rim`), the hollow over it.
+      const ox = x;
+      const oy = y;
+      shape(rim * 0.9, KIT.seed.cut, 1);
+      x = ox + rim * 0.5;
+      y = oy + rim * 0.8;
+      shape(0, color, alpha);
+      x = ox;
+      y = oy;
+      shape(0, 0x0c0a10, 1);
+    } else shape(0, color, alpha);
   }
 
   private heartwood(g: Graphics, x: number, y: number, w: number, h: number, id: string): void {

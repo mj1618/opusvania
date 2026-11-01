@@ -28,6 +28,8 @@ const AIM7 =
       number
     >
   )[process.argv.find((a) => a.startsWith('--aim7='))?.slice(7) ?? 'L'] ?? ActionBit.left;
+/** `--hold`: after each press the whole aim stays held through the flight (a hand's diagonal; review r18 #4). */
+const HOLD = process.argv.includes('--hold');
 const pre = Number(process.argv.find((a) => a.startsWith('--pre='))?.slice(6) ?? 30);
 const kit = ['wallJump', 'glide'] as never;
 const s = createState(1, t, gap, [], kit, newSave(kit));
@@ -73,12 +75,12 @@ if (process.argv.includes('--fall')) {
     run(aim);
     const got = () => reach() === ix(next);
     for (let k = 0; k < 160 && (next === '' || !got()); k++) {
-      run(aim & (L | R));
+      run(HOLD ? aim : aim & (L | R));
       if (next === '' && s.player.grounded && k > 4) break;
     }
     // (A person's beat between seeing the lamp in reach and pressing: `--beat`, while it stays in reach; `--closest`:
     // she presses as the lamp is nearest, the way one aims at it.)
-    for (let k = 0; k < BEAT && got(); k++) run(aim & (L | R));
+    for (let k = 0; k < BEAT && got(); k++) run(HOLD ? aim : aim & (L | R));
     if (CLOSEST && next !== '') {
       const lid = reach();
       const l = (gap.lures ?? [])[lid];

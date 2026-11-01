@@ -41,6 +41,7 @@ import { LanternBackLayer } from './layers/lantern-back';
 import { MidLayer } from './layers/mid';
 import { PlayfieldLayer } from './layers/playfield';
 import { SkyLayer } from './layers/sky';
+import { ThicketLayer } from './layers/thicket';
 import { VeilLayer } from './layers/veil';
 import { isInterior, isLantern } from './lib/room-look';
 import { withSealedMass } from './lib/sealed';
@@ -72,6 +73,7 @@ const MODULES: ReadonlyArray<new () => EnvModule> = [
   SkyLayer,
   FarLayers,
   MidLayer,
+  ThicketLayer,
   VeilLayer,
   PlayfieldLayer,
   ForegroundLayer,

@@ -4,6 +4,22 @@ What the wood kit draws in `?world=canopy` beyond the mass painter (memory/canop
 docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`, round 4 before / after in
 `shots/canopy-r4-render/before|after|after-21x9/<room>/`.
 
+## Round 19: shape, not light (review r18 #3)
+- **Root door** (kit.ts `rootDoor`, `KIT.door.stakeOff` / `stirPx`): three roots, the silk bands wound three turns
+  round a stake on the opening side and tied in a bow with tails; no glow, no seams, no rings. Knock = shudder, dust,
+  bands strain (`KIT.doorKnock` 2.6 s), ties jerk. Its signature lost `glow`, `fg`, `gf`.
+- **Seed door sockets** (`seedShape(g, x, y, s, color, alpha, rim)`): the moonseed silhouette (blade wing + body);
+  `rim` > 0 = carved (cut face `KIT.seed.cut` all round, the lit lip set down-right, the hollow over). Gotcha: two
+  stroked ellipses read as chain links; three rim crescents alone read as moons.
+- **The flame's aim** (lamps.ts `peekAt`, `READY.peekLen / peekW / peekFar`): a flame tongue of three layers out of
+  the lantern's mouth, `want`-scaled from READY.notice, full in reach; READY's ring pulse (`pulse`, `ring`) is gone.
+- **Shield** (fx.ts kind `shield`, `FX.shield`): a thick white arc bowed toward her at a side block + 8 sparks.
+- **Gone**: `KIT.sill` (chips at a cut under a rotten wall); `doorWarm` after the room beyond is visited
+  (acts.ts `warmSeen`). Tried and reverted: a dark shell round the teaching wall (read as a door, ft19b).
+- **Knotholes** (interior.ts shaft near): none within `INTERIOR.knotFloor` 240 px over the walk (a lit one at the
+  well's pit read as "a glassy pod"). How it was found: hide `__bg.layers.playfield.children[0]` (the bake tiles), then
+  disable painters one at a time; `getBounds` over the stage only finds the 512 px tile.
+
 ## Every creature has a renderer (kinds.ts)
 - `src/render/enemies/kinds.ts` `creatureArt(kind, look)` says who draws a kind: `beetle` (burrback rig, scaled by
   `BEETLE_SCALE`), `moth` (lampwing art), `spider` (render/lantern/creatures.ts, needs `art.pieces` or Lanternroot),
@@ -759,3 +775,45 @@ logs the item line against `kit.quiet`, `recall.sh`).
   belly by `spentK * (1 - braceK)` breathing with the pant, a flash for 0.45 s as it lays open (`rig.openT`, not on a
   touch). Staging a miss for a shot: walk at it, clear input in its windup, jump on `charge` (goto another room first:
   a same-room goto keeps creatures where they were).
+
+## Round 19: close-up art, the giant's inside and the hub (review r18 #1)
+Shots: `shots/art-r19/before|after|after-21x9|after-16x10/<room>/` (cn-trunk, cn-hub, cn-grove).
+- **The giant's inside** (lib/heartwood.ts, called from interior.ts' heartwood branches). Deep back: fibre bundles along
+  `heartAngle` (lit top, shadowed lower third, broken dark grooves), grain strands that **part round features**
+  (`parted`: a monotone push, lines never cross), eroded recesses ring by ring + 1-2 great cavities, knots, beetle
+  galleries, punk stipple, mycelium, cracks with a cold sliver. Mid: the roof shredded into fibre curtains **hung from
+  every ceiling** (`ceilingsIn`; one hung from the room's top hid under the roof mass), punk heaps with splinters behind
+  the walked tops (`topsIn`), bracket fungi (cap dome over a gill crescent, <= 70 px). Near back: fibre from the
+  ceilings (the old lenses WERE the review's "three soft diagonal blobs"). Dust in each crack beam (`DUST`,
+  layers/interior.ts), beams every `shaftEvery * 1.1` in heartwood.
+- What failed on the way: slabs floating free read as shadows; lone hanging flaps as pale posts; a painted beam down
+  the wall as a post; lit contour lines on a recess as a map, a lit outer ring as a raised plateau (a recess reads as
+  depth when each step is darker and only the lower crescent of a step is lit); mid at `midValue` 0.45 is the deep's
+  own value in heartwood (used 0.1: a darker plane against the lit far wall); the generic "dim great roots" read as posts
+  (dropped where `graded`).
+- **Baked planes** (lib/bake-plane.ts `bakePlane`: MSAA render, resolved copy, Graphics freed): heartwood deep 0.6, mid
+  0.6, an open room's pockets x0.4 (`INTERIOR.bake`). Live, the hub's pocket marks cost ~1 ms. A back inside a bigger
+  one is painted once (`innerBack`; its padded rect drew a ruled rectangle) and gets no edge shade.
+- **Open-room heartwood** (`plan.graded` false, the hub's under-floor): drawn unlit (no warm pools, lit tones pulled to
+  the body) and keeps the far roots; else it turned the hub's gap tan.
+- **Foreground inside a hollow** (lib/fx-bark.ts; `gradeLookOf(room) === 'heartwood'`): torn bark lips for the top
+  boughs (`FOREGROUND.hollow`), splintered wood for the bottom twigs and the opening's corner.
+- **The hub's near-mid ground** (layers/thicket.ts, lib/thicket.ts, layers `thicketFar` 0.8 / `thicketNear` 0.9, only
+  `THICKET.rooms`): moss banks behind every low floor run >= 480 px, placed at layer `A + (w - A) * p` (what is behind
+  the screen centre stays behind it). Even round lumps read as cumulus: lumps of 22-120 px, flattened, swelling on a
+  700 px wave, a 22 px tooth. Kept darker than the fog, lighter than the ground.
+- **Hub foreground corners** (`floored`, `bothCorners`): the Grove's bottom plants with both corners standing (its
+  mirror at x 2500-3300 retracted them in the clearing) and the walk line from the low root tops, the HIGHEST under a
+  plant (the lowest let them cover the floor by the door's gap). Over the near-black mass they mostly vanish; they show
+  where there is air (the gap).
+- **Crowned back edges** (interior.ts `crowns`, `CROWN`): a back's free edge is overlapping half-ellipse domes instead
+  of +-120 px noise every 140 px: that noise, with the edge shade's stacked bands, was the Grove's "clip-art triangle
+  hills" and the hub mouth's zigzag. Shade 12 steps at 0.08. Side edges clamp inside the top / bottom bites (a corner
+  spike broke `wood-looks`' tear test).
+- Light pools under the cracks at 0.4 / 0.26 and the bundles' lit tops at 0.14 / 0.08: brighter, cn-webs (heartwood too) broke look:check's air ceiling of 85 at 21:9 (it sits at 84 now).
+- Cost (headless GPU, 1920x1080, median of 3 x 180 frames): per-frame time within run-to-run noise (1.4-2.7 ms before
+  and after); textures +29 MB in the giant, +39 MB in the hub, the Grove unchanged. look:check passes.
+- Left: the den (packed earth and root hair, the larder niche's decals, story litter), the carcass (a split shell, legs
+  folded), moths as moths (>= 12 px two-tone beating wings), the well's walls, the Grove's mid plane (the crowns are
+  flat silhouettes, no leaf texture), stippled moss on walk tops / beards from undersides (plan §4 #1), the ceiling's
+  "dark discs" (pf-mass root mats), recess cores still lifted by the heartwood grade's shadow lift.

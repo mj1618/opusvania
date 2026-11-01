@@ -295,7 +295,11 @@ export function enterRoom(
   state.room = to;
   // (An ambush left unfinished plays again from its arrival: `rearm` triggers, review r7 #2.)
   rearmArenas(scene, state.save);
+  // (The Canopy r19: the glints she carries are hers, not the room's. Every first-timer saw the count "drop from 5 to
+  // 0" at a door: a new room's pickups started the wallet over.)
+  const carried = state.pickups?.count ?? 0;
   Object.assign(state, createLocal(scene, t, state.save, firstVisit));
+  state.pickups.count = carried;
   // Seam hysteresis: the opening she came in by stays shut behind her for a moment (src/sim/index.ts).
   if (entry.kind === 'edge') state.seam = { exit: entry.exit.id, frames: 0 };
   state.prevInput = entry.kind === 'edge' ? state.prevInput : 0;
