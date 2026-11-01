@@ -156,3 +156,41 @@ describe('the shade in sound (r20)', () => {
     expect(lost.length).toBe(1);
   });
 });
+
+describe('fights built as fights (r20)', () => {
+  const live = (s: GameState, ids: string[]) =>
+    s.enemies.filter((e) => ids.includes(e.id) && !e.gone && e.mode !== 'dead').length;
+
+  it("the kin's foot: landing on the bower's west floor wakes a burrback, a lampwing and a juvenile", () => {
+    const s = at('cn-bower', 2166, 1408);
+    const ids = ['burr-kin', 'wing-kin', 'juv-kin'];
+    run(s, 0, 10);
+    expect(live(s, ids)).toBe(0);
+    const ev: SimEvent[] = [];
+    for (let k = 0; k < 200 && !s.save.flags.includes('cn-bower-ambush'); k++) run(s, ActionBit.left, 1, ev);
+    expect(s.save.flags).toContain('cn-bower-ambush');
+    run(s, 0, 120, ev);
+    expect(live(s, ids)).toBe(3);
+  });
+
+  it("the fork is quiet on the way to the Grove; after the firefly's flight carriers and a hawker hold its floor", () => {
+    const ids = ['ant-f1', 'ant-f2', 'ant-f3', 'hawk-fork'];
+    const first = at('cn-fork', 400, 1344);
+    run(first, 0, 5);
+    expect(live(first, ids)).toBe(0);
+    const scene = getRoom('cn-fork');
+    const s = createState(1, t, scene, [], CG as never, {
+      ...newSave(CG as never),
+      flags: ['cn-firefly-gap'],
+    });
+    s.hatch = null;
+    run(s, 0, 5);
+    expect(live(s, ids)).toBe(4);
+  });
+
+  it('the upper limbs: a hawker hunts her over the bed from the first limb', () => {
+    const s = at('cn-limbs', 1000, 768);
+    const ev = run(s, 0, 120);
+    expect(ev.some((e) => e.type === 'enemyNotice' && e.id === 'hawk-limbs')).toBe(true);
+  });
+});

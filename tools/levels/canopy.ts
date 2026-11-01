@@ -1819,6 +1819,11 @@ function limbs(): Json {
   r.mass(LIMB_KNUCKLE[0], LIMB_KNUCKLE[1], LIMB_KNUCKLE[2], 48);
   r.lamp('wick-limb-1', 1240, 600, { aim: [1, -1] });
   r.lamp('wick-limb-2', 1640, 450);
+  // (r20, Matt "very easy": the gap is crossed under a hunter. A hawker hangs under the roof over the bed's west half,
+  // sees her from the first limb's end and hunts her across: a 30-frame tell, then a strike where her jump goes. In a
+  // lamp's aim nothing hunts her (`huntCaught` off): the flame is the safe beat, the air between is not. It guards
+  // nothing: a fling does not send it away; a cut does (it tumbles, 2 cuts).)
+  r.flyer('hawker', 'hawk-limbs', 1180, 400, 1, { radius: 160, sight: 560 });
   r.hoard('niche-', 1920, 220, 240, 40, 2);
   r.cover('niche-cover', 1664, 64, 640, 320);
   // (r19, ft18b / ft18c: the bed under the gap was off the bottom of the frame from the limbs ("the screen was showing
@@ -2065,6 +2070,14 @@ function fork(): Json {
   // pod at the face's top and the stone pocket's ledge and pod are gone; the face and the lamp over its top remain.)
   // (r7: east in the top's cave, high: flung west off it at 3000 x 440 a clawed player reached the glide shelf.)
   r.lamp('wick-fork', 3120, 400);
+  // (r20, Matt "very easy": carrier plus hawker.) Once the firefly has fled up the gap (`cn-firefly-gap`), the way
+  // home through the fork is no longer quiet: the cellar's carriers have come up and run a trail along the floor west
+  // of the knoll (a line that bites one who stands on it), and a hawker hunts that floor from over the perch limb, so
+  // she cannot stand still on the trail to fight it: the ants hold the floor, the hawker presses. The first pass
+  // (to the Grove) is as quiet as before.
+  const after = { wakes: 'cn-firefly-gap' };
+  r.ants('ant-f', 1000, 1560, 1344, 3, after);
+  r.flyer('hawker', 'hawk-fork', 1300, 780, -1, { radius: 180, sight: 560, ...after });
   // (r8: two covers, the knoll's chamber behind the panel and the stairs under the floor; v7's one ran over the open
   // way in from the Crossing as well.)
   r.cover('cellar-cover', 1600, 1088, 448, 448, 'cellar-panel');
@@ -2540,6 +2553,31 @@ function bower(): Json {
   r.thornsUp('thorn-kin', 1536, 1250, 158);
   r.lamp('wick-hall', 3300, 860);
   r.flyer('hawker', 'hawk-hall', 3300, 660, -1, { orbit: 'wick-hall', period: 240, radius: 300 });
+  // (r20, Matt "very easy": a fight built as a fight.) The kin's foot is an ambush: landing on the hall's west floor
+  // past the bramble run (1,600-2,150) wakes it. A burrback crawls out from under the kin's roots and presses her
+  // along the floor toward the run; a lampwing drops out of the roof and holds the air over the floor and the kin's
+  // ledge (where she would climb out of the burrback's way), and a juvenile comes back over the run's knuckles behind
+  // her. Until all three are down a fade or leaving plays it again from its arrival (`rearm`); cleared, it stays clear.
+  const kinFoot = { wakes: 'cn-bower-ambush', sets: 'cn-bower-clear' };
+  r.add('triggers', { id: 'kin-ambush', x: 1600, y: 1216, w: 550, h: 192, sets: 'cn-bower-ambush', rearm: true });
+  r.burrback('burr-kin', 1760, 1408, 1, 260, { ...kinFoot, fenced: true, arrive: [[1600, 1408]] });
+  r.flyer('lampwing', 'wing-kin', 2000, 900, -1, { radius: 200, ...kinFoot, arrive: [[1900, 420]] });
+  r.juvenile('juv-kin', 2080, 1408, -1, 200, { ...kinFoot, fenced: true, arrive: [[2560, 1216]] });
+  // (Framed while it lasts, as the well's: the floor, the ledge and the air the lampwing holds.)
+  r.set('camera', {
+    zones: [
+      {
+        id: 'kin-ambush',
+        x: 1536,
+        y: 704,
+        w: 704,
+        h: 704,
+        fit: true,
+        bounds: { x: 1344, y: 384, w: 1920, h: 1088 },
+        until: 'cn-bower-clear',
+      },
+    ],
+  });
   // A save at the top of the Spire (review r3 #8): the halfway point of the east loop.
   r.patch('p-bower', 3800, 1408);
   // (r7, review r6 #7: the kin's chamber pays a moon shard, not two greats and five glints.)

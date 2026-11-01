@@ -3697,7 +3697,18 @@
       }
     ],
     "pods": [],
-    "enemies": [],
+    "enemies": [
+      {
+        "id": "hawk-limbs",
+        "kind": "hawker",
+        "x": 1180,
+        "y": 400,
+        "facing": 1,
+        "senses": "always",
+        "radius": 160,
+        "sight": 560
+      }
+    ],
     "lures": [
       {
         "id": "wick-limb-1",
@@ -5649,7 +5660,48 @@
     "oneWays": [],
     "pickups": [],
     "pods": [],
-    "enemies": [],
+    "enemies": [
+      {
+        "id": "ant-f1",
+        "kind": "carrier",
+        "x": 1000,
+        "y": 1344,
+        "facing": 1,
+        "trail": [[1560, 1344]],
+        "wakes": "cn-firefly-gap"
+      },
+      {
+        "id": "ant-f2",
+        "kind": "carrier",
+        "x": 1000,
+        "y": 1344,
+        "facing": 1,
+        "follow": "ant-f1",
+        "phase": 0.33,
+        "wakes": "cn-firefly-gap"
+      },
+      {
+        "id": "ant-f3",
+        "kind": "carrier",
+        "x": 1000,
+        "y": 1344,
+        "facing": 1,
+        "follow": "ant-f1",
+        "phase": 0.67,
+        "wakes": "cn-firefly-gap"
+      },
+      {
+        "id": "hawk-fork",
+        "kind": "hawker",
+        "x": 1300,
+        "y": 780,
+        "facing": -1,
+        "senses": "always",
+        "radius": 180,
+        "sight": 560,
+        "wakes": "cn-firefly-gap"
+      }
+    ],
     "lures": [
       {
         "id": "wick-fork",
@@ -9449,6 +9501,44 @@
         "orbit": "wick-hall",
         "period": 240,
         "radius": 300
+      },
+      {
+        "id": "burr-kin",
+        "kind": "burrback",
+        "x": 1760,
+        "y": 1408,
+        "facing": 1,
+        "radius": 260,
+        "senses": "always",
+        "wakes": "cn-bower-ambush",
+        "sets": "cn-bower-clear",
+        "fenced": true,
+        "arrive": [[1600, 1408]]
+      },
+      {
+        "id": "wing-kin",
+        "kind": "lampwing",
+        "x": 2000,
+        "y": 900,
+        "facing": -1,
+        "senses": "always",
+        "radius": 200,
+        "wakes": "cn-bower-ambush",
+        "sets": "cn-bower-clear",
+        "arrive": [[1900, 420]]
+      },
+      {
+        "id": "juv-kin",
+        "kind": "juvenileBurrback",
+        "x": 2080,
+        "y": 1408,
+        "facing": -1,
+        "radius": 200,
+        "senses": "always",
+        "wakes": "cn-bower-ambush",
+        "sets": "cn-bower-clear",
+        "fenced": true,
+        "arrive": [[2560, 1216]]
       }
     ],
     "lures": [
@@ -9584,7 +9674,24 @@
     },
     "roof": true,
     "camera": {
-      "headroom": 0
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "kin-ambush",
+          "x": 1536,
+          "y": 704,
+          "w": 704,
+          "h": 704,
+          "fit": true,
+          "bounds": {
+            "x": 1344,
+            "y": 384,
+            "w": 1920,
+            "h": 1088
+          },
+          "until": "cn-bower-clear"
+        }
+      ]
     },
     "exits": [
       {
@@ -9635,6 +9742,17 @@
         "y": 1444,
         "w": 1088,
         "h": 28
+      }
+    ],
+    "triggers": [
+      {
+        "id": "kin-ambush",
+        "x": 1600,
+        "y": 1216,
+        "w": 550,
+        "h": 192,
+        "sets": "cn-bower-ambush",
+        "rearm": true
       }
     ],
     "patches": [
