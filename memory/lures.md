@@ -32,7 +32,8 @@ to **F** / pad **B** (the test grove's only). Nothing else changed.
 - **Used up, then embers** (wood-area1-v3's retry rule): at launch the flame goes to hp 0 and smoulders
   (`lures.ember[i]`, `lureEmber`). The chain's first launch remembers the ground she left (`chainX/Y`). Then:
   - lands on safe ground (trackSafeGround's rule) not back at the start: every ember goes out for good
-    (`snuffLure` by `'fling'`: `lureSnuff {fling: true}`, moths, the save, +1 health). Leaving the room in flight too;
+    (`snuffLure` by `'fling'`: `lureSnuff {fling: true}`, moths, the save, +1 health: `healOnSnuff`; a `relight` springboard
+    `healOnRelight` 0 and a cage `healOnTrap` 1 since the Canopy r20). Leaving the room in flight too;
   - lands back within `stepUp` / `chainBackPx` 160 of the start (a miss), a fall catch, thorns, or a fade: every
     ember burns again (`lureRelight`), nothing spent.
   A fling straight into the ground relights at once. Landing on a floor under a failed chain counts as safe
