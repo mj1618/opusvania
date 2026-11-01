@@ -469,6 +469,11 @@ export class GoalRenderer {
         wait: 0,
         chest: false,
       });
+    if (this.lamps.length === 0 && !this.heart) {
+      // (The Canopy r20: only her dropped clusters are drawn here, `dropsOnly`.)
+      layers.back.addChild(this.surface.mesh, this.back.mesh);
+      layers.front.addChild(this.front.mesh);
+    }
     if (this.lamps.length > 0 || this.heart) {
       layers.light.addChild(this.lightBatch.mesh);
       layers.back.addChild(this.back.mesh);
@@ -688,7 +693,12 @@ export class GoalRenderer {
     hudLink.x = SAFE_W / 2 + (sim.player.cx - cam.x) * cam.zoom;
     hudLink.y = SAFE_H / 2 + (sim.player.cy - cam.y) * cam.zoom;
     hudLink.zoom = cam.zoom;
-    if (this.lamps.length === 0 && !this.heart) return;
+    if (this.lamps.length === 0 && !this.heart) {
+      // (The Canopy r20: no lanterns or heart, but what she dropped where she faded, HK's shade, is drawn all the
+      // same: the early return here hid every cluster in the Canopy since r16.)
+      this.dropsOnly(dt, clock, cam, sim);
+      return;
+    }
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
     const L = GOAL.lantern;
     const K = GOAL.kindle;
@@ -2027,6 +2037,25 @@ export class GoalRenderer {
       st.root.visible = spot !== undefined;
       if (spot) st.root.position.set(spot[0], spot[1]);
     }
+  }
+
+  /** A room with no lanterns or heart (the Canopy): only her dropped clusters (drops.ts). */
+  private dropsOnly(dt: number, clock: number, cam: CameraView, sim: SimView): void {
+    const p = sim.player;
+    this.chestX = vesperLink.live ? vesperLink.offerX : p.cx;
+    this.chestY = vesperLink.live ? vesperLink.offerY : p.cy - 8;
+    const b = this.back;
+    const f = this.front;
+    const sf = this.surface;
+    b.begin();
+    f.begin();
+    b.uniform[3] = 1;
+    f.uniform[3] = 1;
+    sf.begin();
+    this.drops.update(dt, clock, cam, sim, b, f, sf, this.chestX, this.chestY);
+    sf.end();
+    b.end(clock);
+    f.end(clock);
   }
 
   private draw(dt: number, clock: number, cam: CameraView, sim: SimView, bloom: number): void {

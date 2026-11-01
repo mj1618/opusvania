@@ -119,7 +119,10 @@ export class DropsView {
     const knots = this.knots;
     for (const e of sim.events) {
       if (e.type === 'fade' && !sim.scene.glow && sim.pickups.count > 0) {
-        const n = Math.floor(sim.pickups.count * tuning.health.fadeDrop + 1e-6);
+        // (A bench room, the Canopy r20: all of it, HK's shade.)
+        const n = sim.scene.bench
+          ? sim.pickups.count
+          : Math.floor(sim.pickups.count * tuning.health.fadeDrop + 1e-6);
         const p = sim.player;
         // (Settled onto what is under her, as the sim will settle it.)
         const feet = p.y + p.h;
