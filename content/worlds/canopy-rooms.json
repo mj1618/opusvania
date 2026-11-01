@@ -1290,9 +1290,10 @@
         "x": 4060,
         "y": 1600,
         "facing": -1,
-        "radius": 230,
+        "radius": 200,
         "senses": "always",
-        "fenced": true
+        "fenced": true,
+        "hp": 3
       },
       {
         "id": "ant-m1",
@@ -5822,6 +5823,14 @@
     "pods": [],
     "enemies": [
       {
+        "id": "dang-stairs",
+        "kind": "dangler",
+        "x": 760,
+        "y": 1672,
+        "facing": 1,
+        "senses": "always"
+      },
+      {
         "id": "ant-f1",
         "kind": "carrier",
         "x": 1000,
@@ -6104,7 +6113,7 @@
         "tag": "root",
         "x": 0,
         "y": 0,
-        "w": 320,
+        "w": 384,
         "h": 128
       },
       {
@@ -6313,7 +6322,16 @@
     ],
     "oneWays": [],
     "pickups": [],
-    "pods": [],
+    "pods": [
+      {
+        "id": "pod-cellar-hall",
+        "x": 2400,
+        "y": 554,
+        "mount": "sit",
+        "regrow": 1200,
+        "hp": 2
+      }
+    ],
     "enemies": [
       {
         "id": "ant-c1",
@@ -6322,6 +6340,26 @@
         "y": 704,
         "facing": 1,
         "trail": [[2900, 704]]
+      },
+      {
+        "id": "juv-c",
+        "kind": "juvenileBurrback",
+        "x": 1640,
+        "y": 512,
+        "facing": 1,
+        "radius": 130,
+        "senses": "always",
+        "fenced": true
+      },
+      {
+        "id": "wing-c",
+        "kind": "lampwing",
+        "x": 2840,
+        "y": 400,
+        "facing": -1,
+        "senses": "always",
+        "radius": 100,
+        "dives": 2
       }
     ],
     "lures": [],

@@ -1432,7 +1432,9 @@ function hub(): Json {
   // In the air over the burl between the seed door and the floor's burrback: a lampwing, met on the walk west.
   r.flyer('lampwing', 'wing-door', 4740, 1300, 1, { radius: 160, dives: 2 });
   // The floor between the seed door and the clearing: a burrback (its brace and ram: the first creature that blocks).
-  r.burrback('burr-floor', 4060, 1600, -1, 230, { fenced: true });
+  // (3 hp, not 5: three of six first-timers called it the best fight, and it was also the most hits of any new
+  // creature, on the road crossed three times; a first one to learn the flip on.)
+  r.burrback('burr-floor', 4060, 1600, -1, 200, { fenced: true, hp: 3 });
   // The cellar's pay (the pod is the thing to hit) and the step down to the giant's mouth: carriers on their rail,
   // coming at her from the giant's door.
   r.pod('pod-cellar', HUB_CELLAR[0] + 96, 1792, 1200, 'sit', 3);
@@ -2134,6 +2136,8 @@ function fork(): Json {
   // apex (ft21a, ft21d: "the drop in was one-way", both pressed R). A root across the shaft 64 over the stair's floor:
   // walking off the stair she drops under it into the cellar; a jump up from the cellar lands on it.)
   r.oneWay(400, 1792, 160, 'branch');
+  // (r21: the stairs down are a first-minute stretch too: a dangler over the stair's floor.)
+  r.dangler('dang-stairs', 760, 1664, 1);
   // (Review r4 #2: thorns at the face's foot read as "not this way"; r7, review r6 #1: v6's tray west of it is gone
   // too. The juvenile on the knoll, and a lamp over the face's top: the way on points at a warm light.)
   // (r8, review r7 #7: the fork's approach is the path's quiet room before the Grove: v7's juvenile on the knoll, the
@@ -2182,7 +2186,9 @@ function fork(): Json {
 
 function cellar(): Json {
   const r = new Wood('cn-cellar', 'The root cellar', [480, 96], 7302, { back: true, mood: 'deep' });
-  r.cave(320, 0, 1024, 128, { ceil: 0, w: 64, e: 0, corner: 0 });
+  // (r21: from x 384, not 320: walking off the fork's stair she landed in the sliver west of the hole, under the
+  // roof, and "can't jump back up where I dropped in" (ft21d, ft21f at x 340). The corridor ends under the hole now.)
+  r.cave(384, 0, 1024, 128, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.cave(896, 64, 1472, 320, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.cave(1344, 256, 1920, 512, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.cave(1792, 192, 2944, 704, { ceil: 128, w: 0, e: 64 });
@@ -2202,6 +2208,11 @@ function cellar(): Json {
   r.burl(2240, 704, 320, 128, 2);
   // (r7, review r6 #1: a quiet room, one ant on its way to the nest; v6's two trays, knuckle and pod are gone.)
   r.ants('ant-c', 1900, 2900, 704, 1);
+  // (r21, ft21e: "one carrier in a whole cave and a dead end": a first-minute room for anyone who goes east. A juvenile
+  // on the stair's floor, a lampwing over the hall, a pod on the hall's burl.)
+  r.juvenile('juv-c', 1640, 512, 1, 130, { fenced: true });
+  r.flyer('lampwing', 'wing-c', 2840, 400, -1, { radius: 100, dives: 2 });
+  r.pod('pod-cellar-hall', 2400, 576, 1200, 'sit', 2);
   r.place('in', 480, 96);
   r.place('hall', 2300, 704);
   r.place('low', 600, 1792);
