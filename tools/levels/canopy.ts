@@ -1823,7 +1823,9 @@ function limbs(): Json {
   // sees her from the first limb's end and hunts her across: a 30-frame tell, then a strike where her jump goes. In a
   // lamp's aim nothing hunts her (`huntCaught` off): the flame is the safe beat, the air between is not. It guards
   // nothing: a fling does not send it away; a cut does (it tumbles, 2 cuts).)
-  r.flyer('hawker', 'hawk-limbs', 1180, 400, 1, { radius: 160, sight: 560 });
+  // (ft20a: "a pale smudge against the pale light shaft ... hovers just above my upward cut": off the moonbeam, over
+  // the gap's middle, and low enough that a jump's cut from the first limb's end reaches it when it hangs.)
+  r.flyer('hawker', 'hawk-limbs', 1380, 520, -1, { radius: 160, sight: 600 });
   r.hoard('niche-', 1920, 220, 240, 40, 2);
   r.cover('niche-cover', 1664, 64, 640, 320);
   // (r19, ft18b / ft18c: the bed under the gap was off the bottom of the frame from the limbs ("the screen was showing

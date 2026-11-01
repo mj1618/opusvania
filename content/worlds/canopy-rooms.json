@@ -3701,12 +3701,12 @@
       {
         "id": "hawk-limbs",
         "kind": "hawker",
-        "x": 1180,
-        "y": 400,
-        "facing": 1,
+        "x": 1380,
+        "y": 520,
+        "facing": -1,
         "senses": "always",
         "radius": 160,
-        "sight": 560
+        "sight": 600
       }
     ],
     "lures": [
