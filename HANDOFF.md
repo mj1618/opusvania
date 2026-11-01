@@ -34,6 +34,13 @@ still feel like we can speedrun our level too much." Research, numbers and plan:
     `--goal` it already killed 1–5 a room.
   - The ants are still small beside her; the jumper's air-cut may be too generous; the juvenile half sinks into moss.
   - Ori's Bash on creatures (fling off a droplet or a lampwing) is the next big verb idea.
+  - **First-timer r22a** (`playtest-reports/2026-11-01T16-00-37-firsttimer-r22a/journal.md`, Grove at 7 min, 5 fades):
+    every creature had "one clear trick" and they fought differently (the jumper was the best fight; bat-and-dash
+    on the bombardier "felt great"); ordinary hits felt small (boosted after: more ichor, a bigger cut, shake 0.1);
+    gates opening off screen went unnoticed (a nest door now shakes; consider a camera glance at it). Still open
+    from it: the adult burrback's ram reads as having no wind-up and caused most fades; hits from off screen (a
+    bombardier at the screen edge on landing, a jumper at the foot of a blind drop); dead-end pits (the galleries'
+    pit needing the wall jump, the giant's lower floor); ants read as background.
 
 ## Round 21: the first five minutes (after Matt: "didn't have to deal with a single enemy")
 Deployed. Details are in `memory/canopy.md` v21.
