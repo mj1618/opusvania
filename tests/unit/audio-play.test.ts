@@ -102,6 +102,33 @@ describe('the blade', () => {
       ).find((c) => c.sound === 'hitTick');
     expect((hit(3, 2)?.cents ?? 0) + 200).toBeLessThan(hit(1, 1)?.cents ?? 0);
     expect((hit(1, 1, 'heavy')?.cents ?? 0) + 150).toBeLessThan(hit(1, 1, 'medium')?.cents ?? 0);
+    // (Canopy r22: the finisher lands a second, lower body a beat late; a cut does not.)
+    const cracks = (stepN: number, power: number): Cue[] =>
+      route(
+        {
+          type: 'slashHit',
+          x: 2100,
+          y: 760,
+          dir: 'fwd',
+          facing: 1,
+          target: { kind: 'burrback', id: 'b' },
+          px: 2020,
+          py: 760,
+          pogo: false,
+          hitstop: 4,
+          step: stepN,
+          power,
+          knockback: 6,
+          weight: 'medium',
+        } as PlayEvent,
+        0,
+        snap,
+        { scene: fight, seed: 1 },
+      ).filter((c) => c.sound === 'hitCrack');
+    expect(cracks(1, 1)).toHaveLength(1);
+    const fin = cracks(3, 2);
+    expect(fin).toHaveLength(2);
+    expect(Math.min(...fin.map((c) => c.cents ?? 0))).toBeLessThan(-500);
   });
 
   it('a kill is a crunch with a tail after the hitstop; a glance off a braced shell is a clang; her hurt muffles the mix', () => {
@@ -130,7 +157,7 @@ describe('the blade', () => {
       snap,
       ctx,
     );
-    expect(sounds(die)).toEqual(['crunch', 'killTail']);
+    expect(sounds(die)).toEqual(['crunch', 'killTail', 'killWet']);
     expect(die[1]?.delay).toBeGreaterThanOrEqual(7 / 60);
     const block = route(
       {

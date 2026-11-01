@@ -263,7 +263,14 @@ export const AUDIO = {
     weightCents: { light: 150, medium: 0, heavy: -300 },
     /** A kill: the crunch, its tail (a beat later). A big creature's crack of shell. */
     crunchDb: -18,
-    tailDb: -28,
+    /** (Canopy r22: the kill's wet give under the crunch; the airy tail up 4 dB (was -28): the kill had no after.) */
+    wetDb: -21,
+    tailDb: -24,
+    /** The finisher's second body (canopy r22): the crack again, this far down (cents), this much quieter, two frames late (the conductor's
+     * hitCrack gap is 0.03 s). */
+    finBodyCents: -700,
+    finBodyDb: -5,
+    finBodyS: 0.034,
     tailS: 0.06,
     crackShellDb: -20,
     /** The blade glancing off a braced shell or a seed-case. */

@@ -26,6 +26,42 @@ touch); older: `shots/lamp2`, `shots/burr2`.
   / ~2400; nothing on screen ~0.006 ms (springs only).
 - Drawn position = box centre + `rx / ry`, interpolated by `sim.alpha` (integer `x` alone stutters).
 
+## The hit layer (canopy r22; `hitfx.ts`, `flung.ts`, `ground.ts`; why: feel.md "Hit juice")
+- **`HitFx`** (owned by `EnemyRenderer`, `__enemies.hitfx`: `cpuMs`, `drops`, `splats`): two painters of its own,
+  `back` in the `enemies` layer AFTER the bodies (the body glow, the cut, the kill burst: over the creature, under her)
+  and `front` in `enemiesFront` (drops and splats, over the grass fringe so a splat on a mossy top shows). Reads only
+  `slashHit` (a creature = it has `weight`), `enemyDie` (a kill no `slashHit` reported), `spawn` / `roomEnter` (clears).
+  Positions are the event's target centre: it needs no rig, so new kinds get it as they land.
+- **Knobs** (`HITFX` in hitfx.ts, not config.ts, to keep other builders' merges apart): per family `core / glow / splat`
+  colours, `glowK`, `splatGlow`, gravity `g` 2600 and `drag` 1.8 (dust 520 / 3.2: it drifts), `splatLife`, `size`;
+  `drops` per weight 5 / 7 / 11, +3 finisher, kill x1.3 + 5, pogo x0.7; `speed` 300-760 px/s along the blow (fan 0.55
+  rad, `lift` up to 260), radius 1.4-3.1 px; `cut` (crescent `len` 64 / 84 / 150 by weight, `width` 3.6, `bow` 0.14, 3
+  frames, finisher x1.35 / x1.6 / 4 frames, plus the body glow `flash` 0.42 x len for 3 frames); `kill` (flash 44 / 64
+  / 120 px for 0.1 s, ring 0.3 -> 1.25 x that over 0.2 s). `ichorFamily(kind)` by name: carrier / ant -> `ant` (gold),
+  spider / huntsman / dangler / weaver / web / mantis -> `spider` (pale green-white), wing / moth / hawker / dragonfly
+  -> `dust`, anything else -> `amber` (HK's orange). A new kind whose name fits none bleeds amber: add it to the regex.
+- Randomness is `hash01(frame * 7919 + x * 31 + y * 17, n)`: a capture repeats. Drops collide with the scene's static
+  `solids` and `oneWays` only (`sweepPoint`: from above = a top splat, from the side = a wall splat that runs down a
+  little, from below = gone). Kit solids (bark, gates) are not seen.
+- **Hit flash on the rigs**: `toneWhite` in burrback.ts / lampwing.ts, mixed AFTER the dark and the pop in `tone()`;
+  `BURR.hit.white` / `whiteFrames`, `LAMP.hit.white` / `whiteFrames` (config.ts). It applies to the Keeper too.
+- **Flung bodies** (`FLUNG.kinds`: juvenileBurrback, carrier): `slashHit.kill` on one launches a `FlungBody` from where
+  its rig is drawn (`react()` in index.ts); it is held through the kill's hitstop, then flies (370 px/s along a forward
+  cut, 330 up, finisher x1.3; an up cut 620 up; spin 15 rad/s), bounces (vy x0.38, vx x0.6) on `groundBelow`, settles
+  on its back (angle -> nearest odd pi) once a landing is under 140 px/s, slides out, lies `lie` 2 s, fades over 0.6 s
+  (`p.alphaK`). The rig draws it with `rig.flung` / `flungAng` (no burst, no hop: legs curled). After the sim drops the
+  body (`gone`, carrier 30 frames) index.ts keeps drawing a copy of its last dead record (`flungSnap`). Dust on each
+  landing over 260 px/s. The burrback (medium) keeps its roll and plate burst: the plates ARE its launched corpse.
+- **Rejected looks** (sheets `scratchpad`, clips `clips/juice-*`): pale yellow drops 2-4.2 px stretched 2.6x with glow
+  0.42 (read as coins / bananas hanging in the air, and swamped the creature); drops spawned at the body's centre (they
+  hid the white flash: now they start 10-20 px out along the blow); gravity 1500 with lift 160 (they hung like sparks
+  for 0.4 s: HK's blobs drop at once); a 1.5x kill ring (a UI circle).
+- Capture of this round (the session scratchpad is wiped on a restart; rebuild from this): a `pilot.mts` (closed-loop pilot run in the page like `npm run clip` sets up, prints
+  the DSL that replays in `npm run clip`), a `clips.sh <prefix>` (the five fights; `ONLY=burr|juv|ant|lamp|pogo`).
+  The burrback chain is staged by holding `strikeCd` at 600 through an `__enemies.update` wrapper (`--setup`), the
+  lampwing kill by setting its hp to 1 once. Clips: `clips/juice-{before,after}-{burr-chain,juv-kill,carrier-kill,
+  lamp-kill,pogo}.mp4`, `clips/juice-after-burr-chain-audio.mp4`.
+
 ## Staging and capture (what worked)
 - Open-loop input scripts whiff. Drive it closed-loop in ONE `playwright-cli eval`: each step read
   `__game.state()`, decide the input like the pilots in `tests/unit/lampwing-pilot.test.ts` /
@@ -57,7 +93,7 @@ touch); older: `shots/lamp2`, `shots/burr2`.
   wink out, burst at frame 9: 8 plates (10 and x1.45 further for a finisher), dust, motes. Not drawn
   after the burst (the sim keeps the body 30 frames).
 - Flank lights need deep saturated sources (0x1fb4d8 / 0xf0a030 / 0x8a4cf0); paler went near-white.
-  Hit pop: 2 dark frames then ~2 frames 55% toward 0x7d6873. `nearHero`: 20% darker beside her.
+  Hit pop: (since canopy r22: 3 near-white frames first, "The hit layer") 2 dark frames then ~2 frames 55% toward 0x7d6873. `nearHero`: 20% darker beside her.
   Fringe: 17 narrow dark tufts (11 wide = teeth). At most four thin cracks (more = a tortoise).
 
 ## The lampwing: a ghost-moth (`lampwing.ts`, `LAMP`) (look superseded by the last section; the wing / beat / death mechanics still hold)

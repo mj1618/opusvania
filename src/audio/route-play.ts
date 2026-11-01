@@ -174,8 +174,21 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
             blow('hitCrack', e.x, ty, C.crackDb - 7 + wDb, { cents: wC + jitter('hitCrack', 1) }, 1),
             blow('hitTick', e.x, ty, C.tickDb - 5, { cents: wC + jitter('hitTick', 2) }, 2),
           ];
-        // The finisher (and a heavy throw-cut) hits harder: a louder crack, the tick a fourth down.
+        // The finisher (and a heavy throw-cut) hits harder: a louder crack, the tick a fourth down, and (canopy r22)
+        // the crack again a fifth lower a beat late, so it lands with weight.
         const heavy = e.power >= 2;
+        const fin: Cue[] = heavy
+          ? [
+              blow(
+                'hitCrack',
+                e.x,
+                ty,
+                C.crackDb + wDb + C.finBodyDb,
+                { cents: wC + C.finBodyCents + jitter('hitCrack', 3), delay: C.finBodyS },
+                2,
+              ),
+            ]
+          : [];
         return [
           blow('hitCrack', e.x, ty, C.crackDb + wDb + (heavy ? 2 : 0), {
             cents: wC - (heavy ? 200 : 0) + jitter('hitCrack', 1),
@@ -190,6 +203,8 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
             },
             1,
           ),
+          // (After the crack: the conductor keeps one hitCrack per 0.03 s, the first routed.)
+          ...fin,
         ];
       }
       const out: Cue[] = [];
@@ -234,6 +249,15 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
           priority: 6,
         }),
         blow('killTail', e.x, e.y, C.tailDb, { delay: C.tailS + e.hitstop / 60, priority: 2, far: 0.15 }, 1),
+        // (Canopy r22: the body gives, wet, under the crunch.)
+        blow(
+          'killWet',
+          e.x,
+          e.y,
+          C.wetDb + (big ? 2 : 0),
+          { cents: (big ? -600 : 0) + jitter('killWet', 3, 80) },
+          3,
+        ),
       ];
       if (big) out.push(blow('slam', e.x, e.y, K.slamDb - 4, { delay: 0.05 }, 2));
       return out;

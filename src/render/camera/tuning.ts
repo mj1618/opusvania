@@ -64,7 +64,21 @@ export const cameraTuning = {
    * until the chunk-1 feel review ("0.2% of a 1920 view: can't be seen"). Her hurt kicks `hurt` px along
    * the blow (the way she is thrown), a little down (feel review r2).
    */
-  kick: { power1: 6, power2: 11, vertical: 0.8, omega: 35, kill: 1.4, hurt: 12 },
+  kick: {
+    power1: 6,
+    power2: 11,
+    vertical: 0.8,
+    omega: 35,
+    // (Canopy r22 hit feel: 1.6, was 1.4.)
+    kill: 1.6,
+    hurt: 12,
+    /**
+     * The finisher's kill punches the view in (canopy r22): the zoom jumps `punch` (x 1.035) and comes home on a
+     * critically damped spring of `punchOmega` rad/s (~0.2 s). Not on other kills, not on a hit that lives.
+     */
+    punch: 0.035,
+    punchOmega: 24,
+  },
   /**
    * Screen shake (render-side, `shake.ts`, memory/feel.md): one trauma value 0..1. Each event adds
    * its `budget` (capped at 1); the view is offset `max` world px x trauma^`power` by smooth noise at `freq`
@@ -84,7 +98,8 @@ export const cameraTuning = {
       snuff: 0.45,
       /** The mini-boss's death (the old burrback): the area's loudest kill. */
       bigKill: 0.55,
-      kill: 0.3,
+      // (Canopy r22 hit feel: 0.34, was 0.3: a kill now shakes 5.9 px at peak, not 4.9.)
+      kill: 0.34,
       crack: 0.3,
       wallRam: 0.3,
       barkBreak: 0.3,

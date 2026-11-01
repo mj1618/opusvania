@@ -16,7 +16,8 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 | her hurt | 0.5 | 10.6 |
 | snuff (`lureSnuff`) | 0.45 | 9.1 |
 | the old burrback's death (`bigKill`) | 0.55 | 12.2 |
-| kill, crack (`enemyCrack`), a ram into a wall, a bark break | 0.3 | 4.9 |
+| kill (0.3 until canopy r22) | 0.34 | 5.9 |
+| crack (`enemyCrack`), a ram into a wall, a bark break | 0.3 | 4.9 |
 | hard landing (`land.hard`) | 0.2 | 2.7 |
 | the finisher (`impact` power 2) | 0.12 | 1.2 |
 | a clang (`enemyBlock` not a down cut, `kitClang`), a cap bounce | 0.1 | 0.9 |
@@ -24,7 +25,9 @@ side (hurt hitstop 8 / last light 14, kill bonus +3, `slashTerrain`, the lure th
 
   Small beats are near nothing on their own on purpose (trauma² is the point: they only add up with others);
   the kick carries the cuts.
-- **The kick** (`kick.ts`) now 6 px a cut, 11 the finisher (was 3.5 / 7: invisible at 1080p), x1.4 on a kill, and a
+- **The kick** (`kick.ts`) now 6 px a cut, 11 the finisher (was 3.5 / 7: invisible at 1080p), x1.6 on a kill (x1.4 until
+  canopy r22), the finisher's kill also **punches the zoom in** x1.035 (`kick.punch`, home in ~0.2 s on `punchOmega` 24;
+  `CameraKick.zoom`, multiplied into the view in stage.ts, debug override views too), and a
   snuff kicks as a killing finisher (15 px) whatever cut put it out. Her hurt kicks 12 px the way she is thrown
   (and 4 down).
 - **Accessibility**: `FEEL.shake` off stops the shake AND the kick. `?shake=off` / `?noshake`, remembered in
@@ -101,6 +104,25 @@ ember with smoke until `lureSnuff` (or bursts back alight on `lureRelight`). HUD
 edges darken while she aims, with clear holes round her and the flame. Read loosely (casts) until the sim's fields
 are in every build. The old catch's pips/arc code only runs while `player.lure` >= 0 (never, with the fling).
 
+## Hit juice (canopy r22, Matt: "attacking them could be more satisfying"; `render/enemies/hitfx.ts`, `flung.ts`)
+The sim's rhythm (hitstop 5 / kill +6, the kick, the shake) was kept; what changed is what the eye and ear get at
+contact and death. Every kind gets it from events alone (`slashHit` with `weight` = a creature; `enemyDie` with no
+killing `slashHit` in the batch = a kill by something else), so kinds other builders add are covered. Details, knobs
+and rejected looks: enemies-render.md "The hit layer".
+- **On the creature**: its first 3 frames go near white (`BURR.hit.white` 0.88 / `LAMP.hit.white` 0.85 toward
+  `flashColor`, `whiteFrames` 3), then the old dark hold and pop; and hitfx lays a warm glow over the struck body for
+  those frames (`HITFX.cut.flash*`), behind her: **still no white on her**.
+- **A cut streak** through the body along the slash, **ichor** thrown along the blow that lands and splats, **a kill
+  burst** (flash + fast ring), and **light fodder (juveniles, carriers) is batted away dead**, tumbles, bounces and
+  lies on its back 2 s before fading.
+- Lanternroot's fx (`render/lantern/fx.ts`) lost its creature cut line and kill ring + motes (hitfx draws those now in
+  every non-greybox room); it keeps the contact flash, the sparks, the clangs.
+- **Tried and kept out: more shove on light fodder.** `juvenileBurrback.knockScale` 1.75 / 1.8 / 1.9 (was 1.6) all
+  broke "two standing cuts kill a juvenile" (creatures.test.ts): the first cut throws it out of the second's reach.
+  The launched corpse carries "it flies" instead. Don't raise it without moving that rule.
+- Cost: hitfx 0.04 ms mean, 0.2 ms peak on a finisher kill (M-series, 1920x1080); ~20 drops and ~30 splats at most in
+  a three-cut chain.
+
 ## Gotchas
 - Pixi v8 `Graphics.poly(points)` keeps the array (`new Polygon(flat)` does not copy): a scratch array reused for
   two polys redraws both as the last. creatures.ts `Xf.map` returns a new array every call for this reason.
@@ -110,4 +132,6 @@ are in every build. The old catch's pips/arc code only runs while `player.lure` 
 ## What is still weak
 - The burrback (52 x 34) and hawker (52 x 24) are still small next to her at zoom 1; drawn honest to the hitbox
   (the hawker's wings reach past it, they never hurt). A real silhouette pass belongs to the art stage.
-- No sound on any of it (audio is muted by default anyway).
+- The hero's own crescent covers the creature on the contact frame, so the creature's white reads on frames 2-3, as a
+  pale body rather than HK's pure white (the zone grade and the shell's rims pull it down). The cut streak (hitfx) is
+  hard to tell from her crescent at play zoom when the two lie along the same angle (canopy r22).

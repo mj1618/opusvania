@@ -49,7 +49,11 @@ test grove keeps its old lantern / giving sounds.
   heavy -300 and +3 dB). Pogo = `pogo` (membrane bop gliding 92 -> 165 Hz + an air thwip 500 Hz -> 2.3 kHz) + a
   softer crack and tick. **Kill** = `crunch` (a pop gliding 230 -> 80 Hz, 34-44 grains of shell grit 0.9-3.3 kHz
   bunched at the front, a body, tanh) + `killTail` a beat after the hitstop (a falling pink breath 1.5 kHz -> 320
-  Hz with sparse settling bits); a big creature adds a `slam`. **Clang** (braced shell, seed-case) = chitin
+  Hz with sparse settling bits; -24 dB since r22, was -28) + **`killWet`** (canopy r22: two squelches sweeping
+  1.5 kHz -> 260 and 1.05 kHz -> 210 Hz 26 ms apart, a 240 Hz LP give, wet drips 380-950 Hz; `wetDb` -21); a big
+  creature adds a `slam`. **The finisher** (r22) adds a second `hitCrack` -700 cents, -5 dB, 34 ms late
+  (`finBody*`: the conductor's `GAP.hitCrack` 0.03 s keeps only the FIRST crack inside 30 ms, so it must come
+  after the main one in the cue list and later than 30 ms). **Clang** (braced shell, seed-case) = chitin
   modes 790 Hz x 1, 1.47, 2.63, 3.9, 5.2 with beats, a click, a small 165 Hz knock. **Hurt** (her; no voice) =
   `hurt` (a muffled LP 900 blow, a click, a 64 / 102 / 158 Hz thump, a crackle of scales 2-4.4 kHz, tanh) and the
   mix low-passes to 650 Hz for the stagger. `thock` = the blade biting wood (wall, bark, thorns); `bounce` = a
