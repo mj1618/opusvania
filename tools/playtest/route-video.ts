@@ -171,12 +171,54 @@ export const ROUTE: Leg[] = [
   // since v6: its door opens from the Elder's room.)
   // The hatch: the cocoon listens after the fade up; three presses break it.
   { name: 'cn-hatch: the hatching', kind: 'script', script: '.170 J2 .10 J2 .10 J2 .10 J2 .90' },
+  // v11 (the Canopy r21, Matt: "didn't have to deal with a single enemy"): the first five minutes are dense, and the
+  // route meets what is there: the hatch's juvenile and lampwing, the cage's keeper, the hub's lampwing, burrback and
+  // carriers, the giant's top.
+  { name: 'cn-hatch: the first creature', kind: 'fight', ids: ['juv-hatch'], seconds: 40, optional: true },
+  { name: 'cn-hatch: over the first fling', kind: 'goal', test: flag('cn-first-fling'), max: 12000 },
+  {
+    name: "cn-hatch: the lampwing at the branch's end",
+    kind: 'fight',
+    ids: ['wing-hatch'],
+    seconds: 30,
+    optional: true,
+  },
   { name: 'cn-hatch: down to the drop', kind: 'exit', exit: 'drop', max: 12000 },
   // v8 (the v11 layout): the first release, in the landing's frame: the cage under the landing limb, cut standing.
   { name: 'cn-hub: under the cage', kind: 'goal', test: near(6300, 1600, 60), max: 9000 },
+  { name: "cn-hub: the cage's keeper", kind: 'fight', ids: ['juv-cage'], seconds: 40, optional: true },
   { name: 'cn-hub: the cage cut open (the first release)', kind: 'cage', lure: 'trap-crossing' },
+  {
+    name: 'cn-hub: the lampwing over the seed door',
+    kind: 'fight',
+    ids: ['wing-door'],
+    seconds: 30,
+    optional: true,
+  },
+  {
+    name: 'cn-hub: the burrback on the floor',
+    kind: 'fight',
+    ids: ['burr-floor'],
+    seconds: 60,
+    optional: true,
+  },
+  {
+    name: "cn-hub: the cellar's rotten panel",
+    kind: 'goal',
+    test: opened('cellar-panel'),
+    max: 9000,
+    optional: true,
+  },
+  { name: 'cn-hub: the cellar', kind: 'goal', test: picked('cn-hub', 'cellar-2'), max: 9000, optional: true },
   // The Crossing (8,000 wide since v6) reads west: the root floor through the moonlit clearing to the giant's mouth.
   { name: 'cn-hub: the lit way west', kind: 'exit', exit: 'trunk', max: 20000 },
+  {
+    name: "cn-trunk: the giant's top",
+    kind: 'fight',
+    ids: ['juv-t1', 'wing-t1'],
+    seconds: 60,
+    optional: true,
+  },
   { name: 'cn-trunk: the rotten wall', kind: 'goal', test: opened('giant-wall'), max: 12000 },
   { name: 'cn-trunk: the seed behind it', kind: 'goal', test: flag('seeds:1'), max: 12000 },
   { name: 'cn-trunk: down to the well', kind: 'exit', exit: 'well', max: 12000 },
