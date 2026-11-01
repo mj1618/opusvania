@@ -133,9 +133,10 @@ describe("the Keeper's honest tells (r14, review r13 #2, #3, #7)", () => {
       run(s, 0, 1, ev2);
     }
     const [w, w2] = ev2.filter((q) => q.type === 'enemyWindup') as Of<'enemyWindup'>[];
+    // (r20, Matt "very easy": no bridge, `bridgeTell` / `bridgeSpeed` 1: the first fast ram is a fast ram.)
     expect(w?.speed).toBeCloseTo(t.oldBurrback.chargeSpeed * t.keeper.bridgeSpeed);
     expect(w2?.speed).toBe(t.oldBurrback.chargeSpeed);
-    expect(w?.frames ?? 0).toBeGreaterThan(w2?.frames ?? 0);
+    expect(w?.frames ?? 0).toBeGreaterThanOrEqual(w2?.frames ?? 0);
   });
 
   it('at its gate: `keeperGate` on (why `moths` in P1), `boss.gated`; off once the gate lets go', () => {

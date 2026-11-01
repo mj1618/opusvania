@@ -121,8 +121,10 @@ describe('healing costs something (r20)', () => {
     expect(s.player.hp).toBe(3);
   });
 
-  it('every Canopy room is a bench room', () => {
+  it('every Canopy room is a bench room, and big things hit for 2', () => {
     for (const r of Object.values(W.rooms)) if (r.placed) expect(r.scene.bench, r.id).toBe(true);
+    expect(t.oldBurrback.contactDamage).toBe(2);
+    expect(t.juvenileBurrback.contactDamage).toBe(1);
     expect(t.lures.healOnRelight).toBe(0);
   });
 });

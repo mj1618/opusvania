@@ -4,6 +4,8 @@
  * presses are mistimed by up to 8 frames, it jumps the ram (straight up, or over it when close), runs in and
  * mashes when the old burrback lies open on its back, and now and then slashes the closed shell anyway.
  * Target: it wins; most in 1-2 attempts (a fade heals it and her, at her door: feel review round 2, problem 7).
+ * (The Canopy r20, Matt "very easy": its ram and wave cost 2, its first ram only is told long: about half win at the
+ * first or second attempt, the 20- and 25-frame hands all win within 8.)
  * `OLD_TRACE=1` prints every run.
  */
 import { describe, expect, it } from 'vitest';
@@ -256,7 +258,7 @@ describe('the old burrback will not be beaten by standing and mashing', () => {
   });
 });
 
-describe('the old burrback, the boss under the oak: a slow, sloppy first-timer wins, most in 1-2 attempts', () => {
+describe('the old burrback, the boss under the oak: a slow, sloppy first-timer wins, about half in 1-2 attempts', () => {
   const runs: Array<Run & { react: number; seed: number }> = [];
   for (const react of [20, 25, 30])
     for (let seed = 1; seed <= 8; seed++) runs.push({ ...pilot(react, 8, seed), react, seed });
@@ -275,14 +277,15 @@ describe('the old burrback, the boss under the oak: a slow, sloppy first-timer w
     }
   });
 
-  it('the 20- and 25-frame reactors win in at most 4 attempts; some of the slowest hands win in 4 minutes (round 6)', () => {
+  it('the 20- and 25-frame reactors win in at most 8 attempts; some of the slowest hands win in 4 minutes (r20)', () => {
     // (A fade makes the old burrback whole again and her too, at her door: no attrition. Since round 6 it is a
     // threat (its slam's floor wave, full-speed rams after the first try, a real phase 3): the video review's
     // target is 1-3 fades for a casual player; the slowest hands (30 frames, sloppy) take several.)
     for (const r of runs)
       if (r.react <= 25) {
         expect(r.won, `react ${r.react} seed ${r.seed}`).toBe(true);
-        expect(r.fades + 1, `react ${r.react} seed ${r.seed}`).toBeLessThanOrEqual(4);
+        // (r20: 8, was 4: its blows cost 2.)
+        expect(r.fades + 1, `react ${r.react} seed ${r.seed}`).toBeLessThanOrEqual(8);
       }
     expect(runs.filter((r) => r.react === 30 && r.won).length).toBeGreaterThanOrEqual(3);
   });
@@ -291,9 +294,9 @@ describe('the old burrback, the boss under the oak: a slow, sloppy first-timer w
     for (const r of runs) if (r.won && r.fades === 0) expect(r.frames / 60).toBeGreaterThanOrEqual(25);
   });
 
-  it('most win at the first or second attempt', () => {
+  it('about half win at the first or second attempt (r20: was most, 0.6)', () => {
     const early = runs.filter((r) => r.fades <= 1).length;
-    expect(early / runs.length).toBeGreaterThanOrEqual(0.6);
+    expect(early / runs.length).toBeGreaterThanOrEqual(0.5);
   });
 
   it('it feints only once its health is down a third', () => {

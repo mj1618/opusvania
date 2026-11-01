@@ -898,7 +898,8 @@ class Wood extends RoomBuilder {
     facing: 1 | -1,
     more: Json = {},
   ): this {
-    // (r18: a lampwing's first tell is 1.6 x (0.96 s): ft17d jumped at one and was hit inside the 0.6 s one.)
+    // (r18: a lampwing's first tell was 1.6 x (0.96 s) after ft17d jumped at one. r20, Matt "very easy": gone, the
+    // 0.6 s tell with its three rising buzzes is readable; a bot's late jump is not the bar.)
     return this.enemy({
       id,
       kind,
@@ -906,7 +907,6 @@ class Wood extends RoomBuilder {
       y,
       facing,
       senses: 'always',
-      ...(kind === 'lampwing' ? { firstTell: 1.6 } : {}),
       ...more,
     });
   }
