@@ -590,10 +590,12 @@ export interface Scene {
    */
   reformPatch?: boolean;
   /**
-   * Hollow Knight's bench (the Canopy r20, Matt: "very easy"): a fade here re-forms her at the last moon patch she
-   * RESTED at, in any room (a `mark` or `retry` patch counts once passed), else at the world's start; she drops ALL
-   * her glints where she fell (`pickups.shade`, one cluster in the world: a second fade before she takes it back loses
-   * it). Passing a plain patch no longer marks it (`patch.markOnPass` is for rooms without this).
+   * Hollow Knight's bench and shade (the Canopy r20, Matt: "very easy"; r21, Matt: "for now just go back to a near
+   * checkpoint when you die, not back to the very start"): a fade here re-forms her, whole, at the checkpoint in THIS
+   * room nearest to where she lay (its moon patches, its `reform`, her door: `benchPoint` in src/sim/index.ts); she
+   * drops ALL her glints where she fell (`pickups.shade`, one cluster in the world: a second fade before she takes it
+   * back loses it). The save's patch (Continue) is the last one she RESTED at (a `mark` or `retry` patch counts once
+   * passed); passing a plain patch no longer marks it (`patch.markOnPass` is for rooms without this).
    */
   bench?: boolean;
   /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */

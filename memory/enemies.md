@@ -326,11 +326,16 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
 
 ## Fade and re-form
 - **The rules by kind of room** (which one applies, top first; src/sim/index.ts at the end of a fade):
-  - **`bench` rooms (the Canopy since r20, Matt "very easy"; HK's bench and shade)**: she re-forms at the last moon
-    patch she RESTED at (`save.patch`; a pass marks only a `mark` patch or a boss's `retry` patch), in any room, else at
-    the world's start, whole; the room's creatures are fresh. ALL her glints stay where she fell as one cluster in the
-    world (`pickups.shade`, carried through doors); a second fade before she takes it back loses it (`shadeLost`);
-    taken back, `shadeTaken`. Heals in the Canopy: a rest (full), a cage cut open (`lures.healOnTrap` 1), nothing for a
+  - **`bench` rooms (the Canopy; r20 HK's shade, r21 Matt: "for now just go back to a near checkpoint when you die,
+    not back to the very start")**: she re-forms, whole, at the checkpoint in the room she fell in nearest to where she
+    lay: one of its moon patches, its `reform` point or her door (`state.entry`, the first ground she stood on there
+    with no creature near) (`benchPoint`, src/sim/index.ts); the room's creatures go home, an ambush re-arms. Never
+    beside what faded her: a unit test (canopy-r20) keeps every Canopy patch and `reform` 300 px from every home
+    (ambushes not yet woken and the Keeper aside), the door is clear by construction. r20's rule (the last patch she
+    RESTED at, any room, else the hatch) was a walk of up to minutes; Matt found it too harsh. `save.patch` (rested at;
+    a pass marks only a `mark` or `retry` patch) is still where Continue starts. ALL her glints stay where she fell as
+    one cluster in the world (`pickups.shade`, carried through doors); a second fade before she takes it back loses it
+    (`shadeLost`); taken back, `shadeTaken`. The escape's and chase's checkpoints are falls, not fades (unchanged). Heals in the Canopy: a rest (full), a cage cut open (`lures.healOnTrap` 1), nothing for a
     springboard (`healOnRelight` 0). Thorns 1, the old burrback's ram and wave 2, everything else 1. memory/canopy.md v20.
   - `glow` rooms (Lanternroot): the last patch rested at anywhere; all her glow dropped (memory/glow.md).
   - other lamp rooms: the patch only if it is in this room, else the room's `reform`, else her door; whole, creatures
