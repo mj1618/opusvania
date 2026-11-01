@@ -20,12 +20,20 @@ for (const r of Object.values(w.rooms)) {
   const room = r.scene as unknown as {
     id: string;
     triggers?: Array<{ id: string; x: number; y: number; w: number; h: number; sets: string }>;
-    enemies?: Array<{ wakes?: string; sets?: string }>;
+    enemies?: Array<{ wakes?: string; sets?: string; x?: number; y?: number }>;
     camera?: { zones?: Array<{ id: string; x: number; y: number; w: number; h: number; until?: string }> };
   };
   for (const t of room.triggers ?? []) {
     const woken = (room.enemies ?? []).filter((e) => e.wakes === t.sets);
     if (woken.length === 0) continue;
+    // (r22: a trigger that wakes creatures far out of its own frame is a pre-wake, not an ambush: the nests wake on
+    // `cn-hub-left` long before she can see them, so a cleared nest stays clear. Only an ambush wants its frame.)
+    const far = (e: { x?: number; y?: number }) => {
+      const dx = Math.max(t.x - (e.x ?? 0), 0, (e.x ?? 0) - (t.x + t.w));
+      const dy = Math.max(t.y - (e.y ?? 0), 0, (e.y ?? 0) - (t.y + t.h));
+      return Math.sqrt(dx * dx + dy * dy) > 960;
+    };
+    if (woken.every(far)) continue;
     const clears = new Set<string>();
     // (The wave's flags: what the woken set, and on down the beats they wake.)
     let wave = woken;

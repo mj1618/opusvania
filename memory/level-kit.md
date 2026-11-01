@@ -28,7 +28,7 @@ sim doesn't have yet"). Sim: `src/sim/kit.ts` (+ `kit-data.ts` types, `kit-event
 | `oneWays[].noDrop` | bool or a flag (refuses until the flag is set) | down + jump does not drop through it (still passable from below): the hub's root mesh over R10's climb-out, whose drop-through skipped the pit (sim: `noDropUnder` in physics/aabb.ts, checked in `tryJump`) |
 | `enemies[].sets` | flag | set when the creature dies (`flagSet` by its id): a flag gate opens behind it (the old burrback's root gate). The world check cannot see it: leave it out of `routes[].flags` |
 | `roof` (room) | `true` | the top edge is solid too, except through an `n` exit's span (enclosed rooms: the Canopy's `back` rooms); default open |
-| `enemies[].sets` shared | flag | several creatures may carry one flag (a wave): it is set when the last of them is really killed (a hidden `wakes` one counts as alive) |
+| `enemies[].sets` shared | flag | several creatures may carry one flag (a wave): it is set when the last of them is really killed (a hidden `wakes` one counts as alive; **one that left alive never counts**: a dangler cut down, a lost huntsman, a dispersed one, one out of an open edge. Canopy r22's nests use none of them) |
 | `enemies[].snuffs` (old burrback) | lamp id | that lamp goes out as its phase 3 begins (`lureSnuff`, no moths, no heal; room-local) |
 | `hollows[].upgrade: 'moonShard'` | | a third of a light (`moonShard:<room>:<id>`; `tuning.upgrades.moonShard.perLight` 3) |
 | `reform` | `{x, y}` | where a fade re-forms her in this room while no moon patch is saved (no light either), instead of her last safe ground beside whatever faded her (`src/sim/index.ts`) |

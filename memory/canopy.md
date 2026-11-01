@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v21, 2026-11-01)
+# The Canopy: the first area built to the reference numbers (v22, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,55 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v22 (round 22, 2026-11-01): nests that shut the way on (Matt: "Ori has a good way of forcing you to deal with enemies. I still feel like we can speedrun our level too much")
+Ori's answer (canopy-r22-creatures.md, last section): creatures on the route line, no way round, a closed fight you
+leave when it is dead. Ours: **three nests on the first ten minutes' critical path**, each a root gate on the way on
+that opens when the last of its creatures dies (shared `sets`); the way back stays open, so it reads "clear this to
+go on", never the Grove's trap.
+| nest | room, gate (`nest-door`) | creatures (mix) | flag |
+|---|---|---|---|
+| hub | the giant's door, 64,1664 64x256 (the way west to the trunk) | `bomb-step` on the step into the mouth (1072,1792, its back to the door) + `ant-m1..3` from the door: ranged + swarm | `cn-nest-hub` |
+| trunk | tier 3's west door, 64,1120 64x544 (to the well) | `jump-t3` (300), `juv-t3` (860, east of the drop's foot), `juv-t3d` (180, at the door): leaper + walkers | `cn-nest-trunk` |
+| fork | the face's top, 2816,320 64x256 (to the Grove) | `bomb-knoll` (1880, the knoll's east end), `bomb-face` (2600), `jump-f` (2250, floor): ranged + leaper | `cn-nest-fork` |
+- **Waking (`NESTS_ON` = `cn-hub-left`)**: nest creatures carry `wakes: 'cn-hub-left'` (set walking off the hub's landing,
+  before any nest can be met; the trunk's top and the fork's door set it too, for runs started there). That is only
+  plumbing, for light.ts `respawn`'s rule "a woken creature whose `sets` is saved stays out": **a cleared nest stays
+  clear on every later entry** (the hub is crossed three times). canopy-check's framing rule now skips a trigger
+  whose woken creatures are all > 960 px from it (a pre-wake, not an ambush).
+- **Never a nest creature that can leave**: a dangler cut down and not killed scuttles off (`leave`, gone with hp > 0),
+  a huntsman lost 360 f leaves, a lampwing on a snuffed lamp disperses, anything knocked out of an open room edge is
+  gone: none of those count as killed, so the gate would wait for a creature that is not there (until she leaves and
+  comes back). Found by `tools/playtest/nest-probe.ts` (r22's first trunk nest had a dangler). Nest kinds here:
+  bombardier, jumper, juvenile, carrier; no open edges under them.
+- **Fades**: the flag is saved the step the last one dies; a fade mid-nest re-forms her in the room, and (first-timer
+  nestB) the ones she had killed stayed dead, so the retry is the rest of the nest. The trunk's tier 3 has no way back
+  without the claws (Sein's hollow): a fade re-forms her at the top.
+- **Read**: the root-gate arch shows in the hub's mouth and trunk's tier 3 from the fight; the fork's door is 770 px
+  over the floor, so a `fit` zone (`nest-face`, until `cn-nest-fork`) holds the floor, the face and the door while she
+  is near the face. Opening: `gateOpen` on a `nest-door` plays the groan and a knock as hers (route-canopy.ts: never
+  quieter for distance). `marks.notes` name each nest for the reviewer.
+- **Creatures on the line** were already there in every critical room of the first ten minutes (hatch `juv-hatch`,
+  hub `burr-floor` / `juv-cage`, trunk `juv-t1`, well `hunt-chimney`, limbs `hawk-limbs`, fork the ants' trail): with a
+  forward `--goal`, the speedrunner kills 1-5 in each. r22's "0 kills" was measured without `--goal`: the bot left by
+  the door it spawned at.
+- **Numbers** (headless speedrunner, every ability, `--goal` the next critical room; nest-probe = started in the nest
+  room with that room's real kit and `cn-hub-left`):
+  | room | before (exit, hits, kills) | after | nest-probe after (cleared at, hits; per persona) |
+  |---|---|---|---|
+  | hub | fork 1:48 (can't reach the trunk door: a bot limit, before too), 0, 4 | fork 1:03, 0, 5 (kills `bomb-step`) | naive from the landing: nest cleared, 0 hits from it, through at 0:26 |
+  | trunk | well 0:13, 0, 4 | **hub 1:06**, 0, 3: the planner sees the gate as a wall and climbs back | speedrunner 6.4 s 0, naive 11.5 s 2, cautious 5.5 s 0, explorer 6.1 s 0 |
+  | fork | grove 0:44, 2, 3 | **hub 0:47**, 2, 3: kills 2 of 3, then gives up the Grove | speedrunner 11.7 s 0, explorer 12.1 s 3; naive / cautious walk back west (no goal) |
+  The bots' planner (tools/playtest/map.ts) treats a shut gate as a wall and cannot reason "kill to open": it can no
+  longer skip a nest, and when it engages (nest-probe) it clears one in 6-12 s. Teaching the planner that is open.
+- **First-timers** (6af69d8): nestA (world start) cleared the hub's and the trunk's nests as it went (0 hits from the
+  hub's, the trunk's at 1 light) and never saw a door shut: a player who fights as they go meets no wall. Its unfair
+  notes were older things (the hub's burrback's front glance, the trunk's tier-2 dangler, the bed). nestB (fork, claws):
+  4 hits and a fade from bombardiers, then cleared it at full health on the retry, "the trick is to get close fast";
+  "landed on it" on the knoll's west lip (moved to the east end), droplets hard to read on the dark floor (render).
+- **Open**: the bot planner and nest gates; a fourth nest later on the path (the bower's ambush or the spire) once
+  these are played; a nest the player sees shut before fighting (the fork's zone does it; the hub and trunk show the
+  door in the fight's frame); no huntsman nest yet (it leaves when lost).
 
 ## v21 (round 21, 2026-11-01): the opening is dense (Matt: "I just went through the first 5 minutes in the game, didn't have to deal with a single enemy, hardly encountered anything")
 **The lesson: the opening must be dense; quiet stretches are earned later, never at the start.** Rounds 15-19 tuned the
