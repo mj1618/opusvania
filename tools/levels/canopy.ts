@@ -1532,7 +1532,9 @@ function hub(): Json {
 // a jump at its edge over thorns.
 
 /** The trunk's bramble bed in tier 1 (x0, x1) and the fling lamp in the drop's shaft (r7). */
-const TRUNK_BED: [number, number] = [1664, 2304];
+// (r21: east edge 2,240, was 2,304: the first hop was 192 px and 96 up. All five fades here in eight first-timers were at
+// x 2,220-2,250, the bed's east end: three on purpose (stuck in the hall, the rotten wall not read), two missed hops.)
+const TRUNK_BED: [number, number] = [1664, 2240];
 const TRUNK_WICK: [number, number] = [1184, 800];
 
 function trunk(): Json {
