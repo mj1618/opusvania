@@ -4,6 +4,22 @@ What the wood kit draws in `?world=canopy` beyond the mass painter (memory/canop
 docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`, round 4 before / after in
 `shots/canopy-r4-render/before|after|after-21x9/<room>/`.
 
+## Round 19: shape, not light (review r18 #3)
+- **Root door** (kit.ts `rootDoor`, `KIT.door.stakeOff` / `stirPx`): three roots, the silk bands wound three turns
+  round a stake on the opening side and tied in a bow with tails; no glow, no seams, no rings. Knock = shudder, dust,
+  bands strain (`KIT.doorKnock` 2.6 s), ties jerk. Its signature lost `glow`, `fg`, `gf`.
+- **Seed door sockets** (`seedShape(g, x, y, s, color, alpha, rim)`): the moonseed silhouette (blade wing + body);
+  `rim` > 0 = carved (cut face `KIT.seed.cut` all round, the lit lip set down-right, the hollow over). Gotcha: two
+  stroked ellipses read as chain links; three rim crescents alone read as moons.
+- **The flame's aim** (lamps.ts `peekAt`, `READY.peekLen / peekW / peekFar`): a flame tongue of three layers out of
+  the lantern's mouth, `want`-scaled from READY.notice, full in reach; READY's ring pulse (`pulse`, `ring`) is gone.
+- **Shield** (fx.ts kind `shield`, `FX.shield`): a thick white arc bowed toward her at a side block + 8 sparks.
+- **Gone**: `KIT.sill` (chips at a cut under a rotten wall); `doorWarm` after the room beyond is visited
+  (acts.ts `warmSeen`). Tried and reverted: a dark shell round the teaching wall (read as a door, ft19b).
+- **Knotholes** (interior.ts shaft near): none within `INTERIOR.knotFloor` 240 px over the walk (a lit one at the
+  well's pit read as "a glassy pod"). How it was found: hide `__bg.layers.playfield.children[0]` (the bake tiles), then
+  disable painters one at a time; `getBounds` over the stage only finds the 512 px tile.
+
 ## Every creature has a renderer (kinds.ts)
 - `src/render/enemies/kinds.ts` `creatureArt(kind, look)` says who draws a kind: `beetle` (burrback rig, scaled by
   `BEETLE_SCALE`), `moth` (lampwing art), `spider` (render/lantern/creatures.ts, needs `art.pieces` or Lanternroot),

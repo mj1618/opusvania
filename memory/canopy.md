@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v18, 2026-11-01)
+# The Canopy: the first area built to the reference numbers (v19, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -24,8 +24,63 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
 
+## v19 (round 19, 2026-11-01): answers in shape, not light (ft18a-c, review r18 #2-#4, #6)
+Review r18: rounds 16-18 answered every confusion with a light, and the two that still failed looked like UI. Rule
+for rounds 19-20: no new signpost without a human's confusion behind it; prefer taking one away.
+- **Root doors** (render kit.ts `rootDoor`): roots, bark and rope, no light of their own. The bands are wound round a
+  stake on the side that opens it (`KIT.door.stakeOff` 20) and tied off in a bow with two tails, which stir when she
+  is on that side (`stirPx` 520). A knock: shudder, dust, the bands strain toward the stake, the ties jerk. r17-r18's
+  lit seams, spilt light and rings went. ft19a: "I think these are shortcuts from the other side"; ft19b the same.
+  Not built: review r18's loop that meets the first root door from its opening side (a door swinging open onto a
+  place she has been). The well's doors are still met shut first.
+- **The seed door** (kit.ts `seedShape`): a moonseed's silhouette carved into the door's face (`KIT.seed.cut` face,
+  lit lower lip), not dots floating over it; a cut shakes dust out of each. ft19a read them as "three round knots ...
+  waiting for something" (no longer a count). **The shard's line** names what is left ("Two more, and a new light
+  kindles."), no "one of three": ft19a "clear and nice".
+- **The fling's way before the press** (lamps.ts `peekAt`): the flame streams out of the lantern's mouth that way
+  (paper / hot / core layers, an ember off its tip), from as soon as the lantern wants her (`READY.peekFar` 0.7) and
+  full in reach; r17's breathing ring and r18's pale wedge + white line + beads went. ft19c: "a little V key with an
+  orange arrow pointing up and right ... V will fling me in that direction". Tried and dropped: a sim-side `flingPeek`
+  (the tap's whole flight as the caught aim's dots, from 1.8 radii out): readable, but a UI line (review r18).
+- **Gone, as interface**: r18's rot sill (a cut under a rotten wall shook chips from it, and its crunch): ft19a cut
+  the column under the giant's `rot-door` ~2 min, "sure it would break". The Crossing's warm west door (`doorWarm`)
+  is lit only until the room beyond is visited (acts.ts `warmSeen`): ft19a went back west through it four times.
+- **The teaching wall**: a dark shell round its pale face (987423a) framed it as a door: ft19b "a tall narrow door in
+  a frame ... opens from the other side", left the giant for good. Reverted (5790e4b): r16's pale punk face stays.
+- **Room tops** (review r18 #2): every Canopy room but the hatch keeps `camera.headroom` 0 (the generator's `Wood.set`
+  merges it into any camera given); open rooms had the default 120 and showed the room's top as a ruler line with sky
+  (the chase's hook-3 at zoom 0.72, the Grove's door). look:check now reports deep solid 20-25% in cn-nook, cn-sky,
+  cn-ledge (reported, not failed).
+- **The chase** (review r18 #4): hook-7 has `aim` [-1, 0]; a `hook` with an `aim` takes a held direction one 8-way
+  step off it as that aim (`lures.hookSnapCos` 0.7, lures.ts `flingAim`): down-left held from hook-6 through hook-7
+  reaches the nest (`chase-probe --hold --aim7=L|DL|UL`, beats 0-20). A fall after hook-6 (onto the shelf or into
+  the gap) is put back at hook-6 headless (tests/unit/canopy-r19.test.ts); the reviewer's live shelf return was not
+  reproduced.
+- **The limbs' bed**: over the gap the view sits 260 px under her (zone `gap-bed`, `below`), so the thorn bed is in
+  frame from the first limb. **The way out's chimney**: `thorn-o2` (east face, 880-984) went; escape-live lag 15 x3:
+  13.9 s roof -> clifftop, no hits.
+- **Small**: the glints she carries cross a door (sim world.ts `enterRoom` keeps `pickups.count`; the "star counter
+  dropping to 0" was the wallet starting over in every room; not saved, so a reload is 0). The well's "glassy pod" at
+  the thorn pit was a shaft knothole lit by the moonbeam: none within `INTERIOR.knotFloor` 240 px over the walk. A
+  side cut off a braced shell raises a shield arc toward her (`FX.shield`) and clanks 4 dB louder with a ring a fifth
+  up (`AUDIO.combat.shieldDb`); first-timers still cut braced fronts (ft19a 6 hits from burr-gallery: "it flipped
+  over, I thought it was beaten, then it got up").
+- **First-timers** (same measure as r18: first in a flame's reach -> first fling (the aim's freeze or the first
+  hatch lamp put out), first cage, the Grove, harness's lost / own worst stretch):
+  | run | build | reach -> fling | cage | Grove | lost (harness / own) |
+  |---|---|---|---|---|---|
+  | ft19a | a10b709 | 10.8 -> 12.4 s | 0:20 | 6:13 | 80 / ~5.5 min (the Crossing's way east: the hub-trunk-well-limbs loop x4) |
+  | ft19b | dcd5c68 | 14.1 -> ~36 s | 0:43 | none (quit 4:45) | 27 / ~3 min (the giant's wall read as a door; east fork without claws, cellar) |
+  | ft19c | 5790e4b | 9.5 -> 15.3 s | 0:21 | 5:23 | 79 / ~2 min (dropped into the cellar/galleries from the fork, R) |
+  The Grove came later than r18's (2:50-3:49), from route-finding, not the reads this round targeted: all three went
+  east first or came back to the hub and did not take the hub's east bank with the claws; two dropped into the
+  cellar / galleries (the fork's hidden way down) and circled there. ft19b cut the first lamp ~25 s before seeing
+  the Lamp's cap. Journals: playtest-reports/2026-11-01T00-01-11-firsttimer-ft19a, *00-36-28-*ft19b, *01-05-22-*ft19c.
+  Checks: solver all claims hold (2,557 s), climbs, world check, furniture's bar, look:check 357/357, chase-probe,
+  escape-live, `npm run typecheck`, `lint`, `test`, e2e `--workers=2`.
+
 ## v18 (round 18, 2026-11-01): what first-timers still could not read (ft17a-d)
-- **The fling's way before the press** (render, lamps.ts `READY.peek*`): in a flame's reach a tongue of its light
+- **The fling's way before the press** (render, lamps.ts `READY.peek*`; r19: now the flame's own shape): in a flame's reach a tongue of its light
   leans out the way a fling would throw her now (the held 8-way direction, else the lamp's `aim`, else out from the
   flame through her: `flingAim`'s rule), sparks running along it, swinging as the stick turns. Render reads the held
   keys from the new `SimView.input` (the sim's `prevInput`). ft18a: "a ring and a short yellow line pointing up-right
@@ -38,11 +93,9 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
   45th frame, so running into it with the key held often said nothing (ft17a: no `shortcutShut` at all). Render: the
   seams always leak a thread of light (a way plugged, not a post); a knock blazes them, spills the far side's light on
   the floor at her feet, pulls the silk taut toward its knots and rings them three times (`KIT.doorKnock` 2.6 s);
-  audio a creak from beyond. All three r18 bots knocked (2-4 `shortcutShut`) and still did not read "opens from the
+  audio a creak from beyond (r19: the seams, spill and rings went; a stake and ties). All three r18 bots knocked (2-4 `shortcutShut`) and still did not read "opens from the
   other side" (they saw "two round lights behind bars", "maybe the glows need lighting"). Not solved.
-- **A rotten wall answers a cut into the face under it** (render kit.ts `KIT.sill`, audio route-canopy): within 24
-  px of its sides and 520 under its foot, it shakes, leaks and drops chips of rot from its sill to her floor (ft17d cut
-  the column under the giant's `rot-door` 15+ times, "no response at all").
+- (r18's rot sill, chips from a rotten wall at a cut under it, went in r19: it misled ft19a for ~2 min.)
 - **The giant's juvenile sleeps** (spawn `asleep`, burrback kinds): curled and harmless at 2,836 until she is down on
   its ground within `wakePx` 200, wakes over 50 frames, harmless through the wake and `wakeSafeFrames` 45 after (cut or
   not), shouldering her out (`risePush` 5); awake it walks 2,616-3,056; she off its top (2 x `wakePx` along it, 260
