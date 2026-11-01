@@ -782,6 +782,11 @@
       ]
     },
     "bench": true,
+    "reform": {
+      "x": 4400,
+      "y": 1178,
+      "when": "cn-first-fling"
+    },
     "lures": [
       {
         "id": "wick-path",

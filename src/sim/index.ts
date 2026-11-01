@@ -265,7 +265,8 @@ export function benchPoint(
     const q = pats[i];
     if (q) take(q, i);
   }
-  if (scene.reform) take(scene.reform, -1);
+  const rf = scene.reform;
+  if (rf && (!rf.when || state.save.flags.includes(rf.when))) take(rf, -1);
   if (state.entry) take(state.entry, -1);
   return { point, patch };
 }

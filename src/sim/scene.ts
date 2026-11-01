@@ -580,9 +580,10 @@ export interface Scene {
   }>;
   /**
    * Where a fade re-forms her in this room while no moon patch is saved (instead of her last safe
-   * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4).
+   * ground, which is beside whatever faded her): the burrow's door before P1 (wood.md R4). `when`: only once that
+   * flag is saved (a bench room's point past a gate she may not have crossed yet: the hatch past its first fling).
    */
-  reform?: { x: number; y: number };
+  reform?: { x: number; y: number; when?: string };
   /**
    * A fade in this room re-forms her at its moon patch nearest to where she lay **at or below her** (whole),
    * whatever patch the save holds (area 1 plan r3 / r4: a fade anywhere in the oak re-forms her in the oak,

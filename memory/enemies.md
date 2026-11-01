@@ -329,7 +329,10 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
   - **`bench` rooms (the Canopy; r20 HK's shade, r21 Matt: "for now just go back to a near checkpoint when you die,
     not back to the very start")**: she re-forms, whole, at the checkpoint in the room she fell in nearest to where she
     lay: one of its moon patches, its `reform` point or her door (`state.entry`, the first ground she stood on there
-    with no creature near) (`benchPoint`, src/sim/index.ts); the room's creatures go home, an ambush re-arms. Never
+    with no creature near) (`benchPoint`, src/sim/index.ts; a `reform` with `when` counts only once that flag is saved:
+    the hatch's past its first fling, or a fade by the cocoon's side of the gap would skip it). The room's creatures go
+    home, an ambush re-arms. Euclidean, not by path: a patch ahead of her can be the nearest (the tunnel's pit -> p-warn),
+    which skips a little and costs nothing. Never
     beside what faded her: a unit test (canopy-r20) keeps every Canopy patch and `reform` 300 px from every home
     (ambushes not yet woken and the Keeper aside), the door is clear by construction. r20's rule (the last patch she
     RESTED at, any room, else the hatch) was a walk of up to minutes; Matt found it too harsh. `save.patch` (rested at;

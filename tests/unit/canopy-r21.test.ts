@@ -106,3 +106,23 @@ describe('the first cage answers a cut from where a walk up to it stops (r21)', 
     expect(ev.some((q) => q.type === 'lureHit' && q.id === 'trap-crossing')).toBe(true);
   });
 });
+
+describe('a fade past the first fling is not back at the cocoon (r21, Matt: "not back to the very start")', () => {
+  it('before the fling: her door by the cocoon; after it: the limb she flung to', () => {
+    const hatch = getRoom('cn-hatch');
+    const before = at('cn-hatch', 3200, 728);
+    before.entry = { x: 900, y: 1022 };
+    before.player.hp = 0;
+    before.player.faded = 1;
+    run(before, 0, 1);
+    expect(Math.abs(before.player.x + before.player.w / 2 - 900)).toBeLessThan(8);
+    const after = at('cn-hatch', 4800, 1190);
+    after.entry = { x: 900, y: 1022 };
+    after.save.flags.push('cn-first-fling');
+    after.player.hp = 0;
+    after.player.faded = 1;
+    run(after, 0, 1);
+    expect(Math.abs(after.player.x + after.player.w / 2 - (hatch.reform?.x ?? 0))).toBeLessThan(8);
+    expect(after.player.hp).toBe(after.player.hpMax);
+  });
+});

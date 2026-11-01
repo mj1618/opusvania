@@ -1093,6 +1093,9 @@ function hatch(): Json {
     abilities: [],
     // (r20: HK's bench, as every Canopy room.)
     bench: true,
+    // (r21, Matt: "not back to the very start": the room has no patch, and her door is the cocoon. Past the first
+    // fling a fade (the branch end's lampwing) re-forms her on the limb she flung to, not 3,600 px back over the gap.)
+    reform: { x: 4400, y: 1178, when: 'cn-first-fling' },
     // (r12, moment 1: the break sets a flag the kin's try keys on: it jumps after the swarm and falls back.)
     hatch: { ...(src.hatch as Json), sets: 'cn-hatched' },
     // (The level's pieces draw the pocket's cover: r6.)

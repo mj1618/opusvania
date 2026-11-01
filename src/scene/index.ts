@@ -217,7 +217,7 @@ const SceneSchema = z
       .object({ x: int, y: int, sets: z.string().min(1).optional() })
       .strict()
       .optional(),
-    reform: z.object({ x: int, y: int }).strict().optional(),
+    reform: z.object({ x: int, y: int, when: z.string().optional() }).strict().optional(),
     reformPatch: z.boolean().optional(),
     bench: z.boolean().optional(),
     // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
