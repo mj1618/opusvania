@@ -825,6 +825,28 @@
         "regrow": 1200,
         "hp": 2
       }
+    ],
+    "enemies": [
+      {
+        "id": "juv-hatch",
+        "kind": "juvenileBurrback",
+        "x": 1872,
+        "y": 948,
+        "facing": -1,
+        "radius": 150,
+        "senses": "always",
+        "fenced": true
+      },
+      {
+        "id": "wing-hatch",
+        "kind": "lampwing",
+        "x": 4930,
+        "y": 1090,
+        "facing": -1,
+        "radius": 110,
+        "senses": "always",
+        "dives": 2
+      }
     ]
   },
   {
@@ -932,8 +954,29 @@
         "tag": "root",
         "x": 1408,
         "y": 1600,
-        "w": 3904,
-        "h": 192
+        "w": 2048,
+        "h": 64
+      },
+      {
+        "tag": "root",
+        "x": 3584,
+        "y": 1600,
+        "w": 1728,
+        "h": 64
+      },
+      {
+        "tag": "root",
+        "x": 1408,
+        "y": 1664,
+        "w": 1920,
+        "h": 128
+      },
+      {
+        "tag": "root",
+        "x": 3712,
+        "y": 1664,
+        "w": 1600,
+        "h": 128
       },
       {
         "tag": "root",
@@ -1184,6 +1227,18 @@
     ],
     "pickups": [
       {
+        "id": "cellar-1",
+        "kind": "glint",
+        "x": 3582,
+        "y": 1730
+      },
+      {
+        "id": "cellar-2",
+        "kind": "glint",
+        "x": 3642,
+        "y": 1730
+      },
+      {
         "id": "shelf-great",
         "kind": "great",
         "x": 2432,
@@ -1191,6 +1246,14 @@
       }
     ],
     "pods": [
+      {
+        "id": "pod-cellar",
+        "x": 3424,
+        "y": 1770,
+        "mount": "sit",
+        "regrow": 1200,
+        "hp": 3
+      },
       {
         "id": "pod-bank",
         "x": 7620,
@@ -1200,7 +1263,64 @@
         "hp": 2
       }
     ],
-    "enemies": [],
+    "enemies": [
+      {
+        "id": "juv-cage",
+        "kind": "juvenileBurrback",
+        "x": 6650,
+        "y": 1600,
+        "facing": -1,
+        "radius": 180,
+        "senses": "always",
+        "fenced": true
+      },
+      {
+        "id": "wing-door",
+        "kind": "lampwing",
+        "x": 5600,
+        "y": 1330,
+        "facing": 1,
+        "senses": "always",
+        "radius": 160,
+        "dives": 2
+      },
+      {
+        "id": "burr-floor",
+        "kind": "burrback",
+        "x": 4060,
+        "y": 1600,
+        "facing": -1,
+        "radius": 230,
+        "senses": "always",
+        "fenced": true
+      },
+      {
+        "id": "ant-m1",
+        "kind": "carrier",
+        "x": 240,
+        "y": 1920,
+        "facing": 1,
+        "trail": [[880, 1920]]
+      },
+      {
+        "id": "ant-m2",
+        "kind": "carrier",
+        "x": 240,
+        "y": 1920,
+        "facing": 1,
+        "follow": "ant-m1",
+        "phase": 0.33
+      },
+      {
+        "id": "ant-m3",
+        "kind": "carrier",
+        "x": 240,
+        "y": 1920,
+        "facing": 1,
+        "follow": "ant-m1",
+        "phase": 0.67
+      }
+    ],
     "lures": [
       {
         "id": "socket-1",
@@ -1287,6 +1407,14 @@
         }
       ],
       "covers": [
+        {
+          "id": "cellar-cover",
+          "x": 3328,
+          "y": 1600,
+          "w": 384,
+          "h": 256,
+          "opens": "cellar-panel"
+        },
         {
           "id": "bank-cover",
           "x": 6976,
@@ -1566,6 +1694,14 @@
         "y": 1088,
         "w": 64,
         "h": 192
+      },
+      {
+        "id": "cellar-panel",
+        "x": 3456,
+        "y": 1600,
+        "w": 128,
+        "h": 64,
+        "floor": true
       },
       {
         "id": "bank-wall",
@@ -2122,19 +2258,36 @@
         "y": 586,
         "mount": "sit",
         "regrow": 1200
+      },
+      {
+        "id": "pod-tier3",
+        "x": 300,
+        "y": 1642,
+        "mount": "sit",
+        "regrow": 1200,
+        "hp": 2
       }
     ],
     "enemies": [
       {
         "id": "juv-t1",
         "kind": "juvenileBurrback",
-        "x": 2836,
+        "x": 2830,
         "y": 384,
         "facing": -1,
-        "radius": 220,
+        "radius": 130,
         "senses": "always",
-        "fenced": true,
-        "asleep": true
+        "fenced": true
+      },
+      {
+        "id": "wing-t1",
+        "kind": "lampwing",
+        "x": 2800,
+        "y": 200,
+        "facing": 1,
+        "senses": "always",
+        "radius": 80,
+        "dives": 2
       },
       {
         "id": "dang-t2",

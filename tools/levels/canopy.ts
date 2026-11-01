@@ -1005,6 +1005,10 @@ const FIRST_WICK: [number, number] = [3700, 660];
 const PATH_WICK: [number, number] = [2640, 590];
 /** The promise's widen zone (r12, moment 1): the crown's limb west of the lip (the first fling's frame is the lip's). */
 const PROMISE_X: [number, number] = [2816, 3296];
+/** The hatch's first creature (r21): a juvenile on S2's flat (feet on its top at 948), 640 px past the kin. */
+const HATCH_JUV: [number, number] = [1872, 948];
+/** ...and the second (r21): a lampwing over the branch's end, between S8's east end and S9, after the first fling. */
+const HATCH_WING: [number, number] = [4930, 1090];
 
 function hatch(): Json {
   const src = JSON.parse(readFileSync('content/rooms/wood-hatch.json', 'utf8')) as Json;
@@ -1155,6 +1159,33 @@ function hatch(): Json {
     solids: [...solids, ...pocketSolids],
     pickups: [...((src.pickups as Json[] | undefined) ?? [])],
     pods: [...((src.pods as Json[] | undefined) ?? []), pocketPod],
+    // (r21, Matt: "I just went through the first 5 minutes in the game, didn't have to deal with a single enemy". HK
+    // has a crawlid on its first screen. The first creature is a juvenile on S2, ~10 s after the break: it walks a
+    // flat of the limb, turns to her at 260 px (a 30-frame tell) and comes; two cuts, the first thing she ever cuts.
+    // The second, before the drop, a lampwing over the branch's end past the first fling: not on the landing (S8's
+    // west half, 500 px off), it tells and dives as she walks to the drop. Neither is near the lesson flames.)
+    enemies: [
+      {
+        id: 'juv-hatch',
+        kind: 'juvenileBurrback',
+        x: HATCH_JUV[0],
+        y: HATCH_JUV[1],
+        facing: -1,
+        radius: 150,
+        senses: 'always',
+        fenced: true,
+      },
+      {
+        id: 'wing-hatch',
+        kind: 'lampwing',
+        x: HATCH_WING[0],
+        y: HATCH_WING[1],
+        facing: -1,
+        radius: 110,
+        senses: 'always',
+        dives: 2,
+      },
+    ],
     marks: {
       ...marks,
       // (r12, moment 1: the kin tries the air after the swarm as she breaks out, and falls back.)
@@ -1225,6 +1256,8 @@ const DEN_FREED = 'cn-den-freed';
  * over the floor, so the cut a player makes walking up to it lands, standing or in the air.)
  */
 const HUB_CAGE: [number, number] = [6300, 1480];
+/** The hub's root cellar under the floor (r21): x0, x1 (its rotten panel 128 in from the west end). */
+const HUB_CELLAR: [number, number] = [3328, 3712];
 const GROVE_TRAP = 'trap-grove';
 const WARN_TRAP = 'trap-warn';
 
@@ -1258,6 +1291,10 @@ function hub(): Json {
   // The seed door and its shaft into the root tunnel.
   r.gate('seed-door', 1792 + HX, 1600, 256, 64, 'seeds:3');
   r.hole(1792 + HX, 1664, 2048 + HX, 2304);
+  // (r21: the floor's first secret, a root cellar under a rotten floor panel east of the clearing (the floor is a bough
+  // 256 thick: the cellar is in it). A cut down on the panel's rot opens it; a pod and glints in the dark.)
+  r.hole(HUB_CELLAR[0], 1664, HUB_CELLAR[1], 1792);
+  r.bark('cellar-panel', HUB_CELLAR[0] + 128, 1600, 128, 64, true);
   // Secret (review r3 #8: it needs the claws, so the giant's wall is the first break): a root clump hung over the
   // east limb's end, a hollow in it behind rotten heartwood high on its west face (the heart's moth-stone). She
   // climbs the clump's root face from the limb; each kick throws her out, and she cuts as she swings back in. (r6:
@@ -1385,6 +1422,21 @@ function hub(): Json {
     { id: 'roost-warn', lure: `cn-tunnel:${WARN_TRAP}`, x: 6144, y: 640, w: 512, h: 320, leaves: DEN_FREED },
   ]);
   r.place('trap', HUB_CAGE[0], 1600);
+  // (r21, Matt: "didn't have to deal with a single enemy, hardly encountered anything": the hub had none. Walking west
+  // from the landing every screen has a thing to deal with; the clearing stays the quiet place (nothing within ~1,000
+  // px of the kin's fire).)
+  // The cage's keeper: a juvenile walks the floor east of the cage (6,470-6,830), turns to her as she cuts it.
+  r.juvenile('juv-cage', 6650, 1600, -1, 180, { fenced: true });
+  // In the air over the seed door: a lampwing, met on the walk west from the cage.
+  r.flyer('lampwing', 'wing-door', 5600, 1330, 1, { radius: 160, dives: 2 });
+  // The floor between the seed door and the clearing: a burrback (its brace and ram: the first creature that blocks).
+  r.burrback('burr-floor', 4060, 1600, -1, 230, { fenced: true });
+  // The cellar's pay (the pod is the thing to hit) and the step down to the giant's mouth: carriers on their rail,
+  // coming at her from the giant's door.
+  r.pod('pod-cellar', HUB_CELLAR[0] + 96, 1792, 1200, 'sit', 3);
+  r.hoard('cellar-', HUB_CELLAR[0] + 224, 1700, 120, 60, 2);
+  r.cover('cellar-cover', HUB_CELLAR[0], 1600, HUB_CELLAR[1] - HUB_CELLAR[0], 256, 'cellar-panel');
+  r.ants('ant-m', 240, 880, 1920, 3);
   // (r11: off the landing either way, the first time: its frame lets go, and the kin goes back to its light.)
   r.add('triggers', { id: 'left-west', x: 5376, y: 0, w: 128, h: 1600, sets: 'cn-hub-left' });
   r.add('triggers', { id: 'left-east', x: 7424, y: 0, w: 128, h: 1344, sets: 'cn-hub-left' });
@@ -1527,7 +1579,15 @@ function trunk(): Json {
   // (r18: solved by its wake: it sleeps curled at its spot (`asleep`) until she is down on the top within 200 px, wakes
   // over 50 frames harmless, then tells and comes. Arriving at either end (300 / 276 px off) is never a hit.)
   // Awake it walks the top's middle (2,616-3,056); she gone from the top 1.5 s, it sleeps again where it stands.
-  r.juvenile('juv-t1', 2836, 384, -1, 220, { fenced: true, asleep: true });
+  // (r21, Matt: "didn't have to deal with a single enemy": asleep, a runner jumped it as it woke. Awake now, on a
+  // shorter walk (2,700-2,960) with its back to the door: she arrives 170 px past its east end, and its 30-frame tell
+  // plays before it can reach her (~1.5 s); the claws' return up the west lip is 60 px past its west end, as long.)
+  r.juvenile('juv-t1', 2830, 384, -1, 130, { fenced: true });
+  // (r21: and a lampwing under the top's roof by the lip, so the first trip in is a small fight: the beetle on the
+  // floor, the wing over the way down.)
+  // (Its post over the top's middle-west: 370 px from the door (out of its sight on arrival), 210 from the lip (its
+  // 36-frame tell before a dive on a climber topping out).)
+  r.flyer('lampwing', 'wing-t1', 2800, 200, 1, { radius: 80, dives: 2 });
   // A dangler under the low roof (review r3 #7: a new kind on the path, where the lampwing was), over clean floor
   // (r4 bots: a pair over the thorns faded the casual one 29 times).
   r.dangler('dang-t2', 700, 768, 1);
@@ -1570,6 +1630,8 @@ function trunk(): Json {
   // A fling line (review r6 #4): a lamp in the drop's shaft, a jump over tier 2's floor: flung up from it she is back
   // in the wall's chamber (the clawed return, `t2 -> t1`, now has a second way; the hall's way out stays the claws').
   r.lamp('wick-drop', TRUNK_WICK[0], TRUNK_WICK[1]);
+  // (r21: tier 3, the way out to the well, was bare floor: a pod to hit. No glints: they buy nothing, 25 at most.)
+  r.pod('pod-tier3', 300, 1664, 1200, 'sit', 2);
   return r.finish();
 }
 

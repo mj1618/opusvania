@@ -431,11 +431,10 @@ describe("the first-timer's r11 findings (r12)", () => {
     const trunk = getRoom('cn-trunk');
     const j = (trunk.enemies ?? []).find((e) => e.id === 'juv-t1');
     expect(j?.y).toBe(384);
-    // (r17: both ends of the top are arrivals, the door (3,200) and the climb's lip (2,560). r18: it sleeps at its spot,
-    // 300+ px from the door and 270+ from the lip, until she is down near it (canopy-r18.test.ts); awake it walks the
-    // top's middle.)
-    expect((j as { asleep?: boolean } | undefined)?.asleep).toBe(true);
-    expect((j?.x ?? 0) - 2560).toBeGreaterThanOrEqual(270);
-    expect(3136 - (j?.x ?? 0)).toBeGreaterThanOrEqual(300);
+    // (r17: both ends of the top are arrivals, the door (3,200) and the climb's lip (2,560). r21: awake, its walk keeps
+    // 130+ px from the lip and 170+ from the door, its 30-frame tell first (canopy-r18.test.ts).)
+    const radius = (j as { radius?: number } | undefined)?.radius ?? 0;
+    expect((j?.x ?? 0) - radius - 2560).toBeGreaterThanOrEqual(130);
+    expect(3136 - (j?.x ?? 0) - radius).toBeGreaterThanOrEqual(170);
   });
 });
