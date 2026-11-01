@@ -109,7 +109,11 @@ export const KIT = {
     dull: 0x8a8a8a,
     stalk: 0xb8ae98,
   },
-  moon: { beam: 0xb8d0f0, pool: 0xdce8ff, mote: 0xe8f0ff },
+  /**
+   * `bench`: a moon patch's light in a bench room (the Canopy r20: a fade goes back to the last one she RESTED at, and
+   * ft20a / ft20b never saw the well's or the Grove's): 1.6 x the plain one before she has rested there.
+   */
+  moon: { beam: 0xb8d0f0, pool: 0xdce8ff, mote: 0xe8f0ff, bench: 1.6 },
   moss: { scar: 0x8aa8a0, lit: 0xa8d8cc, body: 0x24403c, glow: 0x88c8c0 },
   /** The Downwood's great lamp seen from above (`glow` marks) and the Split Oak's lightning seam (`scar`). */
   great: { wash: 0xff9a40, core: 0xffd890 },
@@ -350,7 +354,8 @@ export class Kit {
       if (!seen(p.x - 100, p.y - 400, 200, 420)) return;
       const rested = sim.rest.at === i && sim.rest.done;
       const mine = sim.save.patch?.room === room && sim.save.patch?.id === p.id;
-      this.moonPool(back, glow, p.x, p.y, 1 + (mine ? 0.25 : 0) + (rested ? 0.35 : 0), clock, i);
+      const base = S.bench ? KIT.moon.bench : 1;
+      this.moonPool(back, glow, p.x, p.y, base + (mine ? 0.25 : 0) + (rested ? 0.35 : 0), clock, i);
     });
     for (const gl of S.glades ?? []) {
       const open = !gl.when || sim.save.flags.includes(gl.when);
