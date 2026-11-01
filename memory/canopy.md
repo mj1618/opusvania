@@ -68,7 +68,8 @@ either side of it now).
   | ft21f | 50b0f56 | 13 | 1 | 0 | galleries, R at 137 s |
   | ft21g | abde1d6 | 13 | 2 | 0 | no cage in 6 min |
   | ft21h | abde1d6 | 27 | 5 | 0 | Grove from 174 s: 4 fades, thorns |
-  First creature at 6-8 s in all eight (58 s in ft20a and ft20b). Kills in 5 min: 14-31 (3 and 4). Hits in r20's two: 19
+  (Not played by a first-timer: the last changes after abde1d6, the cage's 96 px radius, the bed's 128 px hop, the hatch's
+  `reform`.) First creature at 6-8 s in all eight (58 s in ft20a and ft20b). Kills in 5 min: 14-31 (3 and 4). Hits in r20's two: 19
   and 10, 2 fades each, so hits did not jump as much as kills did.
 - **Open:**
   - **Hits are over the brief** ("a few hits and maybe one fade"): 13-27 hits, 2-5 fades on the last builds. The hub's new
