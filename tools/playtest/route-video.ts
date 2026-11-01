@@ -189,7 +189,7 @@ export const ROUTE: Leg[] = [
   { name: "cn-hub: the cage's keeper", kind: 'fight', ids: ['juv-cage'], seconds: 40, optional: true },
   { name: 'cn-hub: the cage cut open (the first release)', kind: 'cage', lure: 'trap-crossing' },
   {
-    name: 'cn-hub: the lampwing over the seed door',
+    name: 'cn-hub: the lampwing over the burl',
     kind: 'fight',
     ids: ['wing-door'],
     seconds: 30,

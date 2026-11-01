@@ -1267,18 +1267,18 @@
       {
         "id": "juv-cage",
         "kind": "juvenileBurrback",
-        "x": 6650,
+        "x": 5975,
         "y": 1600,
         "facing": -1,
-        "radius": 180,
+        "radius": 125,
         "senses": "always",
         "fenced": true
       },
       {
         "id": "wing-door",
         "kind": "lampwing",
-        "x": 5600,
-        "y": 1330,
+        "x": 4740,
+        "y": 1300,
         "facing": 1,
         "senses": "always",
         "radius": 160,
@@ -5810,7 +5810,14 @@
         "h": 80
       }
     ],
-    "oneWays": [],
+    "oneWays": [
+      {
+        "tag": "branch",
+        "x": 400,
+        "y": 1792,
+        "w": 160
+      }
+    ],
     "pickups": [],
     "pods": [],
     "enemies": [

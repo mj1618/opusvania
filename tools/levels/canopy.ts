@@ -1425,10 +1425,12 @@ function hub(): Json {
   // (r21, Matt: "didn't have to deal with a single enemy, hardly encountered anything": the hub had none. Walking west
   // from the landing every screen has a thing to deal with; the clearing stays the quiet place (nothing within ~1,000
   // px of the kin's fire).)
-  // The cage's keeper: a juvenile walks the floor east of the cage (6,470-6,830), turns to her as she cuts it.
-  r.juvenile('juv-cage', 6650, 1600, -1, 180, { fenced: true });
-  // In the air over the seed door: a lampwing, met on the walk west from the cage.
-  r.flyer('lampwing', 'wing-door', 5600, 1330, 1, { radius: 160, dives: 2 });
+  // The cage's keeper: a juvenile walks the floor under the landing limb west of the cage (5,850-6,100), turns to her
+  // as she cuts it. (Not east of it: the hatch's drop spans 6,080-7,360 and past the limb's end she lands on that
+  // floor; ft21d landed on it twice. Off the limb's west end she lands 130 px short of its walk, its tell first.)
+  r.juvenile('juv-cage', 5975, 1600, -1, 125, { fenced: true });
+  // In the air over the burl between the seed door and the floor's burrback: a lampwing, met on the walk west.
+  r.flyer('lampwing', 'wing-door', 4740, 1300, 1, { radius: 160, dives: 2 });
   // The floor between the seed door and the clearing: a burrback (its brace and ram: the first creature that blocks).
   r.burrback('burr-floor', 4060, 1600, -1, 230, { fenced: true });
   // The cellar's pay (the pod is the thing to hit) and the step down to the giant's mouth: carriers on their rail,
@@ -2128,6 +2130,10 @@ function fork(): Json {
   r.noClaws(896, 0, 1088);
   r.noClaws(2816, 0, 320);
   r.limb('perch', 896, 1344, 1088, { grows: 'east', end: 'tip', h: 80 });
+  // (r21: the way back up from the cellar. A jump up through the hole fell back down it unless steered sideways at the
+  // apex (ft21a, ft21d: "the drop in was one-way", both pressed R). A root across the shaft 64 over the stair's floor:
+  // walking off the stair she drops under it into the cellar; a jump up from the cellar lands on it.)
+  r.oneWay(400, 1792, 160, 'branch');
   // (Review r4 #2: thorns at the face's foot read as "not this way"; r7, review r6 #1: v6's tray west of it is gone
   // too. The juvenile on the knoll, and a lamp over the face's top: the way on points at a warm light.)
   // (r8, review r7 #7: the fork's approach is the path's quiet room before the Grove: v7's juvenile on the knoll, the

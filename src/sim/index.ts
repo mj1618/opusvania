@@ -17,6 +17,7 @@ import { ActionBit, type InputFrame, wasPressed } from './input';
 import { afterCatch, arenaShut, catchHold, rearmArenas, updateKit } from './kit';
 import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
+import { solidAt } from './physics/aabb';
 import { dropGlints, dropShade, updateDrops, updatePickups } from './pickups';
 import { type MoveParams, resolveParams } from './player/params';
 import {
@@ -408,6 +409,10 @@ export function step(
           state.player.vy = 0;
           enterRoom(state, t, world as World, there.id, { kind: 'point', x: at.x, y: at.y }, from, events);
         } else {
+          // (Up through a top edge, the Canopy r21: where the hold's rise took her, in the new room's px.)
+          const up = scene.exits?.find((e) => e.id === ex.id)?.edge === 'n';
+          const rose = state.player.y + here.y - there.y;
+          const holdVy = state.player.vy;
           enterRoom(
             state,
             t,
@@ -417,9 +422,24 @@ export function step(
             from,
             events,
           );
-          // (Up through a top edge: the rise she had as she crossed, not what the hold left of it.)
-          if (scene.exits?.find((e) => e.id === ex.id)?.edge === 'n')
-            state.player.vy = Math.min(state.player.vy, ex.vy);
+          // Up through a top edge she keeps the rise the hold gave her when the way up in the new room is clear (the
+          // Canopy r21: put back at the opening's inset, a jump up from the cellar to the fork lost ~180 px of its 272
+          // and fell back down the hole; r20's first-timers "fell back 4-5 times"); else the rise she had as she
+          // crossed, from the inset (not what the hold left of it).
+          if (up) {
+            const q = state.player;
+            const there2 = withShortcuts(there.scene, state.save);
+            let clear = rose < q.y;
+            for (let y = q.y; clear && y > rose; y -= 8) clear = !solidAt(there2, q.x, y, q.w, q.h);
+            if (clear && !solidAt(there2, q.x, rose, q.w, q.h)) {
+              const lift = rose - q.y;
+              q.y = rose;
+              q.airTopY += lift;
+              q.launchY += lift;
+              q.dropY += lift;
+              q.vy = holdVy;
+            } else q.vy = Math.min(q.vy, ex.vy);
+          }
         }
         remember(state.save.crossed, `${there.id}:${ex.toExit}`);
         state.frame++;

@@ -74,3 +74,22 @@ describe('the root cellar: back up to the fork is a plain jump (r21)', () => {
     expect(s.player.grounded).toBe(true);
   });
 });
+
+describe('the cellar to the fork, the way a first-timer tries it (r21)', () => {
+  it.each([400, 480, 560])('a straight held jump from under the hole at x %i stands her in the fork', (x) => {
+    const s = at('cn-cellar', x, 128);
+    run(s, 0, 20);
+    run(s, ActionBit.jump, 24);
+    run(s, 0, 60);
+    expect(s.room).toBe('cn-fork');
+    expect(s.player.grounded).toBe(true);
+  });
+
+  it('walking west off the fork stair she still drops into the cellar', () => {
+    const s = at('cn-fork', 800, 1856);
+    run(s, 0, 10);
+    let k = 0;
+    while (s.room === 'cn-fork' && k++ < 300) run(s, ActionBit.left, 1);
+    expect(s.room).toBe('cn-cellar');
+  });
+});
