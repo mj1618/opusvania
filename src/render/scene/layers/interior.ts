@@ -79,6 +79,8 @@ export class InteriorLayer implements EnvModule {
     const pad = Math.max(W, H) * (1 - INTERIOR.deepParallax) + 240;
     // (Canopy r19: the heartwood's planes are thousands of small marks, baked once into a texture each.)
     const baked = plan.look === 'heartwood';
+    // (An open room's under-floor pockets, the hub's, are mostly hidden: baked coarse. Live, their marks cost ~1 ms.)
+    const k = plan.graded ? 1 : INTERIOR.bake.open;
     const plane = (g: Graphics, padP: number, scale: number, draw: (g: Graphics) => void): Container => {
       if (!baked) {
         draw(g);
@@ -91,7 +93,9 @@ export class InteriorLayer implements EnvModule {
       const y1 = Math.max(...xs.map((q) => q[3] as number));
       return bakePlane(ctx.renderer, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, scale, draw, g.label);
     };
-    this.deepView = plane(this.deep, pad, INTERIOR.bake.deep, (g) => drawDeepBack(g, plan, LOOK.seed, pad));
+    this.deepView = plane(this.deep, pad, INTERIOR.bake.deep * k, (g) =>
+      drawDeepBack(g, plan, LOOK.seed, pad),
+    );
     ctx.layers.get('interiorDeep').addChild(this.deepView);
     const polys = backMask(plan, LOOK.seed);
     for (const m of polys) this.mask.poly(m).fill({ color: 0xffffff });
@@ -100,7 +104,7 @@ export class InteriorLayer implements EnvModule {
     this.deepView.mask = this.mask;
     // The mid plane (review r5 #7), masked to the same backs.
     const padMid = Math.max(W, H) * (1 - INTERIOR.midParallax) + 240;
-    this.midView = plane(this.mid, padMid, INTERIOR.bake.mid, (g) =>
+    this.midView = plane(this.mid, padMid, INTERIOR.bake.mid * k, (g) =>
       drawMidBack(g, plan, LOOK.seed, padMid, massTone(room).body),
     );
     ctx.layers.get('interiorMid').addChild(this.midView);

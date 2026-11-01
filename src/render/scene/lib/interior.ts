@@ -49,7 +49,7 @@ export const INTERIOR = {
   /** How far the near back's torn edge reaches into it where it meets open air (px). */
   tear: 420,
   /** Texture px per layer px of the baked planes (heartwood: layers/interior.ts, lib/bake-plane.ts). */
-  bake: { deep: 0.6, mid: 0.75 },
+  bake: { deep: 0.6, mid: 0.6, open: 0.4 },
 } as const;
 
 /** The den's fungus light from below (review r5 #7). */
