@@ -1384,8 +1384,9 @@ export const defaultTuning = withVariants({
    * px, px/f, px/f², frames.
    */
   jumper: {
-    width: 50,
-    height: 34,
+    // (58 x 42 since the readability pass: the drawing grew to ~0.65 of her height, the box with it.)
+    width: 58,
+    height: 42,
     hp: 3,
     /** It notices her lit within this far sideways and `noticeDyPx` up or down, with a clear line; it locks on. */
     noticePx: 520,
@@ -1498,9 +1499,9 @@ export const defaultTuning = withVariants({
    * hot cone instead (a quick tell), so the answer is from behind or above. Frames at 60 Hz, px, px/f.
    */
   bombardier: {
-    /** Collision box: lower and wider than the burrback (52 x 34). */
+    /** Collision box: wider than the burrback (52 x 34). (64 x 38 since the readability pass: the drawn beetle grew; wider no longer stands on bomb-larder's ledge.) */
     width: 64,
-    height: 30,
+    height: 38,
     hp: 3,
     /** It sees her (lit, a clear line from its turret) within this sideways and this up / down of its centre. */
     sightPx: 640,
@@ -1535,9 +1536,12 @@ export const defaultTuning = withVariants({
     /** Frames before an unspent droplet is removed. */
     shotLife: 300,
     shotDamage: 1,
-    /** Where droplets leave: the turret's tip (raised over its back), this far above its top and behind its centre. */
-    muzzleUp: 10,
-    muzzleBack: 22,
+    /**
+     * Where droplets leave: the turret's tip (raised over its back), this far above its top and behind its centre
+     * (the drawn tip at full rise: render/enemies/bombardier.ts, `BOMB.scale` / `stand`).
+     */
+    muzzleUp: 18,
+    muzzleBack: 31,
     /** After a burst or a spray it holds still this long (`pause`), then waits `cooldownFrames` before the next tell. */
     pauseFrames: 30,
     cooldownFrames: 96,

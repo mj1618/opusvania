@@ -91,14 +91,21 @@ export const ANT = {
   },
   /** Ends of its trail: it climbs out / goes in over this many px. */
   edge: 12,
-  /** Drawn this much larger than its frame's px (the box is 30 x 14; a touch bigger reads at play zoom). */
-  scale: 1.2,
+  /**
+   * Drawn this much larger than its frame's px (the box is 30 x 14). 1.55 since the readability pass: ~52 px long at
+   * play zoom (was ~40, a speck beside her 80); jaws and gaster overhang the box a little, the legs more.
+   */
+  scale: 1.55,
   /** Drawn larger when the camera pulls out (first-timer r6: "the ants were specks"): from this zoom, up to max. */
   zoomAt: 1.05,
-  maxScale: 1.6,
+  maxScale: 1.4,
   color: {
     top: 0x3e2a24,
     low: 0x140d0c,
+    // (A wood ant's two tones since the readability pass: a rust head and thorax over the dark gaster. One dark brown
+    // was the ground's own value; the warm red part separates it on moss, bark and amber alike.)
+    rust: 0xb4522a,
+    rustLow: 0x4a1c0c,
     leg: 0x231714,
     sheen: 0xc29f86,
     eye: 0x0a0707,
@@ -116,6 +123,8 @@ export const ANT = {
 const C = {
   top: [0, 0, 0] as V3,
   low: [0, 0, 0] as V3,
+  rust: [0, 0, 0] as V3,
+  rustLow: [0, 0, 0] as V3,
   leg: [0, 0, 0] as V3,
   sheen: [0, 0, 0] as V3,
   eye: [0, 0, 0] as V3,
@@ -223,6 +232,8 @@ function loadColors(): void {
   hexTo(C.top, K.top);
   hexTo(C.low, K.low);
   hexTo(C.leg, K.leg);
+  hexTo(C.rust, K.rust);
+  hexTo(C.rustLow, K.rustLow);
   hexTo(C.sheen, K.sheen);
   hexTo(C.eye, K.eye);
   hexTo(C.glint, K.glint);
@@ -590,6 +601,8 @@ export class AntArt {
     applyTone(C.top, C.flash, C.dusk);
     applyTone(C.low, C.flash, C.dusk);
     applyTone(C.leg, C.flash, C.dusk);
+    applyTone(C.rust, C.flash, C.dusk);
+    applyTone(C.rustLow, C.flash, C.dusk);
   }
 
   /** A live ant (walk, the tell, the bite, hurt). */
@@ -724,8 +737,10 @@ export class AntArt {
     p.pw[2] = 1.2;
     p.ribbon(3, SH_BODY);
     p.ellipse(B.x(-3.4, -9.4), B.y(-3.4, -9.4), 1.5, 2.1, 0, SH_BODY, 10);
-    p.ellipse(F.x(1.4, -8.3), F.y(1.4, -8.3), 4.6, 2.5, F.rot(0.2), SH_BODY, 16);
-    p.ellipse(F.x(5.7, -9.4), F.y(5.7, -9.4), 3.1, 2.8, F.rot(-0.1), SH_BODY, 14);
+    SH_HEAD.c0 = C.rust;
+    SH_HEAD.c1 = C.rustLow;
+    p.ellipse(F.x(1.4, -8.3), F.y(1.4, -8.3), 4.6, 2.5, F.rot(0.2), SH_HEAD, 16);
+    p.ellipse(F.x(5.7, -9.4), F.y(5.7, -9.4), 3.1, 2.8, F.rot(-0.1), SH_HEAD, 14);
   }
 
   /** Head, jaws, eye, antennae, and the wing it carries. */
@@ -780,8 +795,8 @@ export class AntArt {
       p.ribbon(3, SH_JAW, true, false);
     }
     // Head.
-    SH_HEAD.c0 = C.top;
-    SH_HEAD.c1 = C.low;
+    SH_HEAD.c0 = C.rust;
+    SH_HEAD.c1 = C.rustLow;
     p.ellipse(F.x(hx, hy), F.y(hx, hy), 4.2, 3.5, F.rot(-0.18), SH_HEAD, 16);
     // Eye: a small dark glossy dome with a pale glint; in the tell it flashes the hunt colour.
     const ex = hx + 0.9;
@@ -926,4 +941,6 @@ function loadColorsBody(): void {
   hexTo(C.top, K.top);
   hexTo(C.low, K.low);
   hexTo(C.leg, K.leg);
+  hexTo(C.rust, K.rust);
+  hexTo(C.rustLow, K.rustLow);
 }

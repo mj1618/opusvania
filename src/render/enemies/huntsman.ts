@@ -24,15 +24,24 @@ import type { EnemyState } from '../../sim/state';
 /** Colours and sizes (world px). Live knob: `HUNT`. */
 export const HUNT = {
   /** Body length along the wall, and how far its body sits off the bark. */
-  scale: 1.1,
+  scale: 1.3,
   /** Its body's centre off the bark (world px at scale 1): the painted bark bulges past the sim's face. */
   off: 12,
-  body: 0x4a3828,
-  belly: 0x22170f,
-  rim: 0xb89470,
-  spot: 0x1c130c,
-  leg: 0x35271b,
-  band: 0x8c7356,
+  // (Readability pass: a warm tan with pale bands against the cool near-black bark. At 0x4a3828 / 0x35271b it was
+  // the bark's own value and vanished on its face; the warm hue and the pale knees now carry it there.)
+  body: 0x8a6a4c,
+  belly: 0x3a2a1c,
+  rim: 0xf0d6aa,
+  spot: 0x2e2016,
+  leg: 0x6e5238,
+  band: 0xe8d4b0,
+  /** Leg widths (femur, tibia) at scale 1. */
+  legW: [3.6, 2.3] as const,
+  /** The far rank of legs reaches back over the bark (out of the gap): px of the knee and foot into it, at scale 1. */
+  farIn: [16, 10] as const,
+  /** The tell: how far the front pair lifts off the bark into the gap (a threat), and the body's hunt tint at a flash. */
+  raise: 20,
+  tint: 0.7,
   eye: 0xf2e6d8,
   hunt: 0xff5a3c,
   flash: 0xfff1d8,
@@ -268,13 +277,20 @@ export class HuntsmanRig {
       const spread = 1 + 0.18 * press;
       // (Twitching palps and toes at rest: a living thing even when still.)
       const idle = (1 - walk) * Math.sin(clock * 2.3 + k * 1.7 + this.seed) * 0.6;
-      const fu = (pair.f * pair.reach * spread + swing * 7 + idle) * s;
-      const fv = sub + lift * 6 * s;
-      // (The far legs a little behind and lower: two ranks, not one ladder.)
+      // (The tell: the front pair comes off the bark, up and out into the gap, spread: the threat before the lunge.)
+      const up = k >> 1 === 0 ? press : k >> 1 === 1 ? press * 0.35 : 0;
+      const fu = (pair.f * pair.reach * spread * (1 - 0.25 * up) + swing * 7 + idle) * s;
+      // (The far rank reaches back over the bark's face, out of the gap: the spider straddles the edge, its legs a
+      // fan all round it, not a ladder along the face.)
+      const fv = near
+        ? sub + lift * 6 * s + up * HUNT.raise * s
+        : sub - HUNT.farIn[1] * s + lift * 4 * s + up * HUNT.raise * 0.6 * s;
       const bu = (pair.b + (near ? 0 : 2.5)) * s;
       const bv = (near ? 0.5 : -0.5) * s;
       const ku = bu + (fu - bu) * pair.k + (near ? 0 : (pair.f > 0 ? -4 : 4) * s);
-      const kv = (pair.knee * (1 - 0.55 * press) + lift * 3) * s * (near ? 1 : 0.7);
+      const kv = near
+        ? (pair.knee * (1 - 0.55 * press) + lift * 3 + up * HUNT.raise * 0.9) * s
+        : (-HUNT.farIn[0] * (1 - 0.3 * press) + lift * 2 + up * HUNT.raise * 0.7) * s;
       this.leg(P, k, bu, bv, ku, kv, fu, fv, near);
     }
   }
@@ -466,56 +482,61 @@ export function drawHuntsman(
       if (L.near !== near) continue;
       const c = danger !== undefined && k < 4 ? danger : near ? leg : legFar;
       // Femur thick, tibia and tarsus finer: a long tapering leg.
+      const lw = HUNT.legW;
       g.moveTo(L.bx, L.by)
         .lineTo(L.kx, L.ky)
-        .stroke({ color: c, width: 2.8 * s, alpha: a, cap: 'round' });
+        .stroke({ color: c, width: lw[0] * s, alpha: a, cap: 'round' });
       g.moveTo(L.kx, L.ky)
         .lineTo(L.fx, L.fy)
-        .stroke({ color: c, width: 1.7 * s, alpha: a, cap: 'round' });
+        .stroke({ color: c, width: lw[1] * s, alpha: a, cap: 'round' });
       // The bands: pale rings across each segment (huntsmen's legs are banded).
       if (near || f > 0.3) {
         for (const [x0, y0, x1, y1, w] of [
-          [L.bx, L.by, L.kx, L.ky, 2.9],
-          [L.kx, L.ky, L.fx, L.fy, 1.8],
+          [L.bx, L.by, L.kx, L.ky, HUNT.legW[0] + 0.2],
+          [L.kx, L.ky, L.fx, L.fy, HUNT.legW[1] + 0.2],
         ] as const) {
           const len = Math.hypot(x1 - x0, y1 - y0) || 1;
           // (Narrow pale rings, ~3 px long whatever the segment's length.)
-          const k = Math.min(0.08, 1.6 / len);
-          for (const u of [0.42, 0.78]) {
+          const k = Math.min(0.09, 2.2 / len);
+          // (One ring a segment since the readability pass: two plus the knee read as beads on a string.)
+          for (const u of [0.62]) {
             const x = x0 + (x1 - x0) * u;
             const y = y0 + (y1 - y0) * u;
             const dx = (x1 - x0) * k;
             const dy = (y1 - y0) * k;
             g.moveTo(x - dx, y - dy)
               .lineTo(x + dx, y + dy)
-              .stroke({ color: band, width: w * s, alpha: a * (near ? 0.75 : 0.4) });
+              .stroke({ color: band, width: w * s, alpha: a * (near ? 0.9 : 0.55) });
           }
         }
         // The knee catches the light.
-        g.circle(L.kx, L.ky, 1.6 * s).fill({ color: band, alpha: a * 0.7 });
+        g.circle(L.kx, L.ky, 2.1 * s).fill({ color: band, alpha: a * 0.85 });
       }
     }
   };
   legsOf(false);
   // The body: a flat abdomen and a smaller cephalothorax along the axis; the back (v +) catches the light.
   const flip = P.flipped ? -1 : 1;
-  blob(g, P, -10 * s, 0, 13.5 * s, 5.5 * s, body, a);
-  blob(g, P, 7 * s, 0.4 * s, 9 * s, 5 * s, body, a);
-  blob(g, P, -10 * s, -2.4 * s * flip, 11 * s, 2.8 * s, belly, a * 0.9);
+  // The countdown on the body: through the tell its back takes the hunt colour on each of the eyes' flashes.
+  const hunt = P.tell > 0 ? HUNT.tint * (P.eyes >= 1 ? 1 : 0.35) * Math.min(1, P.tell * 2) : 0;
+  const bodyT = mixC(body, C.hunt, hunt * 0.6);
+  blob(g, P, -12 * s, 0, 18 * s, 8 * s, bodyT, a);
+  blob(g, P, 8 * s, 0.4 * s, 11 * s, 6.8 * s, bodyT, a);
+  blob(g, P, -12 * s, -3.4 * s * flip, 14.5 * s, 3.8 * s, belly, a * 0.9);
   // The rim along its back.
   {
-    const [x0, y0] = at(P, -22 * s, 4.3 * s * flip);
-    const [x1, y1] = at(P, -10 * s, 5.4 * s * flip);
-    const [x2, y2] = at(P, 2 * s, 4.8 * s * flip);
-    const [x3, y3] = at(P, 11 * s, 4.6 * s * flip);
+    const [x0, y0] = at(P, -25 * s, 5.2 * s * flip);
+    const [x1, y1] = at(P, -11 * s, 6.6 * s * flip);
+    const [x2, y2] = at(P, 2 * s, 5.8 * s * flip);
+    const [x3, y3] = at(P, 13 * s, 5.6 * s * flip);
     g.moveTo(x0, y0).lineTo(x1, y1).lineTo(x2, y2).lineTo(x3, y3);
-    g.stroke({ color: rim, width: 1.4 * s, alpha: a * 0.8, cap: 'round', join: 'round' });
+    g.stroke({ color: mixC(rim, C.hunt, hunt), width: 2 * s, alpha: a * 0.9, cap: 'round', join: 'round' });
   }
   // Mottling on the abdomen.
   for (const [u, v, r] of [
-    [-13, 1.5, 1.8],
-    [-8, 2.2, 1.4],
-    [-4, 1.2, 1.6],
+    [-16, 2, 2.2],
+    [-10, 2.8, 1.8],
+    [-4, 1.6, 2],
   ] as const) {
     const [x, y] = at(P, u * s, v * s * flip);
     g.circle(x, y, r * s).fill({ color: mixC(C.spot, C.flash, f), alpha: a * 0.8 });
@@ -523,15 +544,15 @@ export function drawHuntsman(
   // Eyes at the head's front edge: pale glints, the hunt colour in the tell.
   const eyeC = mixC(C.eye, C.hunt, P.eyes);
   for (const [u, v, r] of [
-    [15.4, 1.8, 1.3],
-    [14.6, 3.2, 1.05],
-    [13.6, 0.4, 0.95],
+    [17.4, 2, 1.5],
+    [16.6, 3.6, 1.2],
+    [15.6, 0.4, 1.1],
   ] as const) {
     const [x, y] = at(P, u * s, v * s * flip);
     g.circle(x, y, r * s).fill({ color: f > 0.5 ? C.flash : eyeC, alpha: a });
   }
   if (glow) {
-    const [ex, ey] = at(P, 14.8 * s, 1.8 * s * flip);
+    const [ex, ey] = at(P, 16.8 * s, 1.8 * s * flip);
     glow(ex, ey, (5 + 9 * P.eyes) * s, eyeC, a * (0.12 + 0.45 * P.eyes));
     // The hit's warm bloom.
     if (f > 0) glow(P.x, P.y, 26 * s, C.flash, 0.35 * f * a);

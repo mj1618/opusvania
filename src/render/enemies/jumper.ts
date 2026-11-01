@@ -21,12 +21,16 @@ type V3 = [number, number, number];
 
 /** Look and acting knobs (render px at the creature's 1x, seconds). */
 export const JUMP = {
-  /** Drawn size against the 1x layout (the sim's box is 50 x 34). */
-  scale: 1.15,
+  /**
+   * Drawn size against the 1x layout (the sim's box is 58 x 42). 1.35: ~52 px tall standing (0.65 of her 80) and ~75
+   * long, eyes to spinnerets, so the body overhangs the box by ~8 px at each end (legs further: fine).
+   */
+  scale: 1.35,
   color: {
     body: 0x3b302b,
     bodyLow: 0x18131a,
-    fur: 0x6a5848,
+    // (Paler than the body: the fringe is its rim against dark ground, the way a real one's hairs catch light.)
+    fur: 0x8f7a62,
     pale: 0xeee2c8,
     eye: 0x05060a,
     eyeRing: 0x3f97b0,
@@ -36,32 +40,35 @@ export const JUMP = {
     palp: 0xf1e6cc,
     legNear: 0x30261f,
     legFar: 0x17120f,
-    band: 0x8f7c66,
+    band: 0xd2bf9e,
     flash: 0xfff2dc,
-    hunt: 0xffd27a,
+    // (The hunt colour of every r22 creature's tell: coral-orange, never her lamp's gold.)
+    hunt: 0xff7444,
     shadow: 0x020306,
   },
   /** Body: head-thorax and abdomen half sizes and centres (feet-centre origin, +x forward, y down). */
-  head: { x: 7, y: -18, rx: 12.5, ry: 11.5 },
-  abd: { x: -13, y: -17, rx: 13, ry: 12 },
+  head: { x: 8, y: -21, rx: 13.5, ry: 13 },
+  abd: { x: -14, y: -22.5, rx: 15.5, ry: 14.5 },
   /** The big front eyes (near / far), the small side eyes, their glints. */
-  eyes: { r: 6.2, rFar: 5.5, x: 17, y: -20, glint: 0.4 },
+  eyes: { r: 7.4, rFar: 6.4, x: 18.5, y: -23.5, glint: 0.42 },
   /** Hairs round the outline (count, length, width). */
   fur: { head: 26, abd: 48, len: 1.9, w: 0.7 },
   /** Legs: hips along the head's underside (x), rest feet (x) on the ground, bone lengths, widths. */
   legs: {
-    hip: [14, 9, 3, -2],
-    foot: [33, 20, -9, -27],
-    l1: [13, 12, 12, 15],
-    l2: [14, 12, 12, 16],
-    w: [4.4, 3.4, 3.3, 3.8],
+    hip: [15, 10, 3, -3],
+    // (Long enough that the knees stand above the back: the spider read in a silhouette.)
+    foot: [39, 24, -13, -35],
+    l1: [20, 17, 17, 22],
+    l2: [17, 15, 15, 19],
+    w: [4.8, 3.7, 3.6, 4.1],
     farDx: 4,
   },
   /** A head twitch: how often (s), how far it snaps (px), how fast. */
   twitch: { every: 0.55, px: 2.2, rate: 46 },
   /** The tell: crouch depth px, tremble px, how far the rear feet bunch in, front legs raised px. */
   /** The tell (its beats are the sim's `tuning.jumper.tellBeats`: the ticks sound on them). */
-  tell: { crouch: 10, tremble: 1.1, bunch: 15, raise: 3, beatFade: 9 },
+  /** (raise: the front pair lifts off the ground and up in front of the face, a threat a player reads at play zoom.) */
+  tell: { crouch: 8, tremble: 1.1, bunch: 15, raise: 26, reach: 12, beatFade: 9 },
   /** Hit: flash frames, squash. */
   hit: { flash: 5, squash: 0.28 },
   /** Death: frames to flip, frames it fades over at the end of the sim's body time. */
@@ -428,8 +435,8 @@ function leg(
   if (band) {
     // Pale bands round the leg past the knee and at the tarsus (the legs read banded: Phidippus).
     for (const [u0, u1] of [
-      [0.1, 0.24],
-      [0.7, 0.8],
+      [0.12, 0.22],
+      [0.68, 0.76],
     ] as const) {
       p.px[0] = kx + (ex - kx) * u0;
       p.py[0] = ky + (ey - ky) * u0;
@@ -455,6 +462,8 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
   const cr = sat(rig.crouch.x);
   const sp = sat(rig.splay.x);
   const curl = dead ? sat(rig.deadF / 14) : 0;
+  // The tell's count on the body (readability pass): marks and fur fringe take the hunt colour, pulsing on the beats.
+  const hb = dead || e.mode !== 'windup' ? 0 : Math.min(1, 0.45 * cr + 0.55 * rig.beat);
 
   // --- The hit flash: warm white for the first frames of the hold, gone fast.
   const age = rig.hitAge;
@@ -471,9 +480,14 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
   lit(SH_LEG_F.c1, C.legFar, flash * 0.5, dim * 0.8);
   lit(SH_FUR.c0, C.fur, flash, dim);
   lit(SH_FUR.c1, C.fur, flash, dim * 0.7);
+  if (hb > 0.02)
+    for (let i = 0; i < 3; i++) {
+      SH_FUR.c0[i] = SH_FUR.c0[i]! + (C.hunt[i]! - SH_FUR.c0[i]!) * hb * 0.8;
+      SH_FUR.c1[i] = SH_FUR.c1[i]! + (C.hunt[i]! - SH_FUR.c1[i]!) * hb * 0.6;
+    }
   lit(SH_PALE.c0, C.pale, flash, dim);
   lit(SH_PALE.c1, C.pale, flash, dim * 0.8);
-  lit(SH_MARK.c0, C.pale, flash, dim * 0.62);
+  lit(SH_MARK.c0, C.pale, flash, dim * 0.75);
   lit(SH_MARK.c1, C.pale, flash, dim * 0.5);
   lit(SH_EYE.c0, C.eye, flash * 0.3, 1);
   lit(SH_EYE.c1, C.eye, flash * 0.3, 1);
@@ -528,7 +542,11 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
     let gx = L.foot[k]!;
     let gy = 0;
     if (k >= 2) gx += J.tell.bunch * cr * (k === 3 ? 1 : 0.6);
-    if (k === 0) gy -= J.tell.raise * cr + 2.5 * (1 - cr) * (e.chase > 0 ? 1 : 0.4);
+    if (k === 0) {
+      gy -= J.tell.raise * cr + 2.5 * (1 - cr) * (e.chase > 0 ? 1 : 0.4);
+      gx += J.tell.reach * cr;
+    }
+    if (k === 1) gy -= J.tell.raise * 0.3 * cr;
     gx *= 1 + sp * 0.35;
     // In flight: front pair reaching forward-down, rear pair streaming back.
     const fxl = [36, 30, -26, -38][k]!;
@@ -556,7 +574,7 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
     leg(
       p,
       L.hip[k]! - L.farDx,
-      -9,
+      -12,
       LEGS_FX[k]! - FX * L.farDx * SX - FX * 3,
       LEGS_FY[k]! - 1,
       L.l1[k]!,
@@ -586,10 +604,24 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
   blob(p, A.x, A.y, A.rx * (1 + breath), A.ry * (1 + breath), SH_ABD, 2.1, 24);
   // The pattern (Phidippus): a pale crescent across its front, a central triangle, then a pair of dashes, smaller
   // toward the spinnerets.
-  blob(p, A.x + 10, A.y - 2.5, 1.4, 5.8, SH_PALE, 2, 12);
-  blob(p, A.x + 1.5, A.y - 9.2, 2.6, 1.3, SH_MARK, 2, 12);
-  blob(p, A.x - 5, A.y - 8, 1.6, 0.9, SH_MARK, 2, 10);
-  blob(p, A.x - 9.5, A.y - 5.4, 1.1, 0.7, SH_MARK, 2, 10);
+  // (Bolder since the readability pass: the crescent is the pale break that shows at play zoom. On each beat of the
+  // tell the marks flash the hunt colour with the eyes: the count is on the body too.)
+  if (hb > 0.02) {
+    lit(SH_PALE.c0, C.pale, flash, dim);
+    for (let i = 0; i < 3; i++) {
+      SH_PALE.c0[i] = SH_PALE.c0[i]! + (C.hunt[i]! - SH_PALE.c0[i]!) * hb * 0.85;
+      SH_PALE.c1[i] = SH_PALE.c0[i]! * 0.85;
+      SH_MARK.c0[i] = SH_MARK.c0[i]! + (C.hunt[i]! - SH_MARK.c0[i]!) * hb * 0.9;
+      SH_MARK.c1[i] = SH_MARK.c0[i]! * 0.85;
+    }
+  }
+  blob(p, A.x + 11.5, A.y - 2.5, 2.6, 8.6, SH_PALE, 2, 14);
+  blob(p, A.x + 1, A.y - 10.5, 3.6, 2.2, SH_MARK, 2, 12);
+  blob(p, A.x - 7.5, A.y - 7.8, 1.8, 1.2, SH_MARK, 2, 10);
+  if (hb > 0.02) {
+    const g = W(A.x + 4, A.y - 6);
+    p.glow(g.x, g.y, A.rx * (1 + hb * 0.6), C.hunt, 0.22 * hb, A.rx * 0.9);
+  }
 
   // --- Head-thorax: blocky, a little tall at the front; the twitch moves the face.
   const H = J.head;
@@ -599,7 +631,7 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
 
   // --- Near legs, in front of the body (under the face); banded.
   for (let k = 3; k >= 0; k--)
-    leg(p, L.hip[k]!, -8, LEGS_FX[k]!, LEGS_FY[k]!, L.l1[k]!, L.l2[k]!, L.w[k]!, SH_LEG_N, true, bend);
+    leg(p, L.hip[k]!, -11, LEGS_FX[k]!, LEGS_FY[k]!, L.l1[k]!, L.l2[k]!, L.w[k]!, SH_LEG_N, true, bend);
 
   // --- The face, turned a little to us: two huge front eyes side by side, bulging past the head's front (black glass in
   // a dark socket, a teal sheen, glints that catch the light), fangs and pale palps under them, small side eyes on top.
@@ -622,7 +654,7 @@ export function drawJumper(p: Painter, rig: JumperRig, e: EnemyState, clock: num
   for (let k = 1; k >= 0; k--) {
     const pxl = fx + E.x + 2.5 - k * 4;
     const pyl = E.y + 9.5 + (k === 0 ? flick : -flick * 0.7);
-    blob(p, pxl, pyl, 1.9, 2.3, SH_PALP, 2, 12);
+    blob(p, pxl, pyl, 2.4, 2.9, SH_PALP, 2, 12);
   }
   // The eyes: far one first (behind, toward the body), then the near one bulging past the front.
   for (let k = 1; k >= 0; k--) {

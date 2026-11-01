@@ -92,7 +92,9 @@ plain JSON. `document.body.dataset.ready === 'true'` once booted (`dataset.error
 - `load()` restarts the scene (glints come back, pods close, enemies return, full health, lanterns dark, the heart asleep, the ending undone). `teleport(x, y)` puts the feet centre there at rest and snaps the camera (health, enemies, the last safe ground and the slash count `attackSeq` are kept).
 - `cam()` → `{x, y, zoom, follow, override}` (view centre, world px). `cam({x, y, zoom})` overrides (any
   subset; missing x/y follow the game camera), `cam({on: 'player', zoom: 4})` tracks the player,
-  `cam(null)` releases. Overrides are not clamped to the scene.
+  `cam(null)` releases. Overrides are not clamped to the scene. **zoom is world px per VIEW px, and the view is ~1920 wide
+  at zoom 1 whatever the canvas**: on a 960 x 540 page `zoom: 2.4` is only 1.2 screen px per world px (the old
+  bestiary's "close-ups" were that). Shoot at 1920 x 1080 for 1:1. The room's play zoom is `cam(null); cam().follow.zoom`.
 - `tuning()`, `setTuning('run.maxSpeed', 12)` or `setTuning({run: {maxSpeed: 12}})`. `lights()`.
   `render()` redraws. `debug.hitboxes(on)` (also F2; scene edges and solids that take no kick are grey; shows enemy boxes too: magenta, orange while hurt, grey dead, **thick red while a burrback is braced (a white bar on its armoured front, a red line along the ground as far as its ram will go), green while it stands spent**, with a tick on the facing side; a lampwing also gets its territory circle, a line to what it is drawn to (yellow while curious / pursuing) and its velocity in white; her box is white while invulnerable; lantern trigger boxes are cyan, gold once lit, with a white bar over them that fills while she kindles or rests and a gold line under the one she re-forms at, and once lit a gold line along the ground burrbacks keep off and the circle lampwings give up at; a dropped cluster is a yellow diamond; the heart's box is dim violet asleep, orange awake, white once reached), `debug.panel(on)` (also backquote), `debug.post(on)` (post-processing), `debug.clearColor(rgb)` (what an uncovered pixel shows; view-size.md).
 

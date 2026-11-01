@@ -33,6 +33,7 @@ export const BOMB = {
     tip: rgb(0xff7a1e),
     tipHot: rgb(0xffe0a0),
     key: rgb(0xb8c8ff),
+    gloss: rgb(0x9fb4e8),
     flash: rgb(0xfff0d8),
     drop: rgb(0xffb050),
     dropCore: rgb(0xfff4d0),
@@ -42,9 +43,20 @@ export const BOMB = {
     steam: rgb(0x8c96a8),
     spark: rgb(0xffc070),
   },
+  /**
+   * Readability (r22 pass): drawn size x its 1x layout, how far its legs lift the body off the ground (local px: the
+   * belly clears the walk moss, so it reads as a beetle standing, not a strip), and the dome's height (was 19).
+   */
+  scale: 1.25,
+  stand: 7,
+  /** The layout's centre is behind its middle (the head is long): shifted back so the body overhangs its box evenly. */
+  shiftX: -3,
+  domeH: 25,
+  /** The wing cases' gloss: a pale streak along the dome's crown (a beetle reads by its shine). */
+  gloss: 0.8,
   /** Turret segment lengths at full rise (px; the rest stub is `stub` x these), half-widths. */
   seg: [13, 13, 10] as const,
-  segW: [6.5, 5.6, 4.6] as const,
+  segW: [7.6, 6.6, 5.4] as const,
   stub: 0.42,
   /** Springs: rise, forward swing, facing, roll (rad/s), heat. */
   riseK: 16,
@@ -89,6 +101,7 @@ const SH_HEAD = shade(C.head[0], C.head[1], 0.45, 0.3, 0.2, 0.35);
 const SH_LEG = shade(C.leg, C.leg, 0.35, 0.3, 0, 0.5);
 const SH_TAIL = shade(C.tail[0], C.tail[1], 0.45, 0.35, 0.2, 0.35);
 const SH_RING = shade(C.band, C.band, 0.2, 0.1, 0, 0.4);
+const SH_GLOSS = shade(C.gloss, C.gloss, 0, 0, 0, 0.5);
 const SH_DROP = shade(C.drop, C.dropGlow, 0, 0, 0, 0.5);
 
 const smooth = (a: number, b: number, x: number): number => {
@@ -255,12 +268,18 @@ class Frame {
     this.y = r.y;
     const ad = Math.max(0.3, Math.abs(r.d));
     this.d = r.d < 0 ? -ad : ad;
-    this.sx = 1 + (BOMB.squash[0] - 1) * r.sq;
-    this.sy = (1 + (BOMB.squash[1] - 1) * r.sq) * (1 - 0.05 * r.kick);
+    this.sx = (1 + (BOMB.squash[0] - 1) * r.sq) * BOMB.scale;
+    this.sy = (1 + (BOMB.squash[1] - 1) * r.sq) * (1 - 0.05 * r.kick) * BOMB.scale;
     this.cr = Math.cos(r.roll);
     this.sr = Math.sin(r.roll);
+    // (Up on its legs only while upright; curled asleep / dead it sinks.)
+    this.lift = BOMB.stand * Math.max(0, this.cr) * (1 - 0.6 * r.curl);
   }
-  map(lx: number, ly: number): typeof P {
+  lift = 0;
+  map(lx0: number, ly0: number): typeof P {
+    // Up on its legs: everything from the belly line up is lifted, the feet stay on the ground (knees stretch).
+    const ly = ly0 - this.lift * sat(-ly0 / 6);
+    const lx = lx0 + BOMB.shiftX;
     // Roll about (0, -13): on its back (pi) the dome's top (-26) rests on the ground.
     const ry = ly + 13;
     const x = lx * this.cr - ry * this.sr;
@@ -287,7 +306,7 @@ function domePath(p: Painter): number {
     const x = -6 + 25 * Math.cos(t);
     // Highest a little behind the middle; a flatter front shoulder.
     const s = Math.sin(t);
-    const y = -6 - 19 * s ** 0.85 * (1 - 0.12 * Math.cos(t));
+    const y = -6 - BOMB.domeH * s ** 0.85 * (1 - 0.12 * Math.cos(t));
     put(p, n++, x, y);
   }
   for (let k = 1; k < 6; k++) {
@@ -408,7 +427,7 @@ function bodyShapes(p: Painter, r: BombRig, bandC: RGB): void {
     const top = (x: number) => {
       const c = clamp((x + 6) / 25, -1, 1);
       const s = Math.sqrt(Math.max(0, 1 - c * c));
-      return -6 - 19 * s ** 0.85 * (1 - 0.12 * c) + 2.2;
+      return -6 - BOMB.domeH * s ** 0.85 * (1 - 0.12 * c) + 2.2;
     };
     put(p, 0, x0 - w, -6.5);
     put(p, 1, x0 - w * 0.6, top(x0 - w * 0.6));
@@ -416,6 +435,22 @@ function bodyShapes(p: Painter, r: BombRig, bandC: RGB): void {
     put(p, 3, x0 + w, -6.5);
     [qx, qy] = centre(x0, -12);
     p.shape(4, qx, qy, SH_BAND, p.px[1]!, p.py[1]!, p.px[0]!, p.py[0]!);
+  }
+  // The gloss: a pale streak along the crown, behind the light's side of the top (skipped in the flash's ghost).
+  if (BOMB.gloss > 0 && !p.ghost) {
+    const H = BOMB.domeH;
+    const N = 9;
+    for (let k = 0; k < N; k++) {
+      const t = 0.35 + (k / (N - 1)) * 0.45;
+      const c = Math.cos(t * Math.PI);
+      const sn = Math.sin(t * Math.PI);
+      put(p, k, -6 + 25 * c * 0.86, -6 - H * sn ** 0.85 * (1 - 0.12 * c) + 3.2);
+      p.pw[k] = 2.6 * Math.sin((k / (N - 1)) * Math.PI) + 0.3;
+    }
+    SH_GLOSS.c0 = mixRGB(C.gloss, bandC, 0.15);
+    SH_GLOSS.c1 = SH_GLOSS.c0;
+    SH_GLOSS.alpha = BOMB.gloss;
+    p.ribbon(N, SH_GLOSS);
   }
   // Pronotum and the small head.
   n = ellipseL(p, 21, -10.5, 8.5, 7, -0.15);

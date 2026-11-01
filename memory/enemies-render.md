@@ -67,7 +67,7 @@ touch); older: `shots/lamp2`, `shots/burr2`.
   the tell and lunge; it acts its own death, no shards). kinds.ts: `huntsman` is a `spider` kind.
 - Side-on on a vertical face: local axes `u` (along the body, head) and `v` (its back); body off the bark `HUNT.off`
   12 (the painted bark bulges past the sim face: at 7 it vanished into the bark's lit edge). Four leg pairs, front two
-  forward, back two behind, near rank over the body and a far rank darker, lower and offset (one rank read as a
+  forward, back two behind, near rank over the body and a far rank darker, reaching back over the bark (readability pass) (one rank read as a
   ladder of banded sticks). Narrow pale bands, ~3 px whatever the segment's length.
 - Gait from distance moved (0.42 rad/px, capped 48 rad/s), alternating tetrapod; a pivot along the face
   foreshortens the body. Tell: flattens (knees down, legs spread, closer to the bark), eyes flash the hunt colour
@@ -394,7 +394,7 @@ clip `clips/looks-ants-bite.mp4`. Staging: the fork's hawker is `gone` until its
 - Its own rig (not the burrback's): `creatureArt` -> `'bombardier'` in every painted room; `EnemyRenderer.bombardier`
   draws the body into the back painter, `BombFx` (droplets, trails, sparks, steam, flashes, rings, the spray's jet
   and cone of light) into the front one. Greybox: `render/greybox/creatures.ts` `bombardier()` + `shots()`.
-- Look: a low blue-black dome with three thin orange bands (they warm with `heat`), orange pronotum and a small
+- Look (sizes: the readability pass, below): a blue-black dome with three thin orange bands (they warm with `heat`), orange pronotum and a small
   head, splayed legs, feelers; the turret is the abdomen tip, a short stub tucked behind at rest, telescoping up
   over its back for the lob (aimed at `targetX/Y`) and curling forward over the back (drawn over the dome) to spray.
   **Turret angles are unwrapped past pi** (`upA`, `fwA` + 2 pi): a linear blend from the rest pose through 0 swung
@@ -413,7 +413,7 @@ clip `clips/looks-ants-bite.mp4`. Staging: the fork's hawker is `gone` until its
 ## The jumping spider (`jumper.ts`, `JUMP`, `__enemies.jump`; r22, clips `clips/jump-*`)
 - Its own rig (kinds.ts art `jumper`, every painted wood / Lanternroot room; greybox draws its own: round body, big pale
   eye discs, red crouch with the pounce's arc dashed to its landing). Side view, laid out at 1x for a 44 px box and
-  scaled `JUMP.scale` 1.15 about its feet (`scaleFrom`). A body frame `W()` (turn, squash, pitch, roll about y -15).
+  scaled `JUMP.scale` (1.35 since the readability pass, below) about its feet (`scaleFrom`). A body frame `W()` (turn, squash, pitch, roll about y -15).
 - Read: blocky head-thorax + round abdomen, both fringed with short fur hairs (`furRing`; pale long hairs read as a
   hedgehog), short thick banded legs (two pale bands per leg as ribbons: pale dots at the knees read as polka), **two
   big front eyes side by side, seated in dark sockets at the head's front** (bulging past it they read as binoculars),
@@ -426,7 +426,37 @@ clip `clips/looks-ants-bite.mp4`. Staging: the fork's hawker is `gone` until its
   velocity; landing = a squash spring + puffs (index.ts `jumper()`), skid dust; open = splayed, reared and swaying,
   eyes dim; stunned / dead = rolled onto its back (legs kicking / curling); a hit = warm-white flash 2 frames + a
   squash. Death fades over the sim's last 28 body frames. Generic hit debris is the hit-feel layer's, not this rig's.
-- At play zoom (the Canopy's camera) it is ~60 px long beside her 80 px: the leap and the landing read; the crouch
+- (Before the readability pass, below:) at play zoom (the Canopy's camera) it was ~60 px long beside her 80 px: the leap and the landing read; the crouch
   alone barely does, the eye flash and the ticks carry the tell. Staging: `scratchpad` bot wrapping `g.step` (plans
   stand / dodge / air / kill) in `npm run clip -- --setup`, as "Staging and capture" above.
 
+## Readability pass (r22, 2026-11-01; `tools/bestiary.ts`, sheets `shots/bestiary/`)
+The orchestrator's look at play zoom: the new kinds were too small and too dark (HK / Ori creatures are mostly as big as
+the hero or bigger and read by silhouette plus a value break). **The rule used:** (1) height first: the body must rise
+above the walk moss / grass fringe into the mid-value air (art-direction "figure-ground"), where a dark silhouette reads
+by itself; (2) one warm, light-catching signature per kind against the cool grades (bands, rust, tan, a pale fringe),
+never a glow outline; (3) the tell is a pose change big enough at 1:1 on a 1080p frame plus the hunt colour (coral-orange
+0xff7444 / 0xff5a3c) on the BODY, not only in the eyes; (4) the drawn body may overhang its sim box by <= ~10 px at an
+end (legs more), else the box grows.
+| Kind | Before | After |
+|---|---|---|
+| jumper | `JUMP.scale` 1.15, box 50 x 34, ~37 px tall, legs under the body | scale 1.35, **box 58 x 42**, ~52 px tall (0.65 of her), ~75 long; bigger round abdomen, eyes r 7.4; legs long enough that knees stand out; fur fringe paler (0x8f7a62: its rim); bold pale crescent + one central spot (three dashes read as polka); tell: crouch 8, **front pair raised 26 and forward 12**, fur + marks to the hunt colour (0.45 x crouch + 0.55 x beat) |
+| bombardier | low strip ~25 px, half hidden in moss | `BOMB.scale` 1.25, **`stand` 7** (everything above the belly line lifted, feet stay: legs show), **`domeH` 25** (was 19), `shiftX` -3 (overhang even), a pale gloss streak on the crown (`gloss`, `color.gloss`); turret thicker (`segW` 7.6 / 6.6 / 5.4); **box 64 x 38** (was 30 tall; 72 wide fails bomb-larder's ledge), **muzzle 18 up / 31 back** (the drawn tip at full rise) |
+| huntsman | dark brown 0x4a3828 on dark bark, legs 2.8 / 1.7 px hugging the face | `HUNT.scale` 1.3, warm tan body 0x8a6a4c, legs 0x6e5238 at `legW` 3.6 / 2.3 with one pale band a segment + pale knees, rim 0xf0d6aa; **far rank reaches back over the bark** (`farIn` 16 / 10): it straddles the edge, legs a fan all round; abdomen 18 x 8; tell: front pair lifts `raise` 20 into the gap, body + back rim to the hunt colour on the flashes (`tint`) |
+| ant | `ANT.scale` 1.2, one dark brown | scale 1.55 (`maxScale` 1.4 for zoomed-out rooms), **rust head and thorax** (`rust` 0xb4522a / `rustLow`) over the dark gaster (a wood ant) |
+| dragonfly | unchanged (it already read: long banded abdomen, coral eyes) | |
+- Rejected / fixed on the way: pale bodies everywhere (wrong: in front of mid-value air a dark body reads; the pale
+  went into fringes, bands and marks); the huntsman's two bands a segment + knee dot (beads on a string: now one);
+  three pale dots on the jumper's back (polka / ladybird); the jumper's 14 px leg raise (hidden under the head by the
+  crouch: 26 + reach 12 shows); a 72 px bombardier box (placement fails).
+- Cost: geometry is the same but for the gloss ribbon (~20 vertices) and fewer huntsman band strokes; measured with
+  others on screen: jumper room ~0.16 ms / ~3000 vertices, bombardier room ~0.08 ms / ~780.
+- **Bestiary** (`npx tsx tools/bestiary.ts --url http://localhost:5240 [--out dir] [kind ...]`): per kind it steps one
+  frame at a time and takes a frame at each new mode (a tell `tellAt` frames in; one every 75 frames if nothing new),
+  close-up 2.5x and the play view at the room's follow zoom, 1:1 on a 1080p frame. Entry options: `across` (wall
+  creature: she is level across the gap), `ahead` (in front of a walker), `hold` (she is put back every frame).
+  Lineups (`lineup-rest.png`, `lineup-tell.png`) are built from every kind dir in the out dir. Current:
+  `shots/bestiary/{before,after}/`, `shots/bestiary/before-after-{rest,tell}.png`.
+- Still weak: the jumper's body is a muddy mid brown in the amber rooms (it reads by size, eyes and fringe, not by
+  value); the ants are still small beside her (~52 px) and the galleries crowd them against the jumper; the juvenile
+  burrback (the dark blob with violet eye dots in the galleries, often mistaken for the jumper) was not touched.
