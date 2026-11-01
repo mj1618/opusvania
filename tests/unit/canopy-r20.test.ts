@@ -203,11 +203,11 @@ describe('fights built as fights (r20)', () => {
     expect(live(s, ids)).toBe(3);
   });
 
-  it("the fork is quiet on the way to the Grove; after the firefly's flight carriers and a hawker hold its floor", () => {
-    const ids = ['ant-f1', 'ant-f2', 'ant-f3', 'hawk-fork'];
+  it("the fork's carriers run from the start (r21); after the firefly's flight a hawker hunts their floor", () => {
     const first = at('cn-fork', 400, 1344);
     run(first, 0, 5);
-    expect(live(first, ids)).toBe(0);
+    expect(live(first, ['ant-f1', 'ant-f2', 'ant-f3'])).toBe(3);
+    expect(live(first, ['hawk-fork'])).toBe(0);
     const scene = getRoom('cn-fork');
     const s = createState(1, t, scene, [], CG as never, {
       ...newSave(CG as never),
@@ -215,7 +215,7 @@ describe('fights built as fights (r20)', () => {
     });
     s.hatch = null;
     run(s, 0, 5);
-    expect(live(s, ids)).toBe(4);
+    expect(live(s, ['ant-f1', 'ant-f2', 'ant-f3', 'hawk-fork'])).toBe(4);
   });
 
   it('the upper limbs: a hawker hunts her over the bed from the first limb', () => {

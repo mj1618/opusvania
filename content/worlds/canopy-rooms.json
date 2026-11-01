@@ -5820,8 +5820,7 @@
         "x": 1000,
         "y": 1344,
         "facing": 1,
-        "trail": [[1560, 1344]],
-        "wakes": "cn-firefly-gap"
+        "trail": [[1560, 1344]]
       },
       {
         "id": "ant-f2",
@@ -5830,8 +5829,7 @@
         "y": 1344,
         "facing": 1,
         "follow": "ant-f1",
-        "phase": 0.33,
-        "wakes": "cn-firefly-gap"
+        "phase": 0.33
       },
       {
         "id": "ant-f3",
@@ -5840,8 +5838,7 @@
         "y": 1344,
         "facing": 1,
         "follow": "ant-f1",
-        "phase": 0.67,
-        "wakes": "cn-firefly-gap"
+        "phase": 0.67
       },
       {
         "id": "hawk-fork",
@@ -6079,7 +6076,7 @@
     "height": 1920,
     "spawn": {
       "x": 480,
-      "y": 128
+      "y": 96
     },
     "solids": [
       {
@@ -6287,6 +6284,13 @@
       },
       {
         "tag": "root",
+        "x": 384,
+        "y": 96,
+        "w": 192,
+        "h": 32
+      },
+      {
+        "tag": "root",
         "x": 2240,
         "y": 640,
         "w": 320,
@@ -6323,7 +6327,7 @@
         {
           "id": "in",
           "x": 480,
-          "y": 128
+          "y": 96
         },
         {
           "id": "hall",

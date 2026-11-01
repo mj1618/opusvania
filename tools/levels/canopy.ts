@@ -2140,7 +2140,10 @@ function fork(): Json {
   // she cannot stand still on the trail to fight it: the ants hold the floor, the hawker presses. The first pass
   // (to the Grove) is as quiet as before.
   const after = { wakes: 'cn-firefly-gap' };
-  r.ants('ant-f', 1000, 1560, 1344, 3, after);
+  // (r21, Matt: "hardly encountered anything": the fork is met in the first minute by one who goes east from the cage,
+  // and its first pass was empty, "a pretty but empty walk to a wall" (ft21a). The carriers run their trail from the
+  // start now; the hawker still comes with the firefly's flight.)
+  r.ants('ant-f', 1000, 1560, 1344, 3);
   r.flyer('hawker', 'hawk-fork', 1300, 780, -1, { radius: 180, sight: 560, ...after });
   // (r8: two covers, the knoll's chamber behind the panel and the stairs under the floor; v7's one ran over the open
   // way in from the Crossing as well.)
@@ -2172,7 +2175,7 @@ function fork(): Json {
 // low passage the tunnel's shortcut reaches: after the seed door, tunnel -> cellar -> fork is a way home.
 
 function cellar(): Json {
-  const r = new Wood('cn-cellar', 'The root cellar', [480, 128], 7302, { back: true, mood: 'deep' });
+  const r = new Wood('cn-cellar', 'The root cellar', [480, 96], 7302, { back: true, mood: 'deep' });
   r.cave(320, 0, 1024, 128, { ceil: 0, w: 64, e: 0, corner: 0 });
   r.cave(896, 64, 1472, 320, { ceil: 0, w: 0, e: 0, corner: 0 });
   r.cave(1344, 256, 1920, 512, { ceil: 0, w: 0, e: 0, corner: 0 });
@@ -2185,10 +2188,15 @@ function cellar(): Json {
   r.sealDeep();
   r.fill();
   r.shortcut('trap', 1024, 320, 192, 64, 's');
+  // (r21: the way back up to the fork was a 192 px jump through the hole in a 128 px corridor's roof, then a step
+  // sideways at the apex: ft19b / ft19c / ft20b / ft21a fell back or never saw it ("the drop in was one-way", ft21a
+  // pressed R after 2 minutes). A root step 32 high under the hole (a hop onto it, the corridor still clear over her):
+  // from it a full jump rises 112 px over the fork's stair, not 80.)
+  r.mass(384, 96, 192, 32);
   r.burl(2240, 704, 320, 128, 2);
   // (r7, review r6 #1: a quiet room, one ant on its way to the nest; v6's two trays, knuckle and pod are gone.)
   r.ants('ant-c', 1900, 2900, 704, 1);
-  r.place('in', 480, 128);
+  r.place('in', 480, 96);
   r.place('hall', 2300, 704);
   r.place('low', 600, 1792);
   r.shotStops([
