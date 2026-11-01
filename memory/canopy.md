@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v20, 2026-11-01)
+# The Canopy: the first area built to the reference numbers (v21, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,67 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v21 (round 21, 2026-11-01): the opening is dense (Matt: "I just went through the first 5 minutes in the game, didn't have to deal with a single enemy, hardly encountered anything")
+**The lesson: the opening must be dense; quiet stretches are earned later, never at the start.** Rounds 15-19 tuned the
+opening to AI testers' time-to-Grove, which made it smoother and emptier, and "first areas open quiet" was simply
+wrong: HK has a crawlid on its first screen, Silksong and Nine Sols fight in the first minute, and Matt's grove was fun
+because every moment offered several things. Judge the opening by what a player meets per 30 s, not by how fast they
+get through it. A quiet room needs a loud one before it (the clearing by the kin's fire works because of what is on
+either side of it now).
+- **What is where** (all existing kinds, no new render):
+  - hatch: `juv-hatch` on S2 (first thing she ever cuts, ~8-10 s after the break), `wing-hatch` over the branch's end,
+    past the first fling (500 px from the landing). Both lesson flames untouched, no creature near them.
+  - hub, west from the drop: the cage (`trapRadius` 96, was 64: a cut from where a walk up to it stops, 124 px off,
+    missed with no answer and ft21e / ft21g never freed it), `juv-cage` under the landing limb west of the cage
+    (5,850-6,100: **not east, the hatch's drop spans 6,080-7,360** and ft21d landed on it twice), `wing-door` over the
+    burl, `burr-floor` (3 hp, not 5: most-liked fight and most hits, on a road crossed three times), the root cellar
+    under `cellar-panel` (a down cut; a pod, 2 glints), the clearing (no home within 1,000 px of `p-crossing`), `ant-m*`
+    coming at her from the giant's door.
+  - fork: `ant-f*` from the start (r20 woke them with the firefly; the hawker still does), `dang-stairs` over the
+    secret stairs. Cellar: `juv-c`, `wing-c`, `pod-cellar-hall` (ft21e's one empty bucket).
+  - giant: `juv-t1` awake on a shorter walk (2,700-2,960, r18's `asleep` still exists, unused here), `wing-t1` over the
+    top's middle (370 px from the door: out of sight on arrival), `pod-tier3`. The bed's east edge 2,240 (a 128 px hop).
+  - well: left alone. Five of eight first-timers entered it inside 5 minutes (68-267 s) and those who climbed felt it,
+    too much for some (below); the other three went east from the cage and never got there.
+- **The glint cap holds** (at most 25, canopy-r9: they buy nothing): I added 13 and took 11 back. Density is creatures,
+  pods and finds, not glints.
+- **A fade** re-forms her at the nearest checkpoint in the room she fell in: memory/enemies.md "Fade and re-form".
+  First-timers read it as a soft landing ("death costs almost nothing"), as Matt asked; the stake is the shade.
+- **A sim bug found by asking why "the drop in was one-way"**: up through a top edge she was put back at the opening's
+  inset after the 18-frame hold, keeping only her crossing speed. A 272 px jump rose ~86 px into the next room. Where a
+  floor sits 64 px over the edge (fork <-> cellar) that was 6 px short, unless steered: r19-r21's first-timers fell back
+  and pressed R. She now keeps where the hold took her when the way up is clear (`up` in `step`, src/sim/index.ts),
+  else as before. This was also r20's "y 2,728 in a room 1,920 tall": falling on during a hold, no bug in itself.
+  With it: a root across the shaft (`oneWay` 400 x 1,792) catches a straight jump, a 32 px step under the hole, and the
+  cellar's corridor ends under the hole (it ran 64 px past, and a walker landed under the roof at x 340).
+- **Measured by 30 s buckets** (tools: trace.json + journal.md; first-timers on four builds; game time, 5 min):
+  | run | build | hits | fades | empty buckets | note |
+  |---|---|---|---|---|---|
+  | ft21a | e5f361e | 6 | 0 | 90-150 s nearly (a wall, the map) | lost in the galleries, R |
+  | ft21b | e5f361e | 26 | 5 | 0 | Grove from 212 s: 3 fades there |
+  | ft21c | f8d7ad8 | 22 | 5 | 0 | well: gallery pit 2, ambush 2 |
+  | ft21d | f8d7ad8 | 15 | 2 | 90-120 s | galleries, R |
+  | ft21e | 50b0f56 | 19 | 3 | 210-240 s | cellar; bed 2 |
+  | ft21f | 50b0f56 | 13 | 1 | 0 | galleries, R at 137 s |
+  | ft21g | abde1d6 | 13 | 2 | 0 | no cage in 6 min |
+  | ft21h | abde1d6 | 27 | 5 | 0 | Grove from 174 s: 4 fades, thorns |
+  (Not played by a first-timer: the last changes after abde1d6, the cage's 96 px radius, the bed's 128 px hop, the hatch's
+  `reform`.) First creature at 6-8 s in all eight (58 s in ft20a and ft20b). Kills in 5 min: 14-31 (3 and 4). Hits in r20's two: 19
+  and 10, 2 fades each, so hits did not jump as much as kills did.
+- **Open:**
+  - **Hits are over the brief** ("a few hits and maybe one fade"): 13-27 hits, 2-5 fades on the last builds. The hub's new
+    creatures are not the main cost: the Grove's thorn returns (r20's open item, up to ~1,800 px back) and the well's
+    gallery pit and ambush are. Hub crossings still cost 3-4 hits to some; creatures return on every entry. If that stays
+    a complaint, try "slain until she rests" (Nine Sols), which would also earn the quiet on the way back.
+  - **After ~2.5 min, what is next?** Fights no longer fill it: ft21e and ft21g had steady fights and "no sense of going
+    anywhere" (0 abilities in 6 min; the well's claws are the way on and they did not find it). The giant's rotten wall is
+    still not read as a wall (3 deliberate deaths from the hall). This is now the opening's worst problem.
+  - **The burrback's teaching:** head-on cuts do little and nothing says jump and down-cut; most learn it at ~4 min.
+  - The galleries' claw ledge still holds explorers ~1 min: they want it, and nothing says "later".
+  - **The hub's cellar went unfound:** none of eight first-timers broke `cellar-panel` (a floor panel wants a down cut, and
+    nothing marks it), so the hub's breakable and secret exist only for the route bot so far.
+  - Lampwings still read as friendly moths (r20's art job), small creatures on dark floors are unread ("swinging blind").
 
 ## v20 (round 20, 2026-11-01): teeth (Matt: "I feel like it's very easy")
 Not the creature count (55 over ~94 screens, 0.59 a screen, as dense as the references): a fade cost nothing, health

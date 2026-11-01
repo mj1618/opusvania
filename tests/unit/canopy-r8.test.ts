@@ -98,8 +98,8 @@ describe('ambushes arrive (review r7 #2)', () => {
     });
 });
 
-describe('a patch she runs through is not her re-form point: she rests at it (r20, HK bench; was review r7 #4)', () => {
-  it('over the hollow save without a stop, a fade in the ambush re-forms her at the landing she rested at', () => {
+describe('a patch she runs through is not her save, she rests at it (r20); a fade re-forms her at the nearest (r21)', () => {
+  it('over the hollow save without a stop, a fade in the ambush re-forms her at the hollow, the nearest patch', () => {
     const { s, scene } = at('cn-well', 2120, 1152);
     // She rested at the landing's save, two legs down.
     s.save.patch = { room: 'cn-well', id: 'p-landing' };
@@ -124,8 +124,11 @@ describe('a patch she runs through is not her re-form point: she rests at it (r2
     k = 0;
     while (s.player.faded > 0 && k++ < 600) run(s, scene, 0, 1, fade);
     expect(s.room).toBe('cn-well');
-    expect(Math.abs(s.player.x + s.player.w / 2 - (landing?.x ?? 0))).toBeLessThan(100);
-    expect(Math.abs(s.player.y + s.player.h - (landing?.y ?? 0))).toBeLessThan(8);
+    // (r21, Matt: "go back to a near checkpoint": the hollow's patch, not the landing two legs down.)
+    const hollow = (scene.patches ?? []).find((q) => q.id === 'p-hollow');
+    expect(Math.abs(s.player.x + s.player.w / 2 - (hollow?.x ?? 0))).toBeLessThan(100);
+    expect(Math.abs(s.player.y + s.player.h - (hollow?.y ?? 0))).toBeLessThan(8);
+    expect(s.save.patch).toEqual({ room: 'cn-well', id: 'p-landing' });
     expect(s.player.hp).toBe(s.player.hpMax);
     // The ambush plays again: its flag was taken back.
     expect(s.save.flags).not.toContain('cn-well-ambush');

@@ -249,7 +249,7 @@ const CLAIMS: Claim[] = [
   { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'] },
   // The cellar branch: there and back without the claws; the larder needs them; the tunnel's shortcut and the
   // trapdoor open from below only.
-  { room: 'cn-cellar', from: [480, 128], kit: [], reach: ['fork', 'galleries'], not: ['tunnel'] },
+  { room: 'cn-cellar', from: [480, 96], kit: [], reach: ['fork', 'galleries'], not: ['tunnel'] },
   { room: 'cn-cellar', from: [900, 1792], kit: [C], reach: ['fork', 'galleries', 'tunnel'] },
   {
     room: 'cn-galleries',

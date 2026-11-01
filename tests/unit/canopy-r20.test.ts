@@ -43,23 +43,27 @@ function fade(s: GameState, ev: SimEvent[] = []): SimEvent[] {
 }
 const feet = (s: GameState) => ({ x: s.player.x + s.player.w / 2, y: s.player.y + s.player.h });
 
-describe('a fade re-forms her at the last patch she rested at, in any room (r20, HK bench)', () => {
-  it('faded in the giant, rested last at the Crossing: back at p-crossing, whole; every glint lies in the giant', () => {
-    const s = at('cn-trunk', 2400, 640);
+describe('a fade re-forms her at the nearest checkpoint in the room she fell in (r21, Matt; was r20 HK bench)', () => {
+  it('faded in the giant (no patch there): back at her door into it, whole; every glint lies where she fell', () => {
+    const s = at('cn-trunk', 3136, 384);
     s.save.patch = { room: 'cn-hub', id: 'p-crossing' };
+    run(s, 0, 40);
+    const door = s.entry;
+    expect(door).not.toBeNull();
+    s.player.x = 2400 - s.player.w / 2;
+    s.player.y = 640 - s.player.h;
     s.pickups.count = 7;
     s.player.hp = 1;
     const where = feet(s);
     const ev = fade(s);
-    expect(s.room).toBe('cn-hub');
-    const p = getRoom('cn-hub').patches?.find((q) => q.id === 'p-crossing');
-    expect(Math.abs(feet(s).x - (p?.x ?? 0))).toBeLessThan(8);
+    expect(s.room).toBe('cn-trunk');
+    expect(Math.abs(feet(s).x - (door?.x ?? 0))).toBeLessThan(8);
     expect(s.player.hp).toBe(s.player.hpMax);
     expect(s.pickups.count).toBe(0);
     expect(s.pickups.shade).toMatchObject({ room: 'cn-trunk', value: 7, left: 7 });
     expect(Math.abs((s.pickups.shade?.x ?? 0) - where.x)).toBeLessThan(40);
     expect(ev.some((e) => e.type === 'glintsDrop' && e.value === 7)).toBe(true);
-    // Back in the giant the cluster lies where she fell; touched, all seven come back, then `shadeTaken`.
+    // Back where she fell the cluster waits; touched, all seven come back, then `shadeTaken`.
     const back: SimEvent[] = [];
     enterRoom(s, t, W, 'cn-trunk', { kind: 'point', x: where.x, y: where.y }, 'cn-hub', back);
     expect(s.pickups.drops.length).toBe(1);
@@ -70,25 +74,51 @@ describe('a fade re-forms her at the last patch she rested at, in any room (r20,
   });
 
   it('a second fade before she takes it back loses the first for good', () => {
-    const s = at('cn-trunk', 2400, 640);
-    s.save.patch = { room: 'cn-hub', id: 'p-crossing' };
+    const s = at('cn-trunk', 3136, 384);
+    run(s, 0, 40);
     s.pickups.count = 5;
     fade(s);
     expect(s.pickups.shade?.room).toBe('cn-trunk');
     s.pickups.count = 2;
     const ev = fade(s);
     expect(ev.some((e) => e.type === 'shadeLost' && e.room === 'cn-trunk' && e.left === 5)).toBe(true);
-    expect(s.pickups.shade).toMatchObject({ room: 'cn-hub', value: 2 });
+    expect(s.pickups.shade).toMatchObject({ room: 'cn-trunk', value: 2 });
   });
 
-  it('with no patch rested at yet, back at the hatch', () => {
-    const s = at('cn-trunk', 2400, 640);
-    s.save.patch = null;
+  it("in a room with patches, the one nearest where she lay, whatever the save holds; the den's is its balcony", () => {
+    const well = getRoom('cn-well');
+    const landing = well.patches?.find((q) => q.id === 'p-landing');
+    const s = at('cn-well', (landing?.x ?? 0) - 300, landing?.y ?? 0);
+    s.save.patch = { room: 'cn-hub', id: 'p-crossing' };
     fade(s);
-    expect(s.room).toBe(W.start);
-    const sp = getRoom(W.start).spawn;
-    expect(Math.abs(feet(s).x - sp.x)).toBeLessThan(8);
-    expect(s.player.hp).toBe(s.player.hpMax);
+    expect(s.room).toBe('cn-well');
+    expect(Math.abs(feet(s).x - (landing?.x ?? 0))).toBeLessThan(8);
+    expect(Math.abs(feet(s).y - (landing?.y ?? 0))).toBeLessThan(8);
+    const den = getRoom('cn-den');
+    const balcony = den.patches?.find((q) => q.id === 'p-den');
+    const d = at('cn-den', 1800, 1344);
+    fade(d);
+    expect(d.room).toBe('cn-den');
+    expect(Math.abs(feet(d).x - (balcony?.x ?? 0))).toBeLessThan(8);
+    expect(d.player.hp).toBe(d.player.hpMax);
+  });
+
+  it('no checkpoint is beside a creature: every Canopy patch and `reform` point is 300 px from every home', () => {
+    for (const r of Object.values(W.rooms)) {
+      if (!r.placed) continue;
+      const sc = r.scene;
+      const points = [...(sc.patches ?? []), ...(sc.reform ? [sc.reform] : [])];
+      for (const q of points)
+        for (const e of sc.enemies ?? []) {
+          // (An ambush's creatures are not there until it wakes; a fade re-arms it.)
+          const w = (e as { wakes?: string }).wakes;
+          if (w && !['wallJump', 'glide', 'dash'].includes(w)) continue;
+          // (The Keeper's den: its balcony is the retry, the arena is shut until she drops in.)
+          if (e.kind === 'oldBurrback') continue;
+          const d = Math.hypot(e.x - q.x, e.y - q.y);
+          expect(d, `${r.id}: ${e.id} is ${Math.round(d)} px from a checkpoint`).toBeGreaterThanOrEqual(300);
+        }
+    }
   });
 
   it("a pass over a plain patch marks nothing; the den's balcony (`retry`) and the warning (`mark`) do", () => {
@@ -173,11 +203,11 @@ describe('fights built as fights (r20)', () => {
     expect(live(s, ids)).toBe(3);
   });
 
-  it("the fork is quiet on the way to the Grove; after the firefly's flight carriers and a hawker hold its floor", () => {
-    const ids = ['ant-f1', 'ant-f2', 'ant-f3', 'hawk-fork'];
+  it("the fork's carriers run from the start (r21); after the firefly's flight a hawker hunts their floor", () => {
     const first = at('cn-fork', 400, 1344);
     run(first, 0, 5);
-    expect(live(first, ids)).toBe(0);
+    expect(live(first, ['ant-f1', 'ant-f2', 'ant-f3'])).toBe(3);
+    expect(live(first, ['hawk-fork'])).toBe(0);
     const scene = getRoom('cn-fork');
     const s = createState(1, t, scene, [], CG as never, {
       ...newSave(CG as never),
@@ -185,7 +215,7 @@ describe('fights built as fights (r20)', () => {
     });
     s.hatch = null;
     run(s, 0, 5);
-    expect(live(s, ids)).toBe(4);
+    expect(live(s, ['ant-f1', 'ant-f2', 'ant-f3', 'hawk-fork'])).toBe(4);
   });
 
   it('the upper limbs: a hawker hunts her over the bed from the first limb', () => {

@@ -513,8 +513,10 @@ export const defaultTuning = withVariants({
     /**
      * ...and a trap's cage (the Canopy r11, review r10 #3: the cage is drawn ~90 px wide; three cuts from 47 px off
      * all missed a 20 px flame). A standing up cut reaches a cage 228 px over her feet.
+     * (r21: 96 (was 64): ft21e and ft21g never freed the first cage in 6 minutes, "it ignores cut and Lamp": a cut from
+     * 124 px off, what a walk up to it gives, missed by a few px, with no answer at all.)
      */
-    trapRadius: 64,
+    trapRadius: 96,
     /** A Lamp press this close to a burning cage (her centre to its flame) with no flame in reach: `lureRefuse`. */
     trapRefusePx: 200,
     /** Hitstop when a cut lands on a flame and it holds, and when it goes out (the loudest beat). */

@@ -91,93 +91,44 @@ describe('the Canopy r18: a cut into a shut root door meets its face', () => {
   });
 });
 
-describe("the Canopy r18: the giant's juvenile sleeps between two arrivals", () => {
+// (r21, Matt: "didn't have to deal with a single enemy": the giant's juvenile is awake now and walks a shorter stretch
+// of the top's middle. r18's sleep is still the kind's (`asleep`), no longer used here.)
+describe("the giant's juvenile (r21): awake, but never a hit on the frame she arrives at either end of the top", () => {
   const hurtBy = (ev: SimEvent[]) =>
     ev.filter((q) => q.type === 'hurt' && JSON.stringify(q).includes('juvenileBurrback'));
 
   it.each([
-    ['in at the door, running west', 3150, ActionBit.left],
-    ['topped out at the lip, running east', 2600, ActionBit.right],
-  ])('%s: never a hit', (_n, x, key) => {
+    ['in at the door', 3150],
+    ['topped out at the lip', 2650],
+  ])('%s and standing still: no hit for the first second', (_n, x) => {
     const { s, scene } = at('cn-trunk', x, 384, ['wallJump']);
     const ev: SimEvent[] = [];
-    run(s, scene, 0, 2, ev);
-    expect(s.enemies.find((e) => e.id === 'juv-t1')?.mode).toBe('sleep');
-    // Run straight at it and past it (a jump's worth of hops on the way: a blind first-timer).
-    for (let k = 0; k < 160; k++) run(s, scene, key | (k % 40 < 2 ? ActionBit.jump : 0), 1, ev);
-    expect(hurtBy(ev)).toEqual([]);
-  });
-
-  it('she stands at the door: it sleeps on; she comes down near it: it wakes, harmless, then comes', () => {
-    const { s, scene } = at('cn-trunk', 3136, 384, ['wallJump']);
-    const ev: SimEvent[] = [];
-    run(s, scene, 0, 240, ev);
-    expect(s.enemies.find((e) => e.id === 'juv-t1')?.mode).toBe('sleep');
-    // Walk to 150 px of it and wait.
-    let k = 0;
-    const woke: SimEvent[] = [];
-    while (s.player.x + s.player.w / 2 > 2990 && k++ < 200) run(s, scene, ActionBit.left, 1, woke);
-    run(s, scene, 0, 50, woke);
-    expect(woke.some((q) => q.type === 'enemyWake')).toBe(true);
-    expect(hurtBy(woke)).toEqual([]);
-    const later: SimEvent[] = [];
-    run(s, scene, 0, 400, later);
-    expect(later.some((q) => q.type === 'enemyNotice')).toBe(true);
-    expect(hurtBy(later).length).toBeGreaterThan(0);
-  });
-});
-
-describe("the Canopy r18: the giant's juvenile sleeps again once she has left its top", () => {
-  it('woken, then she drops into the hall and comes back up at the lip: it is asleep again, never a hit', () => {
-    const { s, scene } = at('cn-trunk', 3000, 384, ['wallJump']);
-    const ev: SimEvent[] = [];
-    run(s, scene, 0, 120, ev);
-    expect(ev.some((q) => q.type === 'enemyWake')).toBe(true);
-    // Down off the lip into the hall (she runs west past it: a jump over it).
-    let k = 0;
-    while (s.player.y < 600 && k++ < 300)
-      run(s, scene, ActionBit.left | (k % 30 < 12 ? ActionBit.jump : 0), 1, ev);
-    run(s, scene, 0, 120, ev);
-    expect(s.enemies.find((e) => e.id === 'juv-t1')?.mode).toBe('sleep');
-    // Back up at the lip (as the claws' climb tops out), and on east.
-    placePlayer(s, 2590, 384, t, withShortcuts(scene, s.save), []);
-    const back: SimEvent[] = [];
-    for (let j = 0; j < 160; j++) run(s, scene, ActionBit.right | (j % 40 < 2 ? ActionBit.jump : 0), 1, back);
-    expect(back.filter((q) => q.type === 'hurt' && JSON.stringify(q).includes('juvenileBurrback'))).toEqual(
-      [],
-    );
-  });
-});
-
-describe("the giant's juvenile: its wake is harmless, awake it is a threat at once (r20; r18's grace after it went)", () => {
-  it('in at the door, she walks straight to it and stands over it: no hit while it wakes; then one may come', () => {
-    const { s, scene } = at('cn-trunk', 3136, 384, ['wallJump']);
-    const ev: SimEvent[] = [];
-    run(s, scene, 0, 4, ev);
-    let k = 0;
-    while (s.player.x + s.player.w / 2 > 2862 && k++ < 200) run(s, scene, ActionBit.left, 1, ev);
-    const juv = () => s.enemies.find((e) => e.id === 'juv-t1');
-    // Over it until it is up: no hit through the wake (it shoulders her out).
-    k = 0;
-    while (juv()?.mode !== 'wake' && k++ < 60) run(s, scene, 0, 1, ev);
-    expect(juv()?.mode).toBe('wake');
-    while (juv()?.mode === 'wake' && k++ < 200) run(s, scene, 0, 1, ev);
+    expect(s.enemies.find((e) => e.id === 'juv-t1')?.mode).not.toBe('sleep');
+    run(s, scene, 0, 30, ev);
+    // (Nothing at all on her arrival: the top's lampwing tells 36 frames first.)
     expect(ev.filter((q) => q.type === 'hurt')).toEqual([]);
-    // No grace after it (r18 had `wakeSafeFrames` 45): it may hurt her the frame it is up.
-    expect(t.burrback.wakeSafeFrames).toBe(0);
-    expect(juv()?.wander ?? 0).toBeLessThanOrEqual(1);
+    run(s, scene, 0, 30, ev);
+    expect(hurtBy(ev)).toEqual([]);
+    // It is a fight, not a sleeper: stepping onto its ground she is noticed and met.
+    const key = x > 2830 ? ActionBit.left : ActionBit.right;
+    const met: SimEvent[] = [];
+    for (let k = 0; k < 120 && !met.some((q) => q.type === 'enemyNotice'); k++)
+      run(s, scene, key | (k % 40 < 2 ? ActionBit.jump : 0), 1, met);
+    expect(
+      [...ev, ...met].some((q) => q.type === 'enemyNotice' && JSON.stringify(q).includes('juv-t1')),
+    ).toBe(true);
   });
 
-  it('two cuts as it gets up kill it before it can touch her', () => {
+  it('two cuts as it comes kill it before it can touch her', () => {
     const { s, scene } = at('cn-trunk', 3136, 384, ['wallJump']);
     const ev: SimEvent[] = [];
-    run(s, scene, 0, 4, ev);
-    let k = 0;
-    while (s.player.x + s.player.w / 2 > 3010 && k++ < 200) run(s, scene, ActionBit.left, 1, ev);
     const juv = () => s.enemies.find((e) => e.id === 'juv-t1');
-    while (juv()?.mode === 'sleep' && k++ < 400) run(s, scene, ActionBit.left, 1, ev);
+    let k = 0;
+    while (Math.abs((juv()?.x ?? 0) + 19 - (s.player.x + s.player.w / 2)) > 70 && k++ < 400)
+      run(s, scene, 0, 1, ev);
+    s.player.facing = -1;
     for (let n = 0; n < 6 && juv()?.mode !== 'dead'; n++) {
-      run(s, scene, ActionBit.attack, 2, ev);
+      run(s, scene, ActionBit.left | ActionBit.attack, 2, ev);
       run(s, scene, 0, 14, ev);
     }
     expect(juv()?.mode).toBe('dead');

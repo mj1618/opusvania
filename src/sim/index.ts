@@ -17,6 +17,7 @@ import { ActionBit, type InputFrame, wasPressed } from './input';
 import { afterCatch, arenaShut, catchHold, rearmArenas, updateKit } from './kit';
 import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
+import { solidAt } from './physics/aabb';
 import { dropGlints, dropShade, updateDrops, updatePickups } from './pickups';
 import { type MoveParams, resolveParams } from './player/params';
 import {
@@ -236,6 +237,40 @@ function nearestPatch(scene: Scene, p: { x: number; y: number; w: number; h: num
   return best;
 }
 
+/**
+ * A bench room's re-form point (the Canopy r21): of this room's moon patches, its `reform` point and her door
+ * (`entry`: the first clear ground she stood on here), the one nearest to where she lay. `patch` is the patch's index
+ * (-1 for the others). None of them: undefined (her safe ground, `reformPlayer`).
+ */
+export function benchPoint(
+  state: GameState,
+  scene: Scene,
+): { point: { x: number; y: number } | undefined; patch: number } {
+  const p = state.player;
+  const fx = p.x + p.w / 2;
+  const fy = p.y + p.h;
+  let point: { x: number; y: number } | undefined;
+  let patch = -1;
+  let bd = Number.POSITIVE_INFINITY;
+  const take = (q: { x: number; y: number }, i: number) => {
+    const d = (q.x - fx) * (q.x - fx) + (q.y - fy) * (q.y - fy);
+    if (d < bd) {
+      bd = d;
+      point = { x: q.x, y: q.y };
+      patch = i;
+    }
+  };
+  const pats = scene.patches ?? [];
+  for (let i = 0; i < pats.length; i++) {
+    const q = pats[i];
+    if (q) take(q, i);
+  }
+  const rf = scene.reform;
+  if (rf && (!rf.when || state.save.flags.includes(rf.when))) take(rf, -1);
+  if (state.entry) take(state.entry, -1);
+  return { point, patch };
+}
+
 /** The catch zone her box centre is in, if any. */
 function inCatch(state: GameState, scene: Scene): string | null {
   const zones = scene.catches;
@@ -375,6 +410,10 @@ export function step(
           state.player.vy = 0;
           enterRoom(state, t, world as World, there.id, { kind: 'point', x: at.x, y: at.y }, from, events);
         } else {
+          // (Up through a top edge, the Canopy r21: where the hold's rise took her, in the new room's px.)
+          const up = scene.exits?.find((e) => e.id === ex.id)?.edge === 'n';
+          const rose = state.player.y + here.y - there.y;
+          const holdVy = state.player.vy;
           enterRoom(
             state,
             t,
@@ -384,9 +423,24 @@ export function step(
             from,
             events,
           );
-          // (Up through a top edge: the rise she had as she crossed, not what the hold left of it.)
-          if (scene.exits?.find((e) => e.id === ex.id)?.edge === 'n')
-            state.player.vy = Math.min(state.player.vy, ex.vy);
+          // Up through a top edge she keeps the rise the hold gave her when the way up in the new room is clear (the
+          // Canopy r21: put back at the opening's inset, a jump up from the cellar to the fork lost ~180 px of its 272
+          // and fell back down the hole; r20's first-timers "fell back 4-5 times"); else the rise she had as she
+          // crossed, from the inset (not what the hold left of it).
+          if (up) {
+            const q = state.player;
+            const there2 = withShortcuts(there.scene, state.save);
+            let clear = rose < q.y;
+            for (let y = q.y; clear && y > rose; y -= 8) clear = !solidAt(there2, q.x, y, q.w, q.h);
+            if (clear && !solidAt(there2, q.x, rose, q.w, q.h)) {
+              const lift = rose - q.y;
+              q.y = rose;
+              q.airTopY += lift;
+              q.launchY += lift;
+              q.dropY += lift;
+              q.vy = holdVy;
+            } else q.vy = Math.min(q.vy, ex.vy);
+          }
         }
         remember(state.save.crossed, `${there.id}:${ex.toExit}`);
         state.frame++;
@@ -459,8 +513,8 @@ export function step(
     }
   }
   const live = state.exit || state.caught || shut || story ? 0 : input;
-  // The end of a fade: she re-forms at her last moon patch (any room: everything earned is kept),
-  // else at the last light / safe ground, and the living enemies go home.
+  // The end of a fade: she re-forms at a checkpoint (by the kind of room: memory/enemies.md "Fade and re-form"),
+  // and the living enemies go home.
   if (state.player.faded > 0 && --state.player.faded === 0) {
     // (An arena's door shut behind her opens again: the lock-in re-arms, as HK's does on a death.)
     rearmArenas(scene, state.save, state.enemies);
@@ -482,6 +536,17 @@ export function step(
       resetEnemies(state, S, t, events);
       resetBoss(state, scene, t, events);
     }
+    // A bench room (the Canopy r21, Matt: "for now just go back to a near checkpoint when you die, not back to the
+    // very start"): the checkpoint in this room nearest to where she lay (its moon patches, its `reform` point, her
+    // door), whole; the room's creatures go home. Her glints still lie where she fell (`dropShade` above).
+    else if (S.bench) {
+      const at = benchPoint(state, S);
+      reformPlayer(state, S, P, events, at.point);
+      state.player.hp = state.player.hpMax;
+      if (at.patch >= 0) state.rest = { at: at.patch, frames: 0, done: true };
+      resetEnemies(state, S, t, events);
+      resetBoss(state, scene, t, events);
+    }
     // A death re-forms her in the room she died in (area 1 plan r5, item 5): in lamp rooms the saved patch
     // counts only when it is in this room; else the room's `reform` point, else her door (below). (The test
     // grove's rule: a patch anywhere unless the room names its own `reform`.)
@@ -491,7 +556,8 @@ export function step(
       pr &&
       pp &&
       world &&
-      (pr.id === scene.id || S.glow === true || S.bench === true || (S.senses !== 'lamp' && !S.reform))
+      !S.bench &&
+      (pr.id === scene.id || S.glow === true || (S.senses !== 'lamp' && !S.reform))
     ) {
       if (pr.id !== scene.id) {
         // Another room: she re-forms there (the room's creatures are fresh anyway).
@@ -510,22 +576,6 @@ export function step(
       state.player.hp = state.player.hpMax;
       const i = scene.patches?.indexOf(pp) ?? -1;
       state.rest = { at: i, frames: 0, done: true };
-      resetEnemies(state, S, t, events);
-      resetBoss(state, scene, t, events);
-    } else if (S.bench && world) {
-      // A bench room with no patch rested at yet (the Canopy r20): back where the world began, whole.
-      const home = world.rooms[world.start];
-      const sp = home?.scene.spawn ?? S.spawn;
-      if (home && home.id !== scene.id) {
-        gotoRoom(state, t, world, home.id, sp.x, sp.y, 'reform', events);
-        reformPlayer(state, withShortcuts(home.scene, state.save), P, events, sp);
-        state.player.hp = state.player.hpMax;
-        state.prevInput = 0;
-        state.frame++;
-        return;
-      }
-      reformPlayer(state, S, P, events, sp);
-      state.player.hp = state.player.hpMax;
       resetEnemies(state, S, t, events);
       resetBoss(state, scene, t, events);
     } else {
