@@ -13,6 +13,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { GlowPool } from '../../lantern/glow';
 import type { EnvModule, SceneContext, SceneFrame } from '../index';
+import { bakePlane } from '../lib/bake-plane';
 import {
   backEdgeShade,
   backMask,
@@ -31,6 +32,16 @@ const BEYOND = 3200;
 /** The boss's snuffed lamp (review r4 #5): seconds the dark takes to spread, how much it takes off the back and off
  * the room's bake, and how far round the lamp the growth's light goes out with it (px). */
 const SNUFF = { secs: 1.5, back: 0.36, near: 0.16, reach: 700 };
+/** Dust in a crack's beam: motes per beam (the giant's heartwood / elsewhere), sink speed (beam lengths per s, base +
+ *  spread), drift (px), size (px), colour. */
+const DUST = {
+  heartwood: 48,
+  other: 12,
+  sink: [0.004, 0.008] as const,
+  drift: 12,
+  r: [1.8, 4.2] as const,
+  color: 0xfff0d8,
+};
 /** The share of the room its backs must cover for the wood to close in past its edges. */
 const ENCLOSED = 0.35;
 
@@ -39,6 +50,9 @@ export class InteriorLayer implements EnvModule {
   private readonly deep = new Graphics({ label: 'interior-deep' });
   private readonly mask = new Graphics({ label: 'interior-mask' });
   private readonly mid = new Graphics({ label: 'interior-mid' });
+  /** What is in the layers: the Graphics, or (heartwood) a sprite of its bake. */
+  private deepView: Container = this.deep;
+  private midView: Container = this.mid;
   private readonly midMask = new Graphics({ label: 'interior-mid-mask' });
   private readonly beyond = new Graphics({ label: 'interior-beyond' });
   private readonly edge = new Graphics({ label: 'interior-edge' });
@@ -63,20 +77,40 @@ export class InteriorLayer implements EnvModule {
     const H = room.height;
     // The deep back, padded by what the parallax can shift it (the room's size times 1 - p).
     const pad = Math.max(W, H) * (1 - INTERIOR.deepParallax) + 240;
-    drawDeepBack(this.deep, plan, LOOK.seed, pad);
-    ctx.layers.get('interiorDeep').addChild(this.deep);
+    // (Canopy r19: the heartwood's planes are thousands of small marks, baked once into a texture each.)
+    const baked = plan.look === 'heartwood';
+    // (An open room's under-floor pockets, the hub's, are mostly hidden: baked coarse. Live, their marks cost ~1 ms.)
+    const k = plan.graded ? 1 : INTERIOR.bake.open;
+    const plane = (g: Graphics, padP: number, scale: number, draw: (g: Graphics) => void): Container => {
+      if (!baked) {
+        draw(g);
+        return g;
+      }
+      const xs = plan.backs.map((b) => [b.x - padP, b.y - padP, b.x + b.w + padP, b.y + b.h + padP]);
+      const x0 = Math.min(...xs.map((q) => q[0] as number));
+      const y0 = Math.min(...xs.map((q) => q[1] as number));
+      const x1 = Math.max(...xs.map((q) => q[2] as number));
+      const y1 = Math.max(...xs.map((q) => q[3] as number));
+      return bakePlane(ctx.renderer, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, scale, draw, g.label);
+    };
+    this.deepView = plane(this.deep, pad, INTERIOR.bake.deep * k, (g) =>
+      drawDeepBack(g, plan, LOOK.seed, pad),
+    );
+    ctx.layers.get('interiorDeep').addChild(this.deepView);
     const polys = backMask(plan, LOOK.seed);
     for (const m of polys) this.mask.poly(m).fill({ color: 0xffffff });
     const airBack = ctx.layers.get('airBack');
     airBack.addChild(this.mask);
-    this.deep.mask = this.mask;
+    this.deepView.mask = this.mask;
     // The mid plane (review r5 #7), masked to the same backs.
     const padMid = Math.max(W, H) * (1 - INTERIOR.midParallax) + 240;
-    drawMidBack(this.mid, plan, LOOK.seed, padMid, massTone(room).body);
-    ctx.layers.get('interiorMid').addChild(this.mid);
+    this.midView = plane(this.mid, padMid, INTERIOR.bake.mid * k, (g) =>
+      drawMidBack(g, plan, LOOK.seed, padMid, massTone(room).body),
+    );
+    ctx.layers.get('interiorMid').addChild(this.midView);
     for (const m of polys) this.midMask.poly(m).fill({ color: 0xffffff });
     airBack.addChild(this.midMask);
-    this.mid.mask = this.midMask;
+    this.midView.mask = this.midMask;
     // The torn edge falls into shadow (review r3 #2: where a back met open air its hard mask edge cut flat pale shapes
     // out of the night: the Grove's and the hub's "mint"): bands following the edge inward (inside only: a twin mask).
     for (const m of polys) this.edgeMask.poly(m).fill({ color: 0xffffff });
@@ -330,17 +364,24 @@ export class InteriorLayer implements EnvModule {
         this.glow.add(mx, my, l.s * 0.22, I.moon, 0.14 * breathe, l.len * 0.5, ang);
         this.glow.add(l.x, l.y + 30, l.s * 0.6, I.moon, 0.3, 40);
         this.glow.add(l.x + Math.sin(-ang) * l.len, l.y + l.len - 10, l.s * 1.4, I.moon, 0.14 * breathe, 30);
-        for (let k = 0; k < 10; k++) {
-          const u = (hash1(l.seed + k, 13) + clock * (0.02 + 0.02 * hash1(k, 17))) % 1;
-          const across = (hash1(l.seed + k, 19) - 0.5) * l.s * 0.6;
-          this.glow.add(
-            l.x + Math.sin(-ang) * l.len * u + across,
-            l.y + l.len * u,
-            3,
-            0xeef4ff,
-            0.6 * Math.sin(u * Math.PI),
-            3,
-          );
+        // Dust hanging in the beam (r19, the giant: "dust in shafts of light"): motes that sink slowly, drift and turn,
+        // catching the light as they turn; fainter at the beam's sides and ends. Render time only.
+        const nD = plan.look === 'heartwood' ? DUST.heartwood : DUST.other;
+        const dx = Math.sin(-ang);
+        for (let k = 0; k < nD; k++) {
+          const h1 = hash1(l.seed + k, 13);
+          const h2 = hash1(l.seed + k, 19);
+          const h3 = hash1(l.seed + k, 29);
+          const u = (h1 + clock * (DUST.sink[0] + DUST.sink[1] * h3)) % 1;
+          const y = l.y + l.len * u + Math.cos(clock * (0.25 + 0.3 * h1) + k * 1.7) * DUST.drift;
+          if (Math.abs(y - cam.y) > hh) continue;
+          const across =
+            (h2 - 0.5) * l.s * 0.8 * (0.6 + 0.4 * u) + Math.sin(clock * (0.3 + 0.4 * h3) + k) * DUST.drift;
+          const turn = 0.5 + 0.5 * Math.sin(clock * (1.1 + 2.2 * h3) + k * 2.1);
+          const side = 1 - Math.abs(h2 - 0.5) * 2;
+          const a = (0.18 + 0.6 * turn * turn) * Math.sin(u * Math.PI) ** 0.6 * (0.35 + 0.65 * side);
+          const rr = DUST.r[0] + (DUST.r[1] - DUST.r[0]) * h3;
+          this.glow.add(l.x + dx * l.len * u + across, y, rr, DUST.color, a * breathe, rr);
         }
       } else if (l.kind === 'spore') {
         this.glow.add(l.x, l.y, l.s * 1.4, I.cyanDeep, 0.08 * breathe, l.s);
@@ -389,8 +430,11 @@ export class InteriorLayer implements EnvModule {
   }
 
   destroy(): void {
-    this.deep.mask = null;
-    this.mid.mask = null;
+    this.deepView.mask = null;
+    this.midView.mask = null;
+    // (A baked plane's Graphics never entered the tree.)
+    if (this.deepView !== this.deep) this.deep.destroy({ context: true });
+    if (this.midView !== this.mid) this.mid.destroy({ context: true });
     this.edge.mask = null;
   }
 }
