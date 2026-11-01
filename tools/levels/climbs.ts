@@ -393,6 +393,8 @@ export const CLIMBS: Climb[] = [
     xs: [2560, 2624, 2688],
     y: 1344,
     goal: { x0: 2752, x1: 3200, y: 576 },
+    // (r22: the fork's nest cleared: its root door at the face's top is open.)
+    flags: ['cn-nest-fork'],
     plans: [{ name: 'E face', first: 1, legs: [{ mode: 'face' }] }],
   },
   {

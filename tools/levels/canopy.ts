@@ -1300,6 +1300,17 @@ const HUB_CAGE: [number, number] = [6300, 1480];
 const HUB_CELLAR: [number, number] = [3328, 3712];
 const GROVE_TRAP = 'trap-grove';
 const WARN_TRAP = 'trap-warn';
+/**
+ * The nests (r22, Matt: "Ori has a good way of forcing you to deal with enemies; we can still speedrun our level too
+ * much"): the way on is a root gate that opens when the last creature of its nest dies (their shared `sets`); the way
+ * back stays open. Each nest's creatures wake with `NESTS_ON` (set walking off the hub's landing, before any nest can
+ * be met; the trunk and the fork set it at their doors too, for a run started there), so a cleared nest stays clear
+ * on every later entry (light.ts `respawn`: a woken creature whose `sets` is saved stays out), HK's arenas.
+ */
+const NESTS_ON = 'cn-hub-left';
+const NEST_HUB = 'cn-nest-hub';
+const NEST_TRUNK = 'cn-nest-trunk';
+const NEST_FORK = 'cn-nest-fork';
 
 function hub(): Json {
   const r = new Wood('cn-hub', 'The Crossing', [2640 + HX, 1152], 7101, {
@@ -1348,6 +1359,9 @@ function hub(): Json {
   r.sealed(3712 + HX + 64, 1600, 8000 - 128, 2176);
   r.sealed(128, 2048, 960, 2176);
   r.back(0, 1600, 8000, 2304);
+  // (r22: the giant's door is the hub nest's gate, a root door in its arch: the way west opens when the step's
+  // bombardier and the door's ants are dead. The way back east is the hall, open.)
+  r.gate('nest-door', 64, 1664, 64, 256, NEST_HUB);
   r.fill();
   // (r11, review r10 #4 / #6: the clump read as a framed box with a straight band along its top. Its crown steps up in
   // root tiers to a hump under the gap's drop, and its east face runs down to a root foot 192 over the bank's floor: a
@@ -1480,7 +1494,12 @@ function hub(): Json {
   r.pod('pod-cellar', HUB_CELLAR[0] + 96, 1792, 1200, 'sit', 3);
   r.hoard('cellar-', HUB_CELLAR[0] + 224, 1700, 120, 60, 2);
   r.cover('cellar-cover', HUB_CELLAR[0], 1600, HUB_CELLAR[1] - HUB_CELLAR[0], 256, 'cellar-panel');
-  r.ants('ant-m', 240, 880, 1920, 3);
+  // (r22: the hub's nest, ranged + swarm.) The ants come at her out of the giant's door; a bombardier holds the step
+  // down into the mouth and lobs at her along the hall's floor as she comes west (its back to the door: one who drops
+  // past it to the door is cut from behind, or pogos it off the hall's lip). The door is shut until all four are dead.
+  const hubNest = { wakes: NESTS_ON, sets: NEST_HUB };
+  r.ants('ant-m', 240, 880, 1920, 3, hubNest);
+  r.bombardier('bomb-step', 1072, 1792, 1, hubNest);
   // (r22, Matt: "the enemies are boring and monotonous": a ranged one.) On the bank by the way east, the fork's exit: it
   // lobs across the step up from the east limb and onto the clump's claw face behind it; the way east walks past it
   // (bat a droplet back, or over it). 340 px east of the hatch's drop: never a landing on it.
@@ -1515,6 +1534,11 @@ function hub(): Json {
         x: 2780,
         y: 1500,
         text: 'the kin (1/3): watches her come into the clearing, turns away as she nears',
+      },
+      {
+        x: 600,
+        y: 1800,
+        text: "the hub's nest (r22): the giant's door is a root door until the step's bombardier and the door's ants are dead",
       },
     ],
   });
@@ -1610,6 +1634,10 @@ function trunk(): Json {
   // Tier 1's bramble bed (r7, review r6 #1: v6's three trays in three tiers became one composed run): a shallow pit
   // 640 long between the landing and the giant's wall, under two root knuckles. Over them, or the bed.
   r.hole(TRUNK_BED[0], 704, TRUNK_BED[1], 768);
+  // (r22: tier 3's way out west is the trunk nest's gate, roof to floor: Ori's Sein hollow, a drop into a closed
+  // fight. Without the claws the drop in has no way back up, so the gate holds only the way on, and a fade here
+  // re-forms her at the top.)
+  r.gate('nest-door', 64, 1120, 64, 544, NEST_TRUNK);
   // (r9, review r8 #2: the mass more than 256 px from the air is sealed air with the back behind it.)
   r.sealDeep();
   r.fill();
@@ -1685,7 +1713,26 @@ function trunk(): Json {
   // (r22, Matt: "the enemies are boring and monotonous": a jumping spider holds tier 3's floor, the way out west. She
   // drops in 250-350 px east of it, in its sight as she falls: its eyes lock on (30 frames) and it crouches (26) before
   // the first pounce, so it never meets her landing. 1,000 px of floor to dance on.)
-  r.jumper('jump-t3', 240, 1664, 1);
+  // (r22: the trunk's nest, leaper + walkers: the west door is shut until all three are dead. The jumper holds the floor
+  // west of the drop's foot, a juvenile the floor east of it (she lands 100+ px short of its walk) and another keeps
+  // the door, so the spider's pounces come while a beetle presses her. No dangler: one cut down and not killed
+  // scuttles off out of the room, and a nest must never wait on a creature that left.)
+  const trunkNest = { wakes: NESTS_ON, sets: NEST_TRUNK };
+  r.jumper('jump-t3', 300, 1664, 1, trunkNest);
+  r.juvenile('juv-t3', 860, 1664, -1, 90, { ...trunkNest, fenced: true });
+  r.juvenile('juv-t3d', 180, 1664, 1, 40, { ...trunkNest, fenced: true });
+  // (A run started in this room: the nests wake as they do coming from the hub.)
+  r.add('triggers', { id: 'nests-on', x: 2560, y: 128, w: 640, h: 256, sets: NESTS_ON });
+  r.set('marks', {
+    ...(r.data.marks as Json),
+    notes: [
+      {
+        x: 500,
+        y: 1560,
+        text: "the trunk's nest (r22): tier 3's west door holds until the jumper and both juveniles are dead",
+      },
+    ],
+  });
   return r.finish();
 }
 
@@ -2188,6 +2235,9 @@ function fork(): Json {
   // The west block as a trunk (r9, review r8 #2: one rectangle a screen tall over the way in): 320 thick at its face,
   // sealed air and the deep back behind it. Nothing she can reach opens.
   r.sealed(64, 128, 576, 960);
+  // (r22: the top of the claw face is the fork nest's gate, a root door in the mouth of the top's cave: the way on to
+  // the Grove opens when both bombardiers and the jumper are dead. The way back west is the hall, open.)
+  r.gate('nest-door', 2816, 320, 64, 256, NEST_FORK);
   r.fill();
   r.noClaws(896, 0, 1088);
   r.noClaws(2816, 0, 320);
@@ -2217,8 +2267,24 @@ function fork(): Json {
   // (r22: ranged ones.) On the knoll's west lip over the carriers' floor: it lobs across the long walk in (cover right
   // under the knoll), so the trail and the arcs come at once. And one on the floor short of the face: it meets her
   // crossing to the climb, and lobs at her back on the face's lower half (from behind or above: a pogo on the way).
-  r.bombardier('bomb-knoll', 1640, 1088, -1);
-  r.bombardier('bomb-face', 2600, 1344, -1);
+  // (r22: the fork's nest, ranged + leaper: both bombardiers and a jumping spider on the floor between the knoll and
+  // the face, so the lobs come while the spider keeps her moving. The ants stay out of it, a line on the way in.)
+  const forkNest = { wakes: NESTS_ON, sets: NEST_FORK };
+  r.bombardier('bomb-knoll', 1640, 1088, -1, forkNest);
+  r.bombardier('bomb-face', 2600, 1344, -1, forkNest);
+  r.jumper('jump-f', 2250, 1344, -1, forkNest);
+  // (A run started in this room: the nests wake as they do coming from the hub.)
+  r.add('triggers', { id: 'nests-on', x: 0, y: 1088, w: 640, h: 256, sets: NESTS_ON });
+  r.set('marks', {
+    ...(r.data.marks as Json),
+    notes: [
+      {
+        x: 2600,
+        y: 520,
+        text: "the fork's nest (r22): the face's top is a root door until both bombardiers and the jumper are dead",
+      },
+    ],
+  });
   r.flyer('hawker', 'hawk-fork', 1300, 780, -1, { radius: 180, sight: 560, ...after });
   // (r8: two covers, the knoll's chamber behind the panel and the stairs under the floor; v7's one ran over the open
   // way in from the Crossing as well.)

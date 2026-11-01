@@ -43,6 +43,10 @@ interface Claim {
 
 const C = 'wallJump';
 const G = 'glide';
+/** The nests (r22): each holds a root gate on the way on until its creatures are dead (creatures are out here). */
+const NEST_HUB = 'cn-nest-hub';
+const NEST_TRUNK = 'cn-nest-trunk';
+const NEST_FORK = 'cn-nest-fork';
 
 const CLAIMS: Claim[] = [
   // The hatching branch (r6): the first dark edge, a pocket under the branch's end, before the drop.
@@ -75,6 +79,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-hub',
     from: [6160, 1152],
     kit: [],
+    flags: [NEST_HUB],
     // (r10: the trap lamp's floor, `place:trap`: freed with no ability.)
     reach: ['trunk', 'fork', 'cn-hub:p-crossing', 'place:clearing', 'place:trap'],
     not: ['limbs', 'door', 'cn-hub:stone-heart', 'cn-hub:shard-high', 'cn-hub:shelf-great', 'vent'],
@@ -84,6 +89,7 @@ const CLAIMS: Claim[] = [
     room: 'cn-hub',
     from: [6160, 1152],
     kit: [C],
+    flags: [NEST_HUB],
     reach: ['limbs', 'vent', 'trunk', 'fork', 'cn-hub:stone-heart', 'cn-hub:shard-high', 'place:trader'],
     not: ['door', 'cn-hub:shelf-great'],
     max: 12000,
@@ -97,21 +103,33 @@ const CLAIMS: Claim[] = [
     room: 'cn-hub',
     from: [600, 576],
     kit: [C],
+    flags: [NEST_HUB],
     reach: ['trunk', 'fork', 'limbs', 'cn-hub:p-crossing'],
     max: 12000,
   },
   { room: 'cn-hub', from: [600, 576], kit: [C, G], reach: ['cn-hub:shelf-great'], max: 12000 },
   { room: 'cn-hub', from: [5920, 1600], kit: [C, G], flags: ['seeds:3'], reach: ['door'] },
+  // (r22: the nest's root door in the giant's arch holds the way west, with every ability, until its creatures are
+  // dead; the rest of the Crossing stays open.)
+  {
+    room: 'cn-hub',
+    from: [6160, 1152],
+    kit: [C, G],
+    reach: ['fork', 'limbs', 'cn-hub:p-crossing', 'place:mouth'],
+    not: ['trunk'],
+    max: 12000,
+  },
   // The fallen giant: in from the hub, through the rotten wall, the seed in the roof, down to the well; no way back
   // up from the low tiers; the rot branch shut until the claws (r5: its wall high in tier 3's east face).
   {
     room: 'cn-trunk',
     from: [2900, 384],
     kit: [],
+    flags: [NEST_TRUNK],
     reach: ['hub', 'well', 'cn-trunk:seed-giant'],
     not: ['rot'],
   },
-  { room: 'cn-trunk', from: [1600, 704], kit: [], reach: ['well'], not: ['hub'] },
+  { room: 'cn-trunk', from: [1600, 704], kit: [], flags: [NEST_TRUNK], reach: ['well'], not: ['hub'] },
   // (The giant's wall is the only way on, and the seed is behind it: no blade, no seed, no way down.)
   {
     room: 'cn-trunk',
@@ -121,9 +139,17 @@ const CLAIMS: Claim[] = [
     reach: ['hub'],
     not: ['well', 'rot', 'cn-trunk:seed-giant'],
   },
-  { room: 'cn-trunk', from: [600, 1664], kit: [], reach: ['well'], not: ['hub', 'rot'] },
+  { room: 'cn-trunk', from: [600, 1664], kit: [], flags: [NEST_TRUNK], reach: ['well'], not: ['hub', 'rot'] },
+  // (r22: tier 3 is the trunk's nest: its west door holds until the creatures are dead, whatever she has.)
+  { room: 'cn-trunk', from: [600, 1664], kit: [C, G], reach: ['place:t2', 'rot'], not: ['well'] },
   // (Back in from the well with the claws: up the tiers to the hall and out to the Crossing.)
-  { room: 'cn-trunk', from: [600, 1664], kit: [C], reach: ['well', 'rot', 'place:t2', 'place:t1', 'hub'] },
+  {
+    room: 'cn-trunk',
+    from: [600, 1664],
+    kit: [C],
+    flags: [NEST_TRUNK],
+    reach: ['well', 'rot', 'place:t2', 'place:t1', 'hub'],
+  },
   // (r7, the fling line: the drop shaft's lamp throws her from tier 2 back up into the wall's chamber and on to tier 1;
   // the hall's way out to the Crossing stays the claws'.)
   { room: 'cn-trunk', from: [800, 1024], kit: [], lit: true, reach: ['place:t1'], not: ['hub', 'rot'] },
@@ -246,7 +272,9 @@ const CLAIMS: Claim[] = [
     reach: ['hub', 'cellar'],
     not: ['grove'],
   },
-  { room: 'cn-fork', from: [400, 1344], kit: [C], reach: ['grove'] },
+  { room: 'cn-fork', from: [400, 1344], kit: [C], flags: [NEST_FORK], reach: ['grove'] },
+  // (r22: the face's top is the fork nest's root door: up the claws to it, no further until the nest is dead.)
+  { room: 'cn-fork', from: [400, 1344], kit: [C, G], reach: ['hub', 'cellar'], not: ['grove'] },
   // The cellar branch: there and back without the claws; the larder needs them; the tunnel's shortcut and the
   // trapdoor open from below only.
   { room: 'cn-cellar', from: [480, 96], kit: [], reach: ['fork', 'galleries'], not: ['tunnel'] },

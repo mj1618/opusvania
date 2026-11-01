@@ -239,6 +239,13 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
         }),
       ];
     case 'gateOpen':
+      // (r22: a nest's door opens as its last creature dies, often far across the room from her: heard as hers, never
+      // quieter for distance, with a dull knock of the roots letting go under the groan.)
+      if (q.id === 'nest-door')
+        return [
+          at('gateGroan', 'world', C.groanDb + 2, { place: 'hero', priority: 5 }),
+          at('gateThud', 'world', C.gateDb - 6, { place: 'hero', cents: -300, delay: 0.12, priority: 4 }),
+        ];
       return [
         at('gateGroan', 'world', C.groanDb, {
           x: q.x + (q.w ?? 0) / 2,
