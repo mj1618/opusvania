@@ -620,7 +620,10 @@ export function snuffLure(
     state.save.moths += moths;
   }
   // (In a glow room a lamp out pays glow instead of health: memory/glow.md.)
-  const heal = scene.glow ? 0 : Math.max(0, Math.min(p.hpMax - p.hp, Math.round(t.lures.healOnSnuff)));
+  // (The Canopy r20, Matt "very easy": 37 of its 41 lamps relight, so a heal on each was health without end. A
+  // springboard heals `healOnRelight` (0), a freed cage `healOnTrap`, any other lamp out for good `healOnSnuff`.)
+  const gives = l.trap ? t.lures.healOnTrap : l.relight ? t.lures.healOnRelight : t.lures.healOnSnuff;
+  const heal = scene.glow ? 0 : Math.max(0, Math.min(p.hpMax - p.hp, Math.round(gives)));
   p.hp += heal;
   events.push({
     type: 'lureSnuff',

@@ -286,6 +286,9 @@ class Wood extends RoomBuilder {
       region: 'wood',
       edgeKick: false,
       senses: 'lamp',
+      // (r20, Matt "very easy": HK's bench. A fade re-forms her at the last patch she rested at, any room; all her
+      // glints lie where she fell.)
+      bench: true,
       abilities: [],
       art: {
         kit: 'wood',
@@ -1084,6 +1087,8 @@ function hatch(): Json {
     id: 'cn-hatch',
     title: 'The hatching branch',
     abilities: [],
+    // (r20: HK's bench, as every Canopy room.)
+    bench: true,
     // (r12, moment 1: the break sets a flag the kin's try keys on: it jumps after the swarm and falls back.)
     hatch: { ...(src.hatch as Json), sets: 'cn-hatched' },
     // (The level's pieces draw the pocket's cover: r6.)
@@ -3377,7 +3382,8 @@ function den(): Json {
     sets: 'cn-den-freed',
     hold: 90,
   });
-  r.patch('p-den', 300, DEN_IN);
+  // (r20: the Keeper's retry. In the bench rule a pass marks it, so a fade in the fight is back on the balcony.)
+  r.patch('p-den', 300, DEN_IN, { retry: true });
   r.lamp('wick-den', 380, DEN_IN - 132);
   r.enemy({
     id: 'old-burr',

@@ -781,6 +781,7 @@
         }
       ]
     },
+    "bench": true,
     "lures": [
       {
         "id": "wick-path",
@@ -832,6 +833,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -1820,6 +1822,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -2421,6 +2424,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -3385,6 +3389,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -3925,6 +3930,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -4319,6 +4325,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -4700,6 +4707,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -4963,6 +4971,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -5433,6 +5442,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -5837,6 +5847,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -6285,6 +6296,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -6731,6 +6743,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -7158,6 +7171,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -8004,6 +8018,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -8544,6 +8559,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -8787,6 +8803,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -9109,6 +9126,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -9735,6 +9753,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -10120,6 +10139,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -10356,6 +10376,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -10942,6 +10963,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -11196,6 +11218,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -12284,6 +12307,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -12767,6 +12791,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -13192,7 +13217,8 @@
       {
         "id": "p-den",
         "x": 300,
-        "y": 320
+        "y": 320,
+        "retry": true
       }
     ],
     "boss": {
@@ -13452,6 +13478,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -14344,6 +14371,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",

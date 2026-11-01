@@ -122,6 +122,7 @@ describe('pickups (sim rule)', () => {
       lost: 0,
       bonus: 0,
       drops: [],
+      shade: null,
       dropSeq: 0,
       taken: 0,
       combo: 0,

@@ -32,6 +32,7 @@ export function createPickups(scene: Scene): PickupsState {
     lost: 0,
     bonus: 0,
     drops: [],
+    shade: null,
     dropSeq: 0,
     taken: 0,
     combo: 0,
@@ -141,6 +142,54 @@ export function dropGlints(state: GameState, scene: Scene, share: number, events
   events.push({ type: 'glintsDrop', id: drop.id, x: drop.x, y: drop.y, value, wallet: s.count });
 }
 
+/**
+ * A fade in a `bench` room (the Canopy r20, HK's shade): ALL her glints lie where she fell, one cluster in the world.
+ * One still lying anywhere from before is lost for good (`shadeLost`). Pushes `glintsDrop` for the new one (none
+ * when she carried nothing).
+ */
+export function dropShade(state: GameState, scene: Scene, events: SimEvent[]): void {
+  const s = state.pickups;
+  const old = s.shade;
+  if (old) {
+    s.shade = null;
+    const i = old.room === scene.id ? s.drops.findIndex((d) => d.shade) : -1;
+    if (i >= 0) {
+      s.lost -= s.drops[i]?.left ?? 0;
+      s.drops.splice(i, 1);
+    }
+    events.push({ type: 'shadeLost', id: old.id, room: old.room, x: old.x, y: old.y, left: old.left });
+  }
+  const value = Math.max(0, s.count);
+  if (value <= 0) return;
+  const b = state.player;
+  let y = b.y;
+  for (let i = 0; i < scene.height && !rests(scene, b.x, y, b.w, b.h); i++) y++;
+  const drop = {
+    id: ++s.dropSeq,
+    x: b.x + (b.w >> 1),
+    y: y + (b.h >> 1),
+    value,
+    left: value,
+    timer: 0,
+    shade: true,
+  };
+  s.count = 0;
+  s.lost += value;
+  s.drops.push(drop);
+  // (Its id: the frame it fell on, so one is never mistaken for another across rooms.)
+  s.shade = { id: state.frame, room: scene.id, x: drop.x, y: drop.y, value, left: value };
+  events.push({ type: 'glintsDrop', id: drop.id, x: drop.x, y: drop.y, value, wallet: s.count });
+}
+
+/** She comes into `room` (src/sim/world.ts `enterRoom`): the shade lying there is a cluster again. */
+export function placeShade(state: GameState, room: string): void {
+  const s = state.pickups;
+  const sh = s.shade;
+  if (!sh || sh.room !== room || sh.left <= 0) return;
+  s.drops.push({ id: ++s.dropSeq, x: sh.x, y: sh.y, value: sh.value, left: sh.left, timer: 0, shade: true });
+  s.lost += sh.left;
+}
+
 /** Does a box at (x, y) rest on something (a solid, a one-way, the scene's floor)? */
 function rests(scene: Scene, x: number, y: number, w: number, h: number): boolean {
   const bottom = y + h;
@@ -201,10 +250,17 @@ export function updateDrops(state: GameState, t: Tuning['pickups'], events: SimE
       total: s.count,
       drop: true,
     });
+    // (The shade: what is still out there, through doors.)
+    const sh = d.shade ? s.shade : null;
+    if (sh) sh.left = d.left;
     if (d.left > 0) d.timer = Math.max(1, Math.round(t.dropStagger));
     else {
       s.drops.splice(i, 1);
       i--;
+      if (sh) {
+        s.shade = null;
+        events.push({ type: 'shadeTaken', id: sh.id, x: d.x, y: d.y, value: d.value });
+      }
     }
   }
 }

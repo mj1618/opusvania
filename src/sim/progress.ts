@@ -98,11 +98,16 @@ export function updatePatches(
     const k = patchThrough(state, scene, t);
     const q = scene.patches?.[k];
     const cur = state.save.patch;
+    // (A bench room, the Canopy r20: HK's bench is a stop. Only a `mark` patch or a boss's `retry` counts on a pass.)
+    const passes = !scene.bench || q?.mark === true || q?.retry === true;
     if (q && (cur?.room !== scene.id || cur.id !== q.id)) {
-      state.save.patch = { room: scene.id, id: q.id };
-      events.push({ type: 'patchMark', id: q.id, room: scene.id, x: q.x, y: q.y });
+      if (passes) {
+        state.save.patch = { room: scene.id, id: q.id };
+        events.push({ type: 'patchMark', id: q.id, room: scene.id, x: q.x, y: q.y });
+      }
       // A map station opens the map on her first pass too (the Canopy r10, review r9 #9: it fired only on a rest, and
-      // a runner never stopped); then on each rest. The save remembers the pass (`map:room:id` in flags).
+      // a runner never stopped); then on each rest. The save remembers the pass (`map:room:id` in flags). (In a bench
+      // room the pass still opens it once, but marks nothing.)
       if (q.map && remember(state.save.flags, `map:${scene.id}:${q.id}`))
         events.push({ type: 'mapStation', id: q.id, room: scene.id, x: q.x, y: q.y });
     }

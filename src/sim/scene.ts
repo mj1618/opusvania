@@ -416,6 +416,11 @@ export interface MoonPatch {
    * (`patchMark`), standing on it never rests her (no heal, no `patchRest`). Mid-arena, a light to come back to.
    */
   mark?: boolean;
+  /**
+   * A boss's retry (the Canopy r20: the den's balcony): in a `bench` room passing it marks it as her re-form point
+   * (`patchMark`), as a `mark` patch does, and it still rests her when she stands in it.
+   */
+  retry?: boolean;
   /** Where passing marks it, if not its box (a `mark` patch: the den's warning's whole floor). */
   area?: { x: number; y: number; w: number; h: number };
 }
@@ -584,6 +589,13 @@ export interface Scene {
    * never in R8, never above where she was); with none at or below, the usual rules (`reform`, her door).
    */
   reformPatch?: boolean;
+  /**
+   * Hollow Knight's bench (the Canopy r20, Matt: "very easy"): a fade here re-forms her at the last moon patch she
+   * RESTED at, in any room (a `mark` or `retry` patch counts once passed), else at the world's start; she drops ALL
+   * her glints where she fell (`pickups.shade`, one cluster in the world: a second fade before she takes it back loses
+   * it). Passing a plain patch no longer marks it (`patch.markOnPass` is for rooms without this).
+   */
+  bench?: boolean;
   /** A boss fight (src/sim/boss/, memory/bosses.md): its arena, lock, flags and the things it is made of. */
   boss?: BossSpec;
   /**

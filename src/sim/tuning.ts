@@ -522,8 +522,12 @@ export const defaultTuning = withVariants({
     snuffHitstop: 9,
     /** ...and when a trap's cage breaks (review r10 #2: the release is the game's verb, it stops for a beat). */
     trapSnuffHitstop: 14,
-    /** Health back for each lure put out (core.md §5). */
+    /** Health back for each lure put out for good (core.md §5). */
     healOnSnuff: 1,
+    /** ...for a trap's cage cut open (its moths freed: the Canopy r20 keeps this the heal on the way). */
+    healOnTrap: 1,
+    /** ...for a springboard (a `relight` lamp) put out: none (the Canopy r20; it was `healOnSnuff`, 1, every time). */
+    healOnRelight: 0,
     /**
      * A swinging lure's defaults (`lure.swing`, src/sim/paths.ts, memory/level-kit.md): `reach` px to each
      * side of its rest point, one swing there and back every `period` frames. Its pull and core go with it.

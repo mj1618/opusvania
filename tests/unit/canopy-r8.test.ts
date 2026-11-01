@@ -98,23 +98,21 @@ describe('ambushes arrive (review r7 #2)', () => {
     });
 });
 
-describe('a patch she runs through is her re-form point (review r7 #4)', () => {
-  it('over the hollow save without a stop, a fade in the ambush re-forms her at p-hollow', () => {
+describe('a patch she runs through is not her re-form point: she rests at it (r20, HK bench; was review r7 #4)', () => {
+  it('over the hollow save without a stop, a fade in the ambush re-forms her at the landing she rested at', () => {
     const { s, scene } = at('cn-well', 2120, 1152);
     // She rested at the landing's save, two legs down.
     s.save.patch = { room: 'cn-well', id: 'p-landing' };
+    const landing = (scene.patches ?? []).find((q) => q.id === 'p-landing');
+    expect(landing).toBeDefined();
     const ev: SimEvent[] = [];
     // Run west over the stair's root and p-hollow (r9: 1,472), into the ambush, never stopping.
     let k = 0;
     while (s.player.x + s.player.w / 2 > 1390 && k++ < 200) run(s, scene, ActionBit.left, 1, ev);
-    expect(ev.some((e) => e.type === 'patchMark' && e.id === 'p-hollow')).toBe(true);
+    expect(ev.some((e) => e.type === 'patchMark' && e.id === 'p-hollow')).toBe(false);
     expect(ev.some((e) => e.type === 'patchRest')).toBe(false);
-    expect(s.save.patch).toEqual({ room: 'cn-well', id: 'p-hollow' });
-    // No rest: she keeps what she had.
+    expect(s.save.patch).toEqual({ room: 'cn-well', id: 'p-landing' });
     s.player.hp = 1;
-    const hp = s.player.hp;
-    run(s, scene, 0, 1, ev);
-    expect(s.player.hp).toBe(hp);
     // Into the ambush, and stand there until she fades.
     k = 0;
     while (!s.save.flags.includes('cn-well-ambush') && k++ < 300)
@@ -125,12 +123,23 @@ describe('a patch she runs through is her re-form point (review r7 #4)', () => {
     expect(s.player.faded).toBeGreaterThan(0);
     k = 0;
     while (s.player.faded > 0 && k++ < 600) run(s, scene, 0, 1, fade);
-    const fx = s.player.x + s.player.w / 2;
     expect(s.room).toBe('cn-well');
-    expect(Math.abs(fx - 1472)).toBeLessThan(100);
-    expect(Math.abs(s.player.y + s.player.h - 1152)).toBeLessThan(8);
+    expect(Math.abs(s.player.x + s.player.w / 2 - (landing?.x ?? 0))).toBeLessThan(100);
+    expect(Math.abs(s.player.y + s.player.h - (landing?.y ?? 0))).toBeLessThan(8);
+    expect(s.player.hp).toBe(s.player.hpMax);
     // The ambush plays again: its flag was taken back.
     expect(s.save.flags).not.toContain('cn-well-ambush');
+  });
+
+  it('a rest at the hollow (standing still in it) makes it her re-form point, whole', () => {
+    const { s, scene } = at('cn-well', 1472, 1152);
+    s.save.patch = { room: 'cn-well', id: 'p-landing' };
+    s.player.hp = 1;
+    const ev: SimEvent[] = [];
+    run(s, scene, 0, 60, ev);
+    expect(ev.some((e) => e.type === 'patchRest' && e.id === 'p-hollow')).toBe(true);
+    expect(s.save.patch).toEqual({ room: 'cn-well', id: 'p-hollow' });
+    expect(s.player.hp).toBe(s.player.hpMax);
   });
 });
 

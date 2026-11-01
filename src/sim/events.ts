@@ -399,6 +399,13 @@ export type SimEvent =
    */
   | { type: 'dropWake'; id: number; x: number; y: number; value: number; frames: number; stagger: number }
   /**
+   * A bench room's shade (the Canopy r20, `PickupsState.shade`): `shadeTaken` as the last of it is back with her
+   * (`value` = what it held), `shadeLost` when she faded again before taking it back (`room`, `x`, `y`: where it lay;
+   * those `left` glints are gone for good).
+   */
+  | { type: 'shadeTaken'; id: number; x: number; y: number; value: number }
+  | { type: 'shadeLost'; id: number; room: string; x: number; y: number; left: number }
+  /**
    * Enemy events: `x`, `y` = the centre of the enemy's box, `facing` = the way it faces.
    * `enemyAlert`: she landed or slashed close by and it flinches for `frames`; `dir` = the side she is on.
    * Cause `touch`: its touch just hurt her (or met her while she kindled): it recoils from her, turns away.
