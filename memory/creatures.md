@@ -81,7 +81,8 @@ round 2 (feel review r2 #1, #2: "a masher wins in 10.8 s", "shorter than she is"
 - **Its death is a beat**: the killing blow holds 20 f extra (`killHitstopFrames`, her and it), the body lies 150 f
   (`deadFrames`), and a 90 f story hold (`deathHoldFrames`: the kit's `storyHold` / `storyHoldEnd`, no input, she cannot
   be hurt) covers the gate's opening and the claws' beam. `KindRules.killHold` / `deathHold`.
-- **Round 3** (area1-plan-r3: casual runs faded 8-9 times, first tries 11-21 s): its first 2 rams of a life
+- **Round 3** (area1-plan-r3: casual runs faded 8-9 times, first tries 11-21 s; the Canopy r20: the first ram only, 1.25x at 0.8
+  speed, and its ram and wave cost 2): its first 2 rams of a life
   (`firstTellRams`) are told 1.5x (`firstTellMult`): 42 f; a jump started 12-48 f into that tell clears it (12 f = a
   200 ms reaction; earlier, the jump lands before the ram). Open = harmless is asserted over every pilot run. Slow pilot:
   22 of 24 at the first attempt, 17-67 s; masher still always fades. Human-like (HEAD e6023a5 + this, 9 runs): all 7

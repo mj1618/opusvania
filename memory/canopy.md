@@ -1,4 +1,4 @@
-# The Canopy: the first area built to the reference numbers (v19, 2026-11-01)
+# The Canopy: the first area built to the reference numbers (v20, 2026-11-01)
 
 Design, room list and measurements: docs/design/levels/first-area.md; reviews that drove it:
 docs/design/levels/reviews/canopy-r1.md .. canopy-r8.md; the reference data: docs/design/reference-levels/ (all four
@@ -23,6 +23,56 @@ Open: `?world=canopy&fresh` (27 rooms `cn-*`).
 - `shortcut(id, ..., opens)`: the tunnel's door into the cellar (opens `w`, from the tunnel) and the cellar's trapdoor
   (opens `s`, from below); world routes use `door` (passable from `from`, the reverse only once open).
 - Render (other builder) paints tapered stacks as terraces: prefer two big steps (`burl(..., 2)`) over many small.
+
+## v20 (round 20, 2026-11-01): teeth (Matt: "I feel like it's very easy")
+Not the creature count (55 over ~94 screens, 0.59 a screen, as dense as the references): a fade cost nothing, health
+was endless, rounds 12-19 had added grace for AI first-timers, and few fights were built as fights. Death and healing
+rules: memory/enemies.md "Fade and re-form".
+- **HK's bench and shade** (scene `bench`, every Canopy room): a fade re-forms her at the last moon patch she RESTED at,
+  any room (`gotoRoom`), else the world's start (the hatch), whole; the room she left is rebuilt (its creatures fresh),
+  in the same room `resetEnemies` / `resetBoss`. ALL her glints lie where she fell: `pickups.shade` `{id, room, x, y,
+  value, left}`, one in the world, carried through doors (`enterRoom` -> `placeShade` makes it a drop in its room);
+  taken back in full -> `shadeTaken`; a second fade first -> `shadeLost` (gone). Was: same room at her door,
+  `fadeDrop` 1/3. A pass over a plain patch marks nothing in a bench room; a `mark` patch (p-warn) and the new
+  `MoonPatch.retry` (p-den: the Keeper's retry from the balcony) still do. A map station's first pass still opens the
+  map. Glints still buy nothing in the Canopy, so the stake is mostly the walk back.
+- **Heals**: springboards none (`lures.healOnRelight` 0; was `healOnSnuff` 1 for every lamp, 37 of 41 relight), cages
+  `healOnTrap` 1, a rest full. Thorns 1. Max health 4 (+1 at 60 moths, `mothMilestones`).
+- **Grace removed** (bots are not the bar): the giant's juvenile `wakeSafeFrames` 45 -> 0 (its wake, 50 -> 40, is
+  still harmless and shoulders her out; it still sleeps between its two arrivals: arrival grace kept); lampwings' 1.6x
+  first tell gone (generator `flyer`); juvenile `touchCalmFrames` 150 -> 75; hawker 180 -> 90; carriers'
+  `lineCalmFrames` 240 -> 120. The Keeper: no bridge ram (`bridgeTell` / `bridgeSpeed` 1), `sweepFirst` 210 -> 150,
+  first ram only told long (`firstTellRams` 2 -> 1, x1.25, at 0.8 speed; was 1.5x at 0.6), `touchRestFrames` 90 -> 60.
+  Kept: the sweep's 42-frame tell, no P3 slam near the fallen cage, ambush arrivals, the escape's and chase's
+  checkpoints.
+- **Big blows cost 2**: `oldBurrback.contactDamage` 2 (its ram and its slam's wave; the Keeper's sweep stays 1 via
+  `bossBlade`). The oak's boss in the test grove too (old-burrback-pilot: about half win in 1-2 tries now).
+- **Fights built as fights** (tools/levels/canopy.ts): `hawk-limbs` hunts her across the upper limbs' fling gap (home
+  1,380 x 520, off the moonbeam, in a jump-cut's reach from the first limb); the bower's kin-foot ambush
+  (`kin-ambush` trigger 1,600-2,150 on the hall's west floor: `burr-kin` presses on the floor, `wing-kin` holds the air
+  and the kin's ledge, `juv-kin` comes back over the run; `cn-bower-ambush` / `cn-bower-clear`, framed zone
+  `kin-ambush`); the fork on the way home (`wakes: cn-firefly-gap`): `ant-f1..3` on the floor west of the knoll and
+  `hawk-fork` hunting it (the ants hold the floor, the hawker presses). Hub and opening stay quiet.
+- **Render**: the goal renderer returned early in rooms with no lanterns or heart, so no fade's cluster was ever drawn
+  in the Canopy (since r16): now `dropsOnly`. A patch not rested at burns `KIT.moon.bench` 1.6x in a bench room.
+  **Audio**: `shadeTaken` four notes rising through the moth scale + her wings; `shadeLost` one low note.
+- **The Keeper** (`keeper-run` = the den's plan, `keeper-react` = the lag-n reactive bot, both from the balcony):
+  the tell-jumper wins first try at lag 12-25 (41-48 s, 0 hits; was 42-49 s); the den plan wins at lag 12-18 (77-117 s,
+  1 hit) and loses at 20+ (P2's 24-frame lunge; r19 won lag 20 with 2 fades); the "jump when it charges" habit
+  (`--learn`) never leaves P1 now (67 fades in 10 min; r19 won with 2 hits: the slow 0.6x rams forgave it). A person
+  learns the tell in a few tries; then it is short. Not done: more pressure for one who knows it.
+- **First-timers** (ft20a 17 min, 7 fades; ft20b 20 min, 10 fades; build 3089c29, before the hawker move and the
+  drops fix): fades in the well's thorn pit after a burrback hit (2 + 1), the upper limbs' hawker (ft20b 2, ft20a ~6
+  hits: "a pale smudge against the pale light shaft", knocked into the bed: moved), the galleries (a juvenile at 1
+  light), the Lamp Grove x 10 (thorns, the wave's burrbacks and lampwing; 5 on purpose to leave the shut arena: both
+  read the wave's lock-in as a trap). Every re-form was where they last rested (mostly the Crossing, 25-30 s back);
+  no softlock in the bench rule. Unfair / unreadable to them: hawkers and lampwings look like the freed moths (render),
+  carriers like moss, burrbacks' open window, the dangler at the giant's drop, the Grove's arena thorn returns
+  (r10's far-end rule: up to 2,700 px back). Not fixed, reported: the cellar -> fork hole (ft20b fell back 4-5 times,
+  one position read y 2,728 in a 1,920 room), the well's patch hard to see among its moonbeams.
+  Journals: playtest-reports/2026-11-01T02-50-38-firsttimer-ft20a, *02-50-43-*ft20b.
+  Checks: solver all claims hold (2,461 s), climbs, world check, furniture's bar, look:check 357/357, `npm run
+  typecheck`, `lint`, `test`, e2e `--workers=2`.
 
 ## v19 (round 19, 2026-11-01): answers in shape, not light (ft18a-c, review r18 #2-#4, #6)
 Review r18: rounds 16-18 answered every confusion with a light, and the two that still failed looked like UI. Rule
@@ -97,7 +147,7 @@ for rounds 19-20: no new signpost without a human's confusion behind it; prefer 
   other side" (they saw "two round lights behind bars", "maybe the glows need lighting"). Not solved.
 - (r18's rot sill, chips from a rotten wall at a cut under it, went in r19: it misled ft19a for ~2 min.)
 - **The giant's juvenile sleeps** (spawn `asleep`, burrback kinds): curled and harmless at 2,836 until she is down on
-  its ground within `wakePx` 200, wakes over 50 frames, harmless through the wake and `wakeSafeFrames` 45 after (cut or
+  its ground within `wakePx` 200, wakes over 50 frames (r20: 40), harmless through the wake and `wakeSafeFrames` 45 after (r20: 0; cut or
   not), shouldering her out (`risePush` 5); awake it walks 2,616-3,056; she off its top (2 x `wakePx` along it, 260
   over, `strikeAbovePx` under) for `sleepAgainFrames` 90 and it sleeps where it stands, so a return up the lip never
   meets it awake (`e.lost` counts, `e.wander` is the grace: both unused by burrbacks before). ft18a still took a hit
@@ -105,7 +155,7 @@ for rounds 19-20: no new signpost without a human's confusion behind it; prefer 
   ft18c met it with no hit. tests/unit/canopy-r18.test.ts has both arrivals, the sleep again and ft18a's sequence.
 - **Creatures' reads**: a spent beetle's open belly glows pale gold, with a flash as it lays open (render
   `BURR.ram.open`), and a winded breath is heard (`enemyRecover` not by a touch); a lampwing's first tell is 1.6 x (spawn
-  `firstTell`, the generator's `flyer` sets it; the grove's lampwings keep 36 frames) and counted in three rising
+  `firstTell`, the generator's `flyer` set it until r20; the grove's lampwings keep 36 frames) and counted in three rising
   buzzes. ft18b: "the red glow before it dives was a clear, fair warning". The well's burrback still "shoves into me
   mid-swing": players cut a braced front.
 - **First-timers** (from the hatch, fresh save; first in a flame's reach -> first fling, both from the trace's path
@@ -245,7 +295,7 @@ Render and audio build against these; sim / content names only (render never wri
   floor and ran on after from wherever they stopped (review r14's "the wave began at her feet"); it runs every step
   now (`burrback.ts waveStep`).
 - **The rage beat's bridge** (#6): **`boss.bridge`** 1 from the beat until its first fast ram has run (2 while it
-  runs): that ram is told `keeper.bridgeTell` 1.3x and runs at `bridgeSpeed` 0.8x (`enemyWindup.frames` / `speed` say so).
+  runs): that ram is told `keeper.bridgeTell` 1.3x and runs at `bridgeSpeed` 0.8x (`enemyWindup.frames` / `speed` say so; r20: both 1).
 - **The chase breathes** (#5): the gap's hooks are **`Lure.hook: true`**: while a chase runs, within
   `kit.firefly.catchPx` 140 of the next burning hook her flight eases (speed across to `catchRun` 6, fall `catchFall`
   3.5, rise `catchRise` 7, gravity thinned): **`player.catchK`** 0..1 (render: thicken the air as with `lessonK`).
@@ -714,7 +764,8 @@ Sim / content hooks for the three moments (the look is render's; names are stabl
   wait for a flag start hidden (`createLight`), so a flag set on the first step still arrives. Lay a trigger where
   she comes in (the drop's column, the landing off a block), not over the whole floor, and the spawns (homes) away
   from it: arrival shows them coming, it does not move where they act from.
-- **Patches mark on a pass** (`tuning.patch.markOnPass`, `patchMark`): no more "stand still to save".
+- **Patches mark on a pass** (`tuning.patch.markOnPass`, `patchMark`): no more "stand still to save". (r20: not in a
+  `bench` room: only `mark` / `retry` patches do; a rest is HK's bench again.)
 - **A lampwing with `dives: n`** tells nothing for `retellFrames` once tired or after touching her, and is harmless
   meanwhile (her climb past its hover was the hits, not its dives).
 - **Climbs at delay 16** (`DELAYS` 0 / 6 / 10 / 16): what fails is a first touch near a face's foot (the slide takes

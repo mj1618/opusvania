@@ -302,7 +302,8 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
 - `noticeCd` (frames): after a `far` give-up it notices only one well inside its leash (round 2 above).
 
 ## Contact and health
-- 4 lights (`health.max`). Her box overlapping a living enemy costs 1, unless: she is invulnerable
+- 4 lights (`health.max`). Her box overlapping a living enemy costs its kind's `contactDamage` (1; the old burrback's
+  ram and slam wave 2 since the Canopy r20), unless: she is invulnerable
   (`invuln > 0`), she has faded, or the creature is in the first `hurtSafeFrames` of its `hurt` (plus the
   hitstop): burrback 8 of 14, lampwing all 16. **Chosen: harmless for 8 of the 14 stagger frames, not all of them.** A cut at point
   blank is never punished on the spot, but running on through the creature she just hit is (she
@@ -324,6 +325,17 @@ A small pale moth-wisp, box 36 x 30 (drawn ~40 px), **3 hp**, drawn to her light
   recover. Kept on purpose.
 
 ## Fade and re-form
+- **The rules by kind of room** (which one applies, top first; src/sim/index.ts at the end of a fade):
+  - **`bench` rooms (the Canopy since r20, Matt "very easy"; HK's bench and shade)**: she re-forms at the last moon
+    patch she RESTED at (`save.patch`; a pass marks only a `mark` patch or a boss's `retry` patch), in any room, else at
+    the world's start, whole; the room's creatures are fresh. ALL her glints stay where she fell as one cluster in the
+    world (`pickups.shade`, carried through doors); a second fade before she takes it back loses it (`shadeLost`);
+    taken back, `shadeTaken`. Heals in the Canopy: a rest (full), a cage cut open (`lures.healOnTrap` 1), nothing for a
+    springboard (`healOnRelight` 0). Thorns 1, the old burrback's ram and wave 2, everything else 1. memory/canopy.md v20.
+  - `glow` rooms (Lanternroot): the last patch rested at anywhere; all her glow dropped (memory/glow.md).
+  - other lamp rooms: the patch only if it is in this room, else the room's `reform`, else her door; whole, creatures
+    healed (below).
+  - the test grove (`senses` wallet): the section below.
 - At 0: `hurt` (hp 0) then `fade`. `faded` 50 frames: no control, the body takes the throw, falls and
   lies there; enemies cannot touch her. Then, at the start of the step after, a fresh player at the
   last safe ground with **2 of 4 lights** (`health.reformHp`) and 90 frames of `invuln`, same facing,

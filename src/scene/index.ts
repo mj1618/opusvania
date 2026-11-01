@@ -219,6 +219,7 @@ const SceneSchema = z
       .optional(),
     reform: z.object({ x: int, y: int }).strict().optional(),
     reformPatch: z.boolean().optional(),
+    bench: z.boolean().optional(),
     // --- The world (memory/world.md): moon patches, glades, doors, shortcuts, route claims.
     patches: z
       .array(
@@ -232,6 +233,7 @@ const SceneSchema = z
               .array(z.object({ stone: z.string().min(1), flag: z.string().min(1) }).strict())
               .optional(),
             mark: z.boolean().optional(),
+            retry: z.boolean().optional(),
             area: z.object({ x: int, y: int, w: int.positive(), h: int.positive() }).strict().optional(),
           })
           .strict(),

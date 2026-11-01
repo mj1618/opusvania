@@ -1225,7 +1225,9 @@ describe('round 5: the carriers (ants)', () => {
     );
     s.place(1300, FLOOR);
     const ev = s.run('.400');
-    expect(of(ev, 'hurt').length).toBeLessThanOrEqual(1);
+    // (r20: the line lets her be `lineCalmFrames` 120 (was 240), so one who stands on the trail is bitten again after
+    // it: at most 2 in 400 frames.)
+    expect(of(ev, 'hurt').length).toBeLessThanOrEqual(2);
   });
 
   it('their lamp out, they finish the trip and stop coming', () => {

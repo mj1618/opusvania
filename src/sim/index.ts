@@ -17,7 +17,7 @@ import { ActionBit, type InputFrame, wasPressed } from './input';
 import { afterCatch, arenaShut, catchHold, rearmArenas, updateKit } from './kit';
 import { dropGlow, updateLight, withMoss } from './light';
 import { commitEmbers, hasEmbers, relightEmbers } from './lures';
-import { dropGlints, updateDrops, updatePickups } from './pickups';
+import { dropGlints, dropShade, updateDrops, updatePickups } from './pickups';
 import { type MoveParams, resolveParams } from './player/params';
 import {
   createPlayer,
@@ -464,8 +464,10 @@ export function step(
   if (state.player.faded > 0 && --state.player.faded === 0) {
     // (An arena's door shut behind her opens again: the lock-in re-arms, as HK's does on a death.)
     rearmArenas(scene, state.save, state.enemies);
-    // (In a glow room all her glow lies where she fell instead: src/sim/light.ts.)
+    // (In a glow room all her glow lies where she fell instead: src/sim/light.ts. In a bench room, the Canopy r20, all
+    // her glints: HK's shade, one in the world.)
     if (S.glow) dropGlow(state, S, events);
+    else if (S.bench) dropShade(state, S, events);
     else dropGlints(state, S, t.health.fadeDrop, events);
     const patch = state.save.patch;
     const pr = patch && world ? world.rooms[patch.room] : undefined;
@@ -489,7 +491,7 @@ export function step(
       pr &&
       pp &&
       world &&
-      (pr.id === scene.id || S.glow === true || (S.senses !== 'lamp' && !S.reform))
+      (pr.id === scene.id || S.glow === true || S.bench === true || (S.senses !== 'lamp' && !S.reform))
     ) {
       if (pr.id !== scene.id) {
         // Another room: she re-forms there (the room's creatures are fresh anyway).
@@ -508,6 +510,22 @@ export function step(
       state.player.hp = state.player.hpMax;
       const i = scene.patches?.indexOf(pp) ?? -1;
       state.rest = { at: i, frames: 0, done: true };
+      resetEnemies(state, S, t, events);
+      resetBoss(state, scene, t, events);
+    } else if (S.bench && world) {
+      // A bench room with no patch rested at yet (the Canopy r20): back where the world began, whole.
+      const home = world.rooms[world.start];
+      const sp = home?.scene.spawn ?? S.spawn;
+      if (home && home.id !== scene.id) {
+        gotoRoom(state, t, world, home.id, sp.x, sp.y, 'reform', events);
+        reformPlayer(state, withShortcuts(home.scene, state.save), P, events, sp);
+        state.player.hp = state.player.hpMax;
+        state.prevInput = 0;
+        state.frame++;
+        return;
+      }
+      reformPlayer(state, S, P, events, sp);
+      state.player.hp = state.player.hpMax;
       resetEnemies(state, S, t, events);
       resetBoss(state, scene, t, events);
     } else {

@@ -665,6 +665,38 @@ export function routeCanopy(e: PlayEvent, i: number, snap: AudioSnap, ctx: Route
           k,
         ),
       );
+    // (r20, HK's shade) All she left where she faded is back with her: four notes rising through the moth scale, over
+    // the last glint's chime, then her wings stir. Lost to a second fade: one low note, falling away.
+    case 'shadeTaken':
+      return [
+        ...[0, 1, 2, 3].map((k) =>
+          at(
+            'glintNote',
+            'lantern',
+            C.shadeDb - k,
+            {
+              place: 'hero',
+              x: h.x,
+              y: h.y,
+              cents: MOTH_CENTS[2 + 2 * k] ?? 0,
+              delay: 0.06 + k * 0.09,
+              priority: 5,
+            },
+            k,
+          ),
+        ),
+        at('wingOpen', 'hero', C.backWingDb, { place: 'hero', x: h.x, y: h.y, delay: 0.45, priority: 3 }, 4),
+      ];
+    case 'shadeLost':
+      return [
+        at('glintNote', 'lantern', C.shadeLostDb, {
+          place: 'hero',
+          x: h.x,
+          y: h.y,
+          cents: (MOTH_CENTS[0] ?? 0) - 1200,
+          priority: 4,
+        }),
+      ];
     case 'escapeHit':
       return q.what === 'front'
         ? [

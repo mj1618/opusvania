@@ -781,6 +781,7 @@
         }
       ]
     },
+    "bench": true,
     "lures": [
       {
         "id": "wick-path",
@@ -832,6 +833,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -1820,6 +1822,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -2421,6 +2424,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -2904,7 +2908,6 @@
         "y": 1580,
         "facing": -1,
         "senses": "always",
-        "firstTell": 1.6,
         "radius": 160,
         "wakes": "wallJump",
         "dives": 1
@@ -2942,7 +2945,6 @@
         "y": 820,
         "facing": -1,
         "senses": "always",
-        "firstTell": 1.6,
         "radius": 220,
         "wakes": "cn-well-ambush",
         "sets": "cn-well-clear",
@@ -3385,6 +3387,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -3694,7 +3697,18 @@
       }
     ],
     "pods": [],
-    "enemies": [],
+    "enemies": [
+      {
+        "id": "hawk-limbs",
+        "kind": "hawker",
+        "x": 1380,
+        "y": 520,
+        "facing": -1,
+        "senses": "always",
+        "radius": 160,
+        "sight": 600
+      }
+    ],
     "lures": [
       {
         "id": "wick-limb-1",
@@ -3925,6 +3939,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -4319,6 +4334,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -4700,6 +4716,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -4963,6 +4980,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -5433,6 +5451,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -5641,7 +5660,48 @@
     "oneWays": [],
     "pickups": [],
     "pods": [],
-    "enemies": [],
+    "enemies": [
+      {
+        "id": "ant-f1",
+        "kind": "carrier",
+        "x": 1000,
+        "y": 1344,
+        "facing": 1,
+        "trail": [[1560, 1344]],
+        "wakes": "cn-firefly-gap"
+      },
+      {
+        "id": "ant-f2",
+        "kind": "carrier",
+        "x": 1000,
+        "y": 1344,
+        "facing": 1,
+        "follow": "ant-f1",
+        "phase": 0.33,
+        "wakes": "cn-firefly-gap"
+      },
+      {
+        "id": "ant-f3",
+        "kind": "carrier",
+        "x": 1000,
+        "y": 1344,
+        "facing": 1,
+        "follow": "ant-f1",
+        "phase": 0.67,
+        "wakes": "cn-firefly-gap"
+      },
+      {
+        "id": "hawk-fork",
+        "kind": "hawker",
+        "x": 1300,
+        "y": 780,
+        "facing": -1,
+        "senses": "always",
+        "radius": 180,
+        "sight": 560,
+        "wakes": "cn-firefly-gap"
+      }
+    ],
     "lures": [
       {
         "id": "wick-fork",
@@ -5837,6 +5897,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -6285,6 +6346,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -6731,6 +6793,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -7158,6 +7221,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -7577,7 +7641,6 @@
         "y": 1360,
         "facing": -1,
         "senses": "always",
-        "firstTell": 1.6,
         "radius": 120,
         "sight": 360,
         "wakes": "cn-grove-beat2",
@@ -7590,7 +7653,6 @@
         "y": 900,
         "facing": 1,
         "senses": "always",
-        "firstTell": 1.6,
         "radius": 220
       },
       {
@@ -8004,6 +8066,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -8544,6 +8607,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -8787,6 +8851,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -9109,6 +9174,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -9435,6 +9501,44 @@
         "orbit": "wick-hall",
         "period": 240,
         "radius": 300
+      },
+      {
+        "id": "burr-kin",
+        "kind": "burrback",
+        "x": 1760,
+        "y": 1408,
+        "facing": 1,
+        "radius": 260,
+        "senses": "always",
+        "wakes": "cn-bower-ambush",
+        "sets": "cn-bower-clear",
+        "fenced": true,
+        "arrive": [[1600, 1408]]
+      },
+      {
+        "id": "wing-kin",
+        "kind": "lampwing",
+        "x": 2000,
+        "y": 900,
+        "facing": -1,
+        "senses": "always",
+        "radius": 200,
+        "wakes": "cn-bower-ambush",
+        "sets": "cn-bower-clear",
+        "arrive": [[1900, 420]]
+      },
+      {
+        "id": "juv-kin",
+        "kind": "juvenileBurrback",
+        "x": 2080,
+        "y": 1408,
+        "facing": -1,
+        "radius": 200,
+        "senses": "always",
+        "wakes": "cn-bower-ambush",
+        "sets": "cn-bower-clear",
+        "fenced": true,
+        "arrive": [[2560, 1216]]
       }
     ],
     "lures": [
@@ -9570,7 +9674,24 @@
     },
     "roof": true,
     "camera": {
-      "headroom": 0
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "kin-ambush",
+          "x": 1536,
+          "y": 704,
+          "w": 704,
+          "h": 704,
+          "fit": true,
+          "bounds": {
+            "x": 1344,
+            "y": 384,
+            "w": 1920,
+            "h": 1088
+          },
+          "until": "cn-bower-clear"
+        }
+      ]
     },
     "exits": [
       {
@@ -9621,6 +9742,17 @@
         "y": 1444,
         "w": 1088,
         "h": 28
+      }
+    ],
+    "triggers": [
+      {
+        "id": "kin-ambush",
+        "x": 1600,
+        "y": 1216,
+        "w": 550,
+        "h": 192,
+        "sets": "cn-bower-ambush",
+        "rearm": true
       }
     ],
     "patches": [
@@ -9735,6 +9867,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -10120,6 +10253,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -10356,6 +10490,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -10942,6 +11077,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -11196,6 +11332,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -11799,7 +11936,6 @@
         "y": 1560,
         "facing": 1,
         "senses": "always",
-        "firstTell": 1.6,
         "radius": 140,
         "sight": 360,
         "wakes": "cn-tunnel-wave",
@@ -11813,7 +11949,6 @@
         "y": 1520,
         "facing": -1,
         "senses": "always",
-        "firstTell": 1.6,
         "radius": 120,
         "sight": 360,
         "wakes": "cn-tunnel-wave",
@@ -12284,6 +12419,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -12767,6 +12903,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -13192,7 +13329,8 @@
       {
         "id": "p-den",
         "x": 300,
-        "y": 320
+        "y": 320,
+        "retry": true
       }
     ],
     "boss": {
@@ -13452,6 +13590,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",
@@ -14344,6 +14483,7 @@
     "region": "wood",
     "edgeKick": false,
     "senses": "lamp",
+    "bench": true,
     "abilities": [],
     "art": {
       "kit": "wood",

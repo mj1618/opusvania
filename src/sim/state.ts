@@ -318,6 +318,22 @@ export interface GlintDrop {
   timer: number;
   /** Lanternroot: her glow dropped at a fade (it comes back as glow, not into the wallet). */
   glow?: boolean;
+  /** A bench room's fade (the Canopy r20): this cluster is `PickupsState.shade`, the one she left in the world. */
+  shade?: boolean;
+}
+
+/**
+ * Everything she carried when she last faded in a `bench` room (the Canopy r20, HK's shade): it lies in `room` at
+ * (`x`, `y`) until she takes it back (`left` glints still there). Kept through rooms; a second fade before she takes
+ * it back loses it for good (`shadeLost`). Not saved (the wallet is not either).
+ */
+export interface Shade {
+  id: number;
+  room: string;
+  x: number;
+  y: number;
+  value: number;
+  left: number;
 }
 
 /** Collectibles (src/sim/pickups.ts). */
@@ -355,6 +371,8 @@ export interface PickupsState {
    * is 0; kept through fades (a second fade adds another); gone on a restart.
    */
   drops: GlintDrop[];
+  /** The bench rooms' one cluster in the world (`Shade`), null when there is none. Carried through rooms. */
+  shade: Shade | null;
   /** Clusters dropped so far (the next one's id - 1). */
   dropSeq: number;
   /** How many pickups have been collected. */
@@ -1187,6 +1205,7 @@ export function cloneState(s: GameState): GameState {
       ...s.pickups,
       timers: s.pickups.timers.slice(),
       drops: s.pickups.drops.map((d) => ({ ...d })),
+      shade: s.pickups.shade ? { ...s.pickups.shade } : null,
     },
     pods: {
       hp: s.pods.hp.slice(),

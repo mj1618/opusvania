@@ -20,7 +20,7 @@ import { createKit, kitSolids, rearmArenas } from './kit';
 import { createLight, initTaken, initWicks } from './light';
 import { createLures } from './lures';
 import { solidAt } from './physics/aabb';
-import { createPickups } from './pickups';
+import { createPickups, placeShade } from './pickups';
 import { createPlayer, keepOffer } from './player/player';
 import { createPods } from './pods';
 import type { RoomExit, Scene, SolidRect } from './scene';
@@ -298,8 +298,12 @@ export function enterRoom(
   // (The Canopy r19: the glints she carries are hers, not the room's. Every first-timer saw the count "drop from 5 to
   // 0" at a door: a new room's pickups started the wallet over.)
   const carried = state.pickups?.count ?? 0;
+  // (The Canopy r20: and what she left where she last faded, wherever that was.)
+  const shade = state.pickups?.shade ?? null;
   Object.assign(state, createLocal(scene, t, state.save, firstVisit));
   state.pickups.count = carried;
+  state.pickups.shade = shade;
+  placeShade(state, to);
   // Seam hysteresis: the opening she came in by stays shut behind her for a moment (src/sim/index.ts).
   if (entry.kind === 'edge') state.seam = { exit: entry.exit.id, frames: 0 };
   state.prevInput = entry.kind === 'edge' ? state.prevInput : 0;

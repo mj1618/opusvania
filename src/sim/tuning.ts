@@ -522,8 +522,12 @@ export const defaultTuning = withVariants({
     snuffHitstop: 9,
     /** ...and when a trap's cage breaks (review r10 #2: the release is the game's verb, it stops for a beat). */
     trapSnuffHitstop: 14,
-    /** Health back for each lure put out (core.md §5). */
+    /** Health back for each lure put out for good (core.md §5). */
     healOnSnuff: 1,
+    /** ...for a trap's cage cut open (its moths freed: the Canopy r20 keeps this the heal on the way). */
+    healOnTrap: 1,
+    /** ...for a springboard (a `relight` lamp) put out: none (the Canopy r20; it was `healOnSnuff`, 1, every time). */
+    healOnRelight: 0,
     /**
      * A swinging lure's defaults (`lure.swing`, src/sim/paths.ts, memory/level-kit.md): `reach` px to each
      * side of its rest point, one swing there and back every `period` frames. Its pull and core go with it.
@@ -948,8 +952,11 @@ export const defaultTuning = withVariants({
      */
     sleepAgainFrames: 90,
     sleepAgainAbovePx: 260,
-    /** One placed `asleep` is harmless this long after its wake ends (it got up under her blade: ft18a). */
-    wakeSafeFrames: 45,
+    /**
+     * One placed `asleep` is harmless this long after its wake ends (r18, ft18a: it got up under her blade: 45). The
+     * Canopy r20: 0, awake it is a threat at once (the wake itself is still harmless, and shoulders her out).
+     */
+    wakeSafeFrames: 0,
     /**
      * The wake's last `wakeTurnFrames` it turns to her (the Canopy r11, review r10 #10: it rises first, facing the way
      * it slept, then turns, then hunts); 0 = it faces her as it wakes.
@@ -1386,8 +1393,11 @@ export const defaultTuning = withVariants({
     biteFrames: 10,
     biteLunge: 8,
     biteCooldownFrames: 60,
-    /** After one bites her, every carrier within `lineCalmPx` lets her be this long (no chained bites). */
-    lineCalmFrames: 240,
+    /**
+     * After one bites her, every carrier within `lineCalmPx` lets her be this long (no chained bites). r20: 120 (was
+     * 240): past her own safety (78), not a free walk down the line.
+     */
+    lineCalmFrames: 120,
     lineCalmPx: 600,
     hurtFrames: 10,
     hurtSafeFrames: 0,
@@ -1598,8 +1608,9 @@ export const defaultTuning = withVariants({
     // then `sweepEat` moths eaten, open the whole `sweepTell + sweepOpen` for `p3` open hits. `cageCuts` cuts on the
     // fallen cage free a third each (`cutShare`) of what is in it; then the bars hold until it is beaten.
     cageFallFrames: 24,
-    // (r14, first-timer ft14den: "it came straight back with a sweep, no breather": 210 (was 150).)
-    sweepFirst: 210,
+    // (r14, first-timer ft14den: "it came straight back with a sweep, no breather": 210 (was 150). r20, Matt "very
+    // easy": 150 again, the bot's breather was not a person's.)
+    sweepFirst: 150,
     sweepEvery: 330,
     sweepReachPx: 150,
     // (r13: 36 (was 30): its claws now hurt, so the tell is one a person sees coming while at the cage. r14, review r13
@@ -1651,8 +1662,9 @@ export const defaultTuning = withVariants({
     cageNearPx: 140,
     // --- r15, review r14 #6: the first fast ram after the rage beat is a bridge: told `bridgeTell` x as long, run at
     // `bridgeSpeed` x (`boss.bridge` 1 until it has rammed).
-    bridgeTell: 1.3,
-    bridgeSpeed: 0.8,
+    // (r20: 1 / 1, no bridge: the rage beat itself is the warning.)
+    bridgeTell: 1,
+    bridgeSpeed: 1,
   },
   bossRush: {
     /** The final blow: she and the boss hold this many frames before the defeat plays on. */
@@ -2119,9 +2131,10 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       deathHoldFrames: 90,
       ramUnderJump: true,
       // (area1-plan-r3 #8: casual runs faded 8-9 times and gave up; first tries lasted 11-21 s.)
-      firstTellRams: 2,
-      firstTellMult: 1.5,
-      firstRamSpeedMult: 0.6,
+      // (The Canopy r20, Matt "very easy": the first ram only, told 1.25x at 0.8x (was two at 1.5x / 0.6x).)
+      firstTellRams: 1,
+      firstTellMult: 1.25,
+      firstRamSpeedMult: 0.8,
       // (area1-video-r2 #2: casual tries lasted 11-15 s: hit standing, rammed again while down, pinned at the gate.)
       lungeOnJump: true,
       // (Its den's escape ledges (192 px up): its ram pulls up at a ledge's mouth, open: under a ledge she is
@@ -2130,7 +2143,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       braceUnderRoof: true,
       bodyHarmless: true,
       landBounce: true,
-      touchRestFrames: 90,
+      // (r20: 60 (was 90): its ram hurts 2 now, so never ram after ram while she is down, but no long rest either.)
+      touchRestFrames: 60,
       // (Its den has its own rule for ledges: the slam.)
       stepRamPx: 0,
       // (Round 5: the three-phase boss under the oak. Round 6, video r4 "fights 60-120 s": 20 hp: phase 1 to 12,
@@ -2147,7 +2161,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       wakeFrames: 90,
       wakeTurnFrames: 30,
       hunt: true,
-      contactDamage: 1,
+      // (The Canopy r20: a big thing's blow, its ram and its slam's wave, costs 2 of her 4.)
+      contactDamage: 2,
       value: 0,
       valueFinisher: 0,
     },
@@ -2169,11 +2184,13 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // (First-timer r4: "the juvenile took 2 health by contact while I was swinging at it". Harmless while
       // staggered by a cut, and after its touch it turns and wanders off, calm, for 2.5 s: one pip a meeting.)
       hurtSafeFrames: 30,
-      touchCalmFrames: 150,
+      // (r20: 75 (was 150): one pip a meeting, then it comes back.)
+      touchCalmFrames: 75,
       // (The Canopy r18: one placed `asleep` wakes once she is down on its ground this near, over 50 frames, harmless:
       // the giant's, between two arrivals, never meets her on her arrival.)
       wakePx: 200,
-      wakeFrames: 50,
+      // (r20: 40 (was 50).)
+      wakeFrames: 40,
       // (Getting up it shoulders her out of its body, so she is never inside it when it can hurt.)
       risePush: 5,
       domeShoulder: 0.58,
@@ -2212,8 +2229,8 @@ function withVariants<T extends { burrback: object; lampwing: object }>(base: T)
       // (Round 7: off; the lamp's hold becomes a fling's slowed aim, and nothing hunts her in it.)
       huntCaught: false,
       straightKnock: true,
-      // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop.)
-      touchCalmFrames: 180,
+      // (A breather after a hit: one who stood still under it was hit every 4 s and faded in a loop. r20: 90, was 180.)
+      touchCalmFrames: 90,
       value: 0,
       valueFinisher: 0,
     },

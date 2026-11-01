@@ -489,6 +489,10 @@ export const AUDIO = {
     rockFallDb: -24,
     rockLandDb: -17,
     checkpointDb: -27,
+    /** r20: her shade taken back (every glint she left where she faded): a rising four-note scale, then a breath. */
+    shadeDb: -25,
+    /** ...and lost (a second fade before she took it back): one low note, falling. */
+    shadeLostDb: -30,
     backWingDb: -30,
     collapseDb: -27,
     collapseNearPx: 170,
