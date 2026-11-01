@@ -159,7 +159,7 @@ export const BURR = {
      * whole body `white` of the way to `flashColor` (HK's white hit flash; never on her), then the dark of the hold.
      */
     white: 0.88,
-    whiteFrames: 3,
+    whiteFrames: 5,
     /** Chips a blow knocks off (a finisher's), their life in seconds: gone in about ten frames. */
     chips: 3,
     chipsFinisher: 5,
@@ -636,7 +636,7 @@ export const LAMP = {
     flash: 2,
     flashColor: 0xf6eedc,
     white: 0.85,
-    whiteFrames: 3,
+    whiteFrames: 5,
     scales: 4,
     scalesFinisher: 5,
     scaleLife: 0.26,

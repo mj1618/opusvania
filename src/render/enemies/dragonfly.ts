@@ -80,7 +80,7 @@ export const DRAGON = {
   pitchMax: 0.5,
   bob: 0.6,
   /** Hit: flash frames, share of the way to the struck dusk. */
-  hit: { flash: 2, dark: 0.5 },
+  hit: { flash: 5, dark: 0.5 },
   /** Death: spin while it falls (rad/s), gravity after the sim lets the body go (px/s²), lie (s), fade (s). */
   die: { spin: 9, gravity: 1300, lie: 1.9, fade: 0.55, torn: 4.2 },
   color: {

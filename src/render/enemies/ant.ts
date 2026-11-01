@@ -71,7 +71,7 @@ export const ANT = {
   /** Wing pick-up after a bite, s. */
   pick: 0.24,
   /** Hit: flash frames (warm near-white), share of the way to the struck dusk through the hold, squash. */
-  hit: { flash: 2, dark: 0.55, squash: 0.25 },
+  hit: { flash: 5, dark: 0.55, squash: 0.25 },
   /**
    * Death (render s, px/s): thrown along the cut (`fwd` / `up` / `down` velocities, x `fin` for a finisher),
    * spinning `spin` rad/s, `gravity`, one bounce (`bounce`), on its back; legs twitch `twitch` s; lies `lie` s, fades
