@@ -39,10 +39,14 @@ export const LAYERS = [
   { name: 'swarmFar', parallax: 0.4, screen: false },
   { name: 'swarmMid', parallax: 0.6, screen: false },
   { name: 'mid', parallax: 0.68, screen: false },
+  // An open wood room's moss banks behind its floors, far rank (layers/thicket.ts, canopy r19).
+  { name: 'thicketFar', parallax: 0.8, screen: false },
   // The deep back of an enclosed wood room (layers/interior.ts), masked to its backs.
   { name: 'interiorDeep', parallax: 0.86, screen: false },
   // Its mid plane (review r5 #7), between the deep back and the playfield, masked the same.
   { name: 'interiorMid', parallax: 0.93, screen: false },
+  // The banks' near rank (layers/thicket.ts).
+  { name: 'thicketNear', parallax: 0.9, screen: false },
   // The play plane's air (layers/veil.ts): a haze screen-blended over everything behind the playfield (canopy r7).
   { name: 'veil', parallax: 0, screen: true },
   // Light shafts that pass behind the terrain and the character (owned by layers/air.ts).

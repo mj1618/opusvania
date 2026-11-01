@@ -170,7 +170,19 @@ function arcs(pts: number[], cy: number, ry: number, lower: boolean, k = 0.15): 
 }
 
 /** The deep back of a heartwood room's back `b` (padded; `b0` the back itself). */
-export function drawHeartDeep(g: HeartG, T: HeartTone, b: Box, b0: Box, ang: number, seed: number): void {
+export function drawHeartDeep(
+  g: HeartG,
+  T0: HeartTone,
+  b: Box,
+  b0: Box,
+  ang: number,
+  seed: number,
+  lit = true,
+): void {
+  // (Unlit: a pocket under an open room's floor in the night, the hub's: the light low and no warm pools.)
+  const T = lit
+    ? T0
+    : { ...T0, deepLit: mixc(T0.deepLit, T0.deep, 0.6), nearLit: mixc(T0.nearLit, T0.deep, 0.75) };
   const r = rngFor(seed, b0.x, b0.y, 131);
   const F = frame(b, ang);
   const area = b.w * b.h;
@@ -266,7 +278,7 @@ export function drawHeartDeep(g: HeartG, T: HeartTone, b: Box, b0: Box, ang: num
     cracks.push({ x, y, len: range(r, 180, 380) });
   }
   // Pools of light on the wall under each crack (the beam's slant: down and a little east).
-  for (const c of cracks) {
+  for (const c of lit ? cracks : []) {
     const px = c.x + 0.3 * b0.h * 0.45;
     const py = c.y + b0.h * 0.45;
     pool(g, px, py, range(r, 420, 640), range(r, 300, 420), T.deepLit, 0.5, seed + Math.round(c.x));

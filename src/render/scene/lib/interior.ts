@@ -15,7 +15,7 @@
 import type { Room } from '../../../scene/room';
 import { drawLarderDeep, drawLarderMid, type LarderRoot, larderRoots, paintLarderRoots } from './den-larder';
 import { drawHeartDeep, drawHeartMid } from './heartwood';
-import { type Look, lookOf } from './looks';
+import { gradeLookOf, type Look, lookOf } from './looks';
 import { BRANCH, strand } from './pf-branch';
 import { exposedSides, type MassRect } from './pf-mass';
 import type { Paint } from './pf-paint';
@@ -212,6 +212,8 @@ export interface InteriorPlan {
   masses: MassRect[];
   /** The Keeper's den (a den with the `keeper` boss): its back is a larder wall (den-larder.ts), not banks. */
   larder: boolean;
+  /** Enclosed and graded as its place (looks.ts `gradeLookOf`); else its backs are pockets in an open room. */
+  graded?: boolean;
 }
 
 const massOf = (s: { tag: string }): boolean => s.tag === 'root' || s.tag === 'ground';
@@ -459,7 +461,17 @@ export function interiorPlan(room: Room, seed: number): InteriorPlan | null {
     );
   };
   const larder = look === 'den' && (room as { boss?: { kind?: string } }).boss?.kind === 'keeper';
-  return { look, mat, tone, backs, edges, lights: lights.filter((l) => !sealedHit(l)), masses, larder };
+  return {
+    look,
+    mat,
+    tone,
+    backs,
+    edges,
+    lights: lights.filter((l) => !sealedHit(l)),
+    masses,
+    larder,
+    graded: gradeLookOf(room) !== null,
+  };
 }
 
 /** How far into the back the torn edge reaches at (x, y): 0 at a free edge, 1 deep inside or along a closed edge. */
@@ -1662,7 +1674,8 @@ export function drawDeepBack(
       }
     } else if (plan.look === 'heartwood') {
       // Inside the fallen giant (review r18 #1: a flat orange card): the far wall of a hollow trunk, heartwood.ts.
-      drawHeartDeep(g, T, b, b0, heartAngle(plan), seed + i * 41);
+      // (In an open room, the hub, its backs are pockets under the floor in the cool night: dimmer, no warm pools.)
+      drawHeartDeep(g, T, b, b0, heartAngle(plan), seed + i * 41, plan.graded !== false);
     } else {
       // Strata: long soft lenses across the earth, broken, of uneven thickness. (Not in the den: canopy review r7 #10,
       // its back read as flat fog with lenses; its shapes are in the mid plane.)
@@ -1815,7 +1828,11 @@ export function drawDeepBack(
       }
     }
     // Dim great roots crossing, far off. (Not in the giant: straight down its diagonal grain they read as posts.)
-    for (let k = 0; k < (plan.look === 'heartwood' ? 0 : Math.max(1, Math.round(b.w / 1100))); k++) {
+    for (
+      let k = 0;
+      k < (plan.look === 'heartwood' && plan.graded ? 0 : Math.max(1, Math.round(b.w / 1100)));
+      k++
+    ) {
       const x = b.x + range(r, 0, b.w);
       const line: number[] = [];
       for (let t = 0; t <= 10; t++) line.push(x + range(r, -40, 40) * t * 0.2, b.y + (b.h * t) / 10);
@@ -1852,12 +1869,32 @@ export function backBite(
     if (!e[side]) return -40;
     const o = e.at ? e.at(side, v) : 1;
     const k = Math.round(v / 20) + (off[side] as number);
+    // (r19, review r18 #1: a noise bite of +-120 px every ~140 px made the Grove's "clip-art triangle hills", and the
+    // shade bands that follow it stacked them into ranges. The edge is a row of overlapping rounded crowns now.)
     const deep =
       INTERIOR.tear * 0.75 +
-      120 * wobble(k * 20, seed + i * 13, 140) +
-      60 * wobble(k * 20, seed + i * 7, 600);
+      60 * wobble(k * 20, seed + i * 7, 600) +
+      CROWN.h[1] * 0.55 -
+      crowns(k * 20, seed + i * 13);
     return lerp(-40, deep, o);
   };
+}
+
+/** The rounded crowns along a back's free edge: spacing, radius and height ranges (px). */
+const CROWN = { cell: 170, r: [70, 190] as const, h: [50, 190] as const };
+
+/** How far the crowns along an edge stand out at v (px): the highest dome over v, each a half ellipse. */
+function crowns(v: number, seed: number): number {
+  const j0 = Math.floor(v / CROWN.cell);
+  let best = 0;
+  for (let j = j0 - 2; j <= j0 + 2; j++) {
+    const c = (j + 0.15 + 0.7 * hash1(j, seed)) * CROWN.cell;
+    const r = lerp(CROWN.r[0], CROWN.r[1], hash1(j, seed + 1));
+    const d = (v - c) / r;
+    if (d * d >= 1) continue;
+    best = Math.max(best, lerp(CROWN.h[0], CROWN.h[1], hash1(j, seed + 2)) * Math.sqrt(1 - d * d));
+  }
+  return best;
 }
 
 /** The deep back's mask: each back, its free edges torn and drawn in (playfield coords). */
@@ -1866,10 +1903,14 @@ export function backMask(plan: InteriorPlan, seed: number): number[][] {
     const bite = backBite(plan, i, seed);
     const pts: number[] = [];
     const st = 20;
+    // (r19: a side edge starts and ends inside the top and bottom bites, or a crown at a corner made a spike.)
+    const yTop = (x: number) => b.y + Math.max(0, bite('n', x));
+    const yBot = (x: number) => b.y + b.h - Math.max(0, bite('s', x));
     for (let x = b.x; x < b.x + b.w; x += st) pts.push(x, b.y + bite('n', x));
-    for (let y = b.y; y < b.y + b.h; y += st) pts.push(b.x + b.w - bite('e', y), y);
+    for (let y = b.y; y < b.y + b.h; y += st)
+      pts.push(b.x + b.w - bite('e', y), clamp(y, yTop(b.x + b.w), yBot(b.x + b.w)));
     for (let x = b.x + b.w; x > b.x; x -= st) pts.push(x, b.y + b.h - bite('s', x));
-    for (let y = b.y + b.h; y > b.y; y -= st) pts.push(b.x + bite('w', y), y);
+    for (let y = b.y + b.h; y > b.y; y -= st) pts.push(b.x + bite('w', y), clamp(y, yTop(b.x), yBot(b.x)));
     return chaikin(pts, 2);
   });
 }
@@ -1881,7 +1922,8 @@ export function backMask(plan: InteriorPlan, seed: number): number[][] {
  */
 export function backEdgeShade(plan: InteriorPlan, seed: number): Array<{ pts: number[]; alpha: number }> {
   const out: Array<{ pts: number[]; alpha: number }> = [];
-  const steps = 7;
+  // (r19: more, fainter steps, so the shade under the crowns is a fade, not a stack of outlines.)
+  const steps = 12;
   const reach = 300;
   plan.backs.forEach((b, i) => {
     // (r19: a back inside another has no edge on open air; its bands drew a ruled rectangle in the giant.)
@@ -1915,7 +1957,7 @@ export function backEdgeShade(plan: InteriorPlan, seed: number): Array<{ pts: nu
         }
         for (let j = inner.length / 2 - 1; j >= 0; j--)
           outer.push(inner[j * 2] as number, inner[j * 2 + 1] as number);
-        out.push({ pts: outer, alpha: 0.13 });
+        out.push({ pts: outer, alpha: 0.08 });
       }
     }
   });
