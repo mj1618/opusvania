@@ -54,11 +54,6 @@ export const KIT = {
     leak: 0xffb060,
     /** A teaching wall's punky face, its beetle holes and shelf fungus (r16). */
     punk: 0x6e5236,
-    /**
-     * Its shell of sound wood (r19): dark edges `w` px down both sides, flared `flare` px into the roof and floor, and
-     * `leaks` of its holes showing warm light from behind.
-     */
-    shell: { color: 0x0c0806, w: 9, flare: 22, leaks: 4 },
     hole: 0x140a06,
     shelf: 0xd8c49a,
   },
@@ -891,30 +886,6 @@ export class Kit {
           color: R.hole,
           alpha: 0.9,
         });
-      }
-      // (The Canopy r19, ft18b: "a pale column ... looked like a background support post with little mushrooms".
-      // Pale is the back's value here; the wood she stands on is dark. So the punk is held in a dark shell of sound
-      // wood: near-black edges down both sides, flared into the roof and the floor where it is rooted (one thing with
-      // the hall, in front), and warm light from the space behind it shows through some of its holes.)
-      const E = KIT.rot.shell;
-      for (const side of [-1, 1]) {
-        const ex = side < 0 ? x : x + w;
-        const pts: number[] = [];
-        for (let q = 0; q <= 8; q++)
-          pts.push(ex - side * (E.w * (0.7 + 0.3 * hash01(id, q + 260))), y + (h * q) / 8);
-        pts.push(ex + side * 2, y + h, ex + side * 2, y);
-        g.poly(pts).fill({ color: E.color, alpha: 0.95 });
-        // Flares: where it meets the roof and the floor it spreads into them.
-        g.poly([ex, y + E.flare, ex + side * E.flare * 0.7, y - 2, ex - side * E.w, y - 2]).fill(E.color);
-        g.poly([ex, y + h - E.flare, ex + side * E.flare * 0.8, y + h + 2, ex - side * E.w, y + h + 2]).fill(
-          E.color,
-        );
-      }
-      for (let q = 0; q < E.leaks; q++) {
-        const bx = x + w * (0.3 + 0.4 * hash01(id, q + 270));
-        const by = y + h * (0.2 + 0.6 * hash01(id, q + 280));
-        g.ellipse(bx, by, 3, 4.5).fill({ color: KIT.rot.hole, alpha: 1 });
-        g.ellipse(bx, by + 0.5, 1.8, 2.8).fill({ color: KIT.rot.leak, alpha: 0.85 });
       }
       for (let q = 0; q < 4; q++) {
         const side = q % 2 ? 1 : -1;
