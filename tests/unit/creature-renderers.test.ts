@@ -49,4 +49,13 @@ describe('creature renderers (canopy review r2 #3: the invisible old burrback)',
     expect(n).toBeGreaterThan(50);
     expect(missing).toEqual([]);
   });
+
+  it('carriers are ants and hawkers are dragonflies in painted rooms (Canopy r22), boxes in greybox', () => {
+    const wood: LookKey = { kit: 'wood', pieces: true, greybox: false };
+    expect(creatureArt('carrier', wood)).toBe('ant');
+    expect(creatureArt('hawker', wood)).toBe('dragonfly');
+    expect(creatureArt('lampwing', wood)).toBe('moth');
+    expect(creatureArt('juvenileBurrback', wood)).toBe('beetle');
+    expect(creatureArt('carrier', { ...wood, greybox: true })).toBe('greybox');
+  });
 });

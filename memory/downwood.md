@@ -35,8 +35,8 @@ proven, what is in it and what is not.
   `seeds:3` (the Seed Door) / `seeds:5` (the Heartwood's knot). The world check counts seeds reached into those flags.
   Render: a pale winged seed bobbing in its light (render/lantern/kit.ts); a seed gate draws its sockets, one lit per
   seed held; the item line says how many are held.
-- Painted rooms draw the old burrback (x4.4) and the carriers (x0.5) on the burrback's rig (render/enemies/index.ts
-  `BEETLE_SCALE`; a carrier `under` its crack is not drawn). Before this they were greybox only.
+- Painted rooms draw the old burrback (x4.4) on the burrback's rig (render/enemies/index.ts `BEETLE_SCALE`) and the
+  carriers as ants (render/enemies/ant.ts since Canopy r22; a carrier `under` its crack is not drawn).
 - The explorer (tools/solve/explore.ts) gained `allExits` (several crossings per exit) and dash macros (with dash owned).
 
 ## The proof (tools/solve/downwood.ts, `npx tsx tools/solve/downwood.ts --write`, ~30-40 min)
