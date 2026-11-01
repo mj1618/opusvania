@@ -5993,7 +5993,7 @@
       {
         "id": "bomb-knoll",
         "kind": "bombardier",
-        "x": 1640,
+        "x": 1880,
         "y": 1088,
         "facing": -1,
         "senses": "always",
@@ -6130,7 +6130,24 @@
       ]
     },
     "camera": {
-      "headroom": 0
+      "headroom": 0,
+      "zones": [
+        {
+          "id": "nest-face",
+          "x": 2240,
+          "y": 576,
+          "w": 576,
+          "h": 768,
+          "fit": true,
+          "bounds": {
+            "x": 1792,
+            "y": 256,
+            "w": 1408,
+            "h": 1152
+          },
+          "until": "cn-nest-fork"
+        }
+      ]
     },
     "exits": [
       {

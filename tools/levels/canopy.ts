@@ -2270,11 +2270,30 @@ function fork(): Json {
   // (r22: the fork's nest, ranged + leaper: both bombardiers and a jumping spider on the floor between the knoll and
   // the face, so the lobs come while the spider keeps her moving. The ants stay out of it, a line on the way in.)
   const forkNest = { wakes: NESTS_ON, sets: NEST_FORK };
-  r.bombardier('bomb-knoll', 1640, 1088, -1, forkNest);
+  // (First-timer nestB: on the west lip it sat where the jump up onto the knoll lands, "I landed on it and got hurt"
+  // (creatures.md rule 7). At the knoll's east end she lands 200+ px short of it, out of its spray's cone, and it still
+  // lobs over the lip at the floor.)
+  r.bombardier('bomb-knoll', 1880, 1088, -1, forkNest);
   r.bombardier('bomb-face', 2600, 1344, -1, forkNest);
   r.jumper('jump-f', 2250, 1344, -1, forkNest);
   // (A run started in this room: the nests wake as they do coming from the hub.)
   r.add('triggers', { id: 'nests-on', x: 0, y: 1088, w: 640, h: 256, sets: NESTS_ON });
+  // (The nest's door is 770 px over the floor, out of the frame of a fight at the face's foot: until the nest is dead,
+  // near the face the view widens to hold the floor, the face and its shut door at once.)
+  r.set('camera', {
+    zones: [
+      {
+        id: 'nest-face',
+        x: 2240,
+        y: 576,
+        w: 576,
+        h: 768,
+        fit: true,
+        bounds: { x: 1792, y: 256, w: 1408, h: 1152 },
+        until: NEST_FORK,
+      },
+    ],
+  });
   r.set('marks', {
     ...(r.data.marks as Json),
     notes: [
