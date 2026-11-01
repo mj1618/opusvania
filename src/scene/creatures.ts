@@ -142,6 +142,9 @@ export const ENEMIES = z
       z.object({ ...base, kind: z.literal('mantis') }).strict(),
       // The dangler (memory/creatures.md): `x`, `y` = where its thread is tied; `drop` = its longest drop.
       z.object({ ...base, kind: z.literal('dangler'), drop: int.min(80).max(1200).optional() }).strict(),
+      // The huntsman (src/sim/enemies/huntsman.ts): `x` = its face's x, `y` = the middle of its stretch, `radius` = half
+      // of it, `facing` = the way it faces (into the gap; its wall is behind it).
+      z.object({ ...base, kind: z.literal('huntsman'), radius: int.min(40).max(1200).optional() }).strict(),
       // The carriers (ants, src/sim/enemies/carrier.ts): `x`, `y` = the trail's start (feet); `trail` = the rest
       // of it (the last point the crack), or `follow` = the carrier whose trail it walks; `phase` 0..1.
       z
@@ -373,6 +376,29 @@ function checkDangler(s: RoomLike, e: Enemy): void {
 }
 
 /**
+ * A huntsman's face: its box at (`x`, `y`) beside the face, clear of solids, the face solid behind it (a solid or the
+ * room's edge on the side away from `facing`), away from the spawn.
+ */
+function checkHuntsman(s: RoomLike, e: Enemy): void {
+  const H = defaultTuning.huntsman;
+  const x0 = e.facing > 0 ? e.x : e.x - H.width;
+  const y0 = e.y - H.height / 2;
+  if (x0 < 0 || x0 + H.width > s.width || y0 < Math.min(0, s.ceilingY ?? 0) || y0 + H.height > s.height)
+    throw new Error(`Scene "${s.id}": huntsman "${e.id}" is outside the scene`);
+  if (s.solids.some((q) => x0 + H.width > q.x && x0 < q.x + q.w && y0 + H.height > q.y && y0 < q.y + q.h))
+    throw new Error(`Scene "${s.id}": huntsman "${e.id}" is inside a solid`);
+  const c = e.facing > 0 ? x0 - 1 : x0 + H.width;
+  const wall = (y: number) =>
+    c < 0 || c >= s.width || s.solids.some((q) => c >= q.x && c < q.x + q.w && y >= q.y && y < q.y + q.h);
+  if (!wall(y0 + 6) || !wall(y0 + H.height - 7))
+    throw new Error(`Scene "${s.id}": huntsman "${e.id}" has no face behind it at x ${e.x}`);
+  const dx = e.x - s.spawn.x;
+  const dy = e.y - s.spawn.y;
+  if (dx * dx + dy * dy < ENEMY_SPAWN_CLEAR * ENEMY_SPAWN_CLEAR)
+    throw new Error(`Scene "${s.id}": huntsman "${e.id}" is too close to the spawn point`);
+}
+
+/**
  * Every creature of a parsed room: unique ids (`seen`, shared with pickups and pods), placement per
  * kind, `guards` names a lure of the room, a web's strands inside the room and clear of the spawn
  * (an `orb` is expanded into `strands` here), a weaver names a web and sits on it.
@@ -392,6 +418,7 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
     else if (e.kind === 'burrback' || e.kind === 'oldBurrback' || e.kind === 'juvenileBurrback')
       checkCrawler(s, e);
     else if (e.kind === 'dangler') checkDangler(s, e);
+    else if (e.kind === 'huntsman') checkHuntsman(s, e);
     else if (e.kind === 'carrier') {
       if ((e.trail === undefined) === (e.follow === undefined))
         throw new Error(`Scene "${s.id}": carrier "${e.id}" needs a trail or a follow (one of them)`);

@@ -34,6 +34,7 @@ import {
   throwCut,
 } from './enemies/common';
 import { dangler } from './enemies/dangler';
+import { huntsman } from './enemies/huntsman';
 import { hawker, lampwing } from './enemies/lampwing';
 import { litNow, moonlitAt, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
 import { weaver } from './enemies/weaver';
@@ -58,6 +59,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   carrier,
   gloamweaver,
   mantis,
+  huntsman,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -72,6 +74,7 @@ const KIND_LIST: EnemyKind[] = [
   'carrier',
   'gloamweaver',
   'mantis',
+  'huntsman',
 ];
 
 /**

@@ -1407,6 +1407,77 @@ export const defaultTuning = withVariants({
     contactDamage: 1,
   },
   /**
+   * The huntsman (canopy-r22-creatures.md, src/sim/enemies/huntsman.ts, memory/enemies.md "The huntsman"): a wall
+   * runner on a bark face. It scuttles its stretch of face (`radius` either side of its spawn) in bursts
+   * (`burstSpeed` px/f for `burstFrames`, then a pause), toward her height once it sees her (`noticePx`). She level
+   * with it (`levelPx`) and within `reachPx` across the gap, a clear line: the tell (`tellFrames`: it flattens), then
+   * the lunge straight across at her (`lungeSpeed`, live for `lungeFrames`; a flat arc, `lungeGravity`), aimed `lead`
+   * of her motion ahead. A wall in its flight: it clings there (`clingFrames`) and that face is its home now. None: it
+   * drops (`gravity`), lands flipped and lies open (`recoverFrames`), then scrambles back (`runSpeed`) and climbs.
+   * Only the lunge hurts. Hit on its wall it scuttles away (`evadePx`); hit in the air it falls and lands open.
+   */
+  huntsman: {
+    width: 44,
+    height: 56,
+    hp: 3,
+    /** Half the stretch of face it keeps to, if the spawn names none (`radius`). */
+    radius: 220,
+    noticePx: 560,
+    burstSpeed: 7,
+    /** A burst lasts `burstMin` .. `burstMax` frames; pauses between: wandering, and hunting (she is seen). */
+    burstMin: 8,
+    burstMax: 18,
+    pauseMin: 40,
+    pauseMax: 90,
+    huntPauseMin: 10,
+    huntPauseMax: 22,
+    /** It stops a burst within this of her height (it hunts her level). */
+    levelPx: 72,
+    reachPx: 250,
+    tellFrames: 24,
+    lungeSpeed: 13,
+    lungeFrames: 24,
+    lungeGravity: 0.15,
+    /**
+     * It watches her climb (her vertical speed smoothed by `trackK` a frame): it tells when she is level now or will
+     * be `aheadFrames` after the tell, and aims `lead` of that motion over the flight ahead (0 = where she is).
+     */
+    trackK: 0.12,
+    aheadFrames: 12,
+    lead: 1,
+    /** ... never further ahead of her than this (a slow climber far under it is not "coming level"). */
+    aheadMaxPx: 140,
+    /** The steepest it springs: up or down this many px for each px across. */
+    lungeSlope: 0.8,
+    lungeSlopeDown: 0.4,
+    /** After a lunge (hit or miss) it tells no sooner than this. */
+    cooldownFrames: 70,
+    /** After its lunge hurt her: her safety (`health.invulnFrames`) + this before its next lunge can land. */
+    rehitGapFrames: 10,
+    clingFrames: 26,
+    gravity: 0.6,
+    maxFall: 13,
+    /** Out of the air its flight's sideways speed fades by this a frame. */
+    airDrag: 0.94,
+    recoverFrames: 80,
+    runSpeed: 4,
+    /** Scrambling back, it gives up after this long without a wall (it leaves). */
+    runFrames: 360,
+    climbSpeed: 5,
+    evadePx: 120,
+    evadeSpeed: 9,
+    hurtFrames: 10,
+    hurtSafeFrames: 10,
+    /** A blow's shove, x the slash's knockback: off the wall (dead, or in the air) it flies along the blow. */
+    knock: 1.1,
+    knockUp: 5,
+    /** Lying open on the ground a blow bats it less (a chain of cuts still reaches it). */
+    knockGround: 0.4,
+    knockUpGround: 2,
+    deadFrames: 150,
+    contactDamage: 1,
+  },
+  /**
    * The Weaver, the wood's boss (docs/design/regions/wood.md §6, memory/bosses.md). One exam a phase:
    * P1 glide among the spokes to snuff the ring flames, P2 read the swing and get off its half, P3 pogo
    * its abdomen, then the heart. Frames at 60 Hz, px, px/f.

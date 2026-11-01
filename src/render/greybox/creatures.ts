@@ -25,6 +25,7 @@ import type { Scene } from '../../sim/scene';
 import type { EnemyState } from '../../sim/state';
 import { tuning } from '../../sim/tuning';
 import type { SimView } from '../contract';
+import { drawHuntsman, type HuntPaint, HuntsmanRig } from '../enemies/huntsman';
 import { hash01 } from './moths';
 
 /** Colours (memory/greybox.md "Creatures"). Bodies are mid tones: lighter than the solids, darker than her lights. */
@@ -44,6 +45,8 @@ export const CREATURE = {
   hawker: 0x5f6e86,
   weaver: 0x6e6280,
   dangler: 0x6a6478,
+  /** The huntsman: a warm grey-brown body, legs a shade darker with pale bands. */
+  huntsman: 0x8a7462,
   other: 0x6b7385,
   belly: 0x2e2a2c,
   /** The danger part at rest, and in a tell / dive / brace (the hunt colour, as the boss view's). */
@@ -273,8 +276,26 @@ function bodyColor(kind: string): number {
 const isFlyer = (k: string) => k === 'hawker' || k === 'lampwing';
 const isCrawler = (k: string) => k === 'burrback' || k === 'oldBurrback' || k === 'juvenileBurrback';
 
+/** The huntsman's rig in flat greybox colours (render/enemies/huntsman.ts); its front legs are the danger part. */
+const HUNT_GREY: HuntPaint = {
+  body: CREATURE.huntsman,
+  belly: 0x5c4e44,
+  rim: 0xb8a490,
+  spot: 0x5c4e44,
+  leg: 0x6e5e50,
+  band: 0xc8b8a4,
+  eye: CREATURE.eye,
+  hunt: CREATURE.hunt,
+  flash: CREATURE.flash,
+  danger: CREATURE.hunt,
+};
+
 export class CreatureView {
   private readonly fx = new Map<string, Fx>();
+  /** Huntsmen's rigs by id, and this frame's dt for them. */
+  private readonly hunts = new Map<string, HuntsmanRig>();
+  private dt = 1 / 60;
+  private alpha = 1;
   private readonly shards: Shard[] = [];
   private readonly bursts: Burst[] = [];
   private readonly xf = new Xf();
@@ -472,6 +493,8 @@ export class CreatureView {
   draw(dt: number, clock: number, sim: SimView, back: Graphics, front: Graphics, zoom = 1): void {
     this.herX = sim.player.cx;
     this.zoom = zoom;
+    this.dt = dt;
+    this.alpha = sim.alpha;
     this.trails(back, sim);
     for (const f of this.fx.values()) {
       f.hitT += dt;
@@ -481,6 +504,11 @@ export class CreatureView {
     for (const e of sim.enemies) {
       if (e.kind === 'web') continue;
       const f = this.get(e.id);
+      // The huntsman acts its own death (knocked off its wall, on its back, it fades): its rig, not shards.
+      if (e.kind === 'huntsman') {
+        if (!e.gone) this.huntsman(e, clock, back, front);
+        continue;
+      }
       const big = e.kind === 'oldBurrback';
       if (e.gone) {
         if (big && f.corpse) this.husk(back, f.corpse, 1);
@@ -519,6 +547,25 @@ export class CreatureView {
       this.creature(e, f, sim, clock, back, front);
     }
     this.effects(dt, front);
+  }
+
+  /** The huntsman (render/enemies/huntsman.ts): its own rig in flat colours, its front legs red while it tells and lunges. */
+  private huntsman(e: EnemyState, clock: number, g: Graphics, front: Graphics): void {
+    let rig = this.hunts.get(e.id);
+    if (!rig) {
+      rig = new HuntsmanRig(e.id.length + 3);
+      this.hunts.set(e.id, rig);
+    }
+    drawHuntsman(g, rig.pose(e, this.dt, clock, this.alpha), HUNT_GREY);
+    if (e.mode === 'dead') return;
+    // The shared language: a yellow eye over one aware of her; the tell's red bar draining (beside it: it is tall).
+    const cx = e.x + e.w / 2;
+    if (e.aware > 0) front.circle(cx, e.y - 12, 5).fill({ color: CREATURE.aware });
+    if (e.mode === 'windup' && e.timer > 0) {
+      const of = Math.max(e.timer, e.modeFrames + e.timer);
+      front.rect(cx - 26, e.y - 26, 52, 4).fill({ color: CREATURE.belly, alpha: 0.6 });
+      front.rect(cx - 26, e.y - 26, (52 * e.timer) / of, 4).fill({ color: CREATURE.hunt });
+    }
   }
 
   /**

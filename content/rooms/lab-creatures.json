@@ -159,6 +159,20 @@
       "w": 500,
       "h": 60,
       "kick": false
+    },
+    {
+      "tag": "trunk",
+      "x": 27400,
+      "y": 300,
+      "w": 300,
+      "h": 780
+    },
+    {
+      "tag": "trunk",
+      "x": 28084,
+      "y": 300,
+      "w": 316,
+      "h": 980
     }
   ],
   "oneWays": [],
@@ -231,6 +245,13 @@
       "kind": "wick",
       "x": 26600,
       "y": 880,
+      "spin": 1
+    },
+    {
+      "id": "wick-k",
+      "kind": "wick",
+      "x": 27892,
+      "y": 820,
       "spin": 1
     }
   ],
@@ -374,6 +395,14 @@
       "y": 620,
       "facing": -1,
       "guards": "wick-j"
+    },
+    {
+      "id": "hunt-k",
+      "kind": "huntsman",
+      "x": 27700,
+      "y": 700,
+      "facing": 1,
+      "radius": 220
     }
   ],
   "marks": {
@@ -427,6 +456,11 @@
         "x": 25400,
         "y": 700,
         "text": "J  glide onto a landing a dangler guards"
+      },
+      {
+        "x": 27600,
+        "y": 200,
+        "text": "K  huntsman on the chimney west face: wall-jump up the east face; it flattens (the tell), then springs across. Hold still or cut it as it comes; knocked down it lies open"
       }
     ]
   },

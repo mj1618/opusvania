@@ -794,7 +794,10 @@ class Wood extends RoomBuilder {
             [x - 24, y - 40],
             [x + 24, y - 40],
           ]
-        : [[x, y]];
+        : e.kind === 'huntsman'
+          ? // (A huntsman's `x` is its face: its body is beside it, toward `facing`.)
+            [[x + (e.facing as number) * 22, y]]
+          : [[x, y]];
       for (const [px, py] of probes)
         if (this.solidAt(px, py) || inCap(px, py))
           throw new Error(`${this.data.id}: creature "${e.id}" spawns inside a solid at (${px}, ${py})`);
@@ -919,6 +922,15 @@ class Wood extends RoomBuilder {
       .filter((b) => b <= under + 8 && b >= under - 320);
     const y = roofs.length ? Math.max(...roofs) : under;
     return this.enemy({ id, kind: 'dangler', x, y: y + 8, facing, senses: 'always', ...more });
+  }
+
+  /**
+   * A huntsman on a bark face (src/sim/enemies/huntsman.ts): `x` = the face's x, `y` = the middle of the stretch it
+   * keeps to (`radius` either side), `facing` = into the gap (1: the wall is west of it). It sees her always (the
+   * climbs are dark).
+   */
+  huntsman(id: string, x: number, y: number, facing: 1 | -1, radius: number, more: Json = {}): this {
+    return this.enemy({ id, kind: 'huntsman', x, y, facing, radius, senses: 'always', ...more });
   }
 
   /** A line of carriers (ants) on rails along a floor from x0 to the crack at x1, `n` of them. */
@@ -1749,6 +1761,11 @@ function well(): Json {
   // The gallery's two problems (r9): a burrback on the floor west of the bramble pit, and a lampwing over the bough
   // (v8's leg-3b one: one dive a pass). Woken by the claws.
   r.burrback('burr-gallery', 1010, LAND, -1, 110, { fenced: true, wakes: C });
+  // (r22: the chimney is a fight. A huntsman keeps to the west face's upper half (box 2,572-2,788, its home 300 px from the landing's patch: a hit up there drops
+  // her inside the chimney onto the mouth's floor, never off its west end down leg 1; never level with her on the
+  // landing); woken by the claws like the gallery. It springs across at a climber; one who holds still on the wall
+  // when it flattens is never hit.)
+  r.huntsman('hunt-chimney', CH0, 2680, 1, 80, { wakes: C });
   r.flyer('lampwing', 'wing-gallery', WING_GALLERY[0], WING_GALLERY[1], -1, {
     radius: 160,
     wakes: C,
@@ -2081,6 +2098,11 @@ function elder(): Json {
     [1124, 480],
   ]);
   r.hollow('drop-elder', 500, 512, 'moonShard');
+  // (r22: two huntsmen make the optional hardest climb a fight: leg 1's west face between the floor and the strip
+  // (never level with one standing on the floor), leg 2's west face well over its strip (a blow throws her east, away
+  // from the thorns, toward the rest; on the east face a hit threw her into thorn-e1).
+  r.huntsman('hunt-elder-1', 768, 2210, 1, 110);
+  r.huntsman('hunt-elder-2', 768, 1420, 1, 90);
   r.place('in', 2300, 2496);
   r.place('top', 700, 512);
   r.place('plug', 2400, 1152);
