@@ -93,3 +93,16 @@ describe('the cellar to the fork, the way a first-timer tries it (r21)', () => {
     expect(s.room).toBe('cn-cellar');
   });
 });
+
+describe('the first cage answers a cut from where a walk up to it stops (r21)', () => {
+  it('standing 124 px off, facing it, a plain cut lands', () => {
+    const s = at('cn-hub', 6176, 1600);
+    s.enemies.length = 0;
+    run(s, ActionBit.right, 1);
+    run(s, 0, 6);
+    const ev: SimEvent[] = [];
+    run(s, ActionBit.attack, 2, ev);
+    run(s, 0, 16, ev);
+    expect(ev.some((q) => q.type === 'lureHit' && q.id === 'trap-crossing')).toBe(true);
+  });
+});
