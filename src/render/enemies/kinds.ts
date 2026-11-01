@@ -7,11 +7,12 @@
  * - `moth`: the lampwing's art (render/enemies/lampwing.ts).
  * - `spider`: Lanternroot's pieces (render/lantern/creatures.ts: danglers, webs and their weavers, the Gloamweaver,
  *   the Weaver, the mantis), built in a Lanternroot room or a wood room with `art.pieces`.
+ * - `jumper`: the jumping spider's own rig (render/enemies/jumper.ts), in every painted wood or Lanternroot room.
  * - Greybox rooms draw every kind as its box (render/greybox/creatures.ts).
  */
 import type { EnemyKind } from '../../sim/scene';
 
-export type CreatureArt = 'beetle' | 'moth' | 'spider' | 'greybox';
+export type CreatureArt = 'beetle' | 'moth' | 'spider' | 'greybox' | 'jumper';
 
 export interface LookKey {
   kit: 'grove' | 'wood' | 'lanternroot';
@@ -44,6 +45,7 @@ export function creatureArt(kind: EnemyKind, look: LookKey): CreatureArt | null 
   if (look.kit === 'grove') return kind === 'burrback' ? 'beetle' : kind === 'lampwing' ? 'moth' : null;
   if (kind in BEETLE_SCALE) return 'beetle';
   if (kind === 'lampwing' || kind === 'hawker') return 'moth';
+  if (kind === 'jumper') return 'jumper';
   if (look.pieces && SPIDER_KINDS.has(kind)) return 'spider';
   return null;
 }

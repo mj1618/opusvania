@@ -159,6 +159,13 @@
       "w": 500,
       "h": 60,
       "kick": false
+    },
+    {
+      "tag": "ledge",
+      "x": 27500,
+      "y": 1120,
+      "w": 360,
+      "h": 160
     }
   ],
   "oneWays": [],
@@ -231,6 +238,13 @@
       "kind": "wick",
       "x": 26600,
       "y": 880,
+      "spin": 1
+    },
+    {
+      "id": "wick-k",
+      "kind": "wick",
+      "x": 28100,
+      "y": 1060,
       "spin": 1
     }
   ],
@@ -374,6 +388,14 @@
       "y": 620,
       "facing": -1,
       "guards": "wick-j"
+    },
+    {
+      "id": "jump-k",
+      "kind": "jumper",
+      "x": 28450,
+      "y": 1280,
+      "facing": -1,
+      "guards": "wick-k"
     }
   ],
   "marks": {
@@ -427,6 +449,11 @@
         "x": 25400,
         "y": 700,
         "text": "J  glide onto a landing a dangler guards"
+      },
+      {
+        "x": 28150,
+        "y": 760,
+        "text": "K  jumping spider: it keeps its distance, crouches (the tell) and pounces where you stood; side-step and cut it open on landing, or cut it out of the air; cut on the ground it hops back"
       }
     ]
   },

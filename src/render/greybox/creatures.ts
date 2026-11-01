@@ -44,6 +44,8 @@ export const CREATURE = {
   hawker: 0x5f6e86,
   weaver: 0x6e6280,
   dangler: 0x6a6478,
+  /** The jumping spider: a dark brown body, pale eye discs (its read), pale palps. */
+  jumper: 0x6e5a4c,
   other: 0x6b7385,
   belly: 0x2e2a2c,
   /** The danger part at rest, and in a tell / dive / brace (the hunt colour, as the boss view's). */
@@ -265,6 +267,8 @@ function bodyColor(kind: string): number {
       return CREATURE.weaver;
     case 'dangler':
       return CREATURE.dangler;
+    case 'jumper':
+      return CREATURE.jumper;
     default:
       return CREATURE.other;
   }
@@ -584,6 +588,7 @@ export class CreatureView {
       if (white) front.rect(e.x, e.y, e.w, e.h).fill({ color: CREATURE.flash, alpha: 0.9 });
     } else if (kind === 'dangler') this.dangler(e, clock, back, front, sq, white);
     else if (kind === 'carrier') this.carrier(e, clock, back, front, sq, white);
+    else if (kind === 'jumper') this.jumper(e, clock, back, front, sq, white);
     else if (kind === 'weaver') this.spider(e, clock, back, front, sq, white, false);
     else this.generic(e, back, front, sq, white);
 
@@ -1203,6 +1208,72 @@ export class CreatureView {
   }
 
   /** Any other kind: a filled body with its danger side marked. */
+  /**
+   * A jumping spider: a round abdomen and a blocky head, two big pale eye discs with dark pupils toward her, short
+   * legs. Its tell crouches it low and red, with the pounce's arc dashed to where it will land (it follows her until
+   * the last frames); in the leap it is red and stretched; open (a miss, knocked down) it is the open green, on its
+   * back when stunned.
+   */
+  private jumper(
+    e: EnemyState,
+    clock: number,
+    back: Graphics,
+    front: Graphics,
+    sq: number,
+    white: boolean,
+  ): void {
+    const fy = e.y + e.h;
+    const cx = e.x + e.w / 2;
+    const dir = e.facing;
+    const tell = e.mode === 'windup';
+    const leap = e.mode === 'charge';
+    const open = e.mode === 'recover';
+    const onBack = open && e.stunned;
+    const crouch = tell ? 6 : 0;
+    const by = fy - 13 + crouch;
+    const body = white ? CREATURE.flash : open ? mix(CREATURE.jumper, CREATURE.open, 0.45) : CREATURE.jumper;
+    // Legs: four a side, short and splayed; tucked up in a leap.
+    for (let k = 0; k < 4; k++) {
+      const hx = cx + (6 - k * 4) * dir;
+      const reach = [26, 16, -10, -22][k] as number;
+      const lift = leap ? -6 : onBack ? -22 : 0;
+      const kx = hx + reach * 0.55 * dir;
+      back
+        .moveTo(hx, by + 2)
+        .lineTo(kx, by - 8 + (onBack ? -6 : 0))
+        .lineTo(hx + reach * dir, fy + lift + Math.sin(clock * 14 + k) * (onBack ? 4 : 0))
+        .stroke({ color: CREATURE.belly, width: 2.5 });
+    }
+    const s = 1 + (SQUASH.x - 1) * sq;
+    back.ellipse(cx - 12 * dir, by - 2, 13 * s, 11 / s).fill({ color: body });
+    back.roundRect(cx - 4 + (dir > 0 ? 0 : -14), by - 13, 22, 19, 7).fill({ color: body });
+    // The eyes: two big pale discs on the face, pupils on her.
+    const look = Math.sign(this.herX - cx) || dir;
+    for (let k = 0; k < 2; k++) {
+      const ex = cx + (14 - k * 5) * dir;
+      const ey = by - 5;
+      front.circle(ex, ey, k === 0 ? 4.6 : 3.8).fill({ color: tell || leap ? CREATURE.hunt : CREATURE.eye });
+      front.circle(ex + look * 1.2, ey, k === 0 ? 2.4 : 2).fill({ color: CREATURE.belly });
+    }
+    // Pale palps.
+    front.circle(cx + 20 * dir, by + 4, 2.2).fill({ color: CREATURE.eye });
+    // The danger: crouched red, and the arc it will fly.
+    if (tell || leap) {
+      front
+        .ellipse(cx, by + 2, 24, 12)
+        .stroke({ color: CREATURE.hunt, width: 3, alpha: tell ? 0.5 + 0.5 * Math.sin(clock * 30) : 0.9 });
+      const g = tuning.jumper.gravity;
+      const n = Math.max(2, e.span);
+      for (let k = 2; k < n; k += 2) {
+        const x = e.fromX + e.pushX * k;
+        const y = e.fromY + e.pushY * k + (g * k * k) / 2 - e.h / 2;
+        front.circle(x, y, 2.2).fill({ color: CREATURE.hunt, alpha: tell ? 0.55 : 0.25 });
+      }
+      front.circle(e.targetX, e.targetY - 3, 7).stroke({ color: CREATURE.hunt, width: 2 });
+    }
+    if (white) back.ellipse(cx, by - 4, 26, 14).fill({ color: CREATURE.flash, alpha: 0.6 });
+  }
+
   private generic(e: EnemyState, back: Graphics, front: Graphics, sq: number, white: boolean): void {
     const xf = this.xf.set(e, 'centre', 1 + (SQUASH.x - 1) * sq, 1 + (SQUASH.y - 1) * sq);
     const pts = xf.map([0, 0, e.w, 0, e.w, e.h, 0, e.h]);

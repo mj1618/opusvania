@@ -364,6 +364,11 @@ export const AUDIO = {
     slamDb: -18,
     wallDb: -22,
     skitterDb: -42,
+    /** The jumping spider (route-play.ts): its step-hops' scritch, the tell's ticks, the leap's whip, the landing. */
+    jumpScritchDb: -36,
+    jumpTickDb: -27,
+    jumpWhipDb: -25,
+    jumpThudDb: -24,
     /** Ants are heard within this many px of her; a skitter about this often per second while near. */
     skitterPx: 520,
     skitterRate: 2.2,

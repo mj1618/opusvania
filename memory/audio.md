@@ -365,3 +365,9 @@ Clips and numbers: `playtest-reports/canopy-audio-r15/README.md`. Tests: `tests/
   (`AUDIO.combat.shieldDb`) and a second clang a fifth up (+700 cents) 0.05 s after (route-play).
 - A beetle laid open by a ram that missed (`enemyRecover`, not `touch`): a long breath, `catchBreath` -900 cents. A
   lampwing's tell (`enemyNotice`): three `buzzUp` at 0, 0.45 and 0.75 of its frames, each higher and louder.
+
+## The jumping spider (r22, route-play.ts; levels `AUDIO.creatures.jump*`)
+Reused bakes, no new recipe: step-hops = `skitter` +300 cents (a hop back / over louder, with a small `whoosh` +900);
+the tell = a `tick` on each of `tuning.jumper.tellBeats` (rising +600 .. +1350 cents: the count you hear, as its eyes
+flash); the leap = `whoosh` +1100 (a whip); `enemyLand` = `thumpWood` +350 (a pounce loudest, a hop back softest) and
+a `skitter` on a missed pounce's skid. Not yet heard by Matt.

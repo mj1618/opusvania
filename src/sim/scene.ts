@@ -102,7 +102,8 @@ export type EnemyKind =
   | 'juvenileBurrback'
   | 'carrier'
   | 'gloamweaver'
-  | 'mantis';
+  | 'mantis'
+  | 'jumper';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is

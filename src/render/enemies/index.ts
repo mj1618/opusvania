@@ -31,6 +31,7 @@ import {
   topHit,
 } from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
+import { drawJumper, JUMP, JumperRig, loadJumpColors } from './jumper';
 import { keeperAngry, type SweepRead, sweepRead } from './keeper-tells';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
@@ -170,6 +171,10 @@ export class EnemyRenderer {
     len: number;
   }> = [];
   private readonly lamps: (LampRig | undefined)[] = [];
+  /** Jumping spiders' rigs (jumper.ts), by enemy index. */
+  private readonly jumpers: (JumperRig | undefined)[] = [];
+  /** Live knobs of the jumping spider (`__enemies.jump`; `recolor()` after a colour edit). */
+  readonly jump = JUMP;
   private readonly scaleC: [number, number, number] = [0, 0, 0];
   private readonly zw: [number, number, number] = [0, 1, 0];
   /** Enemy id -> its index in `sim.enemies`, for the events. */
@@ -213,6 +218,7 @@ export class EnemyRenderer {
 
   recolor(): void {
     loadColors();
+    loadJumpColors();
   }
 
   private rand(): number {
@@ -771,6 +777,60 @@ export class EnemyRenderer {
   }
 
   /**
+   * A jumping spider (jumper.ts): its rig, its dust (a kick off the ground as it leaps, a puff and a skid as it
+   * lands), then the body. Its hit flash and death are the rig's; generic hit debris is the hit-feel layer's.
+   */
+  private jumper(
+    i: number,
+    e: Readonly<EnemyState>,
+    dt: number,
+    clock: number,
+    cam: CameraView,
+    sim: SimView,
+    halfW: number,
+    halfH: number,
+  ): boolean {
+    let rig = this.jumpers[i];
+    if (!rig) {
+      rig = new JumperRig(i);
+      this.jumpers[i] = rig;
+    }
+    if (e.gone) return false;
+    rig.update(e, sim.frame, sim.alpha, dt, clock, sim.player.cx, sim.player.cy - 20);
+    const fd = e.facing < 0 ? -1 : 1;
+    if (rig.leapNew) {
+      this.puffs(rig.x - fd * 14, rig.ground, -fd, e.mode === 'charge' ? 3 : 2, 0.7);
+      for (let k = 0; k < 3; k++)
+        this.dust(rig.x - fd * (10 + k * 8), rig.ground, -fd * (40 + this.rand() * 50), 1.2, 0.8);
+    }
+    if (rig.landNew) {
+      const n = Math.round(2 + 3 * rig.landK);
+      this.puffs(rig.x, rig.ground, 0, n, 0.6 + 0.4 * rig.landK);
+      for (let k = 0; k < n; k++)
+        this.dust(
+          rig.x + (k - n / 2) * 9,
+          rig.ground,
+          (k - n / 2) * 30 + fd * 30,
+          1.2,
+          0.9 * rig.landK + 0.3,
+        );
+    }
+    if (rig.skid) {
+      rig.dustT += dt;
+      while (rig.dustT > 0.04) {
+        rig.dustT -= 0.04;
+        this.dust(rig.x + fd * (16 + this.rand() * 10), rig.ground, fd * (30 + this.rand() * 50), 1.3, 0.9);
+      }
+    }
+    if (Math.abs(rig.x - cam.x) > halfW || Math.abs(rig.y - cam.y) > halfH) return false;
+    const v0 = this.painter.vertexCount;
+    const ok = drawJumper(this.painter, rig, e as EnemyState, clock) > 0;
+    // (Drawn at its box's size: the rig is laid out at 1x for a 44 px box.)
+    this.painter.scaleFrom(v0, rig.x, rig.y, JUMP.scale);
+    return ok;
+  }
+
+  /**
    * The old burrback's own moves (`BOSS`, memory/creatures.md): the slam lands in a burst of dust across its whole
    * width, and its wave runs along the floor each way as a travelling crest of dust (the front she must jump).
    */
@@ -896,6 +956,10 @@ export class EnemyRenderer {
       let e = e0.arrive > 0 ? arrivalView(e0, sim, art === 'beetle') : e0;
       if (art === 'moth') {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
+        continue;
+      }
+      if (art === 'jumper') {
+        if (this.jumper(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
       }
       if (art !== 'beetle') continue;

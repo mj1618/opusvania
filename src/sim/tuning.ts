@@ -1378,6 +1378,90 @@ export const defaultTuning = withVariants({
     valueFinisher: 0,
   },
   /**
+   * The jumping spider (canopy-r22-creatures.md, src/sim/enemies/jumper.ts, memory/enemies.md "The jumper"): a sight
+   * hunter that keeps its distance in step-hops, crouches (the tell) and pounces on a ballistic arc to where she stood.
+   * A miss leaves it open on landing; a cut on the ground sends it hopping back; a cut in the air knocks it down.
+   * px, px/f, px/f², frames.
+   */
+  jumper: {
+    width: 50,
+    height: 34,
+    hp: 3,
+    /** It notices her lit within this far sideways and `noticeDyPx` up or down, with a clear line; it locks on. */
+    noticePx: 520,
+    noticeDyPx: 360,
+    /** Frames from the notice before its first tell (the eyes lock on: she sees it has seen her). */
+    noticeFrames: 30,
+    /** Out of sight this long (and not roused) it gives her up; past `losePx` sideways at once. */
+    lostFrames: 150,
+    losePx: 760,
+    /** A cut makes it know her whatever the light, for this long. */
+    rouseFrames: 300,
+    /** The distance it keeps (box centre to box centre, sideways) while it waits to pounce. */
+    keepMinPx: 200,
+    keepMaxPx: 280,
+    /** One step-hop: this far over this long, then a beat before the next decision. */
+    hopPx: 30,
+    hopFrames: 9,
+    hopGapFrames: 7,
+    /** Idle: a small hop now and then (every `idleMin..idleMax` frames), back toward home past `homePx`. */
+    idleMin: 70,
+    idleMax: 160,
+    homePx: 60,
+    /** The tell: a crouch this long; the landing follows her until `lockFrames` before the leap, then it is set. */
+    windupFrames: 26,
+    lockFrames: 10,
+    /** The tell's count, as fractions of it: the eyes flare and a tick sounds on each (render, audio). */
+    tellBeats: [0, 0.42, 0.7, 0.88],
+    /**
+     * The pounce: from `pounceMinPx` to `pounceMaxPx` sideways, up to `leapUpPx` up or `leapDownPx` down. (0: one who
+     * stands at it and mashes is pounced on where she stands, after the same tell.)
+     */
+    pounceMinPx: 0,
+    pounceMaxPx: 380,
+    leapUpPx: 280,
+    leapDownPx: 440,
+    /** Its flight lasts `flightBase` + distance / `flightPerPx` frames (higher arcs tried if that one is blocked). */
+    flightBase: 10,
+    flightPerPx: 26,
+    gravity: 1,
+    maxFall: 14,
+    /** After a pounce it may tell again `cdMin..cdMax` frames after it is up again (not a metronome). */
+    cdMin: 46,
+    cdMax: 96,
+    /** A missed pounce: open (harmless, every cut lands) this long on landing, sliding `skidPx` on. */
+    recoverFrames: 38,
+    skidPx: 14,
+    /** A skid on the ground (a missed pounce, a dead body) slows by this, px/f². */
+    skidDecay: 0.7,
+    /** A pounce that hit her: it lands and gathers itself this long, then hops back. */
+    touchRecoverFrames: 14,
+    /** A cut in the air knocks it down: it falls and lies open this long. */
+    stunFrames: 72,
+    /** A cut on the ground: it flinches this long, then hops back up to `backPx` away over `backFrames`. */
+    hurtFrames: 8,
+    hurtSafeFrames: 8,
+    backPx: 140,
+    backFrames: 20,
+    /** Cornered (less than `backMinPx` of ground behind), it hops over her instead, up to `overPx`. */
+    backMinPx: 60,
+    overPx: 300,
+    overFrames: 26,
+    /** Rushed (she is within `rushPx`), it hops back unasked, at most every `rushCdFrames`. */
+    rushPx: 96,
+    rushCdFrames: 110,
+    /** After a hop back it may tell again this soon: the counter (the dance). */
+    counterFrames: 8,
+    /** No attack lands within `invulnFrames + rehitGapFrames` of hurting her (the burrback's rule). */
+    rehitGapFrames: 10,
+    /** A blow's shove (px/f, x the slash's knockback) on a body in the air, and a dead one's throw. */
+    airKnock: 0.9,
+    deathKnock: 1.4,
+    deathLift: 7,
+    deadFrames: 90,
+    contactDamage: 1,
+  },
+  /**
    * The carriers (ants; area1-plan-r5 §2.1, src/sim/enemies/carrier.ts): scavengers on a trail from under a
    * lamp to a crack. `speed` px/f along the trail; `underFrames` in the crack before the next trip; one on
    * the trail ahead of her (`noticePx`, her feet within `trailYPx` of its) tells `noticeFrames` and bites
