@@ -1,4 +1,39 @@
-# Handoff: the Canopy loop, stopped after round 21 (2026-11-01)
+# Handoff: the Canopy loop, stopped after round 22 (2026-11-02)
+
+## Round 22: creature variety, hit feel, and fights you can't skip
+Matt: "there could be more variety of enemies, and attacking them could be more satisfying… currently the enemies are
+too boring and monotonous", then mid-round: "check with Ori, it has a good way of forcing you to deal with enemies. I
+still feel like we can speedrun our level too much." Research, numbers and plan: `docs/design/levels/reviews/canopy-r22-creatures.md`.
+- **Why it was monotonous:** about 50 of 74 regular creatures were the burrback rig at three sizes and 18 the moth
+  art. The references' first areas have 8–20 kinds, and every one has a ranged creature, a leaper and a wall crawler;
+  we had none.
+- **New kinds** (sim + rig + sound + tests; `memory/enemies.md`, `memory/enemies-render.md`):
+  - **bombardier** (ranged): lobs a burst of 3 boiling droplets after a 44 f tell; **a slash bats a droplet back**
+    and one that hits it lays it open; up close it sprays a short cone (go behind or above). `state.shots` (state v23).
+  - **jumper** (jumping spider, leaper): keeps 200–280 px, 26 f crouch, ballistic pounce that always lands on ground,
+    open on a miss, hops back from a ground cut, knocked down if cut in the air.
+  - **huntsman** (wall runner): scuttles its bark face, tells on her projected climb height, lunges across, clings
+    to the far wall or falls open. On the well chimney and the Elder.
+- **Re-looks:** carriers are ants carrying moth wings (`ant.ts`), hawkers are dragonflies (`dragonfly.ts`).
+- **Readability pass:** everything new is drawn bigger with a value break and its own signature colour; the jumper is
+  a velvet-black Phidippus with white marks; the juvenile is drawn at 0.85 with a paler young palette.
+  `npx tsx tools/bestiary.ts --url <dev>` makes per-kind close-ups and play-zoom lineups (`shots/bestiary/`).
+- **Hit feel** (`hitfx.ts`, `flung.ts`, `memory/feel.md`): a near-white creature flash held 5 frames (past her
+  crescent), a cut streak, ichor thrown along the blow that lands and splats, a kill ring, juveniles batted away as
+  corpses, a finisher-kill zoom punch, a wetter kill sound. Slash timings, reach, pogo, hitstop unchanged.
+- **Nests (Ori's rule, `memory/canopy.md` v22):** three critical-path rooms hold the way on behind a root gate until
+  every creature of the nest is dead (shared `sets` flag); the way back stays open; cleared stays cleared.
+  Hub (bombardier + ants, `cn-nest-hub`), trunk tier 3 (jumper + juveniles, `cn-nest-trunk`), fork (two
+  bombardiers + jumper, `cn-nest-fork`). Never put a creature that can leave the room alive (dangler, huntsman, a
+  lamp-guarder) in a nest: the gate would never open.
+- **Open after r22:**
+  - No human has played it. Ask Matt whether the new creatures feel different and whether hits feel better.
+  - A fourth nest later (bower ambush or spire), and a huntsman nest needs a "can't leave" rule first.
+  - The bot route planner treats a nest gate as a wall: speedrunner numbers stop at the gates.
+  - The speedrunner baseline in the r22 doc's first table had no `--goal` (the bot left by the nearest door); with
+    `--goal` it already killed 1–5 a room.
+  - The ants are still small beside her; the jumper's air-cut may be too generous; the juvenile half sinks into moss.
+  - Ori's Bash on creatures (fling off a droplet or a lampwing) is the next big verb idea.
 
 ## Round 21: the first five minutes (after Matt: "didn't have to deal with a single enemy")
 Deployed. Details are in `memory/canopy.md` v21.

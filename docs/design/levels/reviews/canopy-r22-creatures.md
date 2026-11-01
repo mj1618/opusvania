@@ -67,7 +67,7 @@ room the same pair as the room before it.
 
 ## Matt, mid-round: "check with Ori, it has a good way of forcing you to deal with enemies. We can still speedrun our level too much"
 
-**Ours now (speedrunner persona, headless, every ability, 2 runs a room):** hatch, hub, trunk, well, limbs, fork and
+**Ours now (speedrunner persona, headless, every ability, 2 runs a room; correction after the nests pass: these runs had no `--goal`, so the bot often left by the nearest door; aimed at the next room it already killed 1–5 a room. The point stands for a human who runs past):** hatch, hub, trunk, well, limbs, fork and
 bower are crossed with **0 hits and 0 kills**; only the Grove (3) and the tunnel (3) touch her. Nothing on the way
 to the Keeper needs a kill.
 
@@ -95,3 +95,9 @@ to the Keeper needs a kill.
 3. **The bar:** the speedrunner persona takes hits or must kill in every critical room, and the gates make it kill
    in 3–4. Re-run this table after the pass.
 4. **Later (not this round):** Ori's Bash on creatures: fling off a bombardier's droplet or a lampwing's light.
+
+## What was built (end of round 22)
+Three nests (hub: bombardier + ants; trunk tier 3: jumper + juveniles; fork: two bombardiers + jumper), each holding
+the way on behind a root gate until its creatures are dead (`memory/canopy.md` v22). With a goal set, the speedrunner
+can no longer pass the trunk or the fork without the kill. A creature that can leave alive (dangler, huntsman) is
+never in a nest.
