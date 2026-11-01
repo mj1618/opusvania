@@ -51,6 +51,10 @@ export const PLAY_SOUNDS = {
   rear: 3,
   slam: 2,
   skitter: 6,
+  // The huntsman (r22): its scuttle's patter, the held breath of its tell, the thwip of its lunge.
+  patter: 4,
+  huntTell: 3,
+  thwip: 4,
 } as const;
 export type PlaySoundId = keyof typeof PLAY_SOUNDS;
 
@@ -809,6 +813,62 @@ export const PLAY_RECIPES: Record<PlaySoundId, Recipe> = {
     return normalize([x]);
   },
   /** Ants: a tiny skitter of three to six feet on bark. */
+  /**
+   * A huntsman's burst along the bark: a dry rapid patter, eight feet ticking on wood (~40 a second), a little
+   * hollow knock under the first ones, gone in a fifth of a second. Drier and lower than the ants' skitter.
+   */
+  patter(sr, r) {
+    const d = 0.2;
+    const x = new Float32Array(len(sr, d));
+    let t = 0.002;
+    let k = 0;
+    while (t < d - 0.02) {
+      const a = (1 - t / d) * (0.55 + 0.45 * r());
+      modes(
+        x,
+        sr,
+        [
+          { f: 1500 + r() * 900, tau: 0.0012, amp: a, ph: r() },
+          { f: 3100 + r() * 700, tau: 0.0006, amp: a * 0.4, ph: r() },
+          ...(k < 3 ? [{ f: 420 + r() * 80, tau: 0.006, amp: a * 0.5, ph: r() }] : []),
+        ],
+        at(sr, t),
+        0.0003,
+      );
+      t += 0.018 + r() * 0.016;
+      k++;
+    }
+    return normalize([x]);
+  },
+  /**
+   * The tell (r22, 24 frames: 0.4 s): it flattens to the bark. A held breath drawn in (band-passed air rising) over a
+   * slow creak of its joints tightening, cut dead at the end: the stillness before the spring.
+   */
+  huntTell(sr, r) {
+    const d = 0.4;
+    const n = len(sr, d);
+    const air = pink(n, r);
+    biquad(air, sr, 'bandpass', (i) => exp(500, 1300, i / sr / d), 2.2);
+    biquad(air, sr, 'lowpass', 2600);
+    shape(air, sr, (t) => (t < d ? (t / d) ** 1.6 * (t > d - 0.012 ? (d - t) / 0.012 : 1) : 0));
+    const creak = creakOf(sr, r, d - 0.04, 260 + r() * 30, 0.06, 0.022);
+    return blend([
+      [air, 0.7],
+      [creak, 0.8],
+    ]);
+  },
+  /** The lunge: a thwip, air whipped past a taut leg (noise swept 700 Hz -> 3.4 kHz in 70 ms) with a tick at its head. */
+  thwip(sr, r) {
+    const d = 0.16;
+    const n = len(sr, d);
+    const whip = swept(sr, r, d, (t) => exp(700, 3400, t / 0.07), 2.5, arEnv(0.004, 0.02, 0.07, d));
+    const tone = glide(sr, d, 900 + r() * 100, 2400, 0.07, arEnv(0.003, 0.01, 0.05, d));
+    return blend([
+      [whip, 1],
+      [tone, 0.22],
+      [click(sr, r, n, 2600, 0.002), 0.35],
+    ]);
+  },
   skitter(sr, r) {
     const d = 0.09;
     const x = new Float32Array(len(sr, d));

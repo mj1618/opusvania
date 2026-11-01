@@ -9,7 +9,8 @@
  * - `dragonfly`: the hawkers' own rig (render/enemies/dragonfly.ts; until r22 the lampwing's art: a friendly moth).
  * - `bombardier`: its own rig (render/enemies/bombardier.ts), in every painted room.
  * - `spider`: Lanternroot's pieces (render/lantern/creatures.ts: danglers, webs and their weavers, the Gloamweaver,
- *   the Weaver, the mantis), built in a Lanternroot room or a wood room with `art.pieces`.
+ *   the Weaver, the mantis, the huntsman's rig from render/enemies/huntsman.ts), built in a Lanternroot room or a wood
+ *   room with `art.pieces`.
  * - Greybox rooms draw every kind as its box (render/greybox/creatures.ts).
  */
 import type { EnemyKind } from '../../sim/scene';
@@ -37,6 +38,7 @@ const SPIDER_KINDS: ReadonlySet<string> = new Set([
   'gloamweaver',
   'weaverBoss',
   'mantis',
+  'huntsman',
 ]);
 
 /** The renderer that draws `kind` in a room of this look, or null if nothing would draw it. */

@@ -33,6 +33,42 @@ the masher and the reader)**, `lampwing.test.ts`, `lampwing-pilot.test.ts`. Both
 - No `Math.sin` in the sim: the lampwing's bob is a two-parabola wave (`wave()`), its wander a hash
   of its id (`mix`), like the burrback's rests.
 
+## The huntsman (`kind: 'huntsman'`, src/sim/enemies/huntsman.ts, row `tuning.huntsman`; Canopy r22)
+A wall runner (HK's Tiktik slot): a flat long-legged spider on a bark face that turns a wall-jump climb into a fight.
+Tests: `tests/unit/huntsman.test.ts` (face, tell count, cling, drop + open, deflect, evade, dark, re-hit gap, climb
+pilots, sound), `CREATURE_CLIMBS` in tools/levels/climbs.ts. Lab: `?room=lab-creatures` station K (x 27,400-28,400).
+- **Spawn**: `x` = the face's x (the wall's surface), `y` = the middle of its stretch (box centre), `radius` = half
+  the stretch (clamped to where the face really goes, `init`), `facing` = into the gap. Scene check: the face is solid
+  behind its box. Box 44 x 56, 3 hp. Canopy helper `Wood.huntsman(id, x, y, facing, radius)` (senses `always`).
+- **On its face** (`side` = the wall's side, -1 / 1; `facing` = -side): bursts (`skitter`, 7 px/f, 8-18 f, an
+  `enemyRun` each) and pauses (40-90 f wandering; 10-22 f once it hunts her, `noticePx` 560), toward her height.
+  `lookY` = its head along the face.
+- **The tell** (`windup` 24 f, `enemyWindup`): she is in front of it within `reachPx` 250 across the gap and level
+  (`levelPx` 72) now, **or will be** (`pushY` = her vertical speed smoothed by `trackK`, projected tell + 12 frames,
+  capped `aheadMaxPx` 140). Without the projection it told at a kick-out and a climber was 180 px higher by the
+  spring: it never hit anyone climbing.
+- **The lunge** (`charge`, `enemyCharge`, live `lungeFrames` 24 at 13 px/f, `lungeGravity` 0.15): at her height led
+  by `pushY` (lead 1), never steeper than 0.8 up / **0.4 down** (`lungeSlopeDown`: a steep down-lunge hit climbers at
+  a chimney's foot and threw them off it, down leg 1 of the well), the slope from how far **out in front** she is (one
+  on its own face is leapt flat across, not down onto). **Only the lunge hurts**: on its face it is harmless to touch.
+- A wall in its flight (charge or the fall after): it clings (`perch` 26 f, `enemyStall` cause `wall`); that face
+  is its stretch now (`homeX/Y` move), and no tell for clingFrames + tell. None: it falls, lands on its back
+  (`recover` 80 f, `enemyRecover` cause `spent`, open, harmless), then `run`s along the ground toward its home and
+  `climb`s the first wall it meets (its own stretch if that wall is its spawn face); a brink turns it; 360 f lost
+  and it `leave`s.
+- **Blows**: on its face it holds (`hurt` 10), then `flee`s 120 px along it away from her (`enemyRun`). In the air
+  (a cut that meets the lunge: the deflect) or knocked off by a throw-cut it tumbles (`broken`: no cling) and lands
+  open. Lying open a cut bats it only 0.4x (a chain reaches it). Dead: off its wall along the blow, falls, lies.
+- **Re-hit**: its touch hurt her: it falls off her (open) and `strikeCd` = invuln 70 + 10 - tell: no lunge lands
+  sooner than 80 frames. A cling never tells at once (point-blank after a scramble up beside her).
+- **Fairness** (creatures.md rule 7), measured with tools/levels/climbs.ts (`wary` plan: no kick while any creature
+  tells or strikes): a blind climber past one takes at most 1 hit and still tops the leg (well-2 ~6-12 of 12 runs,
+  elder 1-5 of 12); a wary hand on the far face takes 0. On its own face a wary bot still rises into it mid-kick (one
+  hit): the far face is the safe line. climbs.ts's retry now walks back to the start x after a knock.
+- **Placed** (r22): `hunt-chimney` (cn-well, the chimney's west face, box 2,572-2,788, woken by the claws; its home
+  300 px from `p-landing`: canopy-r20.test), `hunt-elder-1` (the Elder's leg 1, west face, never level with the
+  floor), `hunt-elder-2` (leg 2, **west** face: on the east face a hit threw her into thorn-e1).
+
 ## Step order (matters)
 re-form if a fade just ended → `updatePlayer` (her slash is resolved inside it, against where the
 enemies stood) → `updateEnemies` (move, modes, flinch; returns who touches her) → contact →

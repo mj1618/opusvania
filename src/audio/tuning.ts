@@ -376,6 +376,10 @@ export const AUDIO = {
     bombPopDb: -27,
     bombHissDb: -31,
     bombPingDb: -15,
+    /** The huntsman (r22): a burst's patter, its tell, its lunge. */
+    patterDb: -34,
+    huntTellDb: -24,
+    thwipDb: -22,
     /** Ants are heard within this many px of her; a skitter about this often per second while near. */
     skitterPx: 520,
     skitterRate: 2.2,

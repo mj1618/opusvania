@@ -63,6 +63,11 @@ export interface Plan {
   wait?: number;
   /** Start x for this plan (one for every start: she stands there, a rest's lip). */
   at?: number;
+  /**
+   * She reads tells (with the creatures in, r22): while any creature of the room is in its tell or its strike she
+   * kicks no more and slides on the wall she holds (a huntsman leaps where she was going: holding still dodges it).
+   */
+  wary?: boolean;
   /** Creatures (ids) she must have killed by the end (with the creatures in). */
   kills?: string[];
 }
@@ -153,6 +158,8 @@ export function runClimb(
   let retries = 2;
   let hopUp = false;
   let hopF = 0;
+  /** Walking back to her start x on the rest after a knock (then the climb again). */
+  let home = false;
   for (let k = 0; k < STAND + 1800; k++) {
     const p = s.player;
     const f = k - STAND;
@@ -173,6 +180,14 @@ export function runClimb(
         hopF = f;
       }
       if (hops === 0) touchK = -1;
+    } else if (f >= 0 && home) {
+      const fx0 = p.x + p.w / 2;
+      const to = plan.at ?? x;
+      if (Math.abs(fx0 - to) > 6) m = DIR(to - fx0);
+      else {
+        home = false;
+        jumpF = jumpAt === undefined ? f + 1 : -1;
+      }
     } else if (f >= 0) {
       const fx0 = p.x + p.w / 2;
       if (jumpF < 0 && plan.hops && jumpAt === undefined) jumpF = f;
@@ -200,7 +215,9 @@ export function runClimb(
         }
         // (A creature's knock back onto the rest she started from is not the end: she climbs again.)
         if (!pass && o.creatures && fy === c.y && retries-- > 0) {
-          jumpF = jumpAt === undefined ? f + 1 : -1;
+          // (r22: a huntsman's hit can throw her along the rest, away from the foot: she walks back to her start.)
+          home = true;
+          jumpF = -1;
           leg = 0;
           h = plan.first;
           touchK = -1;
@@ -212,7 +229,8 @@ export function runClimb(
       if (p.grounded) m |= air >= 0 && air < 20 && !plan.drop ? J : 0;
       else if (air >= (plan.away ?? 0) && (p.mode === 'wallSlide' || p.wallDir === h)) {
         if (touchK < 0) touchK = f;
-        if (f - touchK >= delay && !(prev & J)) {
+        const tell = plan.wary && s.enemies.some((e) => e.mode === 'windup' || e.mode === 'charge');
+        if (f - touchK >= delay && !(prev & J) && !tell) {
           const fy = Math.round(p.y + p.h);
           const lg = plan.legs[leg] ?? { mode: 'zig' };
           let across = true;
@@ -487,13 +505,42 @@ export const CREATURE_CLIMBS: Array<{
   maxHits: number;
   of: number;
 }> = [
-  // (r9: leg 3b and its lampwing are gone, the gallery's two creatures sit off the climbs: leg 2 with the room's
-  // creatures in is untouched from every start at every delay, and the Spire's foot with its hawker at most one hit.)
+  // (r9: leg 3b and its lampwing are gone, the gallery's two creatures sit off the climbs, and the Spire's foot with
+  // its hawker at most one hit.)
+  // (r22: the huntsmen. A blind climb past one takes at most one hit and still tops the leg, from every start at every
+  // delay; a wary hand (it holds on the wall when one flattens) on the far face is never hit.)
   {
     climb: 'well-2',
     plan: { name: 'E then W', first: 1, legs: [{ mode: 'face', until: 3200 }, { mode: 'face' }] },
     delays: [0, 6, 10, 16],
+    maxHits: 1,
+    of: 3,
+  },
+  {
+    climb: 'well-2',
+    plan: { name: 'E face, wary', first: 1, wary: true, legs: [{ mode: 'face' }] },
+    delays: [0, 6, 10, 16],
     maxHits: 0,
+    // (From x 2,048 at delay 10 the bot kicks on up the east face past the landing for ever: its own loop, no hit.)
+    of: 2,
+  },
+  {
+    climb: 'elder-1',
+    plan: { name: 'E face, wary', first: 1, wary: true, legs: [{ mode: 'face' }] },
+    delays: [0, 6, 10, 16],
+    maxHits: 0,
+    of: 3,
+  },
+  {
+    climb: 'elder-2',
+    plan: {
+      name: 'W then E',
+      first: -1,
+      jumpAt: [1072, 1048, 1024],
+      legs: [{ mode: 'face', until: 1600 }, { mode: 'face' }],
+    },
+    delays: [0, 6, 10, 16],
+    maxHits: 1,
     of: 3,
   },
   {

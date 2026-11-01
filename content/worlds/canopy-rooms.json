@@ -3069,6 +3069,16 @@
         "wakes": "wallJump"
       },
       {
+        "id": "hunt-chimney",
+        "kind": "huntsman",
+        "x": 1920,
+        "y": 2680,
+        "facing": 1,
+        "radius": 80,
+        "senses": "always",
+        "wakes": "wallJump"
+      },
+      {
         "id": "wing-gallery",
         "kind": "lampwing",
         "x": 1150,
@@ -5419,7 +5429,26 @@
       }
     ],
     "pods": [],
-    "enemies": [],
+    "enemies": [
+      {
+        "id": "hunt-elder-1",
+        "kind": "huntsman",
+        "x": 768,
+        "y": 2210,
+        "facing": 1,
+        "radius": 110,
+        "senses": "always"
+      },
+      {
+        "id": "hunt-elder-2",
+        "kind": "huntsman",
+        "x": 768,
+        "y": 1420,
+        "facing": 1,
+        "radius": 90,
+        "senses": "always"
+      }
+    ],
     "lures": [],
     "marks": {
       "trees": [],

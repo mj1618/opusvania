@@ -20,6 +20,7 @@ import { tuning } from '../../sim/tuning';
 import { drawHub } from '../bossrush/hub';
 import { MantisPainter } from '../bossrush/mantis';
 import type { CameraView, SimView } from '../contract';
+import { drawHuntsman, HUNT, HuntsmanRig } from '../enemies/huntsman';
 import { mix } from '../scene/lib/look';
 import type { GlowPool } from './glow';
 
@@ -218,6 +219,8 @@ export class Creatures {
   private readonly tellT = new Map<number, number>();
   /** The boss rush's Mantis (src/render/bossrush/mantis.ts). */
   private readonly mantis = new MantisPainter();
+  /** Huntsmen's rigs (render/enemies/huntsman.ts), by enemy index. */
+  private readonly hunts = new Map<number, HuntsmanRig>();
 
   /**
    * The Weaver, painted (the boss rush's first boss; its greybox look is render/greybox/boss.ts): the spider's body
@@ -363,6 +366,17 @@ export class Creatures {
       else if ((e.kind as string) === 'gloamweaver') this.gloam(e, clock, sim, back, front, glow);
       else if (e.kind === 'weaverBoss') this.weaver(e, clock, sim, back, front, glow);
       else if ((e.kind as string) === 'mantis') this.mantis.draw(e, dt, clock, sim, back, front, glow);
+      else if ((e.kind as string) === 'huntsman') {
+        let rig = this.hunts.get(i);
+        if (!rig) {
+          rig = new HuntsmanRig(i + 3);
+          this.hunts.set(i, rig);
+        }
+        // (Behind her like the other spiders; its eyes and a hit's bloom in the glow pool.)
+        drawHuntsman(back, rig.pose(e, dt, clock, sim.alpha), HUNT, (x, y, r, c, a) =>
+          glow.add(x, y, r, c, a),
+        );
+      }
     }
   }
 

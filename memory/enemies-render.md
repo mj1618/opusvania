@@ -61,6 +61,22 @@ touch); older: `shots/lamp2`, `shots/burr2`.
   The burrback chain is staged by holding `strikeCd` at 600 through an `__enemies.update` wrapper (`--setup`), the
   lampwing kill by setting its hp to 1 once. Clips: `clips/juice-{before,after}-{burr-chain,juv-kill,carrier-kill,
   lamp-kill,pogo}.mp4`, `clips/juice-after-burr-chain-audio.mp4`.
+## The huntsman (`src/render/enemies/huntsman.ts`, knobs `HUNT`)
+- One rig (`HuntsmanRig.pose` -> `drawHuntsman`) for painted rooms (render/lantern/creatures.ts, behind her, eyes and
+  a hit's bloom in the glow pool) and greybox (render/greybox/creatures.ts, flat colours, the front legs hunt-red in
+  the tell and lunge; it acts its own death, no shards). kinds.ts: `huntsman` is a `spider` kind.
+- Side-on on a vertical face: local axes `u` (along the body, head) and `v` (its back); body off the bark `HUNT.off`
+  12 (the painted bark bulges past the sim face: at 7 it vanished into the bark's lit edge). Four leg pairs, front two
+  forward, back two behind, near rank over the body and a far rank darker, lower and offset (one rank read as a
+  ladder of banded sticks). Narrow pale bands, ~3 px whatever the segment's length.
+- Gait from distance moved (0.42 rad/px, capped 48 rad/s), alternating tetrapod; a pivot along the face
+  foreshortens the body. Tell: flattens (knees down, legs spread, closer to the bark), eyes flash the hunt colour
+  quickening. Lunge: along its flight, legs fanned forward. Falls tumble (`spin`). On its back `v` points up (legs in
+  the air) 12 px over the floor line (the floor's moss hides the lowest ~8 px). Hit: warm white 2 frames, back over 3.
+- Capture: `npx tsx tools/hunt-capture.ts --url http://localhost:5234 [scuttle|climb|punish|kill]` (cn-elder; frames
+  `shots/hunt/<scene>/`, `clips/hunt-<scene>.mp4`); punish / kill move the spider low on its face through the live
+  record (wrapped `__enemies.update`). `playwright-cli eval` is refused in isolated worktrees: drive Playwright from a
+  script instead.
 
 ## Staging and capture (what worked)
 - Open-loop input scripts whiff. Drive it closed-loop in ONE `playwright-cli eval`: each step read

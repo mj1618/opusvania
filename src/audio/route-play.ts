@@ -33,6 +33,7 @@ const CREATURES = new Set([
   'juvenileBurrback',
   'carrier',
   'bombardier',
+  'huntsman',
 ]);
 const BEETLES = new Set(['burrback', 'juvenileBurrback', 'oldBurrback']);
 const FLYERS = new Set(['hawker', 'lampwing']);
@@ -353,6 +354,9 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
           }),
         ];
       }
+      // (The huntsman, r22: it flattens and holds its breath; the thwip is its lunge's own event.)
+      if (e.kind === 'huntsman')
+        return [beast('huntTell', K.huntTellDb, { cents: jitter('huntTell', 0, 60) })];
       if (e.kind === 'dangler' || e.kind === 'weaver' || e.kind === 'weaverBoss')
         return [
           beast('silkTense', K.silkDb, { cents: e.kind === 'dangler' ? 0 : -500 }),
@@ -361,6 +365,8 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       return [];
     }
     case 'enemyCharge':
+      if (e.kind === 'huntsman')
+        return [beast('thwip', K.thwipDb, { cents: jitter('thwip', 0, 80), priority: 5 })];
       return BEETLES.has(e.kind)
         ? [
             beast('rumble', K.rumbleDb + (e.kind === 'oldBurrback' ? 4 : 0), {
@@ -397,6 +403,16 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       return [];
     case 'enemyDive':
       return FLYERS.has(e.kind) ? [beast('dive', K.diveDb, { cents: e.kind === 'lampwing' ? 500 : 0 })] : [];
+    case 'enemyRun':
+      // A huntsman's burst along the bark (and its scramble back): a dry patter, quieter the shorter the burst.
+      return e.kind === 'huntsman'
+        ? [
+            beast('patter', K.patterDb + (e.px < 40 ? -4 : 0), {
+              cents: jitter('patter', 0, 120),
+              priority: 1,
+            }),
+          ]
+        : null;
     case 'enemyRear':
       return [beast('rear', K.rearDb, { variant: nearest(REAR_S, e.frames / 60), priority: 6 })];
     case 'enemySlam':

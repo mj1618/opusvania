@@ -104,7 +104,9 @@ export type EnemyKind =
   | 'gloamweaver'
   | 'mantis'
   /** A squat ground beetle on a ledge that lobs boiling droplets (src/sim/enemies/bombardier.ts). */
-  | 'bombardier';
+  | 'bombardier'
+  /** A huntsman spider on a wall face that lunges across the gap (src/sim/enemies/huntsman.ts). */
+  | 'huntsman';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
