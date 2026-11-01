@@ -794,6 +794,7 @@ Shots: `shots/art-r19/before|after|after-21x9|after-16x10/<room>/` (cn-trunk, cn
   of +-120 px noise every 140 px: that noise, with the edge shade's stacked bands, was the Grove's "clip-art triangle
   hills" and the hub mouth's zigzag. Shade 12 steps at 0.08. Side edges clamp inside the top / bottom bites (a corner
   spike broke `wood-looks`' tear test).
+- Light pools under the cracks at 0.4 / 0.26 and the bundles' lit tops at 0.14 / 0.08: brighter, cn-webs (heartwood too) broke look:check's air ceiling of 85 at 21:9 (it sits at 84 now).
 - Cost (headless GPU, 1920x1080, median of 3 x 180 frames): per-frame time within run-to-run noise (1.4-2.7 ms before
   and after); textures +29 MB in the giant, +39 MB in the hub, the Grove unchanged. look:check passes.
 - Left: the den (packed earth and root hair, the larder niche's decals, story litter), the carcass (a split shell, legs

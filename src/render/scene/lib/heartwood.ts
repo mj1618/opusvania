@@ -66,6 +66,9 @@ export const HEART = {
   /** Cracks to the night: one per this much back width; their cold light. */
   crackEvery: 1100,
   moon: 0xc8daf0,
+  /** The light pools under a crack: the beam's landing, the glow at its mouth (alpha; look:check's air ceiling 85 held
+   *  the webs at 21:9 to 0.4). */
+  pool: [0.4, 0.26] as const,
   /** The bottom of a recess (warm near-black). */
   black: 0x0a0604,
   /** The beam's warm dust tint where it lands. */
@@ -242,8 +245,8 @@ export function drawHeartDeep(
     for (const [k0, k1, col, a] of [
       [0.55, 1, T.grain, 0.22],
       [0.75, 1, T.grain, 0.22],
-      [0, 0.32, T.deepLit, 0.18],
-      [0, 0.14, T.nearLit, 0.12],
+      [0, 0.32, T.deepLit, 0.14],
+      [0, 0.14, T.nearLit, 0.08],
     ] as Array<[number, number, number, number]>) {
       const s0 = along(v + h * k0, -F.D - 300, F.D + 300, 80, (u) => lerp(wav(0)(u), wav(1)(u), k0));
       const s1 = along(v + h * k1, -F.D - 300, F.D + 300, 80, (u) => lerp(wav(0)(u), wav(1)(u), k1));
@@ -281,7 +284,7 @@ export function drawHeartDeep(
   for (const c of lit ? cracks : []) {
     const px = c.x + 0.3 * b0.h * 0.45;
     const py = c.y + b0.h * 0.45;
-    pool(g, px, py, range(r, 420, 640), range(r, 300, 420), T.deepLit, 0.5, seed + Math.round(c.x));
+    pool(g, px, py, range(r, 420, 640), range(r, 300, 420), T.deepLit, HEART.pool[0], seed + Math.round(c.x));
     pool(
       g,
       c.x + 60,
@@ -289,7 +292,7 @@ export function drawHeartDeep(
       260,
       200,
       mixc(T.deepLit, HEART.dust, 0.3),
-      0.32,
+      HEART.pool[1],
       seed + Math.round(c.x) + 3,
     );
   }
