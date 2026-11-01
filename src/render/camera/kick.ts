@@ -17,11 +17,17 @@ export class CameraKick {
   /** Offset to add to the view centre, world px. */
   x = 0;
   y = 0;
+  /** Zoom factor to multiply the view by (the finisher kill's punch; 1 = none). */
+  get zoom(): number {
+    return 1 + this.z;
+  }
   private vx = 0;
   private vy = 0;
+  private z = 0;
+  private vz = 0;
 
   reset(): void {
-    this.x = this.y = this.vx = this.vy = 0;
+    this.x = this.y = this.vx = this.vy = this.z = this.vz = 0;
   }
 
   /** Feed the frame's sim events, then advance `dt` seconds of render time. */
@@ -29,6 +35,7 @@ export class CameraKick {
     const k = ct.kick;
     let struck = false;
     let kill = false;
+    let finisher = false;
     let snuff = false;
     for (const e of events) {
       if (e.type === 'enemyDie') kill = true;
@@ -42,6 +49,7 @@ export class CameraKick {
         continue;
       }
       if (e.type !== 'impact') continue;
+      if (e.power >= 2) finisher = true;
       const px = e.power >= 2 || snuffIn(events) ? k.power2 : k.power1;
       // Against the cut: forward cuts shove the view back, an up cut down, a down cut up.
       const dx = e.dir === 'fwd' ? -e.facing : 0;
@@ -55,6 +63,11 @@ export class CameraKick {
     if (struck && (kill || snuff)) {
       this.x *= k.kill;
       this.y *= k.kill;
+      // The finisher that kills punches the view in.
+      if (finisher && kill) {
+        this.z = k.punch;
+        this.vz = 0;
+      }
     }
     // Shake off (accessibility): the kick stays home too.
     if (!FEEL.shake) this.reset();
@@ -68,12 +81,19 @@ export class CameraKick {
     this.y = (this.y + ay * dt) * ex;
     this.vx = ax * ex - w * this.x;
     this.vy = ay * ex - w * this.y;
+    const wz = k.punchOmega;
+    const ez = Math.exp(-wz * dt);
+    const az = this.vz + wz * this.z;
+    this.z = (this.z + az * dt) * ez;
+    this.vz = az * ez - wz * this.z;
+    if (Math.abs(this.z) < 1e-4 && Math.abs(this.vz) < 1e-3) this.z = this.vz = 0;
     if (
       Math.abs(this.x) < 0.02 &&
       Math.abs(this.y) < 0.02 &&
       Math.abs(this.vx) < 0.5 &&
       Math.abs(this.vy) < 0.5
-    )
-      this.reset();
+    ) {
+      this.x = this.y = this.vx = this.vy = 0;
+    }
   }
 }

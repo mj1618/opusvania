@@ -33,6 +33,8 @@ import {
 } from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
 import { DragonArt } from './dragonfly';
+import { FLUNG, FlungBody } from './flung';
+import { HitFx } from './hitfx';
 import { keeperAngry, type SweepRead, sweepRead } from './keeper-tells';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
@@ -155,6 +157,11 @@ export class EnemyRenderer {
   drawn = 0;
   verts = 0;
   private readonly rigs: BurrRig[] = [];
+  /** The hit itself for every kind: the cut, ichor, the kill's burst (hitfx.ts, canopy r22). */
+  readonly hitfx: HitFx;
+  /** Light fodder batted away dead (flung.ts), and its last dead record once the sim has dropped it: by index. */
+  private readonly flung: (FlungBody | undefined)[] = [];
+  private readonly flungSnap: Array<EnemyState | null> = [];
   /** The Keeper's body once dead (the sim drops it; the renderer keeps it on its back): by enemy index. */
   private readonly corpses: Array<EnemyState | null> = [];
   /** The Keeper's sweep this frame (keeper-tells.ts). */
@@ -212,6 +219,7 @@ export class EnemyRenderer {
     this.scaleC[2] = (sc & 255) / 255;
     layer.addChild(this.painter.mesh);
     frontLayer.addChild(this.front.mesh);
+    this.hitfx = new HitFx(ctx, layer, frontLayer);
     // Dev handle, like __pickups: `__enemies.cfg.spots.glow = 0.5; __game.render()`.
     if (typeof window !== 'undefined') (window as unknown as { __enemies?: EnemyRenderer }).__enemies = this;
   }
@@ -617,6 +625,15 @@ export class EnemyRenderer {
         // It turns to hurry out from under her: a start and a look up.
         const i = this.byId.get(ev.id);
         if (i !== undefined && isBeetle(ev.kind)) this.rigs[i]?.startle();
+      } else if (ev.type === 'slashHit' && ev.kill && FLUNG.kinds.includes(ev.target.kind)) {
+        // Light fodder killed by a cut is batted away (flung.ts): from where it is drawn now.
+        const i = this.byId.get(ev.target.id);
+        const rig = i === undefined ? undefined : this.rigs[i];
+        if (i === undefined || !rig || !isBeetle(ev.target.kind)) continue;
+        const fl = this.flung[i] ?? new FlungBody();
+        this.flung[i] = fl;
+        const side = ev.dir === 'fwd' ? ev.facing : Math.sign(ev.x - ev.px) || ev.facing;
+        fl.launch(rig.x, rig.y, ev.dir, side, ev.power);
       } else if (ev.type === 'enemyHit' && isBeetle(ev.kind) && ev.slash === 'down') {
         // A pogo landed: the blow pounds it flat (it curls).
         const i = this.byId.get(ev.id);
@@ -947,6 +964,16 @@ export class EnemyRenderer {
           this.corpses[i] = null;
         }
       }
+      // Batted away dead (flung.ts): drawn from its last dead record until it has lain and faded.
+      const fl = this.flung[i];
+      if (fl?.alive && (e.mode === 'dead' || e.gone)) {
+        if (!e.gone) this.flungSnap[i] = { ...e };
+        const snap = this.flungSnap[i];
+        if (e.gone && snap) e = snap;
+      } else if (fl) {
+        fl.alive = false;
+        this.flungSnap[i] = null;
+      }
       if (e.gone) {
         rig.deadStage = 3;
         continue;
@@ -970,6 +997,20 @@ export class EnemyRenderer {
         sim.goal.gathered || this.inSanctuary(sim, e),
         this.dropping(sim, e),
       );
+      rig.flung = !!fl?.alive && e.mode === 'dead';
+      if (fl && rig.flung) {
+        // Held in the killing blow's hold, then thrown: the drawn body is the tumbling one.
+        if (e.hitstop > 0) {
+          fl.x = rig.x;
+          fl.y = rig.y;
+        } else fl.step(dt, sim.scene);
+        rig.x = fl.x;
+        rig.y = fl.y;
+        rig.flungAng = fl.ang;
+        if (fl.thud > 260)
+          for (let k = 0; k < 3; k++)
+            this.dust(fl.x + (k - 1) * 9, fl.y, (k - 1) * 40 + fl.vx * 0.2, 1.4, 0.8);
+      }
       stepFeelers(rig, e, clock, dt);
       rig.big = scale > 2;
       if (rig.big) this.boss(rig, e, scale, dt);
@@ -1140,7 +1181,12 @@ export class EnemyRenderer {
         }
       } else rig.moteT = BURR.calm.mote * 0.6;
       if (rig.struck) this.chips(rig, e, e.hitPower >= 2 ? BURR.hit.chipsFinisher : BURR.hit.chips);
-      if ((e.mode === 'hurt' || e.mode === 'dead') && e.hitstop === 0 && Math.abs(e.knockVx) > 1.5) {
+      if (
+        (e.mode === 'hurt' || e.mode === 'dead') &&
+        !rig.flung &&
+        e.hitstop === 0 &&
+        Math.abs(e.knockVx) > 1.5
+      ) {
         rig.dustT += dt;
         while (rig.dustT > 0.05) {
           rig.dustT -= 0.05;
@@ -1160,7 +1206,7 @@ export class EnemyRenderer {
           this.shedWings(rig, e, scale);
         }
         rig.deadStage |= 1;
-      } else if (e.mode === 'dead') {
+      } else if (e.mode === 'dead' && !rig.flung) {
         if ((rig.deadStage & 4) === 0 && rig.mf >= D.roll) {
           rig.deadStage |= 4;
           for (let k = 0; k < 3; k++) this.dust(rig.x + (k - 1) * 14, rig.y, (k - 1) * 26 + dir * 12);
@@ -1229,7 +1275,12 @@ export class EnemyRenderer {
       } else {
         // (The old burrback in its own colours: the darkest shape in its den, rimmed warm, red-eyed: the Canopy r11.)
         if (rig.big) bossColors(true);
+        // (A flung body fades once it has lain its while.)
+        const fade = rig.flung && fl ? fl.alpha : 1;
+        if (fade <= 0.001) continue;
+        p.alphaK = pf.alphaK = fade;
         if (drawBurrback(p, pf, rig, e, clock, zw, nearK * nearK * (3 - 2 * nearK)) > 0) drawn++;
+        p.alphaK = pf.alphaK = 1;
         if (rig.big) bossColors(false);
       }
       // Its wake: as its eyes open, dust and grit pour off its back and its burrs shiver up.
@@ -1452,6 +1503,7 @@ export class EnemyRenderer {
 
     back.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
     pf.end(cam.x - halfW, cam.y - halfH, halfW * 2, halfH * 2);
+    this.hitfx.update(dt, cam, sim);
     this.drawn = drawn;
     this.verts = back.vertexCount + pf.vertexCount;
     this.cpuMs = performance.now() - t0;

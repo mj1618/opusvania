@@ -154,6 +154,12 @@ export const BURR = {
     flashW: 1.7,
     flashColor: 0xf6eedc,
     holdLine: 0.42,
+    /**
+     * Canopy r22 (Matt: "attacking them could be more satisfying"): the blow's first `whiteFrames` frames take the
+     * whole body `white` of the way to `flashColor` (HK's white hit flash; never on her), then the dark of the hold.
+     */
+    white: 0.88,
+    whiteFrames: 3,
     /** Chips a blow knocks off (a finisher's), their life in seconds: gone in about ten frames. */
     chips: 3,
     chipsFinisher: 5,
@@ -623,7 +629,18 @@ export const LAMP = {
    * yet, then it goes `dark` of the way to `dusk` (a flat desaturated tone) through the hold, `pop` after.
    * A few scales fly along the cut, gone in `scaleLife` s.
    */
-  hit: { dark: 0.6, pop: 0.3, flash: 2, flashColor: 0xf6eedc, scales: 4, scalesFinisher: 5, scaleLife: 0.26 },
+  /** (`white` / `whiteFrames`: the bright flash of the blow's first frames over the whole moth, as `BURR.hit`.) */
+  hit: {
+    dark: 0.6,
+    pop: 0.3,
+    flash: 2,
+    flashColor: 0xf6eedc,
+    white: 0.85,
+    whiteFrames: 3,
+    scales: 4,
+    scalesFinisher: 5,
+    scaleLife: 0.26,
+  },
   /**
    * The dive, acted on whatever the sim's modes are (lampwing.ts `phaseOf`).
    * Tell: it rears back from her (`rear` rad), a thin line of light from the lamp toward her (`aim` px

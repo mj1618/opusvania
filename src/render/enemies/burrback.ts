@@ -289,6 +289,12 @@ export class BurrRig {
    */
   deathF = -1;
   /**
+   * Batted away dead (light fodder, flung.ts, canopy r22): no burst; drawn on its back at `flungAng` (rad) where the
+   * renderer's tumbling body is (index.ts sets `x`, `y`).
+   */
+  flung = false;
+  flungAng = 0;
+  /**
    * The intro's snap (`enemyFeed`, the Canopy r12): render seconds since it heaved up out of its sleep to take the
    * falling moth (-1 = none). Its red eyes open for the snap and close again; it settles.
    */
@@ -1264,6 +1270,8 @@ const CRUST_WING: V3 = v3(BOSS.crust.wing);
 const CRUST_DARK: V3 = v3(BOSS.crust.wingDark);
 const CRUST_VEIN: V3 = v3(BOSS.crust.vein);
 let toneLight = 0;
+/** The blow's first frames: how far the whole body goes to the warm white (`C.hitFlash`). */
+let toneWhite = 0;
 /** Beside the hero everything is a step darker (her light lifts it): 1 = no change. */
 let nearDim = 1;
 /** How lit the eyes' halo is this creature (set per creature by `drawBurrback`). */
@@ -1275,7 +1283,8 @@ function tone(out: V3, base: V3, k = 1): void {
   for (let i = 0; i < 3; i++) {
     const b0 = base[i]! * nearDim;
     const b = b0 + (C.struck[i]! - b0) * dk;
-    out[i] = b + (C.pop[i]! - b) * li;
+    const o = b + (C.pop[i]! - b) * li;
+    out[i] = o + (C.hitFlash[i]! - o) * toneWhite * k;
   }
 }
 
@@ -1569,6 +1578,12 @@ export function drawBurrback(
     swell = 0.35 * br - 0.12 * smoothstep(D.breath, D.out, tk);
     crackK = smoothstep(D.crack[0], D.crack[1], tk);
     deadK = sat(tk / 3);
+  } else if (dead && rig.flung) {
+    // Batted away (flung.ts): it tumbles as thrown and lies on its back, legs curled; it never bursts.
+    const D = B.death;
+    roll = rig.flungAng;
+    curl = smoothstep(D.curl[0], D.curl[1], t);
+    deadK = sat(t / 2);
   } else if (dead) {
     const D = B.death;
     if (t >= D.burst) return 0;
@@ -1590,7 +1605,11 @@ export function drawBurrback(
   // (A glance: the same pale outline, briefly, with no darkening: nothing went in.)
   const glanceLine = rig.shellFlash * rig.shellFlash;
   const holdLine = Math.max(rig.held ? Math.max(hitFlash, B.hit.holdLine) : hitFlash, glanceLine);
-  toneDark = B.hit.dark * (rig.held ? 1 : 1 - smoothstep(0.2, 1.6, rel)) * (1 - 0.7 * hitFlash);
+  // (Canopy r22: the first frames of a blow are a bright warm flash over the whole body, HK's white; then the dark.)
+  toneWhite =
+    age < 20 ? B.hit.white * (1 - smoothstep(B.hit.whiteFrames - 0.7, B.hit.whiteFrames + 0.3, age)) : 0;
+  toneDark =
+    B.hit.dark * (rig.held ? 1 : 1 - smoothstep(0.2, 1.6, rel)) * (1 - 0.7 * hitFlash) * (1 - toneWhite);
   toneLight = B.hit.pop * (dead ? 1.5 : 1) * smoothstep(0.2, 1.4, rel) * (1 - smoothstep(2, 4.2, rel));
   toneLight = crustOn && dead ? toneLight * 0.3 * (1 - crackK) : Math.max(toneLight, 0.5 * swell);
   nearDim = 1 - nearK * B.nearHero.dark * (1 - toneLight);

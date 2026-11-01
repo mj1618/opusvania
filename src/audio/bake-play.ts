@@ -26,6 +26,7 @@ export const PLAY_SOUNDS = {
   hitTick: 4,
   clang: 4,
   crunch: 4,
+  killWet: 4,
   killTail: 3,
   hurt: 4,
   pogo: 4,
@@ -399,6 +400,33 @@ export const PLAY_RECIPES: Record<PlaySoundId, Recipe> = {
       [click(sr, r, n, 4500, 0.002), 0.4],
     ])[0] as Float32Array;
     for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.5);
+    return normalize([x]);
+  },
+  /**
+   * A kill's wet half (canopy r22, Matt: "attacking them could be more satisfying"): the body giving under the
+   * crunch: two quick squelches sweeping down through the mids, a soft low give, a few wet drips after.
+   */
+  killWet(sr, r) {
+    const d = 0.34;
+    const n = len(sr, d);
+    const sq1 = swept(sr, r, d, (t) => exp(1500 + r() * 200, 260, t / 0.07), 3, arEnv(0.001, 0, 0.04, 0.16));
+    const sq2 = swept(
+      sr,
+      r,
+      d,
+      (t) => exp(1050 + r() * 150, 210, t / 0.09),
+      3.5,
+      arEnv(0.002, 0.01, 0.05, 0.22),
+    );
+    const drips = new Float32Array(n);
+    grains(drips, sr, r, 8 + Math.floor(r() * 4), 0.05, 0.3, 380, 950, 0.006, 1, 1.6);
+    const x = blend([
+      [sq1, 1],
+      [sq2, 0.8, Math.floor(0.026 * sr)],
+      [thud(sr, r, d, 240, arEnv(0.001, 0.006, 0.05, d)), 0.65],
+      [drips, 0.4],
+    ])[0] as Float32Array;
+    for (let i = 0; i < n; i++) x[i] = saturate(x[i] as number, 1.4);
     return normalize([x]);
   },
   /** After a kill, the little tail: bits settling (sparse grit thinning out) in a falling breath of air. */

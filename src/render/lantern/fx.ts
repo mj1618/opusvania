@@ -4,10 +4,10 @@
  * time, so it plays inside the sim's hitstop (as in HK) and every capture repeats.
  *
  *  - **A blow lands** (`slashHit` on a creature): a flash of white-gold where the blade met it (the blow lights the
- *    struck side), a bright cut line across it, sparks thrown the way the cut went.
+ *    struck side), sparks thrown the way the cut went.
  *  - **It pays** (`glowGain`): sparks of the creature's light streak from the contact into her, staggered, and her
  *    aura steps up a pip (`player.glow`: her light's reach 140 -> 260 px, a cool point light).
- *  - **A kill pops** (`enemyDie`): a ring and a burst in the creature's colour, a puff of motes.
+ *  - (The cut across a body, the ichor and a kill's burst: render/enemies/hitfx.ts, every room but greybox.)
  *  - **Clangs** (`enemyBlock`, `kitClang`): a cold white star and sparks thrown back; heartwood answers duller, with
  *    wood chips. A cut into a wall (`slashTerrain`): sparks off the face. Bark: chips and spore dust; broken, a
  *    shower of plates.
@@ -19,7 +19,6 @@ import type { Graphics } from 'pixi.js';
 import type { SimEvent } from '../../sim/events';
 import type { SimView } from '../contract';
 import type { LightRegistry } from '../lights';
-import { mix } from '../scene/lib/look';
 import { hash01 } from './config';
 import type { GlowPool } from './glow';
 
@@ -35,14 +34,6 @@ export const FX = {
   chip: 0x5a3a24,
   hurt: 0xffffff,
   gust: 0xd8e6f2,
-  /** A creature's colour for its kill burst (by kind). */
-  kill: {
-    burrback: 0xffb070,
-    juvenileBurrback: 0xffc080,
-    dangler: 0xd0a0ff,
-    hawker: 0xa8d0ff,
-    gloamweaver: 0xffd090,
-  } as Record<string, number>,
   /** Her aura: reach (px) empty and full, colour, strength. */
   aura: { r0: 140, r1: 260, color: 0xbcd4f4, k: 0.55 },
   /** A spark's flight into her (s), and the stagger between them. */
@@ -132,7 +123,6 @@ export class Fx {
           const cx = x + (dx / d) * 18;
           const cy = y + (dy / d) * 14;
           const heavy = (ev.power as number) > 1 || ev.weight === 'heavy';
-          const kill = ev.kill === true;
           this.add({
             kind: 'flash',
             x: cx,
@@ -148,19 +138,7 @@ export class Fx {
           const dir = ev.dir as string;
           const facing = (ev.facing as number) || 1;
           const ang = dir === 'up' ? -Math.PI / 2 : dir === 'down' ? Math.PI / 2 : facing > 0 ? 0 : Math.PI;
-          // The cut line: across the struck body, along the swing.
-          this.add({
-            kind: 'line',
-            x,
-            y,
-            vx: 0,
-            vy: 0,
-            life: 0.12,
-            size: heavy ? 80 : 58,
-            color: FX.flash,
-            a: ang + (dir === 'fwd' ? -0.5 * facing : 0.3),
-            b: 0,
-          });
+          // (The cut across the body, the ichor and the kill's burst are render/enemies/hitfx.ts's, for every kind.)
           const n = heavy ? 12 : 8;
           for (let k = 0; k < n; k++) {
             const a = ang + (this.r() - 0.5) * 1.3;
@@ -191,26 +169,6 @@ export class Fx {
               a: 0,
               b: 0,
             });
-          if (kill) {
-            const c = FX.kill[kind] ?? FX.spark;
-            this.add({ kind: 'ring', x, y, vx: 0, vy: 0, life: 0.4, size: 110, color: c, a: 0, b: 0 });
-            for (let k = 0; k < 18; k++) {
-              const a = this.r() * Math.PI * 2;
-              const sp = 160 + this.r() * 360;
-              this.add({
-                kind: 'mote',
-                x,
-                y,
-                vx: Math.cos(a) * sp,
-                vy: Math.sin(a) * sp - 80,
-                life: 0.5 + this.r() * 0.5,
-                size: 2 + this.r() * 2.5,
-                color: mix(c, 0xffffff, this.r() * 0.5),
-                a: 0,
-                b: 0,
-              });
-            }
-          }
           break;
         }
         case 'glowGain': {

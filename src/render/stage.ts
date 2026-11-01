@@ -378,7 +378,8 @@ export class RenderStage {
     const ky = this.kick.y + this.shake.y;
     // (The premise's beats lean toward things near the room's edge, the den's mouth: they never take the view past
     // the room's edge further than the follow camera already has.)
-    const zoom = base.zoom * gc.zoom * sc.zoom * pc.zoom * oc.zoom;
+    // (The kick's zoom: the finisher kill's punch in, camera/kick.ts.)
+    const zoom = base.zoom * gc.zoom * sc.zoom * pc.zoom * oc.zoom * this.kick.zoom;
     const inRoom = (from: number, off: number, half: number, size: number): number => {
       const lo = Math.min(from, half);
       const hi = Math.max(from, size - half);
@@ -387,7 +388,7 @@ export class RenderStage {
     const vx0 = base.x + kx + gc.x + rs.x + this.beats.x + sc.x + oc.x;
     const vy0 = base.y + ky + gc.y + rs.y + this.beats.y + sc.y + oc.y;
     const view: CameraView = o
-      ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom, w: vs.w, h: vs.h }
+      ? { x: base.x + kx, y: base.y + ky, zoom: base.zoom * this.kick.zoom, w: vs.w, h: vs.h }
       : {
           x: vx0 + inRoom(vx0, pc.x, vs.w / 2 / zoom, this.game.scene.width),
           y: vy0 + inRoom(vy0, pc.y, vs.h / 2 / zoom, this.game.scene.height),

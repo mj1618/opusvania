@@ -387,10 +387,13 @@ function by(x: number, y: number): number {
 
 let toneDark = 0;
 let toneLight = 0;
+/** The blow's first frames: how far it all goes to the warm white (`W.flash`; canopy r22). */
+let toneWhite = 0;
 function tone(o: V3): void {
   for (let k = 0; k < 3; k++) {
     const d = o[k]! + (W.dusk[k]! - o[k]!) * toneDark;
-    o[k] = d + (W.pop[k]! - d) * toneLight;
+    const l = d + (W.pop[k]! - d) * toneLight;
+    o[k] = l + (W.flash[k]! - l) * toneWhite;
   }
 }
 
@@ -511,7 +514,11 @@ export function drawLampwing(
   const hitHold = e.hitstop > 0 ? age + e.hitstop : e.hitPower >= 2 ? 7 : 4;
   // (The first frame or two: its edges and veins flash pale on wings that have not darkened yet.)
   const hitFlash = age < 20 ? 1 - smoothstep(L.hit.flash - 0.6, L.hit.flash + 0.6, age) : 0;
-  toneDark = L.hit.dark * (1 - smoothstep(hitHold - 0.6, hitHold + 0.8, age)) * (1 - 0.8 * hitFlash);
+  hex(W.flash, L.hit.flashColor);
+  toneWhite =
+    age < 20 ? L.hit.white * (1 - smoothstep(L.hit.whiteFrames - 0.7, L.hit.whiteFrames + 0.3, age)) : 0;
+  toneDark =
+    L.hit.dark * (1 - smoothstep(hitHold - 0.6, hitHold + 0.8, age)) * (1 - 0.8 * hitFlash) * (1 - toneWhite);
   toneLight =
     L.hit.pop *
     smoothstep(hitHold - 0.4, hitHold + 0.8, age) *
@@ -522,7 +529,6 @@ export function drawLampwing(
   tone(W.wing1);
   tone(W.edge);
   // The struck outline: pale through the flash, and it stays half lit for the rest of the hold.
-  hex(W.flash, L.hit.flashColor);
   const lineK = Math.max(hitFlash, e.hitstop > 0 ? 0.5 : 0);
   for (let k = 0; k < 3; k++) W.edge[k] = W.edge[k]! + (W.flash[k]! - W.edge[k]!) * lineK;
   // Hanging open it shows the pale faces of its wings (pale = soft, like the burrback's underside).
