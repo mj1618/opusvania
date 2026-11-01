@@ -1,4 +1,17 @@
-# Handoff: the Canopy loop, stopped after round 20 (2026-11-01)
+# Handoff: the Canopy loop, stopped after round 21 (2026-11-01)
+
+## Round 21: the first five minutes (after Matt: "didn't have to deal with a single enemy")
+Deployed. Details are in `memory/canopy.md` v21.
+- **Lesson:** the opening must be dense. Quiet stretches are earned later. Reading the references as "first areas open quiet" was wrong, and rounds 15–19 made the opening emptier by chasing bots' time-to-Grove.
+- **Matt's rule, which replaces round 20's:** "for now just go back to a near checkpoint when you die, not back to the very start". A fade re-forms her at full health at the nearest of the room's moon patch, `reform` point or her door. The glint drop and its second-fade loss stay. The sections below that describe round 20's "last rested patch" rule are out of date on this point.
+- **Added:** creatures from 6–8 s in the hatch, the hub, the giant, the fork and the cellar; the hub's root cellar secret. The campfire stays safe.
+- **Sim fix:** going up through a room's top edge no longer throws away the jump.
+- **Open after r21:**
+  - Hits and fades are above the brief: first-timers took 6–27 hits and 0–5 fades in five minutes. The biggest costs are thorns, the Grove and the well's pit and ambush.
+  - Hub crossings cost 3–4 hits, because creatures return on every entry.
+  - None of the eight first-timers found the hub's root cellar.
+  - After about 2.5 minutes the problem is direction, not emptiness: two runs never got the claws in 6 minutes.
+  - No first-timer has played the last changes: the cage's 96 px reach, the shorter thorn bed, the hatch's `reform`.
 
 ## Round 20: difficulty (after Matt played: "I feel like it's very easy")
 Deployed. Details are in `memory/canopy.md` v20; the death and healing rules are in `memory/enemies.md` under "Fade and re-form".
