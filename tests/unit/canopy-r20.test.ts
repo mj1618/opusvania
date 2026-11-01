@@ -3,6 +3,8 @@
  * something (springboards no longer heal), and big things hit for 2.
  */
 import { describe, expect, it } from 'vitest';
+import { routeCanopy } from '../../src/audio/route-canopy';
+import type { AudioSnap } from '../../src/audio/router';
 import { getRoom } from '../../src/scene/index';
 import { getWorld } from '../../src/scene/world';
 import type { SimEvent } from '../../src/sim/events';
@@ -12,6 +14,7 @@ import { snuffLure } from '../../src/sim/lures';
 import type { GameState } from '../../src/sim/state';
 import { cloneTuning, defaultTuning } from '../../src/sim/tuning';
 import { enterRoom, withShortcuts } from '../../src/sim/world';
+import { flatScene } from './helpers';
 
 const t = cloneTuning(defaultTuning);
 const W = getWorld('canopy');
@@ -126,5 +129,30 @@ describe('healing costs something (r20)', () => {
     expect(t.oldBurrback.contactDamage).toBe(2);
     expect(t.juvenileBurrback.contactDamage).toBe(1);
     expect(t.lures.healOnRelight).toBe(0);
+  });
+});
+
+describe('the shade in sound (r20)', () => {
+  const snap = {
+    frame: 100,
+    room: 'cn-trunk',
+    hero: { x: 1000, y: 800, vx: 0, vy: 0, grounded: true, facing: 1 },
+    lights: [],
+  } as unknown as AudioSnap;
+  const ctx = { scene: { ...flatScene(), id: 'cn-trunk' }, seed: 1 };
+  it('taken back: four notes rising, then her wings; lost: one low note', () => {
+    const got = routeCanopy({ type: 'shadeTaken', id: 1, x: 900, y: 800, value: 7 }, 0, snap, ctx);
+    const notes = got.filter((c) => c.sound === 'glintNote');
+    expect(notes.length).toBe(4);
+    for (let k = 1; k < notes.length; k++)
+      expect(notes[k]?.cents ?? 0).toBeGreaterThan(notes[k - 1]?.cents ?? 0);
+    expect(got.some((c) => c.sound === 'wingOpen')).toBe(true);
+    const lost = routeCanopy(
+      { type: 'shadeLost', id: 1, room: 'cn-trunk', x: 900, y: 800, left: 5 },
+      0,
+      snap,
+      ctx,
+    );
+    expect(lost.length).toBe(1);
   });
 });
