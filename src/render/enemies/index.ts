@@ -19,6 +19,7 @@ import type { CameraView, RenderContext, SimView } from '../contract';
 import { ZONE_EDGES } from '../scene/lib/fx-zones';
 import { lookOf } from '../scene/lib/looks';
 import { LOOK } from '../scene/lib/room-look';
+import { AntArt } from './ant';
 import { arrivalView } from './arrive';
 import {
   BurrRig,
@@ -31,6 +32,7 @@ import {
   topHit,
 } from './burrback';
 import { BOSS, BURR, DEN_READ, LAMP } from './config';
+import { DragonArt } from './dragonfly';
 import { keeperAngry, type SweepRead, sweepRead } from './keeper-tells';
 import { BEETLE_SCALE, creatureArt, type LookKey } from './kinds';
 import { drawLampwing, LampRig } from './lampwing';
@@ -170,6 +172,9 @@ export class EnemyRenderer {
     len: number;
   }> = [];
   private readonly lamps: (LampRig | undefined)[] = [];
+  /** The carriers' ants and the hawkers' dragonflies (Canopy r22: ant.ts, dragonfly.ts). */
+  readonly ants = new AntArt();
+  readonly dragons = new DragonArt();
   private readonly scaleC: [number, number, number] = [0, 0, 0];
   private readonly zw: [number, number, number] = [0, 1, 0];
   /** Enemy id -> its index in `sim.enemies`, for the events. */
@@ -886,14 +891,21 @@ export class EnemyRenderer {
     let drawn = 0;
     const den = LOOK.kit === 'wood' && lookOf(sim.scene) === 'den';
     this.react(sim);
+    this.ants.begin(p, dt, sim.events);
+    this.dragons.begin(p, dt);
     for (let i = 0; i < list.length; i++) {
       const e0 = list[i];
       if (!e0) continue;
-      // (Painted rooms draw hawkers on the lampwing's art and the juvenile, the old burrback and the carriers on the
-      // burrback's rig, scaled: kinds.ts. The test grove draws only its own two kinds.)
+      // (Painted rooms draw the juvenile and the old burrback on the burrback's rig, scaled, carriers as ants and hawkers
+      // as dragonflies: kinds.ts. The test grove draws only its own two kinds.)
       const art = creatureArt(e0.kind, lookKey());
       // An ambush's creature on its way in is drawn on its eased path (arrive.ts).
       let e = e0.arrive > 0 ? arrivalView(e0, sim, art === 'beetle') : e0;
+      if (art === 'ant' || art === 'dragonfly') {
+        if ((art === 'ant' ? this.ants : this.dragons).draw(p, i, e, dt, clock, cam, sim, halfW, halfH))
+          drawn++;
+        continue;
+      }
       if (art === 'moth') {
         if (this.lampwing(i, e, dt, clock, cam, sim, halfW, halfH)) drawn++;
         continue;
@@ -906,8 +918,6 @@ export class EnemyRenderer {
       const keeperK = e.kind === 'oldBurrback' && sim.scene.boss?.kind === 'keeper' ? BOSS.drawK : 1;
       const scale = den && kindScale <= 2 ? kindScale * DEN_READ.scale : kindScale * keeperK;
       const small = scale !== 1;
-      // (A carrier in its crack is no one's: not drawn.)
-      if (e.kind === 'carrier' && e.mode === 'under') continue;
       let rig = this.rigs[i];
       if (!rig) {
         rig = new BurrRig(i);

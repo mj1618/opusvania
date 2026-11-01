@@ -1,4 +1,4 @@
-# Enemies, render side: the burrback and the lampwing (`src/render/enemies/`)
+# Enemies, render side: the burrback, the lampwing, the ant and the dragonfly (`src/render/enemies/`)
 
 Rules and state fields: enemies.md. **Start with the last two sections (playtest 5, playtest 6 round 2): the
 tell, the hit tone, the winded pose, the whole lampwing, the curl, the top clang and the scurry are there; older
@@ -301,3 +301,40 @@ Sim side: enemies.md "Playtest 6, round 2" (`tuck`, `enemyBlock` slash `down`, `
   e5's `H.stage` cut down + plans `pogo` (the spammer of `playtest6-fights.test.ts`) and `dropL` (teleport to
   3640, 192, hold left `hold` frames; `pre` 170 / hold 14 gives a `drop` turn at frame 13, landing 67), `capFrom /
   capTo` to skip capture on dry runs. `playwright-cli -s=<s> resize 1920 1080` first: the default canvas is 1280x720.
+
+## The ant and the dragonfly (Canopy r22; `ant.ts`, `dragonfly.ts`, shared bits in `insect-kit.ts`)
+Matt: the enemies were boring and monotonous; carriers on the burrback rig at 0.5 read as moss, hawkers on the moth art
+as the friendly moths. Both now have their own rigs (`creatureArt` `ant` / `dragonfly`, kinds.ts; index.ts calls
+`ants.begin` / `dragons.begin` once a frame and `draw` per creature; knobs `ANT` / `DRAGON` live as
+`__enemies.ants.cfg` / `__enemies.dragons.cfg`). Sheets: `shots/looks-r22/*.png` (ant walk / tell-bite / kill, dragonfly hover-tell-dive-stall / hurt / kill, every room at play zoom);
+clip `clips/looks-ants-bite.mp4`. Staging: the fork's hawker is `gone` until its `wakes` flag (`g.flag('cn-firefly-gap')`).
+- **Ant** (side view, x1.2 of its frame, more as the camera pulls out like greybox's SMALL): glossy round gaster with a
+  sheen and two segment lines, node waist, sloped thorax, head with a small dark eye + glint, curved jaws, elbowed
+  antennae that tap the ground ahead in turn (on `segT`), six legs in gait.ts's tripod on `segT` (cycle 15). **The read is
+  the pale dead moth's fore wing held in the jaws, standing up and back over it like a sail** (pale bone, veins, a discal
+  spot, a dusky band inside the outer margin, faint halo): at play zoom a line of them is a procession of little sails.
+  Tell (`alert`, 18 f): the wing is let go (falls ahead, lies), it rears 0.78 rad about the waist, front legs pawing in
+  the air, gaster curled under, jaws wide, antennae forward, eye + jaws flash the hunt red (0xff4630) in 3 quickening
+  beats. Bite: pitched forward, jaws snap shut at 42%; back to `walk` it picks the wing up again (0.24 s). Trail ends: it
+  fades / sinks over 12 px. Death: the sim keeps the box (no knockback) so the corpse is render-only: thrown by the
+  `enemyDie` slash (fwd / up / down velocities, x1.3 finisher), spinning, one bounce on `groundBelow` (scene solids /
+  one-ways), on its back, legs curled and twitching 1.3 s, lies 2.4 s, fades; the wing flutters down as `Litter`.
+- **Dragonfly** (side view, x1.2): banded abdomen (10 segments, amber bars at the joints: wasp-like = hostile), slanted
+  thorax with a stripe, big teal compound eyes (near + far peeking), legs as a forward basket, four narrow clear wings
+  (glassy pale membrane lit by the painter rim set to the wing colour, dark costa + one vein, dark pterostigma).
+  Hover / climb: fore and hind pairs half a beat apart at 3x the sim's flap, drawn as two pale fan layers over the
+  stroke plus a faint crisp wing (the blur). Tell: the beat stops, four crisp wings held level in the world, abdomen
+  curls 1.55 rad, it pitches at her, eyes glow coral with a halo in 3 quickening beats. Dive: pointed at the committed
+  target (facing latched through the dive: straight down the sim's facing flips and squashed the head), wings swept
+  flat back, legs reaching, a thin pale air streak. Stall: nose up 0.5, wings flared up/forward on slow strokes, eyes
+  dim. Hurt: one end-over-end turn. Death: follows the sim's fall, then its own (`groundBelow`), spinning; crumpled on
+  landing (abdomen kinked, the near fore wing broken at the node), a hind wing torn off as `Litter`; lies 1.9 s, fades.
+- Hit tone (both, `hitTone` in insect-kit): 2 frames of warm near-white 0xfff1da on the whole creature, then ~50%
+  toward the struck dusk 0x2f2a34 through the hold. At play zoom the flash is mostly under her slash's cross.
+- Cost (M-series, one on screen): ant ~0.03 ms / ~900 vertices, dragonfly ~0.09 ms / ~1500 (the blur fans).
+- Rejected / fixed: a petal-shaped carried wing with a vein cross (read as a leaf: now a triangular fore wing with a
+  marginal band); the hover blur as one hard-edged fan (paper fan: now two layers); the hover stroke centred above the
+  head (a peacock fan: now back and up, mid 0.78); tell wings at fixed body angles (stood straight up when it pitched
+  down at her: now held level in the world). Not seen: the ants at the burrow / tunnel ends fading in and out, an
+  up-cut or pogo kill of an ant, a dragonfly killed in a rhythm (`orbit`) pass.
+

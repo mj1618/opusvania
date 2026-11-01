@@ -22,7 +22,7 @@ docs/design/levels/reviews/canopy-r2.md, canopy-r3.md. Shots: `shots/canopy-r3/`
 
 ## Every creature has a renderer (kinds.ts)
 - `src/render/enemies/kinds.ts` `creatureArt(kind, look)` says who draws a kind: `beetle` (burrback rig, scaled by
-  `BEETLE_SCALE`), `moth` (lampwing art), `spider` (render/lantern/creatures.ts, needs `art.pieces` or Lanternroot),
+  `BEETLE_SCALE`), `moth` (lampwing art), `ant` (carriers) and `dragonfly` (hawkers) since r22 (enemies-render.md), `spider` (render/lantern/creatures.ts, needs `art.pieces` or Lanternroot),
   `greybox`. The enemy renderer dispatches on it. **Before r3 the wood kit drew only burrbacks and lampwings**: the
   old burrback, the juveniles and the hawkers in the Canopy were simulated and invisible.
 - `tests/unit/creature-renderers.test.ts` walks every room in `content/` and fails on a kind nothing draws (it caught
