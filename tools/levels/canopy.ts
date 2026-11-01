@@ -787,9 +787,14 @@ class Wood extends RoomBuilder {
     for (const e of this.data.enemies) {
       const x = e.x as number;
       const y = e.y as number;
-      const walker = ['burrback', 'juvenileBurrback', 'oldBurrback', 'carrier', 'bombardier'].includes(
-        e.kind as string,
-      );
+      const walker = [
+        'burrback',
+        'juvenileBurrback',
+        'oldBurrback',
+        'carrier',
+        'bombardier',
+        'jumper',
+      ].includes(e.kind as string);
       const probes: Array<[number, number]> = walker
         ? [
             [x, y - 8],
@@ -906,6 +911,11 @@ class Wood extends RoomBuilder {
       senses: 'always',
       ...more,
     });
+  }
+
+  /** A jumping spider (src/sim/enemies/jumper.ts): feet on the top at `top` under `x` (r22: the leaper). */
+  jumper(id: string, x: number, top: number, facing: 1 | -1, more: Json = {}): this {
+    return this.enemy({ id, kind: 'jumper', x, y: this.pad(x, top, 60), facing, senses: 'always', ...more });
   }
 
   flyer(
@@ -1672,6 +1682,10 @@ function trunk(): Json {
   r.lamp('wick-drop', TRUNK_WICK[0], TRUNK_WICK[1]);
   // (r21: tier 3, the way out to the well, was bare floor: a pod to hit. No glints: they buy nothing, 25 at most.)
   r.pod('pod-tier3', 300, 1664, 1200, 'sit', 2);
+  // (r22, Matt: "the enemies are boring and monotonous": a jumping spider holds tier 3's floor, the way out west. She
+  // drops in 250-350 px east of it, in its sight as she falls: its eyes lock on (30 frames) and it crouches (26) before
+  // the first pounce, so it never meets her landing. 1,000 px of floor to dance on.)
+  r.jumper('jump-t3', 240, 1664, 1);
   return r.finish();
 }
 
@@ -2264,6 +2278,9 @@ function cellar(): Json {
   r.juvenile('juv-c', 1640, 512, 1, 130, { fenced: true });
   r.flyer('lampwing', 'wing-c', 2840, 400, -1, { radius: 100, dives: 2 });
   r.pod('pod-cellar-hall', 2400, 576, 1200, 'sit', 2);
+  // (r22: a jumping spider east of the hall's burl, under the lampwing: she comes down the stair 800 px off, out of its
+  // sight; the burl is a ledge it leaps up onto when she stands on it to cut the pod, and down from.)
+  r.jumper('jump-c', 2720, 704, -1);
   r.place('in', 480, 96);
   r.place('hall', 2300, 704);
   r.place('low', 600, 1792);
@@ -2297,6 +2314,11 @@ function galleries(): Json {
   r.burl(1280, 1408, 512, 704, 4);
   r.ants('ant-g', 1900, 2600, 1408, 3);
   r.juvenile('juv-g', 2300, 1408, -1, 260);
+  // (r22: two jumping spiders. One on the nest's floor by the rotten wall, under the branches it pounces up to (the
+  // walker and the leaper on one floor); one in the east gallery on the way to the larder, 700 px from where the claws
+  // top out, so the climb ends in a fight and not in a pounce.)
+  r.jumper('jump-g1', 2600, 1408, -1);
+  r.jumper('jump-g2', 3420, 640, -1);
   // (r7, review r6 #7: the nest pays a glint pile, not a great.)
   r.hoard('nest-', 3150, 1300, 360, 80, 2);
   r.cover('nest-cover', 2752, 1024, 896, 448, 'nest-wall');

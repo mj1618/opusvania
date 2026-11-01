@@ -375,3 +375,8 @@ Clips and numbers: `playtest-reports/canopy-audio-r15/README.md`. Tests: `tests/
 +500 cents), `bombPop` per `shotFire` (pitch steps up the burst), `bombHiss` per `shotSplash` (not `out`; +3 dB on
 her) and on `enemySpray` (-700 cents, +6), `bombPing` on `shotDeflect` (-15 dB, priority 7: the best hit there is)
 and again lower with a crunch and a hiss on `shotHit`. The hiss is rolled off at 5.2 kHz (audio.test's 9 kHz rule).
+## The jumping spider (r22, route-play.ts; levels `AUDIO.creatures.jump*`)
+Reused bakes, no new recipe: step-hops = `skitter` +300 cents (a hop back / over louder, with a small `whoosh` +900);
+the tell = a `tick` on each of `tuning.jumper.tellBeats` (rising +600 .. +1350 cents: the count you hear, as its eyes
+flash); the leap = `whoosh` +1100 (a whip); `enemyLand` = `thumpWood` +350 (a pounce loudest, a hop back softest) and
+a `skitter` on a missed pounce's skid. Not yet heard by Matt.

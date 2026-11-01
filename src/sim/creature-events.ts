@@ -121,4 +121,34 @@ export type CreatureEvent =
       fromY: number;
     }
   /** The weaver's bite: `hit` = she was still held (its touch is live for `frames`). */
-  | { type: 'enemyBite'; id: string; kind: EnemyKind; x: number; y: number; hit: boolean; frames: number };
+  | { type: 'enemyBite'; id: string; kind: EnemyKind; x: number; y: number; hit: boolean; frames: number }
+  /**
+   * The jumping spider (src/sim/enemies/jumper.ts) hops `px` toward `dir` over `frames`: a `step` to keep its
+   * distance, an `idle` one, `back` out of her reach, or `over` her when cornered.
+   */
+  | {
+      type: 'enemyHop';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      px: number;
+      frames: number;
+      why: 'step' | 'idle' | 'back' | 'over';
+    }
+  /**
+   * It came down (`y` = its feet): from a `pounce` (`hit` = it had hit her), a hop `back`, or a `fall` (knocked
+   * down, bonked). `frames` = how long it lies open (0 = up at once).
+   */
+  | {
+      type: 'enemyLand';
+      id: string;
+      kind: EnemyKind;
+      x: number;
+      y: number;
+      dir: number;
+      cause: 'pounce' | 'back' | 'fall';
+      hit: boolean;
+      frames: number;
+    };

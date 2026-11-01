@@ -162,6 +162,8 @@ export const ENEMIES = z
           phase: z.number().min(0).max(1).optional(),
         })
         .strict(),
+      // The jumping spider (src/sim/enemies/jumper.ts): `x`, `y` = its feet centre, on a top.
+      z.object({ ...base, kind: z.literal('jumper'), radius: int.min(0).max(2000).optional() }).strict(),
     ]),
   )
   .default([]);
@@ -336,7 +338,9 @@ function checkCrawler(s: RoomLike, e: Enemy): void {
         ? defaultTuning.juvenileBurrback
         : e.kind === 'bombardier'
           ? defaultTuning.bombardier
-          : defaultTuning.burrback;
+          : e.kind === 'jumper'
+            ? defaultTuning.jumper
+            : defaultTuning.burrback;
   const bw = B.width;
   const bh = B.height;
   const x0 = e.x - bw / 2;
@@ -423,7 +427,8 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
       e.kind === 'burrback' ||
       e.kind === 'oldBurrback' ||
       e.kind === 'juvenileBurrback' ||
-      e.kind === 'bombardier'
+      e.kind === 'bombardier' ||
+      e.kind === 'jumper'
     )
       checkCrawler(s, e);
     else if (e.kind === 'dangler') checkDangler(s, e);

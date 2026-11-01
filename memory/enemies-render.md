@@ -410,3 +410,23 @@ clip `clips/looks-ants-bite.mp4`. Staging: the fork's hawker is `gone` until its
 - Staging: headless search of input timings on the clip tool's timeline (createState, placePlayer to `--at`, `.pre`,
   then the script) found `--room cn-hub --at 7450,1344 --pre 60 --script ".95 A1 .29 R18 A1 .16 A1 .70"` (deflect,
   stun, two cuts, kill) and `--at 7600,1344 --script ".62 R+J10 D+A1 D16 .50"` (spray, then a pogo).
+## The jumping spider (`jumper.ts`, `JUMP`, `__enemies.jump`; r22, clips `clips/jump-*`)
+- Its own rig (kinds.ts art `jumper`, every painted wood / Lanternroot room; greybox draws its own: round body, big pale
+  eye discs, red crouch with the pounce's arc dashed to its landing). Side view, laid out at 1x for a 44 px box and
+  scaled `JUMP.scale` 1.15 about its feet (`scaleFrom`). A body frame `W()` (turn, squash, pitch, roll about y -15).
+- Read: blocky head-thorax + round abdomen, both fringed with short fur hairs (`furRing`; pale long hairs read as a
+  hedgehog), short thick banded legs (two pale bands per leg as ribbons: pale dots at the knees read as polka), **two
+  big front eyes side by side, seated in dark sockets at the head's front** (bulging past it they read as binoculars),
+  a teal sheen ring, big glints; teal fangs and small pale palps that flick under them; pale abdomen crescent + dim
+  dashes (bright dots in a row = a ladybird). Knees always up over the hip-foot line (`leg()` picks the side by the
+  foot's direction; on its back they point away from the body).
+- Acting: twitch snaps of the head (`JUMP.twitch`), a quick turn spring; tell = crouch 10 px, rear feet bunched, a
+  tremble, and **the count in the eyes**: a warm flash on each of `tuning.jumper.tellBeats` (the audio ticks on the
+  same beats) with a halo wide enough to read at play zoom; leap = stretched, legs thrown wide, pitch along the
+  velocity; landing = a squash spring + puffs (index.ts `jumper()`), skid dust; open = splayed, reared and swaying,
+  eyes dim; stunned / dead = rolled onto its back (legs kicking / curling); a hit = warm-white flash 2 frames + a
+  squash. Death fades over the sim's last 28 body frames. Generic hit debris is the hit-feel layer's, not this rig's.
+- At play zoom (the Canopy's camera) it is ~60 px long beside her 80 px: the leap and the landing read; the crouch
+  alone barely does, the eye flash and the ticks carry the tell. Staging: `scratchpad` bot wrapping `g.step` (plans
+  stand / dodge / air / kill) in `npm run clip -- --setup`, as "Staging and capture" above.
+

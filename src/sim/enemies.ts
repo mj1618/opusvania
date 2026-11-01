@@ -36,6 +36,7 @@ import {
 } from './enemies/common';
 import { dangler } from './enemies/dangler';
 import { huntsman } from './enemies/huntsman';
+import { jumper } from './enemies/jumper';
 import { hawker, lampwing } from './enemies/lampwing';
 import { litNow, moonlitAt, SENSE_WALLET, seenBy, senseCode } from './enemies/senses';
 import { weaver } from './enemies/weaver';
@@ -62,6 +63,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   mantis,
   bombardier,
   huntsman,
+  jumper,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -78,6 +80,7 @@ const KIND_LIST: EnemyKind[] = [
   'mantis',
   'bombardier',
   'huntsman',
+  'jumper',
 ];
 
 /**
@@ -123,7 +126,8 @@ export function weightOf(kind: EnemyKind): 'light' | 'medium' | 'heavy' {
     kind === 'hawker' ||
     kind === 'weaver' ||
     kind === 'web' ||
-    kind === 'bombardier'
+    kind === 'bombardier' ||
+    kind === 'jumper'
   )
     return 'medium';
   return 'light';

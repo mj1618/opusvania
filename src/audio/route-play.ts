@@ -12,6 +12,7 @@
 import { releaseFreeze, releaseGreat, releaseTicks } from '../render/lantern/release';
 import { LOOK } from '../render/scene/lib/room-look';
 import type { SimEvent } from '../sim/events';
+import { tuning } from '../sim/tuning';
 import type { SoundId } from './bake';
 import { CREAK_S, MOTH_CENTS, REAR_S } from './bake-play';
 import { hash01, salt } from './dsp';
@@ -34,6 +35,7 @@ const CREATURES = new Set([
   'carrier',
   'bombardier',
   'huntsman',
+  'jumper',
 ]);
 const BEETLES = new Set(['burrback', 'juvenileBurrback', 'oldBurrback']);
 const FLYERS = new Set(['hawker', 'lampwing']);
@@ -362,11 +364,19 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
           beast('silkTense', K.silkDb, { cents: e.kind === 'dangler' ? 0 : -500 }),
           ...(e.kind === 'dangler' ? [beast('drop', K.dropDb, { delay: s }, 1)] : []),
         ];
+      // The jumping spider's crouch: a tense tick on each beat of its count, rising, as its eyes flare.
+      if (e.kind === 'jumper')
+        return tuning.jumper.tellBeats.map((u, k) =>
+          beast('tick', K.jumpTickDb + k, { cents: 600 + k * 250 + jitter('tick', k, 40), delay: u * s }, k),
+        );
       return [];
     }
     case 'enemyCharge':
       if (e.kind === 'huntsman')
         return [beast('thwip', K.thwipDb, { cents: jitter('thwip', 0, 80), priority: 5 })];
+      // The jumping spider leaps: a whip of air.
+      if (e.kind === 'jumper')
+        return [beast('whoosh', K.jumpWhipDb, { cents: 1100 + jitter('whoosh', 0, 80) })];
       return BEETLES.has(e.kind)
         ? [
             beast('rumble', K.rumbleDb + (e.kind === 'oldBurrback' ? 4 : 0), {
@@ -389,6 +399,26 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
           ]
         : open;
     }
+    case 'enemyHop': {
+      // Its little hops: a scritch of eight feet; a hop back (or over her) a louder one and a small whip.
+      const big = e.why === 'back' || e.why === 'over';
+      return [
+        beast('skitter', K.jumpScritchDb + (big ? 4 : e.why === 'idle' ? -4 : 0), {
+          cents: 300 + jitter('skitter', 0),
+        }),
+        ...(big ? [beast('whoosh', K.jumpWhipDb - 7, { cents: 900 }, 1)] : []),
+      ];
+    }
+    case 'enemyLand':
+      // Down again: a thud (a pounce the heaviest), and the feet's scritch on a skid.
+      return [
+        beast('thumpWood', K.jumpThudDb + (e.cause === 'pounce' ? 0 : e.cause === 'fall' ? -1 : -5), {
+          cents: 350 + jitter('thumpWood', 0, 60),
+        }),
+        ...(e.cause === 'pounce' && !e.hit
+          ? [beast('skitter', K.jumpScritchDb + 2, { cents: -200, delay: 0.03 }, 1)]
+          : []),
+      ];
     case 'enemyNotice':
       // (The Canopy r18: a lampwing's tell is counted out, three rising buzzes quickening to the dive, as its lamp
       // flashes; ft17d "didn't see a wind-up I could read in time".)

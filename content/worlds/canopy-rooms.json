@@ -2310,6 +2310,14 @@
         "y": 776,
         "facing": 1,
         "senses": "always"
+      },
+      {
+        "id": "jump-t3",
+        "kind": "jumper",
+        "x": 240,
+        "y": 1664,
+        "facing": 1,
+        "senses": "always"
       }
     ],
     "lures": [
@@ -6418,6 +6426,14 @@
         "senses": "always",
         "radius": 100,
         "dives": 2
+      },
+      {
+        "id": "jump-c",
+        "kind": "jumper",
+        "x": 2720,
+        "y": 704,
+        "facing": -1,
+        "senses": "always"
       }
     ],
     "lures": [],
@@ -6898,6 +6914,22 @@
         "y": 1408,
         "facing": -1,
         "radius": 260,
+        "senses": "always"
+      },
+      {
+        "id": "jump-g1",
+        "kind": "jumper",
+        "x": 2600,
+        "y": 1408,
+        "facing": -1,
+        "senses": "always"
+      },
+      {
+        "id": "jump-g2",
+        "kind": "jumper",
+        "x": 3420,
+        "y": 640,
+        "facing": -1,
         "senses": "always"
       }
     ],

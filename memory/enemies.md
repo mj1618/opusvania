@@ -68,6 +68,36 @@ pilots, sound), `CREATURE_CLIMBS` in tools/levels/climbs.ts. Lab: `?room=lab-cre
 - **Placed** (r22): `hunt-chimney` (cn-well, the chimney's west face, box 2,572-2,788, woken by the claws; its home
   300 px from `p-landing`: canopy-r20.test), `hunt-elder-1` (the Elder's leg 1, west face, never level with the
   floor), `hunt-elder-2` (leg 2, **west** face: on the east face a hit threw her into thorn-e1).
+## The jumper (jumping spider, `kind: 'jumper'`, r22: the leaper; src/sim/enemies/jumper.ts, row `tuning.jumper`)
+- Sight hunter (lamp rules; the Canopy's spawn it `senses: 'always'` like the rest). Spawn `{id, kind: 'jumper', x, y
+  (feet, on a top), facing, radius?}`; box 50 x 34, 3 hp. Placement check = the crawlers' (`checkCrawler`).
+- `sit` (idle hops home-ward) -> seen within `noticePx` 520 / `noticeDyPx` 360, a clear line to her middle or head:
+  `enemyNotice` (30 f: the eyes lock on) -> `hunt`: faces her, keeps 200-280 px in step-hops (`skitter`, 30 px / 9 f,
+  `enemyHop` why `step`). Ready (`strikeCd` 0, seen or `roused`) and a pounce plans: `windup` 26 f (`enemyWindup`;
+  the landing follows her until the last `lockFrames` 10, then it is set) -> `charge` (`enemyCharge`), a ballistic arc
+  (g 1, `flightBase` 10 + dist / 26 frames, higher arcs tried if blocked) -> `enemyLand` cause `pounce`.
+- **The landing is always ground**: `spot()` / `standsAt()`: the whole box on a top (solid or one-way), clear of
+  solids, never in thorns, a catch zone or at the room's bottom edge; within `pounceMaxPx` 380, up `leapUpPx` 280,
+  down `leapDownPx` 440; searched from under her back toward it 96 px, then 48 past. It leaps up onto her ledge.
+  `pounceMinPx` 0: one standing at it is pounced on where she stands (after the same tell).
+- Missed: `recover` 38 f, harmless, skidding `skidPx` 14 (the punish: ~2 cuts); then up, and it hops back if she is
+  within 200. Hit her: lands, `recover` 14, hops back.
+- **Cut on the ground** (not open): 8 f flinch (harmless), then `back`: a hop 140 px away (20 f, harmless), or `over`
+  her (26 f) when cornered (< 60 px behind) and she is within ~136; lands `hunt` with `counterFrames` 8. **The tell is
+  `tough`**: a cut in the crouch lands but it leaps anyway (cut once and get out). Rushed within 96 px it hops back
+  unasked, at most every 110 f. **Cut in the air**: in the pounce (or a bonk's fall) it is knocked down along the
+  blow (`stunned`) and lies open 72 f (`enemyLand` cause `fall`); in a hop back it is knocked on and lands on its
+  feet, straight back at her (`keep`). A throw-cut knocks it flat wherever. Cuts while it lies open do not stretch
+  the window (`chargeLeft` = what was left less the flinch).
+- **Fair**: after it hurt her no tell for invuln + 10 - 26 frames and its touch is harmless for invuln + 10
+  (`noticeCd`): nothing of it lands within 80 frames of the last hurt (tests: stander, masher, walker).
+- Pilots (tests/unit/jumper.test.ts): a stander is hit every ~140 f; the masher (runs in, cuts every 10 f) kills it
+  taking ~1 hit (it is caught in its step-hops; the counter pounce / its touch get her once); the reader (side-steps
+  the leap, cuts it open) takes none. Dead: thrown along the blow (`deathKnock` 1.4 x the knockback, up 7), falls,
+  skids, lies `deadFrames` 90. State fields it reuses: see the module's header (`fromX..pushY` = the arc).
+- Placed (r22): cn-trunk `jump-t3` (tier 3, the way out west), cn-cellar `jump-c` (east of the hall's burl, under the
+  lampwing), cn-galleries `jump-g1` (the nest floor, under the branches) and `jump-g2` (the east gallery, on the way
+  to the larder); lab-creatures station K (a ledge to pounce up to). Not yet played by a first-timer.
 
 ## Step order (matters)
 re-form if a fade just ended → `updatePlayer` (her slash is resolved inside it, against where the

@@ -1,7 +1,7 @@
 {
   "id": "lab-creatures",
   "title": "Lab: creatures (greybox)",
-  "width": 31000,
+  "width": 33000,
   "height": 1600,
   "spawn": {
     "x": 200,
@@ -187,6 +187,20 @@
       "y": 300,
       "w": 316,
       "h": 980
+    },
+    {
+      "tag": "ground",
+      "x": 31000,
+      "y": 1280,
+      "w": 2000,
+      "h": 320
+    },
+    {
+      "tag": "ledge",
+      "x": 31500,
+      "y": 1120,
+      "w": 360,
+      "h": 160
     }
   ],
   "oneWays": [],
@@ -273,6 +287,13 @@
       "kind": "wick",
       "x": 27892,
       "y": 820,
+      "spin": 1
+    },
+    {
+      "id": "wick-m",
+      "kind": "wick",
+      "x": 32100,
+      "y": 1060,
       "spin": 1
     }
   ],
@@ -432,6 +453,14 @@
       "y": 700,
       "facing": 1,
       "radius": 220
+    },
+    {
+      "id": "jump-m",
+      "kind": "jumper",
+      "x": 32450,
+      "y": 1280,
+      "facing": -1,
+      "guards": "wick-m"
     }
   ],
   "marks": {
@@ -495,6 +524,11 @@
         "x": 27600,
         "y": 200,
         "text": "K  huntsman on the chimney west face: wall-jump up the east face; it flattens (the tell), then springs across. Hold still or cut it as it comes; knocked down it lies open"
+      },
+      {
+        "x": 31600,
+        "y": 700,
+        "text": "M  jumping spider: it keeps its distance, crouches (the tell) and pounces where you stood; side-step and cut it open on landing, or cut it out of the air; cut on the ground it hops back"
       }
     ]
   },

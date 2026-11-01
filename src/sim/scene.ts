@@ -106,7 +106,9 @@ export type EnemyKind =
   /** A squat ground beetle on a ledge that lobs boiling droplets (src/sim/enemies/bombardier.ts). */
   | 'bombardier'
   /** A huntsman spider on a wall face that lunges across the gap (src/sim/enemies/huntsman.ts). */
-  | 'huntsman';
+  | 'huntsman'
+  /** A jumping spider that keeps its distance and pounces (src/sim/enemies/jumper.ts). */
+  | 'jumper';
 
 /**
  * How a creature notices her (memory/creatures.md). `lamp`: by lamp light (she is seen while she is
