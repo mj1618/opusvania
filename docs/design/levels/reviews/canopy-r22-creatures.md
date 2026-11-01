@@ -64,3 +64,34 @@ And the hit itself:
 
 Placement (after the kinds land): every room of the first five minutes should hold two different archetypes, and no
 room the same pair as the room before it.
+
+## Matt, mid-round: "check with Ori, it has a good way of forcing you to deal with enemies. We can still speedrun our level too much"
+
+**Ours now (speedrunner persona, headless, every ability, 2 runs a room):** hatch, hub, trunk, well, limbs, fork and
+bower are crossed with **0 hits and 0 kills**; only the Grove (3) and the tunnel (3) touch her. Nothing on the way
+to the Keeper needs a kill.
+
+**Ori's Sunken Glades (mined, `docs/design/reference-levels/ori/area.json`):**
+- **Enemies sit on the route line, not beside it:** 20 of 48 (42%) are within 300 px of the critical route and 14
+  within 150 px; the route spends 30% of its length within 500 px of one. Hollow Knight's Crossroads: 6 of 198 within
+  300 px. Ori is the game that puts the creature where your feet must go.
+- **The geometry leaves no way round:** spiked slugs (14, the commonest) crawl the floors, walls *and ceilings* of the
+  tunnels and shafts that are the only way; drop slugs hang over the pools you must cross; 7 shooter plants fire
+  across the caverns' only corridor in rows.
+- **A one-way drop into a closed fight:** Sein's hollow is reached by a hole you cannot climb back out of, and the
+  first thing after the weapon is 3 Hoppers that do not respawn. You leave when they are dead.
+- **Hoppers chase and leap ~470 px:** you cannot outrun them on foot, so passing is fighting.
+- **The creature is the key:** the Rammer is baited into the rock to break it open; keystones (3 gates of 2, 2 and 4)
+  sit among creatures on the route. Later, Bash makes creatures and their shots the only way across a gap.
+- **The weapon switches the Glades on:** 7 enemies appear the moment Spirit Flame arrives, on the way back.
+
+**What we take (the placement pass after the new kinds land):**
+1. **Nests that shut the way on, never the way back.** 3–4 on the critical path in the first ten minutes: the exit
+   ahead is held shut by the nest itself (a silk curtain spun across it by the spiders; roots for beetles) and falls
+   when the last of its creatures dies (`enemies[].sets` + a flag gate). The way back stays open, so it reads as
+   "clear this to go on", not as the Grove's trap.
+2. **Creatures on the line:** every critical room puts one creature where the fast line's feet go: the only landing
+   ledge (jumper), the climb's wall (huntsman), across the long crossing (bombardier), the tunnel floor (ants).
+3. **The bar:** the speedrunner persona takes hits or must kill in every critical room, and the gates make it kill
+   in 3–4. Re-run this table after the pass.
+4. **Later (not this round):** Ori's Bash on creatures: fling off a bombardier's droplet or a lampwing's light.
