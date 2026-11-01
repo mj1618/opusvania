@@ -81,6 +81,8 @@ either side of it now).
     still not read as a wall (3 deliberate deaths from the hall). This is now the opening's worst problem.
   - **The burrback's teaching:** head-on cuts do little and nothing says jump and down-cut; most learn it at ~4 min.
   - The galleries' claw ledge still holds explorers ~1 min: they want it, and nothing says "later".
+  - **The hub's cellar went unfound:** none of eight first-timers broke `cellar-panel` (a floor panel wants a down cut, and
+    nothing marks it), so the hub's breakable and secret exist only for the route bot so far.
   - Lampwings still read as friendly moths (r20's art job), small creatures on dark floors are unread ("swinging blind").
 
 ## v20 (round 20, 2026-11-01): teeth (Matt: "I feel like it's very easy")
