@@ -22,6 +22,7 @@
 import { gloamweaver } from './boss/gloam';
 import { mantis } from './boss/mantis';
 import { weaverBoss } from './boss/weaver';
+import { bombardier } from './enemies/bombardier';
 import { burrback, juvenileBurrback, oldBurrback } from './enemies/burrback';
 import { carrier } from './enemies/carrier';
 import {
@@ -58,6 +59,7 @@ const KINDS: Record<EnemyKind, KindRules> = {
   carrier,
   gloamweaver,
   mantis,
+  bombardier,
 };
 const KIND_LIST: EnemyKind[] = [
   'burrback',
@@ -72,6 +74,7 @@ const KIND_LIST: EnemyKind[] = [
   'carrier',
   'gloamweaver',
   'mantis',
+  'bombardier',
 ];
 
 /**
@@ -112,7 +115,14 @@ function wingCuts(state: GameState, scene: Scene, t: Tuning, events: SimEvent[])
 export function weightOf(kind: EnemyKind): 'light' | 'medium' | 'heavy' {
   if (kind === 'oldBurrback' || kind === 'weaverBoss' || kind === 'gloamweaver' || kind === 'mantis')
     return 'heavy';
-  if (kind === 'burrback' || kind === 'hawker' || kind === 'weaver' || kind === 'web') return 'medium';
+  if (
+    kind === 'burrback' ||
+    kind === 'hawker' ||
+    kind === 'weaver' ||
+    kind === 'web' ||
+    kind === 'bombardier'
+  )
+    return 'medium';
   return 'light';
 }
 

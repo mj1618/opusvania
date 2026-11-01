@@ -8,6 +8,8 @@
  * every tone is inharmonic or detuned with noise in its attack, every envelope starts and ends at
  * zero, nothing but glass goes far above 9 kHz.
  */
+
+import { BOMB_RECIPES, BOMB_SOUNDS } from './bake-bomb';
 import { at, bowl, breath, click, exp, len, panned, type Recipe, rubbed, swell } from './bake-lib';
 import { LR_RECIPES, LR_SOUNDS } from './bake-lr';
 import { INSTR, MUSIC_GLASS, MUSIC_RECIPES, MUSIC_SLOW, MUSIC_SOUNDS } from './bake-music';
@@ -72,6 +74,7 @@ export const SOUNDS = {
   chordCatch: 3,
   // The greybox-era pass (bake-play.ts): her steps and wings, the blade, the lamps, the creatures.
   ...PLAY_SOUNDS,
+  ...BOMB_SOUNDS,
   // Lanternroot (bake-lr.ts): her light, the moonwicks, the moss, the gust, the cap and the signs.
   ...LR_SOUNDS,
   // The score's instruments (bake-music.ts: one variant per baked pitch) and the Canopy's own sounds.
@@ -115,6 +118,7 @@ export interface Baked {
 
 const RECIPES: Record<SoundId, Recipe> = {
   ...PLAY_RECIPES,
+  ...BOMB_RECIPES,
   ...LR_RECIPES,
   ...MUSIC_RECIPES,
   /** One soft *fff*: noise band-passed from ~1.8 kHz down to ~700 Hz in ~90 ms, a low push under it. */

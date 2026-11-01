@@ -374,3 +374,23 @@ clip `clips/looks-ants-bite.mp4`. Staging: the fork's hawker is `gone` until its
   down at her: now held level in the world). Not seen: the ants at the burrow / tunnel ends fading in and out, an
   up-cut or pogo kill of an ant, a dragonfly killed in a rhythm (`orbit`) pass.
 
+## The bombardier (round 22; `bombardier.ts`, `BOMB`; clips `clips/bomb-*`)
+- Its own rig (not the burrback's): `creatureArt` -> `'bombardier'` in every painted room; `EnemyRenderer.bombardier`
+  draws the body into the back painter, `BombFx` (droplets, trails, sparks, steam, flashes, rings, the spray's jet
+  and cone of light) into the front one. Greybox: `render/greybox/creatures.ts` `bombardier()` + `shots()`.
+- Look: a low blue-black dome with three thin orange bands (they warm with `heat`), orange pronotum and a small
+  head, splayed legs, feelers; the turret is the abdomen tip, a short stub tucked behind at rest, telescoping up
+  over its back for the lob (aimed at `targetX/Y`) and curling forward over the back (drawn over the dome) to spray.
+  **Turret angles are unwrapped past pi** (`upA`, `fwA` + 2 pi): a linear blend from the rest pose through 0 swung
+  the tail forward through the body and hid it mid-rise.
+- The tell (rule 4): the tip and eyes go to the hunt colour; through `rear` / `windup` the tip flashes, quickening
+  (2.2 -> 13 Hz), solid over its last 6 frames; it bucks on each `shotFire` (`fired()`).
+- Hit flash: 2 frames warm near-white (`BOMB.color.flash`) as a ghost redraw of the silhouette + a glow, fading
+  over 4; a squash. Death: in-plane roll at 15 rad/s while it flies, settles on its back (nearest odd multiple of
+  pi) once `landed`, legs curl, fades over its last 28 frames; a hiss of steam and hot drops on `enemyDie`.
+- Droplets: a hot bead stretched along its flight, a glow, a streak of its last 7 positions, steam puffs; a batted
+  one near white with sparks off it. Splash: sparks fanning up, a flash, a ring, steam. Deflect: a 64 px flash,
+  ring, 14 sparks along the bat and 6 back. `shotHit`: a bigger flash and steam.
+- Staging: headless search of input timings on the clip tool's timeline (createState, placePlayer to `--at`, `.pre`,
+  then the script) found `--room cn-hub --at 7450,1344 --pre 60 --script ".95 A1 .29 R18 A1 .16 A1 .70"` (deflect,
+  stun, two cuts, kill) and `--at 7600,1344 --script ".62 R+J10 D+A1 D16 .50"` (spray, then a pogo).

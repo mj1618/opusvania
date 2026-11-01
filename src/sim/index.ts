@@ -35,6 +35,7 @@ import { arenaReturn, clearOfThorns, returnPoint } from './return';
 import { seedRng } from './rng';
 import type { RoomDoor, RoomExit, Scene } from './scene';
 import { markSeen } from './seen';
+import { updateShots } from './shots';
 import { cloneSave, type GameState, newSave, type SaveState } from './state';
 import type { Tuning } from './tuning';
 import { upgradeFlag, withUpgrades } from './upgrades';
@@ -61,7 +62,7 @@ export function createState(
   remember(sv.visited, scene.id);
   const S = withShortcuts(scene, sv);
   const state: GameState = {
-    version: 22,
+    version: 23,
     room: scene.id,
     frame: 0,
     seed: seed >>> 0,
@@ -653,6 +654,26 @@ export function step(
     }
     enemyTouched(state, S, touch, dir, t, events, glide);
   }
+  // Droplets in flight (src/sim/shots.ts): the bombardiers' spray. They move with the creatures (held while she aims a
+  // fling, when nothing touches her either).
+  if (!slowed)
+    updateShots(state, S, t, events, first, (dir, damage, owner, hitX, hitY) => {
+      const q = state.player;
+      if (aiming || q.invuln > 0 || q.hp <= 0 || q.faded > 0 || state.goal.gathered) return false;
+      if (q.kindling >= 0 || q.kindlingLamp >= 0) return false;
+      if (moonstepped(state, t, hitX, hitY, events)) return false;
+      hurtPlayer(
+        state,
+        P,
+        dir,
+        damage,
+        { kind: owner?.kind ?? 'bombardier', id: owner?.id ?? '' },
+        hitX,
+        hitY,
+        events,
+      );
+      return true;
+    });
   // A boss's blade (the Mantis: its strike, its cuts, a ripple): its own box, not its body.
   bossBlade(state, S, P, t, slowed || aiming, events);
   // On safe ground after a fling chain: its embers go out for good, or burn again if she landed back where the

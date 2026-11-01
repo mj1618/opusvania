@@ -142,6 +142,8 @@ export const ENEMIES = z
       z.object({ ...base, kind: z.literal('mantis') }).strict(),
       // The dangler (memory/creatures.md): `x`, `y` = where its thread is tied; `drop` = its longest drop.
       z.object({ ...base, kind: z.literal('dangler'), drop: int.min(80).max(1200).optional() }).strict(),
+      // The bombardier (src/sim/enemies/bombardier.ts): `x`, `y` = its feet centre on a surface (a ledge, a floor).
+      z.object({ ...base, kind: z.literal('bombardier') }).strict(),
       // The carriers (ants, src/sim/enemies/carrier.ts): `x`, `y` = the trail's start (feet); `trail` = the rest
       // of it (the last point the crack), or `follow` = the carrier whose trail it walks; `phase` 0..1.
       z
@@ -329,7 +331,9 @@ function checkCrawler(s: RoomLike, e: Enemy): void {
       ? defaultTuning.oldBurrback
       : e.kind === 'juvenileBurrback'
         ? defaultTuning.juvenileBurrback
-        : defaultTuning.burrback;
+        : e.kind === 'bombardier'
+          ? defaultTuning.bombardier
+          : defaultTuning.burrback;
   const bw = B.width;
   const bh = B.height;
   const x0 = e.x - bw / 2;
@@ -389,7 +393,12 @@ export function checkCreatures(s: RoomLike, seen: Set<string>): void {
     if (e.guards !== undefined && !lures.has(e.guards))
       throw new Error(`Scene "${s.id}": enemy "${e.id}" guards "${e.guards}", which is no lure of the room`);
     if (e.kind === 'lampwing' || e.kind === 'hawker') checkFlyer(s, e);
-    else if (e.kind === 'burrback' || e.kind === 'oldBurrback' || e.kind === 'juvenileBurrback')
+    else if (
+      e.kind === 'burrback' ||
+      e.kind === 'oldBurrback' ||
+      e.kind === 'juvenileBurrback' ||
+      e.kind === 'bombardier'
+    )
       checkCrawler(s, e);
     else if (e.kind === 'dangler') checkDangler(s, e);
     else if (e.kind === 'carrier') {

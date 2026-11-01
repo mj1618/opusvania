@@ -1407,6 +1407,92 @@ export const defaultTuning = withVariants({
     contactDamage: 1,
   },
   /**
+   * The bombardier (canopy-r22-creatures.md, src/sim/enemies/bombardier.ts, memory/enemies.md "The bombardier"): a
+   * squat beetle perched on a ledge. Lit and in view it turns to her, rears its abdomen over its back (the tell,
+   * `tellFrames`) and lobs a burst of boiling droplets on arcs at where she is (a little lead). A slash bats a
+   * droplet back at it: one that hits it lays it open on its back (`stunFrames`). Up close in front it sprays a short
+   * hot cone instead (a quick tell), so the answer is from behind or above. Frames at 60 Hz, px, px/f.
+   */
+  bombardier: {
+    /** Collision box: lower and wider than the burrback (52 x 34). */
+    width: 64,
+    height: 30,
+    hp: 3,
+    /** It sees her (lit, a clear line from its turret) within this sideways and this up / down of its centre. */
+    sightPx: 640,
+    sightUpPx: 520,
+    sightDownPx: 360,
+    /** No tell for this long after it is made (she came into the room, or re-formed): never a shot on arrival. */
+    enterCalmFrames: 90,
+    /** After a fall puts her back on safe ground it starts no tell for this long. */
+    returnCalmFrames: 120,
+    /** Turning round to face her (she is behind it): every cut from behind lands meanwhile. */
+    turnFrames: 24,
+    /** The lob's tell: abdomen up over its back, its glow counting down. */
+    tellFrames: 44,
+    /** The burst: this many droplets, this many frames apart. */
+    burst: 3,
+    burstGap: 10,
+    /** Each droplet's flight time to its mark: `flightBase` + `flightPerPx` x the distance, clamped. */
+    flightBase: 28,
+    flightPerPx: 0.05,
+    flightMin: 34,
+    flightMax: 62,
+    /** Gravity on a droplet (px/f²). */
+    shotGravity: 0.3,
+    /** Lead: her vx x this many frames, at most `leadMaxPx`. */
+    leadFrames: 12,
+    leadMaxPx: 110,
+    /** The burst's marks: the first at her (+ lead), then short of her, then past her, by this. */
+    spreadPx: 64,
+    /** The droplet's radius; it hurts her within `hurtK` x that of her box (a fair, slightly small hit). */
+    shotRadius: 9,
+    hurtK: 0.75,
+    /** Frames before an unspent droplet is removed. */
+    shotLife: 300,
+    shotDamage: 1,
+    /** Where droplets leave: the turret's tip (raised over its back), this far above its top and behind its centre. */
+    muzzleUp: 10,
+    muzzleBack: 22,
+    /** After a burst or a spray it holds still this long (`pause`), then waits `cooldownFrames` before the next tell. */
+    pauseFrames: 30,
+    cooldownFrames: 96,
+    /** Up close: she is in front within this of its front edge and this up / down of its centre: the spray. */
+    conePx: 110,
+    coneUpPx: 90,
+    coneDownPx: 40,
+    /** The spray's quick tell, how long it sprays, and the hot cone in front of it (reach x height at the tip). */
+    coneTellFrames: 16,
+    sprayFrames: 22,
+    coneReach: 128,
+    coneH: 64,
+    /** A batted droplet flies straight at its owner at this, px/f (`reflectGravity` px/f²). */
+    reflectSpeed: 14,
+    reflectGravity: 0,
+    /** The deflect's hold: her and the droplet. */
+    deflectHitstop: 7,
+    /** A batted droplet that hits a creature: its hold, hers, and what it takes. */
+    reflectHitstop: 8,
+    reflectHerHitstop: 3,
+    reflectDamage: 1,
+    /** Hit by its own batted droplet: on its back, open (harmless), then a harmless get-up (`wake`). */
+    stunFrames: 110,
+    wakeFrames: 24,
+    hurtFrames: 16,
+    hurtSafeFrames: 16,
+    /** A blow shoves it this fraction of the slash's knockback (it keeps to its ledge), fading by `shoveDecay` a frame. */
+    shoveK: 0.4,
+    shoveDecay: 0.8,
+    /** Its death: launched along the blow (px/f), falls under `deathGravity`, lies on its back, gone after `deadFrames`. */
+    deathLaunchVx: 5,
+    deathLaunchVy: 8,
+    deathGravity: 0.6,
+    deadFrames: 110,
+    contactDamage: 1,
+    value: 0,
+    valueFinisher: 0,
+  },
+  /**
    * The Weaver, the wood's boss (docs/design/regions/wood.md §6, memory/bosses.md). One exam a phase:
    * P1 glide among the spokes to snuff the ring flames, P2 read the swing and get off its half, P3 pogo
    * its abdomen, then the heart. Frames at 60 Hz, px, px/f.

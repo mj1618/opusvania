@@ -29,6 +29,7 @@ import type {
   PodsState,
   RestState,
   SaveState,
+  ShotState,
 } from '../sim/state';
 import type { LightRegistry } from './lights';
 
@@ -136,6 +137,8 @@ export interface SimView {
   /** The scene's objective: lanterns, heart, ending (memory/goal.md). */
   readonly goal: GameState['goal'];
   readonly enemies: readonly Readonly<EnemyState>[];
+  /** Droplets in flight (the bombardiers' spray, src/sim/shots.ts) at the latest sim frame. Read only. */
+  readonly shots?: readonly Readonly<ShotState>[];
   /** Lures (the story's lamps, memory/lures.md): `hp[i] > 0` = `scene.lures[i]` still burns. Read only. */
   readonly lures: Readonly<LuresState>;
   /** What she has earned (memory/save.md): opened shortcuts, glades taken, her moon patch. Read only. */

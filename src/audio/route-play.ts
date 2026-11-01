@@ -32,6 +32,7 @@ const CREATURES = new Set([
   'dangler',
   'juvenileBurrback',
   'carrier',
+  'bombardier',
 ]);
 const BEETLES = new Set(['burrback', 'juvenileBurrback', 'oldBurrback']);
 const FLYERS = new Set(['hawker', 'lampwing']);
@@ -320,8 +321,29 @@ export function routePlay(e: PlayEvent, i: number, snap: AudioSnap, ctx: RouteCo
       return e.how === 'beat' ? [hero('launch', A.launchDb - 3, { x: h.x, y: h.y })] : [];
 
     // --- Creatures: tells you can hear (a player who listens plays better), moves, answers. ---
+    // --- The bombardier and its droplets (bake-bomb.ts): the boil is the tell, a pop each, a hiss, the ping. ---
+    case 'shotFire':
+      return [beast('bombPop', K.bombPopDb, { cents: (e.n - 1) * 120 + jitter('bombPop', 0, 60) })];
+    case 'shotSplash':
+      if (e.on === 'out') return [];
+      return [
+        beast('bombHiss', K.bombHissDb + (e.on === 'her' ? 3 : 0), { cents: jitter('bombHiss', 0, 120) }),
+      ];
+    case 'shotDeflect':
+      return [blow('bombPing', e.x, e.y, K.bombPingDb, { cents: jitter('bombPing', 0, 40), priority: 7 })];
+    case 'shotHit':
+      return [
+        blow('bombPing', e.x, e.y, K.bombPingDb - 3, { cents: -500 }),
+        blow('crunch', e.x, e.y, C.crackShellDb, { cents: 200 + jitter('crunch', 0, 60), delay: 0.01 }, 1),
+        beast('bombHiss', K.bombHissDb + 4, { cents: -300, delay: 0.03 }, 2),
+      ];
+    case 'enemySpray':
+      return [beast('bombHiss', K.bombHissDb + 6, { cents: -700, priority: 5 })];
     case 'enemyWindup': {
       const s = e.frames / 60;
+      if (e.kind === 'bombardier')
+        // (Its lob's tell is as long as the boil; the spray's quick tell the boil's last bubbles, sped up.)
+        return [beast('bombBoil', K.bombBoilDb, { cents: s < 0.5 ? 500 : 0, priority: 5 })];
       if (BEETLES.has(e.kind)) {
         const big = e.kind === 'oldBurrback';
         return [

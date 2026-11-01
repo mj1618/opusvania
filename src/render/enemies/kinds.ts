@@ -7,13 +7,14 @@
  * - `moth`: the lampwing's art (render/enemies/lampwing.ts).
  * - `ant`: the carriers' own rig (render/enemies/ant.ts; until r22 the burrback's rig at 0.5, which read as moss).
  * - `dragonfly`: the hawkers' own rig (render/enemies/dragonfly.ts; until r22 the lampwing's art: a friendly moth).
+ * - `bombardier`: its own rig (render/enemies/bombardier.ts), in every painted room.
  * - `spider`: Lanternroot's pieces (render/lantern/creatures.ts: danglers, webs and their weavers, the Gloamweaver,
  *   the Weaver, the mantis), built in a Lanternroot room or a wood room with `art.pieces`.
  * - Greybox rooms draw every kind as its box (render/greybox/creatures.ts).
  */
 import type { EnemyKind } from '../../sim/scene';
 
-export type CreatureArt = 'beetle' | 'moth' | 'ant' | 'dragonfly' | 'spider' | 'greybox';
+export type CreatureArt = 'beetle' | 'moth' | 'ant' | 'dragonfly' | 'spider' | 'bombardier' | 'greybox';
 
 export interface LookKey {
   kit: 'grove' | 'wood' | 'lanternroot';
@@ -46,6 +47,7 @@ export function creatureArt(kind: EnemyKind, look: LookKey): CreatureArt | null 
   if (kind in BEETLE_SCALE) return 'beetle';
   if (kind === 'carrier') return 'ant';
   if (kind === 'hawker') return 'dragonfly';
+  if (kind === 'bombardier') return 'bombardier';
   if (kind === 'lampwing') return 'moth';
   if (look.pieces && SPIDER_KINDS.has(kind)) return 'spider';
   return null;

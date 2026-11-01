@@ -1325,6 +1325,14 @@
         "facing": 1,
         "follow": "ant-m1",
         "phase": 0.67
+      },
+      {
+        "id": "bomb-bank",
+        "kind": "bombardier",
+        "x": 7700,
+        "y": 1344,
+        "facing": -1,
+        "senses": "always"
       }
     ],
     "lures": [
@@ -5862,6 +5870,22 @@
         "phase": 0.67
       },
       {
+        "id": "bomb-knoll",
+        "kind": "bombardier",
+        "x": 1640,
+        "y": 1088,
+        "facing": -1,
+        "senses": "always"
+      },
+      {
+        "id": "bomb-face",
+        "kind": "bombardier",
+        "x": 2600,
+        "y": 1344,
+        "facing": -1,
+        "senses": "always"
+      },
+      {
         "id": "hawk-fork",
         "kind": "hawker",
         "x": 1300,
@@ -7277,6 +7301,14 @@
         "radius": 300,
         "senses": "always",
         "fenced": true
+      },
+      {
+        "id": "bomb-larder",
+        "kind": "bombardier",
+        "x": 1408,
+        "y": 1344,
+        "facing": 1,
+        "senses": "always"
       },
       {
         "id": "ant-l1",

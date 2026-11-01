@@ -369,3 +369,9 @@ Clips and numbers: `playtest-reports/canopy-audio-r15/README.md`. Tests: `tests/
   (`AUDIO.combat.shieldDb`) and a second clang a fifth up (+700 cents) 0.05 s after (route-play).
 - A beetle laid open by a ram that missed (`enemyRecover`, not `touch`): a long breath, `catchBreath` -900 cents. A
   lampwing's tell (`enemyNotice`): three `buzzUp` at 0, 0.45 and 0.75 of its frames, each higher and louder.
+
+## The bombardier (round 22; `bake-bomb.ts`, levels `AUDIO.creatures.bomb*`, routed in route-play.ts)
+`bombBoil` (its tell, ~0.78 s: a simmer swelling, bubbles quickening and rising, ticks; the spray's quick tell plays it
++500 cents), `bombPop` per `shotFire` (pitch steps up the burst), `bombHiss` per `shotSplash` (not `out`; +3 dB on
+her) and on `enemySpray` (-700 cents, +6), `bombPing` on `shotDeflect` (-15 dB, priority 7: the best hit there is)
+and again lower with a crunch and a hiss on `shotHit`. The hiss is rolled off at 5.2 kHz (audio.test's 9 kHz rule).
